@@ -1,0 +1,18 @@
+.header {
+  height: var(--headerHeight);
+}
+
+.actionButton {
+  height: 40px !important;
+  border-color: var(--grayBorderMedium) !important;
+  color: var(--blackSoft) !important;
+}
+
+.avatarIcon {
+  color: var(--blackSoft) !important;
+}
+
+.sidebarMenu {
+  height: 100%;
+  border-right: none !important;
+}

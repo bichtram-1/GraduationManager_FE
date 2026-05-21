@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "@frontend/admin": "file:quan-ly-khoa-hoc-phong-thuy/frontend/admin"
+  }
+}
