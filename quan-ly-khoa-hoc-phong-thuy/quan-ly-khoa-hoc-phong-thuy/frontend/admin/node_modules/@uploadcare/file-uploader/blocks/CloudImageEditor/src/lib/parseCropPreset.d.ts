@@ -1,2 +1,0 @@
-export function parseCropPreset(cropPreset: import('../../../../types/exported.d.ts').ConfigType['cropPreset']): import("../types.js").CropAspectRatio[] | undefined;
-//# sourceMappingURL=parseCropPreset.d.ts.map
