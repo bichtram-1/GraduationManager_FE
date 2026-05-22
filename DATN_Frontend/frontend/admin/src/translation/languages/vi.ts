@@ -1,6 +1,6 @@
 import { I18nKey } from '@shared/types/I18nKeyType';
 
-const ViTranslation: I18nKey = {
+const ViTranslation = {
   login: 'Đăng nhập',
   title_login: 'Sử dụng Email và Mật khẩu để Đăng nhập',
   username: 'Tên người dùng',
@@ -38,6 +38,22 @@ const ViTranslation: I18nKey = {
   // Users
   user_management: 'Quản lý người dùng',
   user_management_desc: 'Quản lý thông tin sinh viên và giảng viên',
+  company_management: 'Quản lý công ty',
+  company_management_desc: 'Quản lý doanh nghiệp tiếp nhận thực tập và đồ án',
+  internship_students: 'Quản lý SV TTTN',
+  internship_students_desc: 'Theo dõi sinh viên đăng ký giấy xác nhận và sinh viên chưa có công ty',
+  company_list: 'Danh sách công ty',
+  add_company: 'Thêm công ty',
+  search_by_company_name: 'Tìm theo tên công ty',
+  company_name: 'Tên công ty',
+  company_tax_id: 'Mã số thuế',
+  company_field: 'Lĩnh vực',
+  company_contact: 'Người liên hệ',
+  company_status: 'Trạng thái',
+  company_active: 'Đang hoạt động',
+  company_pending: 'Chờ duyệt',
+  company_paused: 'Tạm dừng',
+  company_approved: 'Đã duyệt',
   full_name: 'Họ tên',
   created_date: 'Ngày tạo',
   add_user: 'Thêm người dùng',

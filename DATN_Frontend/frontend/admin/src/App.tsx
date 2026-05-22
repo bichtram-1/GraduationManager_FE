@@ -20,6 +20,12 @@ const Login = lazy(() => import('./pages/login/LoginPage'));
 const NotFound = lazy(() => import('./components/general/PageNotFound'));
 const Dashboard = lazy(() => import('./pages/dashboard/DashboardPage'));
 const Users = lazy(() => import('./pages/users/UsersPage'));
+const Companies = lazy(() => import('./pages/companies/CompaniesPage'));
+const Topics = lazy(() => import('./pages/topics/TopicsPage'));
+const Assignments = lazy(() => import('./pages/assignments/AssignmentsPage'));
+const Councils = lazy(() => import('./pages/councils/CouncilsPage'));
+const CouncilsCreate = lazy(() => import('./pages/councils/CreateCouncilPage'));
+const InternshipStudents = lazy(() => import('./pages/internship-students/InternshipStudentsPage'));
 const Periods = lazy(() => import('./pages/periods/PeriodsPage'));
 const ForgotPassword = lazy(() => import('./pages/login/components/ForgotPassword'));
 
@@ -67,6 +73,12 @@ function App() {
               >
                 <Route path={ROUTES.DASHBOARD} element={<Dashboard />} />
                 <Route path={ROUTES.USERS} element={<Users />} />
+                <Route path={ROUTES.COMPANIES} element={<Companies />} />
+                <Route path={ROUTES.TOPICS} element={<Topics />} />
+                <Route path={ROUTES.COUNCILS} element={<Councils />} />
+                <Route path={ROUTES.COUNCILS_CREATE} element={<CouncilsCreate />} />
+                <Route path={ROUTES.ASSIGNMENTS} element={<Assignments />} />
+                <Route path={ROUTES.INTERNSHIP_STUDENTS} element={<InternshipStudents />} />
                 <Route path={ROUTES.PERIODS} element={<Periods />} />
               </Route>
               {/* Những route cần bọc Auth Layout */}

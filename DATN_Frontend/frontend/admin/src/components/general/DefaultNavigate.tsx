@@ -1,10 +1,14 @@
 import { Menu, MenuProps, Button, Flex } from 'antd';
 import {
+  BankOutlined,
   CrownOutlined,
+  BookOutlined,
+  TeamOutlined,
   LockOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  SolutionOutlined,
   UserOutlined,
   DashboardOutlined,
 } from '@ant-design/icons';
@@ -65,6 +69,31 @@ const DefaultNavigate = ({ collapsed, onToggle }: IDefaultNavigate) => {
       key: ROUTES.USERS,
       label: t(getKey('user_management')),
       icon: <UserOutlined style={{ fontSize: 20 }} />,
+    },
+    {
+      key: ROUTES.COMPANIES,
+      label: t(getKey('company_management')),
+      icon: <BankOutlined style={{ fontSize: 20 }} />,
+    },
+    {
+      key: ROUTES.TOPICS,
+      label: t(getKey('topic_management')),
+      icon: <BookOutlined style={{ fontSize: 20 }} />,
+    },
+    {
+      key: ROUTES.COUNCILS,
+      label: t(getKey('council_management')),
+      icon: <TeamOutlined style={{ fontSize: 20 }} />,
+    },
+    {
+      key: ROUTES.ASSIGNMENTS,
+      label: t(getKey('assignment_management')),
+      icon: <CrownOutlined style={{ fontSize: 20 }} />,
+    },
+    {
+      key: ROUTES.INTERNSHIP_STUDENTS,
+      label: t(getKey('internship_students')),
+      icon: <SolutionOutlined style={{ fontSize: 20 }} />,
     },
     {
       key: ROUTES.PERIODS,
