@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale } from 'next-intl/server';
+import ViMessages from '@/lib/i18/messages/vi';
 import QueryProvider from '@/lib/providers/QueryProvider';
 import AntdProvider from '@/lib/providers/AntdProvider';
 
@@ -33,7 +34,7 @@ export default async function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <QueryProvider>
           <AntdProvider>
-            <NextIntlClientProvider>
+            <NextIntlClientProvider locale={locale} messages={ViMessages as any}>
               {children}
             </NextIntlClientProvider>
           </AntdProvider>

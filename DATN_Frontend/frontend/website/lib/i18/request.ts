@@ -1,6 +1,6 @@
-import { STORAGES } from '@shared/constants/storage';
-import { decrypted } from '@shared/utils/cookie';
-import ViMessages from '@shared/translation/messages/vi';
+import { STORAGES } from '@/lib/constants/storage';
+import { decrypted } from '@/lib/utils/cookie';
+import ViMessages from './messages/vi';
 import { getRequestConfig } from 'next-intl/server';
 import { cookies } from 'next/headers';
 

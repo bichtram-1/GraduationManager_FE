@@ -1,4 +1,4 @@
-import type { ViMessagesType } from '@shared/translation/messages/vi';
+import type { ViMessagesType } from './messages/vi';
 
 /**
  * Type-safe key helper for next-intl namespaces.
