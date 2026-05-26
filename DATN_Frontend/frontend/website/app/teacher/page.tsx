@@ -1,5 +1,4 @@
-import Link from 'next/link'
-import { ArrowRight, CalendarDays, CheckCircle2, Clock3, Download, LayoutDashboard, Plus, Sparkles, Trophy, TrendingUp, Upload, Users } from 'lucide-react'
+import { CalendarDays, CheckCircle2, Clock3, Trophy, TrendingUp, Users } from 'lucide-react'
 import { TeacherPill, TeacherSectionHeader, TeacherStatCard } from './_components/TeacherShell'
 
 const topics = [
@@ -26,18 +25,6 @@ export default function TeacherIndexPage() {
       <TeacherSectionHeader
         title="Trang chủ giảng viên"
         description="Quản lý đề tài, sinh viên hướng dẫn và hoạt động chấm điểm theo bố cục dashboard nhiều lớp, đậm chất bộ UI tham chiếu."
-        actions={
-          <>
-            <button className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 transition hover:bg-slate-50">
-              <Upload className="h-4 w-4" />
-              Import dữ liệu
-            </button>
-            <Link href="/teacher/topics" className="inline-flex items-center gap-2 rounded-2xl bg-[#2196F3] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-blue-200 transition hover:bg-[#1976D2]">
-              <Plus className="h-4 w-4" />
-              Tạo đề tài mới
-            </Link>
-          </>
-        }
       />
 
       <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">

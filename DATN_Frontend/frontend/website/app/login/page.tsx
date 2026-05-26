@@ -79,7 +79,7 @@ export default function LoginPage() {
       <div className="max-w-md w-full">
         {messageContextHolder}
         <div className="mb-6 flex flex-col items-center text-center">
-          <img src="/images/image-3.png" alt="Logo" className="mb-4 h-20 w-20 object-contain" />
+          <img src="/image-3.png" alt="Logo" className="mb-4 h-20 w-20 object-contain" />
           <h2 className="m-0 text-3xl font-semibold text-slate-900">Đăng nhập</h2>
           <p className="m-0 mt-2 text-sm leading-6 text-slate-500">Chọn vai trò và nhập tài khoản</p>
         </div>

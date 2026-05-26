@@ -24,8 +24,9 @@ import {
 
 const NAV_ITEMS = [
   { key: 'home', href: '/student', label: 'Trang chủ', icon: Home },
-  { key: 'internship', href: '/student/internship', label: 'Đăng ký TTTN', icon: ClipboardList },
-  { key: 'thesis', href: '/student/thesis', label: 'Đề tài ĐATN', icon: BookOpen },
+    { key: 'internship', href: '/student/internship', label: 'Đăng ký TTTN', icon: ClipboardList },
+    { key: 'thesis', href: '/student/thesis-register', label: 'Đăng ký ĐATN', icon: BookOpen },
+    { key: 'thesis-create', href: '/student/thesis-invite', label: 'Tạo nhóm ĐATN', icon: Users },
   { key: 'reports-tttn', href: '/student/reports/tttn', label: 'Báo cáo TTTN', icon: FileText },
   { key: 'reports-datn', href: '/student/reports/datn', label: 'Báo cáo ĐATN', icon: GraduationCap },
   { key: 'results', href: '/student/results', label: 'Kết quả', icon: Award },
@@ -33,7 +34,8 @@ const NAV_ITEMS = [
 
 function getActiveKey(pathname: string) {
   if (pathname.startsWith('/student/internship')) return 'internship'
-  if (pathname.startsWith('/student/thesis')) return 'thesis'
+    if (pathname.startsWith('/student/thesis-register')) return 'thesis'
+    if (pathname.startsWith('/student/thesis-invite')) return 'thesis-create'
   if (pathname.startsWith('/student/reports/tttn')) return 'reports-tttn'
   if (pathname.startsWith('/student/reports/datn')) return 'reports-datn'
   if (pathname.startsWith('/student/results')) return 'results'

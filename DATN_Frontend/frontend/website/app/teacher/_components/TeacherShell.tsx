@@ -4,17 +4,21 @@ import type { ReactNode } from 'react'
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { BookOpen, Building2, CalendarDays, GraduationCap, Home, LogOut, Menu, Search, Trophy, User, Users } from 'lucide-react'
+import { BookOpen, Building2, CalendarDays, ClipboardCheck, GraduationCap, Home, LogOut, Menu, Search, Trophy, User, Users } from 'lucide-react'
 
 const NAV_ITEMS = [
   { key: 'home', href: '/teacher', label: 'Trang chủ', icon: Home },
   { key: 'topics', href: '/teacher/topics', label: 'Đề tài của tôi', icon: BookOpen },
+  { key: 'groups', href: '/teacher/groups', label: 'Duyệt nhóm', icon: Users },
+  { key: 'review-groups', href: '/teacher/review-groups', label: 'Đánh giá nhóm', icon: ClipboardCheck },
   { key: 'students', href: '/teacher/students', label: 'Hướng dẫn sinh viên', icon: Users },
   { key: 'grading', href: '/teacher/grading', label: 'Chấm điểm', icon: Trophy },
 ]
 
 function getActiveKey(pathname: string) {
   if (pathname.startsWith('/teacher/topics')) return 'topics'
+  if (pathname.startsWith('/teacher/groups')) return 'groups'
+  if (pathname.startsWith('/teacher/review-groups')) return 'review-groups'
   if (pathname.startsWith('/teacher/students')) return 'students'
   if (pathname.startsWith('/teacher/grading')) return 'grading'
   return 'home'

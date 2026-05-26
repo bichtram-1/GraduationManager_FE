@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { GraduationCap, User, Lock, LogIn, Users, BookOpen, FolderKanban } from "lucide-react";
 import { Role } from "./Sidebar";
-import logo from "../../imports/image-3.png";
 
 export function Login({ onLogin }: { onLogin: (role: Role) => void }) {
   const [role, setRole] = useState<Role>("admin");
@@ -69,9 +68,9 @@ export function Login({ onLogin }: { onLogin: (role: Role) => void }) {
       <div className="flex-1 flex items-center justify-center p-6">
         <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
           <div className="flex flex-col items-center mb-6">
-            <div className="w-20 h-20 mb-3 flex items-center justify-center">
-              <img src={logo} alt="Trường Cao đẳng Kỹ thuật Cao Thắng" className="w-full h-full object-contain" />
-            </div>
+              <div className="w-20 h-20 mb-3 flex items-center justify-center">
+                <img src="/images/image-3.png" alt="Trường Cao đẳng Kỹ thuật Cao Thắng" className="w-full h-full object-contain" />
+              </div>
             <div className="text-2xl text-gray-900">Đăng nhập</div>
             <div className="text-xs text-gray-500 mt-1">Chọn vai trò và nhập tài khoản đã được cấp</div>
           </div>

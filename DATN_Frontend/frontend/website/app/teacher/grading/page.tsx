@@ -14,8 +14,40 @@ const defaultTttnRows = [
 ]
 
 const defaultCouncilGroups = [
-  { code: 'HD01', name: 'Hội đồng 1 - ĐATN HK2/2025-2026', date: '20/06/2026 • 08:00', room: 'A.102', role: 'Ủy viên', done: 1, total: 2 },
-  { code: 'HD02', name: 'Hội đồng 2 - ĐATN HK2/2025-2026', date: '22/06/2026 • 13:00', room: 'B.201', role: 'GVPB', done: 0, total: 1 },
+  {
+    code: 'HD01',
+    name: 'Hội đồng 1 - ĐATN HK2/2025-2026',
+    date: '20/06/2026 • 08:00',
+    room: 'A.102',
+    role: 'Ủy viên',
+    done: 1,
+    total: 2,
+    members: [
+      { id: 'T001', name: 'TS. Nguyễn Văn GV', role: 'Chủ tịch' },
+      { id: 'T002', name: 'PGS. Trần Thị GV', role: 'Ủy viên' },
+      { id: 'T003', name: 'ThS. Lê Văn GV', role: 'Thư ký' },
+    ],
+    groups: [
+      { groupCode: 'G01', topic: 'Hệ thống IoT', students: [{ id: '20520010', name: 'Lê A' }, { id: '20520011', name: 'Trần B' }] },
+      { groupCode: 'G02', topic: 'Blockchain chuỗi cung ứng', students: [{ id: '20520012', name: 'Nguyễn C' }] },
+    ],
+  },
+  {
+    code: 'HD02',
+    name: 'Hội đồng 2 - ĐATN HK2/2025-2026',
+    date: '22/06/2026 • 13:00',
+    room: 'B.201',
+    role: 'GVPB',
+    done: 0,
+    total: 1,
+    members: [
+      { id: 'T004', name: 'TS. Phạm Thị GV', role: 'Chủ tịch' },
+      { id: 'T005', name: 'ThS. Hoàng GV', role: 'Ủy viên' },
+    ],
+    groups: [
+      { groupCode: 'G03', topic: 'Ứng dụng ML', students: [{ id: '20520020', name: 'Hồ D' }, { id: '20520021', name: 'Phan E' }] },
+    ],
+  },
 ]
 
 const defaultScoreRows = [
@@ -28,6 +60,7 @@ export default function TeacherGradingPage() {
   const [tttnScores, setTttnScores] = useState(defaultTttnRows)
   const [toast, setToast] = useState<string | null>(null)
   const [selectedCouncil, setSelectedCouncil] = useState(defaultCouncilGroups[0])
+  const [selectedGroup, setSelectedGroup] = useState<null | { groupCode: string; topic: string; students: { id: string; name: string }[] }>(null)
   const [selectedTttnId, setSelectedTttnId] = useState(defaultTttnRows[0].id)
   const [councilList, setCouncilList] = useState(defaultCouncilGroups)
   const [scoreList, setScoreList] = useState(defaultScoreRows)
@@ -48,7 +81,10 @@ export default function TeacherGradingPage() {
           setTttnScores(data.tttnRows ?? defaultTttnRows)
           setCouncilList(data.councilGroups ?? defaultCouncilGroups)
           setScoreList(data.scoreRows ?? defaultScoreRows)
-          if (data.councilGroups && data.councilGroups.length > 0) setSelectedCouncil(data.councilGroups[0])
+          if (data.councilGroups && data.councilGroups.length > 0) {
+            setSelectedCouncil(data.councilGroups[0])
+            setSelectedGroup(null)
+          }
         }
       })
       .catch(() => {})
@@ -246,7 +282,7 @@ export default function TeacherGradingPage() {
                   <button
                     key={council.code}
                     type="button"
-                    onClick={() => setSelectedCouncil(council)}
+                        onClick={() => { setSelectedCouncil(council); setSelectedGroup(null) }}
                     className={`w-full rounded-[22px] border px-4 py-4 text-left transition ${active ? 'border-[#2196F3] bg-[#eff6ff]' : 'border-slate-200 bg-slate-50 hover:bg-slate-100'}`}
                   >
                     <div className="flex items-start justify-between gap-4">
@@ -275,24 +311,45 @@ export default function TeacherGradingPage() {
               </div>
               <TeacherPill tone="green">Đang chấm</TeacherPill>
             </div>
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 text-slate-600">
-                <tr>
-                  <th className="px-5 py-3 text-left">MSSV</th>
-                  <th className="px-5 py-3 text-left">Họ tên</th>
-                  <th className="px-5 py-3 text-left">Điểm Ủy viên</th>
-                </tr>
-              </thead>
-              <tbody>
-                {scoreList.map((row) => (
-                  <tr key={row.id} className="border-t border-slate-100 transition hover:bg-slate-50/80">
-                    <td className="px-5 py-4 font-medium text-[#1976D2]">{row.id}</td>
-                    <td className="px-5 py-4 text-slate-900">{row.name}</td>
-                    <td className="px-5 py-4 text-slate-600">{row.member || '—'}</td>
+            {selectedGroup ? (
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 text-slate-600">
+                  <tr>
+                    <th className="px-5 py-3 text-left">MSSV</th>
+                    <th className="px-5 py-3 text-left">Họ tên</th>
+                    <th className="px-5 py-3 text-left">Ghi chú</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {selectedGroup.students.map((s) => (
+                    <tr key={s.id} className="border-t border-slate-100 transition hover:bg-slate-50/80">
+                      <td className="px-5 py-4 font-medium text-[#1976D2]">{s.id}</td>
+                      <td className="px-5 py-4 text-slate-900">{s.name}</td>
+                      <td className="px-5 py-4 text-slate-600">—</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 text-slate-600">
+                  <tr>
+                    <th className="px-5 py-3 text-left">MSSV</th>
+                    <th className="px-5 py-3 text-left">Họ tên</th>
+                    <th className="px-5 py-3 text-left">Điểm Ủy viên</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {scoreList.map((row) => (
+                    <tr key={row.id} className="border-t border-slate-100 transition hover:bg-slate-50/80">
+                      <td className="px-5 py-4 font-medium text-[#1976D2]">{row.id}</td>
+                      <td className="px-5 py-4 text-slate-900">{row.name}</td>
+                      <td className="px-5 py-4 text-slate-600">{row.member || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
             <div className="flex items-center justify-between border-t border-slate-200 px-5 py-4">
               <div className="text-xs text-slate-500">Điểm theo từng vai trò của hội đồng sẽ được cập nhật khi bạn vào phiên chấm.</div>
               <TeacherButton variant="primary" onClick={() => notify('Đã lưu điểm hội đồng')}>
@@ -309,9 +366,40 @@ export default function TeacherGradingPage() {
               <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-[#1976D2]" /> {selectedCouncil.date}</div>
               <div className="flex items-center gap-2"><Users className="h-4 w-4 text-[#1976D2]" /> {selectedCouncil.done}/{selectedCouncil.total} nhóm đã chấm</div>
             </div>
+
+            <div className="mt-4">
+              <div className="text-sm font-medium text-slate-900">Thành viên hội đồng</div>
+              <div className="mt-2 space-y-2 text-sm text-slate-700">
+                {(selectedCouncil.members || []).map((m) => (
+                  <div key={m.id} className="flex items-center justify-between rounded-md bg-white/90 p-3 ring-1 ring-slate-200">
+                    <div>
+                      <div className="font-medium">{m.name}</div>
+                      <div className="text-xs text-slate-500">{m.role}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <div className="text-sm font-medium text-slate-900">Nhóm trong phiên</div>
+              <div className="mt-2 space-y-2">
+                {(selectedCouncil.groups || []).map((g) => (
+                  <button key={g.groupCode} type="button" onClick={() => setSelectedGroup(g)} className={`w-full text-left rounded-md p-3 ${selectedGroup?.groupCode === g.groupCode ? 'bg-[#e6f2ff] ring-1 ring-blue-200' : 'bg-white/90 ring-1 ring-slate-200'}`}>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-medium">Nhóm {g.groupCode} - {g.topic}</div>
+                        <div className="text-xs text-slate-500">{g.students.length} thành viên</div>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="mt-5 rounded-[24px] bg-white/85 p-4 ring-1 ring-slate-200">
               <div className="text-xs text-slate-500">Nhắc nhanh</div>
-              <div className="mt-2 text-sm text-slate-700">Bấm vào từng hội đồng để cập nhật luồng chấm theo phiên tương ứng.</div>
+              <div className="mt-2 text-sm text-slate-700">Bấm vào một nhóm để hiện danh sách sinh viên trong nhóm và bắt đầu chấm.</div>
             </div>
           </section>
         </div>

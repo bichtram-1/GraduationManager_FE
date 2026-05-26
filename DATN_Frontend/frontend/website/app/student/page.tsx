@@ -32,6 +32,10 @@ export default function StudentIndexPage() {
               <Upload className="h-4 w-4" />
               Đăng ký TTTN
             </Link>
+            <Link href="/student/thesis-register" className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 transition hover:bg-slate-50">
+              <FileText className="h-4 w-4" />
+              Đăng ký ĐATN
+            </Link>
             <Link href="/student/results" className="inline-flex items-center gap-2 rounded-2xl bg-[#2196F3] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-blue-200 transition hover:bg-[#1976D2]">
               <Trophy className="h-4 w-4" />
               Xem kết quả
@@ -159,7 +163,8 @@ export default function StudentIndexPage() {
             <div className="text-sm font-semibold text-slate-900">Điều hướng nhanh</div>
             <div className="mt-4 space-y-3 text-sm text-slate-600">
               <Link href="/student/internship" className="flex items-center gap-2 transition hover:text-[#1976D2]"><FileText className="h-4 w-4" /> Đăng ký nơi thực tập</Link>
-              <Link href="/student/thesis" className="flex items-center gap-2 transition hover:text-[#1976D2]"><ArrowRight className="h-4 w-4" /> Chọn đề tài ĐATN</Link>
+              <Link href="/student/thesis-register" className="flex items-center gap-2 transition hover:text-[#1976D2]"><ArrowRight className="h-4 w-4" /> Đăng ký đề tài ĐATN</Link>
+              <Link href="/student/thesis-invite" className="flex items-center gap-2 transition hover:text-[#1976D2]"><ArrowRight className="h-4 w-4" /> Tạo nhóm ĐATN</Link>
               <Link href="/student/reports/tttn" className="flex items-center gap-2 transition hover:text-[#1976D2]"><Upload className="h-4 w-4" /> Nộp báo cáo TTTN</Link>
               <Link href="/student/results" className="flex items-center gap-2 transition hover:text-[#1976D2]"><Trophy className="h-4 w-4" /> Xem điểm tổng kết</Link>
             </div>

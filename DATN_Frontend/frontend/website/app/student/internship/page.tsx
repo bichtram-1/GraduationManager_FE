@@ -1,7 +1,7 @@
-'use client'
+"use client"
 
 import { useMemo, useState } from 'react'
-import { BarChart3, Building2, CheckCircle2, FileText, MapPin, Search, ShieldCheck, Users, ClipboardList, CalendarDays, Phone, Mail } from 'lucide-react'
+import { BarChart3, Building2, CheckCircle2, FileText, MapPin, Search, ShieldCheck, Users, ClipboardList, CalendarDays, Phone, Mail, X, Plus } from 'lucide-react'
 import { StudentPill, StudentSectionHeader } from '../_components/StudentShell'
 
 type Company = {
@@ -64,6 +64,18 @@ export default function StudentInternshipPage() {
   const [query, setQuery] = useState('')
   const [selectedCompany, setSelectedCompany] = useState(companies[0])
   const [note, setNote] = useState('')
+  const [declareOpen, setDeclareOpen] = useState(false)
+  const [declareForm, setDeclareForm] = useState({
+    companyName: '',
+    field: '',
+    address: '',
+    mentor: '',
+    phone: '',
+    email: '',
+    slots: '',
+    duration: '',
+    confirmPaper: false,
+  })
   const filtered = useMemo(() => {
     return companies.filter((company) => {
       const text = `${company.code} ${company.name} ${company.field} ${company.address}`.toLowerCase()
@@ -83,7 +95,19 @@ export default function StudentInternshipPage() {
       <StudentSectionHeader
         title="Đăng ký thực tập tốt nghiệp"
         description="Tìm công ty, xem slot còn trống và khai báo nơi thực tập của bạn."
-        actions={<StudentPill tone="green">Đang mở đăng ký</StudentPill>}
+        actions={
+          <>
+            <StudentPill tone="green">Đang mở đăng ký</StudentPill>
+            <button
+              type="button"
+              onClick={() => setDeclareOpen(true)}
+              className="inline-flex items-center gap-2 rounded-2xl bg-[#2196F3] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-blue-200 transition hover:bg-[#1976D2]"
+            >
+              <Plus className="h-4 w-4" />
+              Khai báo
+            </button>
+          </>
+        }
       />
 
       <div className="mb-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -198,39 +222,90 @@ export default function StudentInternshipPage() {
           </div>
         </section>
 
-        <section className="rounded-[28px] border border-slate-200 bg-[linear-gradient(135deg,#eff6ff_0%,#ffffff_100%)] p-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
-          <div className="flex items-center justify-between">
-            <div className="text-sm font-semibold text-slate-900">Quy trình đăng ký</div>
-            <StudentPill tone="blue">{selectedCompany.duration}</StudentPill>
-          </div>
-          <div className="mt-4 space-y-3 text-sm text-slate-600">
-            <div className="flex items-center gap-2 rounded-2xl bg-white/80 p-3"><ShieldCheck className="h-4 w-4 text-[#1976D2]" /> Chọn công ty phù hợp</div>
-            <div className="flex items-center gap-2 rounded-2xl bg-white/80 p-3"><FileText className="h-4 w-4 text-[#1976D2]" /> Khai báo nơi thực tập</div>
-            <div className="flex items-center gap-2 rounded-2xl bg-white/80 p-3"><CheckCircle2 className="h-4 w-4 text-emerald-600" /> Chờ xác nhận từ Khoa</div>
-            <div className="flex items-center gap-2 rounded-2xl bg-white/80 p-3"><Users className="h-4 w-4 text-[#1976D2]" /> Cập nhật thông tin mentor</div>
-          </div>
+      </div>
 
-          <div className="mt-5 rounded-[24px] bg-white/85 p-4 ring-1 ring-slate-200">
-            <div className="flex items-center gap-2 text-sm font-medium text-slate-900"><ClipboardList className="h-4 w-4 text-[#1976D2]" /> Phiếu khai báo nhanh</div>
-            <div className="mt-3 space-y-3 text-sm">
-              <div className="rounded-2xl bg-slate-50 px-4 py-3 text-slate-600">Đơn vị: {selectedCompany.name}</div>
-              <div className="rounded-2xl bg-slate-50 px-4 py-3 text-slate-600">Mentor: {selectedCompany.mentor}</div>
-              <div className="rounded-2xl bg-slate-50 px-4 py-3 text-slate-600">Ghi chú: {note || 'Chưa có ghi chú bổ sung'}</div>
-              <textarea
-                value={note}
-                onChange={(event) => setNote(event.target.value)}
-                rows={4}
-                placeholder="Nhập ghi chú ngắn cho khoa hoặc mentor..."
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-400"
-              />
-              <button type="button" className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#2196F3] px-4 py-3 text-sm font-medium text-white shadow-lg shadow-blue-200 transition hover:bg-[#1976D2]">
-                <CalendarDays className="h-4 w-4" />
-                Gửi khai báo
+      {declareOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 py-8 backdrop-blur-sm">
+          <div className="relative w-full max-w-2xl overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_30px_120px_rgba(15,23,42,0.3)]">
+            <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-5 py-4">
+              <div>
+                <div className="text-sm font-semibold text-slate-900">Khai báo nơi thực tập</div>
+                <div className="text-xs text-slate-500">Khai báo công ty không có trong danh sách</div>
+              </div>
+              <button onClick={() => setDeclareOpen(false)} className="rounded-full p-2 text-slate-500 transition hover:bg-slate-200 hover:text-slate-700" aria-label="Đóng popup">
+                <X className="h-4 w-4" />
               </button>
             </div>
+
+            <div className="max-h-[75vh] overflow-y-auto p-5">
+              <div className="grid gap-4 md:grid-cols-2">
+                <label className="block">
+                  <div className="text-sm font-medium text-slate-700">Tên công ty</div>
+                  <input value={declareForm.companyName} onChange={(event) => setDeclareForm((current) => ({ ...current, companyName: event.target.value }))} className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white" placeholder="Nhập tên công ty" />
+                </label>
+                <label className="block">
+                  <div className="text-sm font-medium text-slate-700">Lĩnh vực</div>
+                  <input value={declareForm.field} onChange={(event) => setDeclareForm((current) => ({ ...current, field: event.target.value }))} className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white" placeholder="Phần mềm, fintech, sản xuất..." />
+                </label>
+                <label className="block md:col-span-2">
+                  <div className="text-sm font-medium text-slate-700">Địa chỉ</div>
+                  <input value={declareForm.address} onChange={(event) => setDeclareForm((current) => ({ ...current, address: event.target.value }))} className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white" placeholder="Nhập địa chỉ công ty" />
+                </label>
+                <label className="block">
+                  <div className="text-sm font-medium text-slate-700">Mentor</div>
+                  <input value={declareForm.mentor} onChange={(event) => setDeclareForm((current) => ({ ...current, mentor: event.target.value }))} className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white" placeholder="Người hướng dẫn tại công ty" />
+                </label>
+                <label className="block">
+                  <div className="text-sm font-medium text-slate-700">Số điện thoại</div>
+                  <input value={declareForm.phone} onChange={(event) => setDeclareForm((current) => ({ ...current, phone: event.target.value }))} className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white" placeholder="0901234567" />
+                </label>
+                <label className="block">
+                  <div className="text-sm font-medium text-slate-700">Email</div>
+                  <input value={declareForm.email} onChange={(event) => setDeclareForm((current) => ({ ...current, email: event.target.value }))} className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white" placeholder="mentor@company.com" />
+                </label>
+                <label className="block">
+                  <div className="text-sm font-medium text-slate-700">Số slot</div>
+                  <input value={declareForm.slots} onChange={(event) => setDeclareForm((current) => ({ ...current, slots: event.target.value }))} className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white" placeholder="5" />
+                </label>
+                <label className="block">
+                  <div className="text-sm font-medium text-slate-700">Thời gian thực tập</div>
+                  <input value={declareForm.duration} onChange={(event) => setDeclareForm((current) => ({ ...current, duration: event.target.value }))} className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white" placeholder="8 tuần" />
+                </label>
+              </div>
+
+              <label className="mt-4 flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <input
+                  type="checkbox"
+                  checked={declareForm.confirmPaper}
+                  onChange={(event) => setDeclareForm((current) => ({ ...current, confirmPaper: event.target.checked }))}
+                  className="mt-1 h-4 w-4 rounded border-slate-300 text-[#2196F3] focus:ring-[#2196F3]"
+                />
+                <div>
+                  <div className="text-sm font-medium text-slate-900">Đăng ký giấy xác nhận thực tập</div>
+                  <div className="mt-1 text-xs text-slate-500">Chọn nếu bạn cần Khoa xác nhận giấy thực tập cho công ty này.</div>
+                </div>
+              </label>
+
+              <div className="mt-5 flex items-center justify-end gap-3">
+                <button type="button" onClick={() => setDeclareOpen(false)} className="rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDeclareOpen(false)
+                    alert(`Đã gửi khai báo: ${declareForm.companyName || 'Công ty mới'}${declareForm.confirmPaper ? ' + giấy xác nhận thực tập' : ''}`)
+                  }}
+                  className="inline-flex items-center gap-2 rounded-2xl bg-[#2196F3] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-blue-200 transition hover:bg-[#1976D2]"
+                >
+                  <CalendarDays className="h-4 w-4" />
+                  Gửi khai báo
+                </button>
+              </div>
+            </div>
           </div>
-        </section>
-      </div>
+        </div>
+      )}
     </>
   )
 }

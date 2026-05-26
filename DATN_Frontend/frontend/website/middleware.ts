@@ -13,6 +13,11 @@ export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
   const token = req.cookies.get(STORAGES.ACCESS_TOKEN)?.value
 
+  // Always allow static file requests in /public (e.g. /image-3.png).
+  if (/\.[^/]+$/.test(pathname)) {
+    return NextResponse.next()
+  }
+
   // 1. Nếu đang vào public path
   if (PUBLIC_PATHS.some(p => pathname.startsWith(p))) {
     // 1a. Nếu đã login (token tồn tại) → redirect về homepage
@@ -40,5 +45,5 @@ export function middleware(req: NextRequest) {
 
 // Áp dụng middleware cho toàn bộ route, trừ static, api/public, _next...
 export const config = {
-  matcher: '/((?!api/public|api/mock|_next/static|_next/image|favicon.ico).*)',
+  matcher: '/((?!api/public|api/mock|_next/static|_next/image|favicon.ico|.*\\..*).*)',
 }

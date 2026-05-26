@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { BarChart3, Eye, GitBranch, Mail, MapPin, Phone, Search, ShieldCheck, Star, Users, Clock3, Sparkles } from 'lucide-react'
+import { BarChart3, BookOpen, Eye, GitBranch, Mail, MapPin, Phone, Search, ShieldCheck, Star, Users, Clock3, Sparkles } from 'lucide-react'
 import { TeacherPill, TeacherSectionHeader } from '../_components/TeacherShell'
 import { TeacherButton, TeacherCard } from '../_components/TeacherUI'
 

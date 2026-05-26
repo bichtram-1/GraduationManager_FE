@@ -1,9 +1,10 @@
-'use client'
+"use client"
 
 import { useMemo, useState } from 'react'
-import { BarChart3, BookOpen, CheckCircle, Clock3, Download, Eye, FileText, Layers3, Plus, Search, ShieldCheck, Upload, Users } from 'lucide-react'
+import { BarChart3, CheckCircle, Edit2, Eye, Plus, ShieldCheck, Trash2, Users } from 'lucide-react'
 import { TeacherPill, TeacherSectionHeader } from '../_components/TeacherShell'
-import { TeacherButton, TeacherCard, TeacherField, TeacherInputClass, TeacherModal, TeacherToolbar } from '../_components/TeacherUI'
+import { TeacherButton, TeacherCard, TeacherToolbar } from '../_components/TeacherUI'
+import ModalCreateEditTopic from './components/ModalCreateEditTopic'
 
 const TOPICS = [
   {
@@ -46,101 +47,205 @@ const TOPICS = [
     summary: 'Tự động hóa quy trình chấm và phản hồi cho sinh viên.',
     progress: 10,
   },
-]
+] as const
 
-export default function TeacherTopicsPage() {
+type Topic = {
+  code: string
+  name: string
+  slots: string
+  status: 'Đã duyệt' | 'Chờ duyệt' | 'Từ chối'
+  note: string
+  semester: string
+  summary: string
+  progress: number
+}
+
+type SaveTopicPayload = {
+  code: string
+  name: string
+  summary: string
+  maxSlots: number
+}
+
+async function mockUpdateTopic(current: Topic[], payload: SaveTopicPayload): Promise<Topic[]> {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve(
+        current.map((topic) => {
+          if (topic.code !== payload.code) return topic
+          const registered = Number.parseInt(topic.slots.split('/')[0] ?? '0', 10)
+          const boundedRegistered = Number.isNaN(registered) ? 0 : Math.min(registered, payload.maxSlots)
+          const progress = Math.max(0, Math.min(100, Math.round((boundedRegistered / payload.maxSlots) * 100)))
+          return {
+            ...topic,
+            name: payload.name,
+            summary: payload.summary,
+            slots: `${boundedRegistered}/${payload.maxSlots}`,
+            progress,
+          }
+        })
+      )
+    }, 180)
+  })
+}
+
+async function mockDeleteTopic(current: Topic[], code: string): Promise<Topic[]> {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve(current.filter((topic) => topic.code !== code))
+    }, 180)
+  })
+}
+
+export default function Page() {
+  const [topicList, setTopicList] = useState<Topic[]>(TOPICS as unknown as Topic[])
   const [openCreate, setOpenCreate] = useState(false)
-  const [selectedTopic, setSelectedTopic] = useState<(typeof TOPICS)[number] | null>(TOPICS[0])
+  const [selectedTopic, setSelectedTopic] = useState<Topic | null>(TOPICS[0] as Topic)
+  const [editingCode, setEditingCode] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [deletingCode, setDeletingCode] = useState<string | null>(null)
   const [query, setQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'Đã duyệt' | 'Chờ duyệt' | 'Từ chối'>('all')
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [slots, setSlots] = useState('4')
 
   const filtered = useMemo(
     () =>
-      TOPICS.filter((topic) => {
+      topicList.filter((topic) => {
         const q = query.toLowerCase()
-        return !q || [topic.code, topic.name, topic.status].some((value) => value.toLowerCase().includes(q))
+        const statusMatch = statusFilter === 'all' || topic.status === statusFilter
+        return statusMatch && (!q || [topic.code, topic.name, topic.status].some((value) => value.toLowerCase().includes(q)))
       }),
-    [query]
+    [query, statusFilter, topicList]
   )
 
-  const summary = [
-    { title: 'Đề tài đã duyệt', value: TOPICS.filter((topic) => topic.status === 'Đã duyệt').length.toString(), hint: 'Có thể cho sinh viên đăng ký' },
-    { title: 'Chờ duyệt', value: TOPICS.filter((topic) => topic.status === 'Chờ duyệt').length.toString(), hint: 'Đang chờ bộ phận quản lý' },
-    { title: 'Từ chối', value: TOPICS.filter((topic) => topic.status === 'Từ chối').length.toString(), hint: 'Cần chỉnh mô tả hoặc scope' },
-  ]
+  const statusCount = useMemo(
+    () => ({
+      all: topicList.length,
+      approved: topicList.filter((topic) => topic.status === 'Đã duyệt').length,
+      pending: topicList.filter((topic) => topic.status === 'Chờ duyệt').length,
+      rejected: topicList.filter((topic) => topic.status === 'Từ chối').length,
+    }),
+    [topicList]
+  )
+
+  const resetForm = () => {
+    setName('')
+    setDescription('')
+    setSlots('4')
+    setEditingCode(null)
+  }
+
+  const openCreateModal = () => {
+    resetForm()
+    setOpenCreate(true)
+  }
+
+  const handleEdit = (topic: Topic) => {
+    setSelectedTopic(topic)
+    setEditingCode(topic.code)
+    setName(topic.name)
+    setDescription(topic.summary)
+    setSlots(topic.slots.split('/')[1] ?? '4')
+    setOpenCreate(true)
+  }
+
+  const handleDelete = async (topic: Topic) => {
+    const ok = window.confirm(`Bạn có chắc muốn xóa đề tài ${topic.code} - ${topic.name}?`)
+    if (!ok) return
+
+    setDeletingCode(topic.code)
+    const nextList = await mockDeleteTopic(topicList, topic.code)
+    setTopicList(nextList)
+    setSelectedTopic((currentSelected) => {
+      if (!currentSelected || currentSelected.code !== topic.code) return currentSelected
+      return nextList[0] ?? null
+    })
+    setDeletingCode(null)
+  }
+
+  const handleSave = async () => {
+    const trimmedName = name.trim()
+    const trimmedSummary = description.trim()
+    const maxSlots = Number.parseInt(slots, 10)
+
+    if (!trimmedName || !trimmedSummary || Number.isNaN(maxSlots) || maxSlots <= 0) {
+      return
+    }
+
+    setSubmitting(true)
+
+    if (editingCode) {
+      const nextList = await mockUpdateTopic(topicList, {
+        code: editingCode,
+        name: trimmedName,
+        summary: trimmedSummary,
+        maxSlots,
+      })
+
+      setTopicList(nextList)
+      setSelectedTopic((current) => {
+        if (!current || current.code !== editingCode) return current
+        return nextList.find((topic) => topic.code === editingCode) ?? current
+      })
+    } else {
+      const newCode = `DA${String(topicList.length + 1).padStart(3, '0')}`
+      const newTopic: Topic = {
+        code: newCode,
+        name: trimmedName,
+        slots: `0/${maxSlots}`,
+        status: 'Chờ duyệt',
+        note: 'Mới tạo từ giao diện giảng viên',
+        semester: 'HK2/2025-2026',
+        summary: trimmedSummary,
+        progress: 0,
+      }
+      setTopicList((current) => [newTopic, ...current])
+      setSelectedTopic(newTopic)
+    }
+
+    setSubmitting(false)
+    setOpenCreate(false)
+    resetForm()
+  }
 
   return (
     <>
       <TeacherSectionHeader
         title="Đề tài của tôi"
-        description="Tạo đề tài ĐATN, theo dõi slot đăng ký và trạng thái duyệt trong cùng một màn hình giống bộ design tham chiếu."
+        description="Theo dõi đề tài, cập nhật nội dung và quản lý trạng thái ngay trên một màn hình."
         actions={
-          <>
-            <label className="inline-flex cursor-pointer items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50">
-              <Upload className="h-4 w-4" />
-              Import file đề tài
-              <input type="file" accept=".xlsx,.xls" className="hidden" />
-            </label>
-            <TeacherButton variant="primary" className="!h-11" onClick={() => setOpenCreate(true)}>
-              <span className="inline-flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Tạo đề tài mới
-              </span>
-            </TeacherButton>
-          </>
+          <TeacherButton variant="primary" className="!h-11" onClick={openCreateModal}>
+            <span className="inline-flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              Tạo đề tài mới
+            </span>
+          </TeacherButton>
         }
       />
 
-      <section className="mb-5 rounded-[28px] border border-blue-100 bg-[linear-gradient(135deg,#eff6ff_0%,#ffffff_100%)] p-5 shadow-[0_12px_40px_rgba(15,23,42,0.05)]">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="max-w-3xl">
-            <TeacherPill tone="blue">Quản lý đề tài ĐATN</TeacherPill>
-            <h2 className="mt-3 text-xl font-semibold tracking-tight text-slate-900">Danh sách đề tài được trình bày như một bảng điều khiển gọn, có chi tiết và hành động nhanh.</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
-              Khối này giúp giảng viên xem trạng thái duyệt, slot đăng ký và phản hồi nhanh hơn mà không phải rời khỏi màn hình.
-            </p>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[440px]">
-            <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
-              <div className="text-xs text-slate-500">Duyệt</div>
-              <div className="mt-2 text-lg font-semibold text-slate-900">{summary[0].value}</div>
-            </div>
-            <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
-              <div className="text-xs text-slate-500">Chờ duyệt</div>
-              <div className="mt-2 text-lg font-semibold text-slate-900">{summary[1].value}</div>
-            </div>
-            <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
-              <div className="text-xs text-slate-500">Từ chối</div>
-              <div className="mt-2 text-lg font-semibold text-slate-900">{summary[2].value}</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <div className="mb-4 grid gap-4 md:grid-cols-3">
-        {summary.map((item) => (
-          <TeacherCard key={item.title} className="p-5">
-            <div className="inline-flex rounded-2xl bg-gradient-to-br from-[#2196F3] to-[#2563eb] px-3 py-2 text-white shadow-lg shadow-blue-100">
-              <BarChart3 className="h-4 w-4" />
-            </div>
-            <div className="mt-4 text-3xl font-semibold tracking-tight text-slate-900">{item.value}</div>
-            <div className="mt-1 text-sm font-medium text-slate-700">{item.title}</div>
-            <div className="mt-2 text-xs text-slate-500">{item.hint}</div>
-          </TeacherCard>
-        ))}
+      <div className="mb-4 flex flex-wrap gap-2 rounded-[28px] border border-slate-200 bg-white p-2 shadow-[0_12px_40px_rgba(15,23,42,0.05)]">
+        {[
+          { key: 'all', label: 'Tất cả', count: statusCount.all },
+          { key: 'Đã duyệt', label: 'Đã duyệt', count: statusCount.approved },
+          { key: 'Chờ duyệt', label: 'Chờ duyệt', count: statusCount.pending },
+          { key: 'Từ chối', label: 'Từ chối', count: statusCount.rejected },
+        ].map((tab) => {
+          const active = statusFilter === tab.key
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setStatusFilter(tab.key as typeof statusFilter)}
+              className={`inline-flex items-center gap-2 rounded-[20px] px-4 py-2.5 text-sm font-medium transition ${active ? 'bg-[#2196F3] text-white shadow-lg shadow-blue-200' : 'text-slate-600 hover:bg-slate-50'}`}
+            >
+              {tab.label}
+              <span className={`rounded-full px-2 py-0.5 text-xs ${active ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'}`}>{tab.count}</span>
+            </button>
+          )
+        })}
       </div>
-
-      <section className="mb-4 rounded-[28px] border border-blue-100 bg-[#eff6ff] p-5 text-sm text-[#1976D2] shadow-[0_12px_40px_rgba(15,23,42,0.04)]">
-        <div className="flex items-start gap-3">
-          <CheckCircle className="mt-0.5 h-5 w-5" />
-          <div>
-            <div className="font-medium">Đề tài của bạn sẽ được hiển thị ở trạng thái chờ duyệt trước khi sinh viên đăng ký.</div>
-            <div className="mt-1 text-xs text-[#4f77b5]">UI này mô phỏng phong cách của bộ design gốc: thẻ bo góc lớn, header nổi bật và bảng dữ liệu sạch.</div>
-          </div>
-        </div>
-      </section>
 
       <TeacherCard>
         <TeacherToolbar
@@ -149,8 +254,8 @@ export default function TeacherTopicsPage() {
           onChange={setQuery}
         >
           <TeacherPill tone="blue">Tất cả học kỳ</TeacherPill>
-          <TeacherPill tone="green">4 đề tài đã duyệt</TeacherPill>
-          <TeacherPill tone="orange">2 đề tài chờ duyệt</TeacherPill>
+          <TeacherPill tone="green">{statusCount.approved} đề tài đã duyệt</TeacherPill>
+          <TeacherPill tone="orange">{statusCount.pending} đề tài chờ duyệt</TeacherPill>
         </TeacherToolbar>
 
         <table className="w-full text-sm">
@@ -181,11 +286,16 @@ export default function TeacherTopicsPage() {
                     <button className="rounded-2xl p-2 text-[#1976D2] transition hover:bg-blue-50" title="Xem chi tiết" onClick={() => setSelectedTopic(topic)}>
                       <Eye className="h-4 w-4" />
                     </button>
-                    <button className="rounded-2xl p-2 text-emerald-600 transition hover:bg-emerald-50" title="Phê duyệt">
-                      <CheckCircle className="h-4 w-4" />
+                    <button className="rounded-2xl p-2 text-amber-600 transition hover:bg-amber-50" title="Sửa" onClick={() => handleEdit(topic)}>
+                      <Edit2 className="h-4 w-4" />
                     </button>
-                    <button className="rounded-2xl p-2 text-slate-600 transition hover:bg-slate-100" title="Tải xuống">
-                      <Download className="h-4 w-4" />
+                    <button
+                      className="rounded-2xl p-2 text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      title="Xóa"
+                      onClick={() => handleDelete(topic)}
+                      disabled={deletingCode === topic.code}
+                    >
+                      <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
                 </td>
@@ -194,56 +304,6 @@ export default function TeacherTopicsPage() {
           </tbody>
         </table>
       </TeacherCard>
-
-      <div className="mt-6 grid gap-6 xl:grid-cols-3">
-        <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)] xl:col-span-2">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm font-semibold text-slate-900">Sinh viên chưa có đề tài</div>
-              <div className="text-xs text-slate-500">Danh sách để nhắc nhở hoặc phân công thêm</div>
-            </div>
-            <TeacherPill tone="orange">3 sinh viên</TeacherPill>
-          </div>
-          <div className="mt-4 space-y-3">
-            {['20520014 - Nguyễn Văn P', '20520018 - Trần Thị Q', '20520020 - Mai Thị K'].map((student) => (
-              <div key={student} className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3">
-                <div className="text-sm text-slate-700">{student}</div>
-                <button className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-100">
-                  Gửi nhắc nhở
-                </button>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="rounded-[28px] border border-slate-200 bg-[linear-gradient(135deg,#eff6ff_0%,#ffffff_100%)] p-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
-          <div className="text-sm font-semibold text-slate-900">Thao tác nhanh</div>
-          <div className="mt-4 space-y-3 text-sm text-slate-600">
-            <div className="flex items-center gap-2"><BookOpen className="text-[#1976D2]" /> Tạo mới đề tài ĐATN</div>
-            <div className="flex items-center gap-2"><Upload className="text-[#1976D2]" /> Import danh sách đề tài</div>
-            <div className="flex items-center gap-2"><Layers3 className="text-[#1976D2]" /> Phân nhóm theo học kỳ</div>
-            <div className="flex items-center gap-2"><ShieldCheck className="text-[#1976D2]" /> Kiểm tra trạng thái duyệt</div>
-            <div className="flex items-center gap-2"><Clock3 className="text-[#1976D2]" /> Cập nhật slot đăng ký</div>
-          </div>
-
-          {selectedTopic && (
-            <div className="mt-5 rounded-[24px] bg-white/85 p-4 ring-1 ring-slate-200">
-              <div className="flex items-center justify-between gap-2">
-                <div>
-                  <div className="text-sm font-medium text-slate-900">Đang xem</div>
-                  <div className="text-xs text-slate-500">Chi tiết đề tài đã chọn từ bảng</div>
-                </div>
-                <TeacherPill tone={selectedTopic.status === 'Đã duyệt' ? 'green' : selectedTopic.status === 'Từ chối' ? 'red' : 'orange'}>{selectedTopic.code}</TeacherPill>
-              </div>
-              <div className="mt-4 space-y-2 text-sm text-slate-600">
-                <div className="rounded-2xl bg-slate-50 px-4 py-3">{selectedTopic.name}</div>
-                <div className="rounded-2xl bg-slate-50 px-4 py-3">{selectedTopic.summary}</div>
-                <div className="rounded-2xl bg-slate-50 px-4 py-3">{selectedTopic.slots} slot · {selectedTopic.progress}% đã lấp đầy</div>
-              </div>
-            </div>
-          )}
-        </section>
-      </div>
 
       <section className="mt-6 grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
         <TeacherCard className="p-5">
@@ -300,27 +360,22 @@ export default function TeacherTopicsPage() {
         </TeacherCard>
       </section>
 
-      <TeacherModal
+      <ModalCreateEditTopic
         open={openCreate}
-        title="Tạo đề tài ĐATN mới"
-        onClose={() => setOpenCreate(false)}
-      >
-        <div className="mt-2">
-          <TeacherField label="Tên đề tài" required>
-            <input value={name} onChange={(e) => setName(e.target.value)} className={TeacherInputClass()} placeholder="VD: Hệ thống chatbot hỗ trợ tuyển sinh" />
-          </TeacherField>
-          <TeacherField label="Mô tả ngắn" required>
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className={TeacherInputClass('resize-none')} placeholder="Mô tả mục tiêu và nội dung chính" />
-          </TeacherField>
-          <TeacherField label="Số slot tối đa" required>
-            <input value={slots} onChange={(e) => setSlots(e.target.value)} type="number" className={TeacherInputClass()} />
-          </TeacherField>
-          <div className="flex justify-end gap-2 pt-2">
-            <TeacherButton variant="secondary" onClick={() => setOpenCreate(false)}>Hủy</TeacherButton>
-            <TeacherButton variant="primary" onClick={() => setOpenCreate(false)}>Gửi yêu cầu duyệt</TeacherButton>
-          </div>
-        </div>
-      </TeacherModal>
+        submitting={submitting}
+        editingCode={editingCode}
+        name={name}
+        description={description}
+        slots={slots}
+        onChangeName={setName}
+        onChangeDescription={setDescription}
+        onChangeSlots={setSlots}
+        onClose={() => {
+          setOpenCreate(false)
+          resetForm()
+        }}
+        onSave={handleSave}
+      />
     </>
   )
 }
