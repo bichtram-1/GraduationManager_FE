@@ -41,7 +41,7 @@ const ViTranslation = {
   email: 'Email',
   phone_number: 'Số điện thoại',
   // Users
-  user_management: 'Quản lý Users',
+  user_management: 'Quản lý người dùng',
   user_management_desc: 'Quản lý tài khoản học viên',
   company_management: 'Quản lý công ty',
   company_management_desc: 'Quản lý doanh nghiệp tiếp nhận thực tập và đồ án',
