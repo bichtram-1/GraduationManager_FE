@@ -200,13 +200,7 @@ export default function TeacherStudentsPage() {
                 <div className="mt-2 text-sm text-slate-600">{comments[selectedTTTN.id]}</div>
               </div>
             )}
-            <div className="rounded-3xl bg-white/85 p-4 ring-1 ring-slate-200">
-              <div className="flex items-center gap-2 text-sm font-medium text-slate-900"><Sparkles className="h-4 w-4 text-[#1976D2]" /> Hành động gợi ý</div>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <TeacherButton variant="secondary" className="px-3 py-2 text-xs">Gửi nhắc nộp</TeacherButton>
-                <TeacherButton variant="primary" className="px-3 py-2 text-xs">Mở chi tiết</TeacherButton>
-              </div>
-            </div>
+            {/* Hành động gợi ý removed */}
           </TeacherCard>
         </div>
       ) : (
@@ -280,13 +274,7 @@ export default function TeacherStudentsPage() {
                 <div className="mt-2 text-sm text-slate-600">{comments[selectedDATN.group]}</div>
               </div>
             )}
-            <div className="rounded-3xl bg-white/85 p-4 ring-1 ring-slate-200">
-              <div className="flex items-center gap-2 text-sm font-medium text-slate-900"><Sparkles className="h-4 w-4 text-[#1976D2]" /> Hành động gợi ý</div>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <TeacherButton variant="secondary" className="px-3 py-2 text-xs">Xem repot</TeacherButton>
-                <TeacherButton variant="primary" className="px-3 py-2 text-xs">Nhận xét nhóm</TeacherButton>
-              </div>
-            </div>
+            {/* Hành động gợi ý removed */}
           </TeacherCard>
         </div>
       )}
