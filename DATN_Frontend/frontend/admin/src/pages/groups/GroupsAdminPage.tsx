@@ -2,17 +2,21 @@ import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getKey } from '@shared/types/I18nKeyType';
 import { Table, Button, Drawer, Modal, Tooltip, Avatar, Tag, Input, Select, Space, message } from 'antd';
-import { ExclamationCircleOutlined, EyeOutlined, EditOutlined, PlusOutlined, SwapOutlined, DeleteOutlined, LockOutlined } from '@ant-design/icons';
+import { ExclamationCircleOutlined, EyeOutlined, PlusOutlined, SwapOutlined, DeleteOutlined, LockOutlined } from '@ant-design/icons';
+import AddMemberModal from './components/AddMemberModal';
+import MergeModal from './components/MergeModal';
+import type { GroupStatus, IGroupMember, IListGroup } from '../../type/GroupType';
+import { groupHooks } from '../../hooks/useGroups';
 
-type Student = { id: string; name: string; code: string; eligible: boolean; reason?: string };
-type Group = {
+type Student = IGroupMember & { eligible: boolean; reason?: string };
+type Group = IListGroup & {
   id: string;
   code: string;
   title: string;
   supervisor: string;
   members: Student[];
   maxMembers: number;
-  status: 'PENDING' | 'APPROVED' | 'MISSING' | 'LOCKED' | 'DISSOLVED' | 'WARNING';
+  status: GroupStatus | 'PENDING' | 'APPROVED' | 'MISSING' | 'LOCKED' | 'DISSOLVED' | 'WARNING';
   registrationBatch: string;
 };
 
@@ -58,17 +62,19 @@ const STATUS_META: Record<Group['status'], { label: string; color: string }> = {
 
 const GroupsAdminPage: React.FC = () => {
   const { t } = useTranslation();
-  const [groups, setGroups] = useState<Group[]>(initialGroups);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [batchFilter, setBatchFilter] = useState<string | null>(null);
   const [supervisorFilter, setSupervisorFilter] = useState<string | null>(null);
-  const [drawerGroup, setDrawerGroup] = useState<Group | null>(null);
-  const [addModalGroup, setAddModalGroup] = useState<Group | null>(null);
+  const [drawerGroup, setDrawerGroup] = useState<IListGroup | null>(null);
+  const [addModalGroup, setAddModalGroup] = useState<IListGroup | null>(null);
   const [mergeMode, setMergeMode] = useState(false);
   const [mergeLeft, setMergeLeft] = useState<string | null>(null);
   const [mergeRight, setMergeRight] = useState<string | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<Group | null>(null);
+  const { data: groupList } = groupHooks.useFetchListGroups();
+  const updateGroupMutation = groupHooks.useUpdateGroup();
+  const deleteGroupMutation = groupHooks.useDeleteGroup();
+  const groups = (groupList?.rows as Group[] | undefined) ?? initialGroups;
   const supervisors = useMemo(() => Array.from(new Set(groups.map((g) => g.supervisor))), [groups]);
 
   const total = groups.length;
@@ -93,8 +99,21 @@ const GroupsAdminPage: React.FC = () => {
     setDrawerGroup(g);
   }
 
-  function saveGroup(updated: Group) {
-    setGroups((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+  async function saveGroup(updated: Group) {
+    await updateGroupMutation.mutateAsync({
+      id: updated.id,
+      body: {
+        title: updated.title,
+        supervisor: updated.supervisor,
+        members: updated.members,
+        maxMembers: updated.maxMembers,
+        status: updated.status,
+        registrationBatch: updated.registrationBatch,
+        code: updated.code,
+      },
+      index: 0,
+      params: { page: 1, limit: 10 },
+    });
     setDrawerGroup(null);
     message.success('Đã lưu thay đổi');
   }
@@ -103,17 +122,19 @@ const GroupsAdminPage: React.FC = () => {
     setAddModalGroup(g);
   }
 
-  function addMemberToGroup(groupId: string, student: Student, force = false) {
-    setGroups((prev) =>
-      prev.map((g) => {
-        if (g.id !== groupId) return g;
-        const already = g.members.find((m) => m.id === student.id);
-        if (already) return g;
-        const newMembers = [...g.members, student];
-        const newStatus = newMembers.length < 2 ? 'MISSING' : g.status === 'LOCKED' ? 'LOCKED' : g.status;
-        return { ...g, members: newMembers, status: newStatus };
-      })
-    );
+  async function addMemberToGroup(groupId: string, student: Student, _force = false) {
+    const group = groups.find((item) => item.id === groupId);
+    if (!group) return;
+    const already = group.members.find((member) => member.id === student.id);
+    if (already) return;
+    const newMembers = [...group.members, student];
+    const newStatus = newMembers.length < 2 ? 'MISSING' : group.status === 'LOCKED' ? 'LOCKED' : group.status;
+    await updateGroupMutation.mutateAsync({
+      id: groupId,
+      body: { members: newMembers, status: newStatus },
+      index: 0,
+      params: { page: 1, limit: 10 },
+    });
     setAddModalGroup(null);
     message.success('Đã thêm thành viên (mô phỏng)');
   }
@@ -123,22 +144,23 @@ const GroupsAdminPage: React.FC = () => {
       title: 'Xác nhận loại sinh viên',
       icon: <ExclamationCircleOutlined />,
       content: 'Bạn có chắc muốn xóa sinh viên này khỏi nhóm? Hành động này sẽ ghi nhận là "bị loại"',
-      onOk() {
-        setGroups((prev) =>
-          prev.map((g) => {
-            if (g.id !== groupId) return g;
-            const left = g.members.filter((m) => m.id !== studentId);
-            const newStatus = left.length < 2 ? 'MISSING' : g.status;
-            return { ...g, members: left, status: newStatus };
-          })
-        );
+      async onOk() {
+        const group = groups.find((item) => item.id === groupId);
+        if (!group) return;
+        const left = group.members.filter((member) => member.id !== studentId);
+        const newStatus = left.length < 2 ? 'MISSING' : group.status;
+        await updateGroupMutation.mutateAsync({
+          id: groupId,
+          body: { members: left, status: newStatus },
+          index: 0,
+          params: { page: 1, limit: 10 },
+        });
         message.success('Đã loại sinh viên (mô phỏng)');
       },
     });
   }
 
   function promptDelete(group: Group) {
-    setDeleteTarget(group);
     Modal.confirm({
       title: 'Xóa nhóm — xác nhận',
       icon: <ExclamationCircleOutlined />,
@@ -149,8 +171,7 @@ const GroupsAdminPage: React.FC = () => {
         </div>
       ),
       onOk() {
-        // perform delete
-        setGroups((prev) => prev.filter((p) => p.id !== group.id));
+        deleteGroupMutation.mutate({ id: group.id, params: { page: 1, limit: 10 } });
         message.success('Đã xóa nhóm (mô phỏng)');
       },
     });
@@ -166,14 +187,19 @@ const GroupsAdminPage: React.FC = () => {
     Modal.confirm({
       title: 'Xác nhận ghép nhóm',
       content: `${left.code} ← ${right.code}\nSau ghép: ${totalMembers} thành viên.`,
-      onOk() {
-        setGroups((prev) =>
-          prev.map((g) => {
-            if (g.id === left.id) return { ...g, members: [...g.members, ...right.members] } as Group;
-            if (g.id === right.id) return { ...g, status: 'DISSOLVED' } as Group;
-            return g;
-          })
-        );
+      async onOk() {
+        await updateGroupMutation.mutateAsync({
+          id: left.id,
+          body: { members: [...left.members, ...right.members] },
+          index: 0,
+          params: { page: 1, limit: 10 },
+        });
+        await updateGroupMutation.mutateAsync({
+          id: right.id,
+          body: { status: 'DISSOLVED' },
+          index: 0,
+          params: { page: 1, limit: 10 },
+        });
         setMergeMode(false);
         setMergeLeft(null);
         setMergeRight(null);
@@ -195,7 +221,7 @@ const GroupsAdminPage: React.FC = () => {
     {
       title: 'Thành viên',
       key: 'members',
-      render: (_: any, record: Group) => (
+      render: (_: unknown, record: Group) => (
         <Space>
           {record.members.map((m) => (
             <Tooltip key={m.id} title={m.eligible ? m.name : `${m.name} — ${m.reason}`}>
@@ -210,16 +236,16 @@ const GroupsAdminPage: React.FC = () => {
     {
       title: 'Trạng thái',
       key: 'status',
-      render: (_: any, r: Group) => {
+      render: (_: unknown, r: Group) => {
         const meta = STATUS_META[r.status];
         return <Tag color={meta.color} className="!px-2 !py-[2px] !text-xs !font-medium">{meta.label}</Tag>;
       },
     },
-    { title: 'Số thành viên', key: 'count', render: (_: any, r: Group) => `${r.members.length}/${r.maxMembers}` },
+    { title: 'Số thành viên', key: 'count', render: (_: unknown, r: Group) => `${r.members.length}/${r.maxMembers}` },
     {
       title: t ? t(getKey('action')) : 'Hành động',
       key: 'action',
-      render: (_: any, r: Group) => (
+      render: (_: unknown, r: Group) => (
         <Space size={4}>
           <Tooltip title="Xem / Sửa">
             <Button type="text" size="small" onClick={() => openDrawer(r)} icon={<EyeOutlined />} />
@@ -353,48 +379,9 @@ const GroupsAdminPage: React.FC = () => {
         )}
       </Drawer>
 
-      <Modal title="Thêm thành viên" open={!!addModalGroup} onCancel={() => setAddModalGroup(null)} footer={null}>
-        <div className="space-y-3">
-          <Input.Search placeholder="Tìm theo mã hoặc tên" onSearch={(v) => {
-            const found = sampleStudents.filter((s) => `${s.name} ${s.code}`.toLowerCase().includes(v.toLowerCase()));
-            if (found.length === 0) return message.info('Không tìm thấy (mô phỏng)');
-            Modal.info({ title: 'Kết quả tìm kiếm (mô phỏng)', content: (
-              <div>
-                {found.map((f) => (
-                  <div key={f.id} className="flex items-center justify-between py-2">
-                    <div>{f.name} — {f.code} {f.eligible ? null : <span className="text-red-600">({f.reason})</span>}</div>
-                    <div>
-                      <Button onClick={() => addMemberToGroup(addModalGroup!.id, f)} size="small">Thêm</Button>
-                      {!f.eligible && <Button danger size="small" onClick={() => addMemberToGroup(addModalGroup!.id, f, true)} style={{ marginLeft: 8 }}>Bỏ qua và thêm</Button>}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )});
-          }} />
-        </div>
-      </Modal>
+      <AddMemberModal open={!!addModalGroup} onCancel={() => setAddModalGroup(null)} group={addModalGroup} sampleStudents={sampleStudents} onAdd={addMemberToGroup} />
 
-      <Modal title="Ghép nhóm" open={mergeMode} onCancel={() => setMergeMode(false)} onOk={doMerge} okText="Xác nhận">
-        <div className="grid grid-cols-3 gap-4">
-          <div>
-            <div className="text-sm text-gray-600">Nhóm chính</div>
-            <Select style={{ width: '100%' }} value={mergeLeft || undefined} onChange={(v) => setMergeLeft(v)}>
-              {groups.filter((g) => g.status !== 'DISSOLVED').map((g) => <Select.Option key={g.id} value={g.id}>{g.code} — {g.title}</Select.Option>)}
-            </Select>
-          </div>
-          <div>
-            <div className="text-sm text-gray-600">Nhóm phụ</div>
-            <Select style={{ width: '100%' }} value={mergeRight || undefined} onChange={(v) => setMergeRight(v)}>
-              {groups.filter((g) => g.status !== 'DISSOLVED').map((g) => <Select.Option key={g.id} value={g.id}>{g.code} — {g.title}</Select.Option>)}
-            </Select>
-          </div>
-          <div>
-            <div className="text-sm text-gray-600">Preview</div>
-            <div className="p-3 border rounded">{mergeLeft && mergeRight ? `${groups.find((g) => g.id === mergeLeft)!.members.length + groups.find((g) => g.id === mergeRight)!.members.length} thành viên` : 'Chọn 2 nhóm để xem preview'}</div>
-          </div>
-        </div>
-      </Modal>
+      <MergeModal open={mergeMode} onCancel={() => setMergeMode(false)} onOk={doMerge} mergeLeft={mergeLeft} mergeRight={mergeRight} setMergeLeft={setMergeLeft} setMergeRight={setMergeRight} groups={groups} />
     </div>
   );
 };

@@ -70,7 +70,6 @@ export const SearchSelect = <
 
   const debounceFetcher = useMemo(
     () => debounce(loadOptions, 800),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   );
 

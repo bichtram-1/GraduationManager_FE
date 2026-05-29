@@ -156,7 +156,7 @@ const UsersPage = () => {
     return userHooks.useFetchListUsers({
       ...params,
       role,
-    } as IUserListParams) as ReturnType<typeof userHooks.useFetchListUsers>;
+    } as IUserListParams);
   };
 
   const listParams: IUserListParams = {
@@ -180,7 +180,7 @@ const UsersPage = () => {
 
       <Tabs
         activeKey={role}
-        onChange={(k) => setRole(k as any)}
+        onChange={(k) => setRole(k as UserRoleType)}
         items={tabItems.map((item) => ({
           key: item.key,
           label: (

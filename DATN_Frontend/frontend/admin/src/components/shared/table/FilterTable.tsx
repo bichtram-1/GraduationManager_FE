@@ -158,7 +158,7 @@ const FilterTable = <
 
   const detailHook = detailInfo?.type === InfoModalType && detailInfo?.modalInfo?.modalFunc;
   const { data: detail, isLoading: isLoadingDetail } = detailHook
-    ? detailHook(openModal?.id, openModal?.type === DetailModalType)
+    ? detailHook(openModal?.id, openModal?.type === UpdateModalType || openModal?.type === DetailModalType)
     : { data: undefined, isLoading: false };
 
   const exportMutation = exportInfo?.type === InfoModalType && exportInfo?.modalInfo?.modalFunc;
@@ -171,10 +171,9 @@ const FilterTable = <
   useEffect(() => {
     if (!detail) return;
     const clone = _.cloneDeep(detail);
+    const formattedInitialValues = formatInitialValues?.(clone) || clone;
 
-    formatInitialValues?.(clone);
-
-    formModal.setFieldsValue(clone);
+    formModal.setFieldsValue(formattedInitialValues);
   }, [detail, formatInitialValues]);
 
   const handleChangeFilterForm = useCallback(

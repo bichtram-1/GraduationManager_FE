@@ -6,76 +6,16 @@ import {
   ReadOutlined,
   TeamOutlined,
 } from '@ant-design/icons';
-import { Button, Card, Form, Input, InputNumber, Modal, Select, Space, Table, Tag, Tabs } from 'antd';
+import { Button, Card, Form, Input, Modal, Select, Space, Table, Tag, Tabs } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { getKey } from '@shared/types/I18nKeyType';
 import type { ColumnsType } from 'antd/es/table';
 import { useMemo, useState } from 'react';
+import PeriodModal from './components/PeriodModal';
+import { periodHooks } from '../../hooks/usePeriods';
+import type { BatchStatus, BatchType, ICreatePeriod, IUpdatePeriod, IListPeriod } from '../../type/PeriodType';
 
-type BatchType = 'tttn' | 'datn';
-type BatchStatus = 'open' | 'published' | 'grading' | 'closed';
 type PeriodModalMode = 'create' | 'edit' | 'detail';
-
-type PeriodRow = {
-  id: string;
-  name: string;
-  type: BatchType;
-  startDate: string;
-  endDate: string;
-  regDeadline: string;
-  numberDN?: number;
-  numberSV?: number;
-  numberTopics?: number;
-  numberCouncils?: number;
-  status: BatchStatus;
-};
-
-const PERIOD_ROWS: PeriodRow[] = [
-  {
-    id: 'B001',
-    name: 'TTTN HK2/2025-2026',
-    type: 'tttn',
-    startDate: '01/05/2026',
-    endDate: '30/07/2026',
-    regDeadline: '25/04/2026',
-    numberDN: 15,
-    numberSV: 124,
-    status: 'open',
-  },
-  {
-    id: 'B002',
-    name: 'TTTN HK1/2025-2026',
-    type: 'tttn',
-    startDate: '01/09/2025',
-    endDate: '30/12/2025',
-    regDeadline: '25/08/2025',
-    numberDN: 12,
-    numberSV: 102,
-    status: 'published',
-  },
-  {
-    id: 'B003',
-    name: 'ĐATN HK2/2025-2026',
-    type: 'datn',
-    startDate: '01/01/2026',
-    endDate: '30/06/2026',
-    regDeadline: '25/12/2025',
-    numberTopics: 28,
-    numberCouncils: 8,
-    status: 'grading',
-  },
-  {
-    id: 'B004',
-    name: 'ĐATN HK1/2025-2026',
-    type: 'datn',
-    startDate: '01/08/2025',
-    endDate: '31/12/2025',
-    regDeadline: '20/07/2025',
-    numberTopics: 24,
-    numberCouncils: 6,
-    status: 'closed',
-  },
-];
 
 const statusMap: Record<BatchStatus, { label: string; color: string; background: string }> = {
   open: { label: 'Đang mở', color: '#00A65A', background: '#E8F9EE' },
@@ -92,35 +32,24 @@ const batchTabs: Array<{ key: BatchType; label: string; icon: JSX.Element }> = [
 const PeriodsPage = () => {
   const { t } = useTranslation();
   const [tab, setTab] = useState<BatchType>('tttn');
-  const [periodRows, setPeriodRows] = useState<PeriodRow[]>(PERIOD_ROWS);
   const [open, setOpen] = useState(false);
   const [modalMode, setModalMode] = useState<PeriodModalMode>('create');
-  const [selectedPeriod, setSelectedPeriod] = useState<PeriodRow | null>(null);
+  const [selectedPeriod, setSelectedPeriod] = useState<IListPeriod | null>(null);
   const [keyword, setKeyword] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | BatchStatus>('all');
   const [form] = Form.useForm();
+  const listParams = { page: 1, limit: 1000, type: tab, status: statusFilter, keyword };
+  const { data: periodList } = periodHooks.useFetchListPeriods(listParams);
+  const createPeriodMutation = periodHooks.useCreatePeriod();
+  const updatePeriodMutation = periodHooks.useUpdatePeriod();
+  const deletePeriodMutation = periodHooks.useDeletePeriod();
 
   const handleTabChange = (key: string) => {
     const nextTab = key as BatchType;
     setTab(nextTab);
   };
 
-  const filteredRows = useMemo(
-    () => periodRows
-      .filter((row) => row.type === tab)
-      .filter((row) => {
-        const normalizedKeyword = keyword.trim().toLowerCase();
-        const byKeyword =
-          !normalizedKeyword ||
-          [row.id, row.name, row.startDate, row.endDate, row.regDeadline]
-            .join(' ')
-            .toLowerCase()
-            .includes(normalizedKeyword);
-        const byStatus = statusFilter === 'all' || row.status === statusFilter;
-        return byKeyword && byStatus;
-      }),
-    [periodRows, tab, keyword, statusFilter],
-  );
+  const filteredRows = periodList?.rows ?? [];
 
   const handleOpenCreate = () => {
     setModalMode('create');
@@ -133,21 +62,21 @@ const PeriodsPage = () => {
     setOpen(true);
   };
 
-  const handleOpenEdit = (record: PeriodRow) => {
+  const handleOpenEdit = (record: IListPeriod) => {
     setModalMode('edit');
     setSelectedPeriod(record);
     form.setFieldsValue(record);
     setOpen(true);
   };
 
-  const handleOpenDetail = (record: PeriodRow) => {
+  const handleOpenDetail = (record: IListPeriod) => {
     setModalMode('detail');
     setSelectedPeriod(record);
     form.setFieldsValue(record);
     setOpen(true);
   };
 
-  const handleDelete = (record: PeriodRow) => {
+  const handleDelete = (record: IListPeriod) => {
     Modal.confirm({
       centered: true,
       title: 'Xóa đợt?',
@@ -155,9 +84,7 @@ const PeriodsPage = () => {
       okText: 'Xóa',
       cancelText: 'Hủy',
       okButtonProps: { danger: true },
-      onOk: () => {
-        setPeriodRows((prev) => prev.filter((item) => item.id !== record.id));
-      },
+      onOk: () => deletePeriodMutation.mutate({ id: record.id, params: { page: 1, limit: 10 } }),
     });
   };
 
@@ -165,34 +92,17 @@ const PeriodsPage = () => {
     try {
       const values = await form.validateFields();
       if (modalMode === 'edit' && selectedPeriod) {
-        setPeriodRows((prev) =>
-          prev.map((item) =>
-            item.id === selectedPeriod.id
-              ? {
-                  ...item,
-                  ...values,
-                }
-              : item
-          )
-        );
+        await updatePeriodMutation.mutateAsync({
+          id: selectedPeriod.id,
+          body: values as IUpdatePeriod,
+          index: 0,
+          params: { page: 1, limit: 10 },
+        });
       } else {
-        const nextId = `B${String(periodRows.length + 1).padStart(3, '0')}`;
-        setPeriodRows((prev) => [
-          {
-            id: nextId,
-            name: values.name,
-            type: values.type,
-            startDate: values.startDate,
-            endDate: values.endDate,
-            regDeadline: values.regDeadline,
-            numberDN: values.numberDN,
-            numberSV: values.numberSV,
-            numberTopics: values.numberTopics,
-            numberCouncils: values.numberCouncils,
-            status: values.status,
-          },
-          ...prev,
-        ]);
+        await createPeriodMutation.mutateAsync({
+          body: values as ICreatePeriod,
+          params: { page: 1, limit: 10 },
+        });
       }
       setOpen(false);
       setSelectedPeriod(null);
@@ -202,7 +112,7 @@ const PeriodsPage = () => {
     }
   };
 
-  const columns = useMemo<ColumnsType<PeriodRow>>(
+  const columns = useMemo<ColumnsType<IListPeriod>>(
     () => [
       {
         title: 'Tên đợt',
@@ -381,91 +291,7 @@ const PeriodsPage = () => {
         />
       </Card>
 
-      <Modal
-        centered
-        open={open}
-        title={
-          modalMode === 'create'
-            ? tab === 'tttn'
-              ? 'Tạo đợt TTTN'
-              : 'Tạo đợt ĐATN'
-            : modalMode === 'edit'
-              ? 'Chỉnh sửa đợt'
-              : 'Chi tiết đợt'
-        }
-        onCancel={() => {
-          setOpen(false);
-          setSelectedPeriod(null);
-          form.resetFields();
-        }}
-        destroyOnHidden
-        width={820}
-        okText={modalMode === 'create' ? 'Tạo đợt' : modalMode === 'edit' ? 'Cập nhật' : undefined}
-        cancelText="Hủy"
-        okButtonProps={{ className: '!h-10 !rounded-lg !font-medium' }}
-        cancelButtonProps={{ className: '!h-10 !rounded-lg !font-medium' }}
-        onOk={handleSubmit}
-        footer={modalMode === 'detail' ? null : undefined}
-      >
-        <Form form={form} layout="vertical" className="max-h-[75vh] overflow-y-auto pr-1">
-          <Form.Item name="type" hidden>
-            <Input />
-          </Form.Item>
-
-          <Form.Item label="Tên đợt" name="name" rules={[{ required: true, message: 'Vui lòng nhập tên đợt' }]}>
-            <Input disabled={modalMode === 'detail'} placeholder={tab === 'tttn' ? 'VD: TTTN HK1/2026-2027' : 'VD: ĐATN HK1/2026-2027'} />
-          </Form.Item>
-
-          <div className="grid grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-2">
-            <Form.Item label="Bắt đầu" name="startDate" rules={[{ required: true, message: 'Vui lòng nhập ngày bắt đầu' }]}>
-              <Input disabled={modalMode === 'detail'} placeholder="DD/MM/YYYY" />
-            </Form.Item>
-            <Form.Item label="Kết thúc" name="endDate" rules={[{ required: true, message: 'Vui lòng nhập ngày kết thúc' }]}>
-              <Input disabled={modalMode === 'detail'} placeholder="DD/MM/YYYY" />
-            </Form.Item>
-            <Form.Item label="Hạn đăng ký" name="regDeadline" rules={[{ required: true, message: 'Vui lòng nhập hạn đăng ký' }]}>
-              <Input disabled={modalMode === 'detail'} placeholder="DD/MM/YYYY" />
-            </Form.Item>
-            <Form.Item label="Trạng thái" name="status" rules={[{ required: true, message: 'Vui lòng chọn trạng thái' }]}>
-              <Select
-                disabled={modalMode === 'detail'}
-                options={[
-                  { value: 'open', label: 'Đang mở' },
-                  { value: 'published', label: 'Đã công bố' },
-                  { value: 'grading', label: 'Chấm điểm' },
-                  { value: 'closed', label: 'Đã đóng' },
-                ]}
-              />
-            </Form.Item>
-          </div>
-
-          {(form.getFieldValue('type') || tab) === 'tttn' ? (
-            <div className="mt-4 space-y-4 rounded-md border border-blue-200 bg-blue-50/40 p-4">
-              <div className="text-sm text-gray-700 font-medium">Cấu hình riêng cho TTTN</div>
-              <div className="grid grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-2">
-                <Form.Item label="Số doanh nghiệp" name="numberDN">
-                  <InputNumber disabled={modalMode === 'detail'} className="!w-full" min={0} />
-                </Form.Item>
-                <Form.Item label="Số sinh viên" name="numberSV">
-                  <InputNumber disabled={modalMode === 'detail'} className="!w-full" min={0} />
-                </Form.Item>
-              </div>
-            </div>
-          ) : (
-            <div className="mt-4 space-y-4 rounded-md border border-green-200 bg-green-50/40 p-4">
-              <div className="text-sm text-gray-700 font-medium">Cấu hình riêng cho ĐATN</div>
-              <div className="grid grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-2">
-                <Form.Item label="Số nhóm/đề tài" name="numberTopics">
-                  <InputNumber disabled={modalMode === 'detail'} className="!w-full" min={0} />
-                </Form.Item>
-                <Form.Item label="Số hội đồng" name="numberCouncils">
-                  <InputNumber disabled={modalMode === 'detail'} className="!w-full" min={0} />
-                </Form.Item>
-              </div>
-            </div>
-          )}
-        </Form>
-      </Modal>
+      <PeriodModal open={open} modalMode={modalMode} tab={tab} form={form} onCancel={() => { setOpen(false); setSelectedPeriod(null); form.resetFields(); }} onOk={handleSubmit} />
     </div>
   );
 };

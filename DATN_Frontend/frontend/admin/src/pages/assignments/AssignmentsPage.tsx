@@ -1,51 +1,20 @@
 import { TeamOutlined, SearchOutlined, DownloadOutlined, SendOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
 import { Button, Card, Checkbox, Form, Input, Modal, Pagination, Radio, Select, Space, Tag, Tabs, Typography, message } from 'antd';
 import { useMemo, useState } from 'react';
+import AssignmentModal from './components/AssignmentModal';
+import { assignmentHooks } from '../../hooks/useAssignments';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../constants/commonConst';
 import { getKey } from '@shared/types/I18nKeyType';
+import type { AssignmentRow as AssignmentRowType } from '../../type/AssignmentType';
 
-type AssignmentStatus = 'assigned' | 'unassigned';
 type AssignmentModalMode = 'create' | 'edit' | 'detail';
 
-type AssignmentRow = {
-  studentId: string;
-  name: string;
-  className: string;
-  topic: string;
-  supervisor?: string | null;
-  assignedAt?: string | null;
-  status: AssignmentStatus;
-};
-
-const INITIAL_ASSIGNMENTS: AssignmentRow[] = [
-  { studentId: '20520001', name: 'Nguyễn Văn A', className: 'KTPM2020', topic: 'DA001 - IoT giám sát nông nghiệp', supervisor: 'TS. Nguyễn Văn X', assignedAt: '10/04/2026', status: 'assigned' },
-  { studentId: '20520002', name: 'Nguyễn Văn B', className: 'KTPM2020', topic: '—', supervisor: null, status: 'unassigned' },
-  { studentId: '20520005', name: 'Hoàng Văn E', className: 'CNPM2020', topic: '—', supervisor: null, status: 'unassigned' },
-  { studentId: '20520008', name: 'Lê Văn H', className: 'HTTT2020', topic: '—', supervisor: null, status: 'unassigned' },
-  { studentId: '20520010', name: 'Lý Văn H', className: 'KTPM2020', topic: 'DA001 - IoT giám sát nông nghiệp', supervisor: 'ThS. Lê Thị Z', assignedAt: '11/04/2026', status: 'assigned' },
-  { studentId: '20520012', name: 'Trương Thị J', className: 'KTPM2020', topic: '—', supervisor: null, status: 'unassigned' },
-  { studentId: '20520015', name: 'Đỗ Thị M', className: 'CNPM2020', topic: '—', supervisor: null, status: 'unassigned' },
-  { studentId: '20520018', name: 'Bùi Văn N', className: 'KTPM2020', topic: '—', supervisor: null, status: 'unassigned' },
-];
-
-const TEACHERS = [
-  { id: 'T001', name: 'Nguyễn Văn X', degree: 'TS.', major: 'Công nghệ phần mềm', status: 'available' },
-  { id: 'T002', name: 'Trần Văn Y', degree: 'TS.', major: 'Trí tuệ nhân tạo', status: 'full' },
-  { id: 'T003', name: 'Lê Thị Z', degree: 'ThS.', major: 'Hệ thống thông tin', status: 'available' },
-  { id: 'T004', name: 'Phạm Văn K', degree: 'TS.', major: 'An ninh mạng', status: 'available' },
-];
-
-const statusMeta: Record<AssignmentStatus, { label: string; color: string; bg: string }> = {
-  assigned: { label: 'Đã phân công', color: '#00A65A', bg: '#E8F9EE' },
-  unassigned: { label: 'Chưa phân công', color: '#D08A00', bg: '#FFF7E6' },
-};
+type AssignmentRow = AssignmentRowType;
 
 const AssignmentsPage = () => {
   const { t } = useTranslation();
-  const [rows, setRows] = useState<AssignmentRow[]>(INITIAL_ASSIGNMENTS);
   const [modeTab, setModeTab] = useState<'manual' | 'list'>('manual');
-  const [query, setQuery] = useState('');
   const [teacherQuery, setTeacherQuery] = useState('');
   const [teacherStatusFilter, setTeacherStatusFilter] = useState<'all' | 'available' | 'full'>('all');
   const [listQuery, setListQuery] = useState('');
@@ -57,17 +26,17 @@ const AssignmentsPage = () => {
   const [assignmentModalMode, setAssignmentModalMode] = useState<AssignmentModalMode>('create');
   const [selectedAssignment, setSelectedAssignment] = useState<AssignmentRow | null>(null);
   const [form] = Form.useForm();
+  const { data: assignmentList } = assignmentHooks.useFetchListAssignments({ page: 1, limit: 1000 });
+  const { data: teachers = [] } = assignmentHooks.useFetchTeachers();
+  const createAssignmentMutation = assignmentHooks.useCreateAssignment();
+  const updateAssignmentMutation = assignmentHooks.useUpdateAssignment();
 
-  const total = rows.length;
+  const rows = assignmentList?.rows ?? [];
   const assignedCount = rows.filter((r) => r.status === 'assigned').length;
-  const unassignedCount = rows.filter((r) => r.status === 'unassigned').length;
 
   const filtered = useMemo(
-    () =>
-      rows
-        .filter((r) => r.status === 'unassigned')
-        .filter((r) => [r.studentId, r.name, r.className, r.topic, r.supervisor || ''].join(' ').toLowerCase().includes(query.toLowerCase())),
-    [rows, query],
+    () => rows.filter((r) => r.status === 'unassigned'),
+    [rows],
   );
 
   const filteredAssignedRows = useMemo(
@@ -89,7 +58,7 @@ const AssignmentsPage = () => {
   );
 
   const filteredTeachers = useMemo(
-    () => TEACHERS.filter((teacher) => {
+    () => teachers.filter((teacher) => {
       const normalizedKeyword = teacherQuery.trim().toLowerCase();
       const byKeyword =
         !normalizedKeyword ||
@@ -100,16 +69,8 @@ const AssignmentsPage = () => {
       const byStatus = teacherStatusFilter === 'all' || teacher.status === teacherStatusFilter;
       return byKeyword && byStatus;
     }),
-    [teacherQuery, teacherStatusFilter],
+    [teacherQuery, teacherStatusFilter, teachers],
   );
-
-  const openCreateAssignment = () => {
-    setAssignmentModalMode('create');
-    setSelectedAssignment(null);
-    form.resetFields();
-    form.setFieldsValue({ status: 'unassigned' });
-    setAssignmentModalOpen(true);
-  };
 
   const openEditAssignment = (record: AssignmentRow) => {
     setAssignmentModalMode('edit');
@@ -125,49 +86,22 @@ const AssignmentsPage = () => {
     setAssignmentModalOpen(true);
   };
 
-  const deleteAssignment = (record: AssignmentRow) => {
-    Modal.confirm({
-      centered: true,
-      title: 'Xóa phân công?',
-      content: `Bạn có chắc muốn xóa phân công của ${record.name}?`,
-      okText: 'Xóa',
-      cancelText: t(getKey('cancel_btn')),
-      okButtonProps: { danger: true },
-      onOk: () => {
-        setRows((prev) => prev.filter((row) => row.studentId !== record.studentId));
-        message.success('Đã xóa phân công');
-      },
-    });
-  };
-
   const submitAssignment = async () => {
     try {
       const values = await form.validateFields();
       if (assignmentModalMode === 'edit' && selectedAssignment) {
-        setRows((prev) =>
-          prev.map((row) =>
-            row.studentId === selectedAssignment.studentId
-              ? {
-                  ...row,
-                  ...values,
-                }
-              : row
-          )
-        );
+        await updateAssignmentMutation.mutateAsync({
+          id: selectedAssignment.studentId,
+          body: values,
+          index: 0,
+          params: { page: 1, limit: 1000 },
+        });
         message.success('Đã cập nhật phân công');
       } else {
-        setRows((prev) => [
-          {
-            studentId: values.studentId,
-            name: values.name,
-            className: values.className,
-            topic: values.topic || '—',
-            supervisor: values.supervisor || null,
-            assignedAt: values.assignedAt || null,
-            status: values.status,
-          },
-          ...prev,
-        ]);
+        await createAssignmentMutation.mutateAsync({
+          body: values,
+          params: { page: 1, limit: 1000 },
+        });
         message.success('Đã thêm phân công mới');
       }
 
@@ -191,7 +125,7 @@ const AssignmentsPage = () => {
     const studentIds = Object.keys(selectedStudents).filter((k) => selectedStudents[k]);
     if (studentIds.length === 0) return message.warning('Vui lòng chọn sinh viên');
     if (!selectedTeacher) return message.warning('Vui lòng chọn giảng viên');
-    const teacher = TEACHERS.find((t) => t.id === selectedTeacher)!;
+    const teacher = teachers.find((teacherItem) => teacherItem.id === selectedTeacher)!;
     Modal.confirm({
       title: 'Xác nhận phân công',
       content: `Gán ${studentIds.length} sinh viên cho ${teacher.name}?`,
@@ -199,10 +133,20 @@ const AssignmentsPage = () => {
       cancelText: t(getKey('cancel_btn')),
       onOk: () => {
         const now = new Date().toLocaleDateString('vi-VN');
-        setRows((prev) => prev.map((r) => (studentIds.includes(r.studentId) ? { ...r, supervisor: teacher.name, status: 'assigned', assignedAt: now } : r)));
+        Promise.all(
+          studentIds.map((studentId) =>
+            updateAssignmentMutation.mutateAsync({
+              id: studentId,
+              body: { supervisor: teacher.name, status: 'assigned', assignedAt: now },
+              index: 0,
+              params: { page: 1, limit: 1000 },
+            })
+          )
+        ).then(() => {
+          message.success(`Đã phân công ${teacher.name} cho ${studentIds.length} sinh viên`);
+        });
         setSelectedStudents({});
         setSelectedTeacher(null);
-        message.success(`Đã phân công ${teacher.name} cho ${studentIds.length} sinh viên`);
       },
       centered: true,
     });
@@ -216,8 +160,17 @@ const AssignmentsPage = () => {
       cancelText: t(getKey('cancel_btn')),
       okButtonProps: { danger: true },
       onOk: () => {
-        setRows((prev) => prev.map((r) => (r.studentId === studentId ? { ...r, supervisor: null, status: 'unassigned', assignedAt: null } : r)));
-        message.success('Đã hủy phân công');
+        updateAssignmentMutation.mutate(
+          {
+            id: studentId,
+            body: { supervisor: null, status: 'unassigned', assignedAt: null },
+            index: 0,
+            params: { page: 1, limit: 1000 },
+          },
+          {
+            onSuccess: () => message.success('Đã hủy phân công'),
+          }
+        );
       },
       centered: true,
     });
@@ -239,7 +192,7 @@ const AssignmentsPage = () => {
       </div>
 
       <div className="mb-5 rounded-[20px] border border-slate-100 bg-white px-4 pt-3 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
-        <Tabs activeKey={modeTab} onChange={(k) => setModeTab(k as any)} items={[{ key: 'manual', label: 'Phân công thủ công' }, { key: 'list', label: `Danh sách đã phân công (${assignedCount})` }]} />
+        <Tabs activeKey={modeTab} onChange={(k) => setModeTab(k as 'manual' | 'list')} items={[{ key: 'manual', label: 'Phân công thủ công' }, { key: 'list', label: `Danh sách đã phân công (${assignedCount})` }]} />
 
       {modeTab === 'manual' ? (
         <div>
@@ -370,7 +323,7 @@ const AssignmentsPage = () => {
                     </Select>
                     <Select value={listTeacherFilter} onChange={setListTeacherFilter} style={{ minWidth: 180, width: 220 }}>
                       <Select.Option value="all">Tất cả GV</Select.Option>
-                      {TEACHERS.map((teacher) => (
+                      {teachers.map((teacher) => (
                         <Select.Option key={teacher.id} value={teacher.name}>{teacher.name}</Select.Option>
                       ))}
                     </Select>
@@ -424,60 +377,7 @@ const AssignmentsPage = () => {
         <Pagination current={1} total={1} />
       </div>
 
-      <Modal
-        centered
-        open={assignmentModalOpen}
-        title={
-          assignmentModalMode === 'create'
-            ? 'Thêm phân công'
-            : assignmentModalMode === 'edit'
-              ? 'Chỉnh sửa phân công'
-              : 'Chi tiết phân công'
-        }
-        onCancel={() => {
-          setAssignmentModalOpen(false);
-          setSelectedAssignment(null);
-          form.resetFields();
-        }}
-        okText={assignmentModalMode === 'create' ? 'Thêm mới' : assignmentModalMode === 'edit' ? 'Cập nhật' : undefined}
-        cancelText={t(getKey('cancel_btn'))}
-        onOk={submitAssignment}
-        footer={assignmentModalMode === 'detail' ? null : undefined}
-      >
-        <Form form={form} layout="vertical" className="pt-2">
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <Form.Item label="MSSV" name="studentId" rules={[{ required: true, message: 'Vui lòng nhập MSSV' }]}>
-              <Input disabled={assignmentModalMode !== 'create'} />
-            </Form.Item>
-            <Form.Item label="Họ tên" name="name" rules={[{ required: true, message: 'Vui lòng nhập họ tên' }]}>
-              <Input disabled={assignmentModalMode === 'detail'} />
-            </Form.Item>
-            <Form.Item label="Lớp" name="className" rules={[{ required: true, message: 'Vui lòng nhập lớp' }]}>
-              <Input disabled={assignmentModalMode === 'detail'} />
-            </Form.Item>
-            <Form.Item label="Trạng thái" name="status" rules={[{ required: true, message: 'Vui lòng chọn trạng thái' }]}>
-              <Select
-                disabled={assignmentModalMode === 'detail'}
-                options={[
-                  { value: 'assigned', label: 'Đã phân công' },
-                  { value: 'unassigned', label: 'Chưa phân công' },
-                ]}
-              />
-            </Form.Item>
-          </div>
-          <Form.Item label="Đề tài" name="topic">
-            <Input disabled={assignmentModalMode === 'detail'} />
-          </Form.Item>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <Form.Item label="Giảng viên hướng dẫn" name="supervisor">
-              <Input disabled={assignmentModalMode === 'detail'} />
-            </Form.Item>
-            <Form.Item label="Ngày phân công" name="assignedAt">
-              <Input disabled={assignmentModalMode === 'detail'} placeholder="DD/MM/YYYY" />
-            </Form.Item>
-          </div>
-        </Form>
-      </Modal>
+      <AssignmentModal open={assignmentModalOpen} mode={assignmentModalMode} form={form} onCancel={() => { setAssignmentModalOpen(false); setSelectedAssignment(null); form.resetFields(); }} onOk={submitAssignment} />
     </div>
   );
 };

@@ -28,7 +28,6 @@ const CouncilsCreate = lazy(() => import('./pages/councils/components/CreateCoun
 const GroupsAdmin = lazy(() => import('./pages/groups/GroupsAdminPage'));
 const InternshipStudents = lazy(() => import('./pages/internship-students/InternshipStudentsPage'));
 const Periods = lazy(() => import('./pages/periods/PeriodsPage'));
-const ForgotPassword = lazy(() => import('./pages/login/components/ForgotPassword'));
 
 function App() {
   
@@ -92,7 +91,6 @@ function App() {
                 }
               >
                 <Route path={ROUTES.LOGIN} element={<Login />} />
-                <Route path={ROUTES.FORGOTPW} element={<ForgotPassword />} />
               </Route>
 
               {/* Những route không cần bọc private route */}

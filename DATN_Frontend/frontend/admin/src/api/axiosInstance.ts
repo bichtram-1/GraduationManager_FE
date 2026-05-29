@@ -2,6 +2,7 @@ import { STORAGES } from '@shared/constants/storage';
 import { clearCookie, getCookie } from '@shared/utils/cookie';
 import axios from 'axios';
 import { ROUTES } from '../constants/routers';
+import type { AxiosRequestConfigWithData } from './axiosTypes';
 
 const BASE_URL = import.meta.env.VITE_API_URL;
 const USE_MOCK_AUTH = import.meta.env.VITE_USE_MOCK_AUTH === 'true';
@@ -77,8 +78,8 @@ export default axiosInstance;
 
 // Attach simple mock handlers when running in dev with mock flag
 if (USE_MOCK_AUTH) {
-  const originalRequest = (axiosInstance as any).request.bind(axiosInstance);
-  (axiosInstance as any).request = async (config: any) => {
+  const originalRequest = axiosInstance.request.bind(axiosInstance);
+  axiosInstance.request = async (config: AxiosRequestConfigWithData) => {
     const url: string = config?.url ?? '';
     const method: string = (config?.method ?? 'get').toLowerCase();
 

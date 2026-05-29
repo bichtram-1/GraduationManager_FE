@@ -53,7 +53,7 @@ const CustomInput: CustomInputComponent = ((props: CustomInputProps) => {
     const {
       placeholder,
       maxLength = 200,
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+       
       isPassword: _isPassword,
       ...restPasswordProps
     } = props;
@@ -90,5 +90,8 @@ const CustomInput: CustomInputComponent = ((props: CustomInputProps) => {
 
 CustomInput.Password = (props) => <CustomInput {...props} isPassword />;
 CustomInput.TextArea = (props) => <CustomInput {...props} isTextArea />;
+CustomInput.displayName = 'CustomInput';
+CustomInput.Password.displayName = 'CustomInput.Password';
+CustomInput.TextArea.displayName = 'CustomInput.TextArea';
 
 export default CustomInput;

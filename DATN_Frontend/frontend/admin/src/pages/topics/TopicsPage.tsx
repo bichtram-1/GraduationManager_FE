@@ -1,22 +1,14 @@
-import { BookOutlined, CheckCircleOutlined, CloseCircleOutlined, EyeOutlined, ClockCircleOutlined, SendOutlined, SearchOutlined, TeamOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
-import { Button, Card, Dropdown, Form, Input, Modal, Pagination, Select, Space, Tag, Typography, message, Tabs } from 'antd';
+import { BookOutlined, CheckCircleOutlined, CloseCircleOutlined, EyeOutlined, ClockCircleOutlined, SendOutlined, SearchOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Button, Card, Dropdown, Form, Input, Modal, Pagination, Space, Tag, Typography, message, Tabs } from 'antd';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../constants/commonConst';
 import { getKey } from '@shared/types/I18nKeyType';
+import TopicModal from './components/TopicModal';
+import type { IListTopic, TopicStatus as TopicStatusType } from '../../type/TopicType';
+import { topicHooks } from '../../hooks/useTopics';
 
-type TopicStatus = 'pending' | 'approved' | 'rejected';
 type TopicModalMode = 'create' | 'edit' | 'detail';
-
-type TopicRow = {
-  id: string;
-  code: string;
-  name: string;
-  teacher: string;
-  slots: string;
-  rejectReason: string;
-  status: TopicStatus;
-};
 
 type StudentRow = {
   id: string;
@@ -25,7 +17,7 @@ type StudentRow = {
   score: number;
 };
 
-const INITIAL_TOPICS: TopicRow[] = [
+const INITIAL_TOPICS: IListTopic[] = [
   { id: 'DA001', code: 'DA001', name: 'Hệ thống IoT giám sát nông nghiệp', teacher: 'TS. Nguyễn Văn X', slots: '3/4', rejectReason: '', status: 'pending' },
   { id: 'DA002', code: 'DA002', name: 'Ứng dụng AI nhận diện hình ảnh', teacher: 'TS. Trần Văn Y', slots: '2/3', rejectReason: '', status: 'approved' },
   { id: 'DA003', code: 'DA003', name: 'Nền tảng e-commerce micro-service', teacher: 'ThS. Lê Thị Z', slots: '0/4', rejectReason: 'Chủ đề trùng lặp với đề tài DA005', status: 'rejected' },
@@ -42,7 +34,7 @@ const ELIGIBLE_STUDENTS: StudentRow[] = [
   { id: '20520020', name: 'Mai Thị K', className: 'KTPM2020', score: 7.8 },
 ];
 
-const topicStatusMeta: Record<TopicStatus, { label: string; color: string; bg: string }> = {
+const topicStatusMeta: Record<TopicStatusType, { label: string; color: string; bg: string }> = {
   pending: { label: 'Chờ duyệt', color: '#D08A00', bg: '#FFF7E6' },
   approved: { label: 'Đã duyệt', color: '#00A65A', bg: '#E8F9EE' },
   rejected: { label: 'Từ chối', color: '#C53030', bg: '#FFEDED' },
@@ -50,21 +42,31 @@ const topicStatusMeta: Record<TopicStatus, { label: string; color: string; bg: s
 
 const TopicsPage = () => {
   const { t } = useTranslation();
-  const [topicRows, setTopicRows] = useState(INITIAL_TOPICS);
   const [published, setPublished] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [topicModalOpen, setTopicModalOpen] = useState(false);
   const [topicModalMode, setTopicModalMode] = useState<TopicModalMode>('create');
-  const [selectedTopic, setSelectedTopic] = useState<TopicRow | null>(null);
+  const [selectedTopic, setSelectedTopic] = useState<IListTopic | null>(null);
   const [form] = Form.useForm();
+  const { data: topicList } = topicHooks.useFetchListTopics({ page: 1, limit: 1000 });
+  const createTopicMutation = topicHooks.useCreateTopic();
+  const updateTopicMutation = topicHooks.useUpdateTopic();
+  const deleteTopicMutation = topicHooks.useDeleteTopic();
 
+  const topicRows = topicList?.rows ?? INITIAL_TOPICS;
   const totalTopics = topicRows.length;
   const pendingTopics = topicRows.filter((item) => item.status === 'pending').length;
   const approvedTopics = topicRows.filter((item) => item.status === 'approved').length;
   const rejectedTopics = topicRows.filter((item) => item.status === 'rejected').length;
-  const [tab, setTab] = useState<'all' | TopicStatus | 'all'>('all');
+  const [tab, setTab] = useState<'all' | TopicStatusType>('all');
 
-  const filteredTopicRows = useMemo(() => (tab === 'all' ? topicRows : topicRows.filter((r) => r.status === tab)), [topicRows, tab]);
+  const filteredTopicRows = useMemo(
+    () => topicRows.filter((row) => (tab === 'all' ? true : row.status === tab)).filter((row) => {
+      const normalized = search.trim().toLowerCase();
+      return !normalized || [row.code, row.name, row.teacher, row.slots, row.rejectReason].join(' ').toLowerCase().includes(normalized);
+    }),
+    [topicRows, tab, search],
+  );
 
   const unassignedStudents = useMemo(
     () => ELIGIBLE_STUDENTS.filter((student) => {
@@ -74,10 +76,6 @@ const TopicsPage = () => {
     [search],
   );
 
-  const changeTopicStatus = (topicId: string, status: TopicStatus) => {
-    setTopicRows((prev) => prev.map((row) => (row.id === topicId ? { ...row, status } : row)));
-  };
-
   const openCreateTopic = () => {
     setTopicModalMode('create');
     setSelectedTopic(null);
@@ -86,21 +84,21 @@ const TopicsPage = () => {
     setTopicModalOpen(true);
   };
 
-  const openEditTopic = (record: TopicRow) => {
+  const openEditTopic = (record: IListTopic) => {
     setTopicModalMode('edit');
     setSelectedTopic(record);
     form.setFieldsValue(record);
     setTopicModalOpen(true);
   };
 
-  const openDetailTopic = (record: TopicRow) => {
+  const openDetailTopic = (record: IListTopic) => {
     setTopicModalMode('detail');
     setSelectedTopic(record);
     form.setFieldsValue(record);
     setTopicModalOpen(true);
   };
 
-  const deleteTopic = (record: TopicRow) => {
+  const deleteTopic = (record: IListTopic) => {
     Modal.confirm({
       centered: true,
       title: 'Xóa đề tài?',
@@ -108,10 +106,7 @@ const TopicsPage = () => {
       okText: 'Xóa',
       cancelText: t(getKey('cancel_btn')),
       okButtonProps: { danger: true },
-      onOk: () => {
-        setTopicRows((prev) => prev.filter((row) => row.id !== record.id));
-        message.success('Đã xóa đề tài');
-      },
+      onOk: () => deleteTopicMutation.mutate({ id: record.id, params: { page: 1, limit: 10 } }, { onSuccess: () => message.success('Đã xóa đề tài') }),
     });
   };
 
@@ -120,32 +115,18 @@ const TopicsPage = () => {
       const values = await form.validateFields();
 
       if (topicModalMode === 'edit' && selectedTopic) {
-        setTopicRows((prev) =>
-          prev.map((row) =>
-            row.id === selectedTopic.id
-              ? {
-                  ...row,
-                  ...values,
-                }
-              : row
-          )
-        );
+        await updateTopicMutation.mutateAsync({
+          id: selectedTopic.id,
+          body: values,
+          index: 0,
+          params: { page: 1, limit: 10 },
+        });
         message.success('Đã cập nhật đề tài');
       } else {
-        const nextNumber = topicRows.length + 1;
-        const code = `DA${String(nextNumber).padStart(3, '0')}`;
-        setTopicRows((prev) => [
-          {
-            id: code,
-            code,
-            name: values.name,
-            teacher: values.teacher,
-            slots: values.slots,
-            rejectReason: values.rejectReason || '',
-            status: values.status,
-          },
-          ...prev,
-        ]);
+        await createTopicMutation.mutateAsync({
+          body: values,
+          params: { page: 1, limit: 10 },
+        });
         message.success('Đã thêm đề tài mới');
       }
 
@@ -157,7 +138,7 @@ const TopicsPage = () => {
     }
   };
 
-  const confirmTopicChange = (record: TopicRow, status: TopicStatus) => {
+  const confirmTopicChange = (record: IListTopic, status: TopicStatusType) => {
     const label = topicStatusMeta[status].label.toLowerCase();
     Modal.confirm({
       centered: true,
@@ -171,10 +152,7 @@ const TopicsPage = () => {
       okText: 'Xác nhận',
       cancelText: t(getKey('cancel_btn')),
       okButtonProps: status === 'rejected' ? { danger: true } : undefined,
-      onOk: () => {
-        changeTopicStatus(record.id, status);
-        message.success(`Đã cập nhật đề tài ${record.code} sang ${label}`);
-      },
+      onOk: () => updateTopicMutation.mutate({ id: record.id, body: { status }, index: 0, params: { page: 1, limit: 10 } }, { onSuccess: () => message.success(`Đã cập nhật đề tài ${record.code} sang ${label}`) }),
     });
   };
 
@@ -253,7 +231,7 @@ const TopicsPage = () => {
       <div className="mb-5 rounded-[20px] border border-slate-100 bg-white px-4 pt-3 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
         <Tabs
           activeKey={tab}
-          onChange={(key) => setTab(key as any)}
+          onChange={(key) => setTab(key as 'all' | TopicStatusType)}
           items={[
             { key: 'all', label: `Tất cả (${totalTopics})`, icon: <BookOutlined /> },
             { key: 'approved', label: `Đã duyệt (${approvedTopics})`, icon: <CheckCircleOutlined /> },
@@ -319,7 +297,7 @@ const TopicsPage = () => {
                               trigger={['click']}
                               menu={{
                                 items: menuItems,
-                                onClick: ({ key }) => confirmTopicChange(record, key as TopicStatus),
+                                onClick: ({ key }) => confirmTopicChange(record, key as TopicStatusType),
                               }}
                             >
                               <Button type="text" size="small" className="!h-8 !rounded-[8px] !px-2 !font-medium !text-[#2563eb] hover:!bg-[#eff6ff]">
@@ -334,25 +312,13 @@ const TopicsPage = () => {
                   <td className="px-4 py-3 text-xs text-slate-500">{record.rejectReason || '—'}</td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-1">
-                      <button
-                        onClick={() => openDetailTopic(record)}
-                        className="rounded p-1.5 text-[#2196F3] hover:bg-blue-50"
-                        title="Xem"
-                      >
+                      <button onClick={() => openDetailTopic(record)} className="rounded p-1.5 text-[#2196F3] hover:bg-blue-50" title="Xem">
                         <EyeOutlined />
                       </button>
-                      <button
-                        onClick={() => openEditTopic(record)}
-                        className="rounded p-1.5 text-[#0f766e] hover:bg-teal-50"
-                        title="Sửa"
-                      >
+                      <button onClick={() => openEditTopic(record)} className="rounded p-1.5 text-[#0f766e] hover:bg-teal-50" title="Sửa">
                         <EditOutlined />
                       </button>
-                      <button
-                        onClick={() => deleteTopic(record)}
-                        className="rounded p-1.5 text-[#B91C1C] hover:bg-rose-50"
-                        title="Xóa"
-                      >
+                      <button onClick={() => deleteTopic(record)} className="rounded p-1.5 text-[#B91C1C] hover:bg-rose-50" title="Xóa">
                         <DeleteOutlined />
                       </button>
                     </div>
@@ -363,39 +329,27 @@ const TopicsPage = () => {
           </table>
         </div>
 
-        <div className="border-t border-slate-100 bg-slate-50 px-5 py-3 text-xs text-slate-600">
-          Hiển thị {filteredTopicRows.length} đề tài
-        </div>
+        <div className="border-t border-slate-100 bg-slate-50 px-5 py-3 text-xs text-slate-600">Hiển thị {filteredTopicRows.length} đề tài</div>
       </Card>
 
       <Card className="mt-5 overflow-hidden rounded-[18px] border border-slate-100 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
         <div className="flex flex-col gap-3 border-b border-slate-100 bg-slate-50 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <div className="text-base font-semibold text-navyDark">Sinh viên chưa có đề tài ĐATN</div>
-            <div className="mt-1 text-sm text-slate-500">
-              SV đủ điều kiện nhưng chưa đăng ký vào đề tài nào — cần nhắc nhở hoặc phân công
-            </div>
+            <div className="mt-1 text-sm text-slate-500">SV đủ điều kiện nhưng chưa đăng ký vào đề tài nào — cần nhắc nhở hoặc phân công</div>
           </div>
           <Space wrap>
             <Tag style={{ margin: 0, borderRadius: 999, border: 'none', backgroundColor: unassignedStudents.length === 0 ? '#E8F9EE' : '#FFF7E6', color: unassignedStudents.length === 0 ? '#00A65A' : '#D08A00' }}>
               {unassignedStudents.length} sinh viên
             </Tag>
-            <Button type="primary" onClick={remindAll} className="!h-10 !rounded-[8px] !bg-primary !px-5 !font-medium hover:!bg-blueDark">
-              Nhắc nhở tất cả
-            </Button>
+            <Button type="primary" onClick={remindAll} className="!h-10 !rounded-[8px] !bg-primary !px-5 !font-medium hover:!bg-blueDark">Nhắc nhở tất cả</Button>
           </Space>
         </div>
 
         <div className="border-b border-slate-100 bg-slate-50 px-5 py-3">
           <div className="relative max-w-sm">
             <SearchOutlined className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <Input
-              allowClear
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Tìm MSSV, họ tên, lớp..."
-              className="!h-11 !rounded-[12px] !border-slate-300 !pl-9"
-            />
+            <Input allowClear value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Tìm MSSV, họ tên, lớp..." className="!h-11 !rounded-[12px] !border-slate-300 !pl-9" />
           </div>
         </div>
 
@@ -421,12 +375,7 @@ const TopicsPage = () => {
                     <td className="px-4 py-3 text-slate-600">{student.className}</td>
                     <td className="px-4 py-3 text-[#00A65A] font-medium">{student.score.toFixed(1)}</td>
                     <td className="px-4 py-3 text-right">
-                      <button
-                        onClick={() => message.success(`Đã mở luồng phân công cho ${student.name}`)}
-                        className="text-xs font-medium text-[#2196F3] hover:underline"
-                      >
-                        Phân công đề tài
-                      </button>
+                      <button onClick={() => message.success(`Đã mở luồng phân công cho ${student.name}`)} className="text-xs font-medium text-[#2196F3] hover:underline">Phân công đề tài</button>
                     </td>
                   </tr>
                 ))}
@@ -435,62 +384,24 @@ const TopicsPage = () => {
           </div>
         )}
 
-        <div className="border-t border-slate-100 bg-slate-50 px-5 py-3 text-xs text-slate-600">
-          Hiển thị {unassignedStudents.length} sinh viên
-        </div>
+        <div className="border-t border-slate-100 bg-slate-50 px-5 py-3 text-xs text-slate-600">Hiển thị {unassignedStudents.length} sinh viên</div>
       </Card>
 
       <div className="mt-4 flex justify-end">
         <Pagination current={1} total={1} pageSize={10} showSizeChanger={false} />
       </div>
 
-      <Modal
-        centered
+      <TopicModal
         open={topicModalOpen}
-        title={
-          topicModalMode === 'create'
-            ? 'Thêm đề tài'
-            : topicModalMode === 'edit'
-              ? 'Chỉnh sửa đề tài'
-              : 'Chi tiết đề tài'
-        }
+        mode={topicModalMode}
+        form={form}
         onCancel={() => {
           setTopicModalOpen(false);
           setSelectedTopic(null);
           form.resetFields();
         }}
-        okText={topicModalMode === 'create' ? 'Thêm mới' : topicModalMode === 'edit' ? 'Cập nhật' : undefined}
-        cancelText={t(getKey('cancel_btn'))}
         onOk={submitTopicForm}
-        footer={topicModalMode === 'detail' ? null : undefined}
-      >
-        <Form form={form} layout="vertical" className="pt-2">
-          <Form.Item label="Tên đề tài" name="name" rules={[{ required: true, message: 'Vui lòng nhập tên đề tài' }]}>
-            <Input disabled={topicModalMode === 'detail'} placeholder="VD: Phân tích dữ liệu giáo dục" />
-          </Form.Item>
-          <Form.Item label="Giảng viên đề xuất" name="teacher" rules={[{ required: true, message: 'Vui lòng nhập giảng viên' }]}>
-            <Input disabled={topicModalMode === 'detail'} placeholder="VD: TS. Nguyễn Văn X" />
-          </Form.Item>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <Form.Item label="Slot" name="slots" rules={[{ required: true, message: 'Vui lòng nhập slot' }]}>
-              <Input disabled={topicModalMode === 'detail'} placeholder="VD: 0/3" />
-            </Form.Item>
-            <Form.Item label="Trạng thái" name="status" rules={[{ required: true, message: 'Vui lòng chọn trạng thái' }]}>
-              <Select
-                disabled={topicModalMode === 'detail'}
-                options={[
-                  { value: 'pending', label: 'Chờ duyệt' },
-                  { value: 'approved', label: 'Đã duyệt' },
-                  { value: 'rejected', label: 'Từ chối' },
-                ]}
-              />
-            </Form.Item>
-          </div>
-          <Form.Item label="Lý do từ chối" name="rejectReason">
-            <Input.TextArea disabled={topicModalMode === 'detail'} rows={3} placeholder="Nhập lý do từ chối (nếu có)" />
-          </Form.Item>
-        </Form>
-      </Modal>
+      />
     </div>
   );
 };

@@ -11,8 +11,7 @@ import CustomInput from '../../../components/shared/input/CustomInput';
 import { PASSWORD_PATTERN } from '@shared/constants/regex';
 import { generateRandomPassword } from '@shared/utils/password-generator';
 import { DEFAULT_PASSWORD } from '../../../constants/commonConst';
-import { SearchSelect } from '../../../components/shared/select/SearchSelect';
-import { achievementHooks } from '../../../hooks/useAchievements';
+// SearchSelect (achievements) removed — not used
 import { userHooks } from '../../../hooks/useUsers';
 import { IDetailUser, UserRoleType } from 'src/type/UserType';
 
@@ -223,24 +222,7 @@ const ModalCreateEditUser = ({ detail, mode = 'create', role }: IModalCreateEdit
       )}
 
       {/* ===== Danh hiệu (tùy chọn) ===== */}
-      <Form.Item label={t(getKey('achievement_optional'))} name="achievement">
-        {/*
-          labelInValue: SearchSelect emit { value, label } thay vì raw string ID.
-          Backend nhận IValueLabel trực tiếp — không cần convert ở frontend.
-        */}
-        <SearchSelect
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          useQueryHook={achievementHooks.useFetchListAchievements as any}
-          fieldNames={{ label: 'name', value: 'id' }}
-          labelInValue
-          placeholder={t(getKey('no_achievement'))}
-          className="h-10 rounded-lg"
-          disabled={isDetailMode}
-        />
-      </Form.Item>
-      <p className="-mt-4 mb-4 text-xs text-grayMedium">
-        {t(getKey('achievement_note'))}
-      </p>
+      {/* Achievements section removed */}
 
       {/* Nhắc nhở mật khẩu mặc định — chỉ hiện ở edit mode để admin biết khi reset */}
       {isEditMode && !isDetailMode && (

@@ -4,7 +4,6 @@ import {
   CrownOutlined,
   BookOutlined,
   TeamOutlined,
-  LockOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,

@@ -1,6 +1,13 @@
 Changelog
 =========
 
+## [2.4.0](https://github.com/ckeditor/ckeditor5-integrations-common/compare/v2.3.1...v2.4.0) (May 25, 2026)
+
+### Features
+
+* Added `mapObjectKeys` helper for transforming object keys and `kebabToCamelCase` for converting strings from kebab-case to camelCase.
+
+
 ## [2.3.1](https://github.com/ckeditor/ckeditor5-integrations-common/compare/v2.3.0...v2.3.1) (April 15, 2026)
 
 ### Bug fixes
@@ -32,13 +39,6 @@ Changelog
 
 * Upgrade to Node v24.11.
 * Re-export helpers related to installation info and semantic versioning. See [ckeditor/ckeditor5-react#653](https://github.com/ckeditor/ckeditor5-react/issues/653).
-
-
-## [2.2.3](https://github.com/ckeditor/ckeditor5-integrations-common/compare/v2.2.2...v2.2.3) (2025-02-12)
-
-### Features
-
-* Added support for loading more testing versions in CDN loader. ([commit](https://github.com/ckeditor/ckeditor5-integrations-common/commit/af0384bdd76b49c91852cf98174a2ed76e6fd06a))
 
 ---
 

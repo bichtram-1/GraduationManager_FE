@@ -1,4 +1,4 @@
-import crypto from 'crypto-js';
+import * as crypto from 'crypto-js';
 
 const isClient = typeof window !== 'undefined';
 

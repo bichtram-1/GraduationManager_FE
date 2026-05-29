@@ -1,5 +1,3 @@
-import { I18nKey } from '@shared/types/I18nKeyType';
-
 const ViTranslation = {
   login: 'Đăng nhập',
   title_login: 'Sử dụng Email và Mật khẩu để Đăng nhập',

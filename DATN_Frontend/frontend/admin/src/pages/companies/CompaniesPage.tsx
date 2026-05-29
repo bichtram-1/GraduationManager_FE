@@ -1,15 +1,21 @@
-import { BankOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, PlusOutlined, SearchOutlined, SendOutlined, TeamOutlined, EyeOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
-import { Button, Card, Dropdown, Form, Input, InputNumber, message, Modal, Select, Space, Table, Tag, Tabs, Typography } from 'antd';
+import { BankOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, SearchOutlined, SendOutlined, TeamOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Button, Card, Dropdown, Input, message, Modal, Select, Space, Tag, Tabs, Typography } from 'antd';
+import FilterTable from '../../components/shared/table/FilterTable';
 import type { ColumnsType } from 'antd/es/table';
+import PublishModal from './components/PublishModal';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../constants/commonConst';
 import { getKey } from '@shared/types/I18nKeyType';
+import { companyHooks } from '../../hooks/useCompanies';
+import CompanyForm from './components/CompanyForm';
+import type { ICreateCompany, IDetailCompany, IUpdateCompany } from '../../type/CompanyType';
+import type { BaseListParams } from '@shared/types/GeneralType';
+import type { UseQueryResult } from '@tanstack/react-query';
 
 type CompanyStatus = 'active' | 'pending' | 'paused';
 type ReviewStatus = 'pending' | 'approved' | 'rejected';
 type CompanyTab = 'all' | ReviewStatus;
-type CompanyModalMode = 'create' | 'edit' | 'detail';
 
 type CompanyRow = {
   id: string;
@@ -41,15 +47,15 @@ const reviewMeta: Record<ReviewStatus, { label: string; color: string; bg: strin
 const CompaniesPage = () => {
   const { t } = useTranslation();
   const [tab, setTab] = useState<CompanyTab>('all');
-  const [companyRows, setCompanyRows] = useState(COMPANY_ROWS);
-  const [open, setOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<CompanyModalMode>('create');
-  const [selectedCompany, setSelectedCompany] = useState<CompanyRow | null>(null);
   const [publishOpen, setPublishOpen] = useState(false);
   const [keyword, setKeyword] = useState('');
   const [fieldFilter, setFieldFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState<'all' | CompanyStatus>('all');
-  const [form] = Form.useForm();
+  const { data: companyList } = companyHooks.useFetchListCompanies();
+  const createCompanyMutation = companyHooks.useCreateCompany();
+  const updateCompanyMutation = companyHooks.useUpdateCompany();
+  const deleteCompanyMutation = companyHooks.useDeleteCompany();
+  const companyRows = (companyList?.rows ?? COMPANY_ROWS) as CompanyRow[];
 
   const filteredRows = useMemo(
     () => (tab === 'all' ? companyRows : companyRows.filter((row) => row.reviewStatus === tab))
@@ -69,31 +75,19 @@ const CompaniesPage = () => {
     [companyRows, tab, keyword, fieldFilter, statusFilter],
   );
 
-  const handleOpenCreate = () => {
-    setModalMode('create');
-    setSelectedCompany(null);
-    form.resetFields();
-    form.setFieldsValue({
-      status: 'pending',
-      reviewStatus: 'pending',
-      partners: 0,
-      students: 0,
-    });
-    setOpen(true);
-  };
+  const useFilteredCompanyListQuery = (_params: BaseListParams) => {
+    const query = companyHooks.useFetchListCompanies();
 
-  const handleOpenEdit = (record: CompanyRow) => {
-    setModalMode('edit');
-    setSelectedCompany(record);
-    form.setFieldsValue(record);
-    setOpen(true);
-  };
-
-  const handleOpenDetail = (record: CompanyRow) => {
-    setModalMode('detail');
-    setSelectedCompany(record);
-    form.setFieldsValue(record);
-    setOpen(true);
+    return {
+      ...query,
+      data: query.data
+        ? {
+            ...query.data,
+            rows: filteredRows,
+            total: filteredRows.length,
+          }
+        : query.data,
+      } as UseQueryResult<{ rows: CompanyRow[]; total: number }, Error>;
   };
 
   const handleDelete = (record: CompanyRow) => {
@@ -104,56 +98,8 @@ const CompaniesPage = () => {
       okText: 'Xóa',
       cancelText: t(getKey('cancel_btn')),
       okButtonProps: { danger: true },
-      onOk: () => {
-        setCompanyRows((prev) => prev.filter((row) => row.id !== record.id));
-        message.success('Đã xóa công ty');
-      },
+      onOk: () => deleteCompanyMutation.mutate({ id: record.id, params: { page: 1, limit: 10 } }, { onSuccess: () => message.success('Đã xóa công ty') }),
     });
-  };
-
-  const handleSubmitCompany = async () => {
-    try {
-      const values = await form.validateFields();
-
-      if (modalMode === 'edit' && selectedCompany) {
-        setCompanyRows((prev) =>
-          prev.map((row) =>
-            row.id === selectedCompany.id
-              ? {
-                  ...row,
-                  ...values,
-                }
-              : row
-          )
-        );
-        message.success('Đã cập nhật công ty');
-      } else {
-        const nextId = `C${String(companyRows.length + 1).padStart(3, '0')}`;
-        setCompanyRows((prev) => [
-          {
-            id: nextId,
-            name: values.name,
-            taxId: values.taxId,
-            field: values.field,
-            contact: values.contact,
-            phone: values.phone,
-            email: values.email,
-            partners: Number(values.partners || 0),
-            students: Number(values.students || 0),
-            status: values.status,
-            reviewStatus: values.reviewStatus,
-          },
-          ...prev,
-        ]);
-        message.success('Đã thêm công ty mới');
-      }
-
-      setOpen(false);
-      form.resetFields();
-      setSelectedCompany(null);
-    } catch {
-      // noop: validation handled by antd form
-    }
   };
 
   const companyStats = useMemo(() => ({
@@ -170,10 +116,6 @@ const CompaniesPage = () => {
     rejected: companyRows.filter((item) => item.reviewStatus === 'rejected').length,
   }), [companyRows]);
 
-  const updateReviewStatus = (companyId: string, reviewStatus: ReviewStatus) => {
-    setCompanyRows((prev) => prev.map((row) => (row.id === companyId ? { ...row, reviewStatus } : row)));
-  };
-
   const confirmReviewChange = (record: CompanyRow, reviewStatus: ReviewStatus) => {
     const label = reviewMeta[reviewStatus].label;
     Modal.confirm({
@@ -188,10 +130,7 @@ const CompaniesPage = () => {
       okText: 'Xác nhận',
       cancelText: 'Hủy',
       okButtonProps: reviewStatus === 'rejected' ? { danger: true } : undefined,
-      onOk: () => {
-        updateReviewStatus(record.id, reviewStatus);
-        message.success(`Đã cập nhật ${record.name} sang ${label.toLowerCase()}`);
-      },
+      onOk: () => updateCompanyMutation.mutate({ id: record.id, body: { reviewStatus }, index: 0, params: { page: 1, limit: 10 } }, { onSuccess: () => message.success(`Đã cập nhật ${record.name} sang ${label.toLowerCase()}`) }),
     });
   };
 
@@ -254,24 +193,7 @@ const CompaniesPage = () => {
         );
       },
     },
-    {
-      title: t(getKey('action')),
-      key: 'actions',
-      align: 'right',
-      render: (_: unknown, record) => (
-        <Space size={4}>
-          <Button type="text" size="small" className="!px-2" onClick={() => handleOpenDetail(record)} title="Xem">
-            <EyeOutlined />
-          </Button>
-          <Button type="text" size="small" className="!px-2 text-[#0f766e]" onClick={() => handleOpenEdit(record)} title="Sửa">
-            <EditOutlined />
-          </Button>
-          <Button type="text" size="small" danger className="!px-2" onClick={() => handleDelete(record)} title="Xóa">
-            <DeleteOutlined />
-          </Button>
-        </Space>
-      ),
-    },
+    
   ], [t]);
 
   const tabItems = [
@@ -295,6 +217,13 @@ const CompaniesPage = () => {
             </Typography.Title>
             <p className={cn('mt-2 mb-0 text-[18px] leading-[26px] text-grayDark')}>{t(getKey('company_management_desc'))}</p>
           </div>
+          <Button
+            icon={<SendOutlined />}
+            onClick={() => setPublishOpen(true)}
+            className="!h-10 !rounded-[8px] !border-[#2196F3] !px-5 !font-medium !text-[#2196F3] hover:!border-[#1976d2] hover:!text-[#1976d2]"
+          >
+            Công bố danh sách
+          </Button>
         </div>
       </div>
 
@@ -337,177 +266,123 @@ const CompaniesPage = () => {
       </div>
 
       <Card className="overflow-hidden rounded-[18px] border border-slate-100 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
-        <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <div className="text-[18px] font-bold text-navyDark">{t(getKey('company_list'))}</div>
-            <div className="mt-1 text-sm text-slate-500">Danh sách doanh nghiệp hợp tác với hệ thống</div>
-          </div>
-          <Space wrap size={8}>
-            <Button
-              icon={<SendOutlined />}
-              onClick={() => setPublishOpen(true)}
-              className="!h-10 !rounded-[8px] !border-[#2196F3] !px-5 !font-medium !text-[#2196F3] hover:!border-[#1976d2] hover:!text-[#1976d2]"
-            >
-              Công bố danh sách
-            </Button>
-            <Button type="primary" icon={<PlusOutlined className="text-white" />} onClick={handleOpenCreate} className="!h-10 !rounded-[8px] !bg-primary !px-5 !flex !items-center !gap-2 !font-medium hover:!bg-blueDark">
-              <span className="text-white text-base font-medium text-center w-full">{t(getKey('add_company'))}</span>
-            </Button>
-          </Space>
-        </div>
-
-        <div className="mb-4 grid grid-cols-1 gap-3 xl:grid-cols-12">
-          <div className="xl:col-span-5">
-            <Input
-              allowClear
-              value={keyword}
-              onChange={(event) => setKeyword(event.target.value)}
-              prefix={<SearchOutlined className="text-slate-400" />}
-              placeholder={t(getKey('search_by_company_name'))}
-              className="!h-11 !rounded-[12px] !border-slate-300"
-            />
-          </div>
-          <div className="xl:col-span-7">
-            <Space.Compact block>
-              <Select
-                value={fieldFilter}
-                onChange={setFieldFilter}
-                className="!h-11 !w-[55%]"
-                options={[
-                  { value: 'all', label: 'Tất cả lĩnh vực' },
-                  { value: 'Phần mềm & công nghệ', label: 'Phần mềm & công nghệ' },
-                  { value: 'Thương mại điện tử', label: 'Thương mại điện tử' },
-                  { value: 'Gia công phần mềm', label: 'Gia công phần mềm' },
-                  { value: 'Công nghệ số', label: 'Công nghệ số' },
-                ]}
-              />
-              <Select
-                value={statusFilter}
-                onChange={setStatusFilter}
-                className="!h-11 !w-[45%]"
-                options={[
-                  { value: 'all', label: 'Tất cả trạng thái' },
-                  { value: 'active', label: t(getKey('company_active')) },
-                  { value: 'pending', label: t(getKey('company_pending')) },
-                  { value: 'paused', label: t(getKey('company_paused')) },
-                ]}
-              />
-            </Space.Compact>
-          </div>
-        </div>
-
-        <Table
-          rowKey="id"
+        <FilterTable<CompanyRow, IDetailCompany, ICreateCompany, IUpdateCompany>
+          title={t(getKey('company_list'))}
+          createButtonLabel={t(getKey('add_company'))}
           columns={columns}
-          dataSource={filteredRows}
-          pagination={{
-            total: filteredRows.length,
-            pageSize: 10,
-            position: ['bottomCenter'],
-            showQuickJumper: false,
-            showTotal(total, range) {
-              return <span className="pl-2">Hiển thị {range[0]} đến {range[1]} trong {total} mục</span>;
+          useQueryHook={useFilteredCompanyListQuery}
+          createInfo={{
+            type: 'modal',
+            modalInfo: {
+              modalContent: <CompanyForm />,
+              modalProps: {
+                centered: true,
+                width: 720,
+                title: 'Thêm công ty',
+              },
+              modalFunc: createCompanyMutation,
             },
           }}
-          scroll={{ x: 'max-content' }}
+          updateInfo={{
+            type: 'modal',
+            modalInfo: {
+              modalContent: <CompanyForm />,
+              modalProps: {
+                centered: true,
+                width: 720,
+                title: 'Chỉnh sửa công ty',
+              },
+              modalFunc: updateCompanyMutation,
+            },
+          }}
+          detailInfo={{
+            type: 'modal',
+            modalInfo: {
+              modalContent: <CompanyForm disabled />,
+              modalProps: {
+                centered: true,
+                width: 720,
+                title: 'Chi tiết công ty',
+                footer: null,
+              },
+              modalFunc: companyHooks.useFetchDetailCompany,
+            },
+          }}
+          formatInitialValues={(detail: IDetailCompany) => ({
+            name: detail.name,
+            taxId: detail.taxId,
+            field: detail.field,
+            contact: detail.contact,
+            phone: detail.phone || '',
+            email: detail.email || '',
+            partners: detail.partners ?? 0,
+            students: detail.students ?? 0,
+            status: detail.status,
+            reviewStatus: detail.reviewStatus ?? 'pending',
+          })}
+          formatFormValues={(values: Record<string, unknown>) => values as ICreateCompany | IUpdateCompany}
+          filterRender={() => (
+            <div className="mb-4 grid grid-cols-1 gap-3 xl:grid-cols-12">
+              <div className="xl:col-span-5">
+                <Input
+                  allowClear
+                  value={keyword}
+                  onChange={(event) => setKeyword(event.target.value)}
+                  prefix={<SearchOutlined className="text-slate-400" />}
+                  placeholder={t(getKey('search_by_company_name'))}
+                  className="!h-11 !rounded-[12px] !border-slate-300"
+                />
+              </div>
+              <div className="xl:col-span-7">
+                <Space.Compact block>
+                  <Select
+                    value={fieldFilter}
+                    onChange={setFieldFilter}
+                    className="!h-11 !w-[55%]"
+                    options={[
+                      { value: 'all', label: 'Tất cả lĩnh vực' },
+                      { value: 'Phần mềm & công nghệ', label: 'Phần mềm & công nghệ' },
+                      { value: 'Thương mại điện tử', label: 'Thương mại điện tử' },
+                      { value: 'Gia công phần mềm', label: 'Gia công phần mềm' },
+                      { value: 'Công nghệ số', label: 'Công nghệ số' },
+                    ]}
+                  />
+                  <Select
+                    value={statusFilter}
+                    onChange={setStatusFilter}
+                    className="!h-11 !w-[45%]"
+                    options={[
+                      { value: 'all', label: 'Tất cả trạng thái' },
+                      { value: 'active', label: t(getKey('company_active')) },
+                      { value: 'pending', label: t(getKey('company_pending')) },
+                      { value: 'paused', label: t(getKey('company_paused')) },
+                    ]}
+                  />
+                </Space.Compact>
+              </div>
+            </div>
+          )}
+          actions={{
+            isDetail: true,
+            isEdit: true,
+            isDelete: false,
+            customAction: (record: unknown) => {
+              const r = record as CompanyRow;
+              return (
+                <div className="pointer-events-auto">
+                  <Space size={4}>
+                    <Button type="text" size="small" danger className="!px-2 pointer-events-auto" onClick={() => handleDelete(r)} title="Xóa">
+                      <DeleteOutlined />
+                    </Button>
+                  </Space>
+                </div>
+              );
+            },
+          }}
         />
       </Card>
 
-      <Modal
-        centered
-        open={open}
-        title={modalMode === 'create' ? 'Thêm công ty' : modalMode === 'edit' ? 'Chỉnh sửa công ty' : 'Chi tiết công ty'}
-        onCancel={() => {
-          setOpen(false);
-          setSelectedCompany(null);
-          form.resetFields();
-        }}
-        destroyOnHidden
-        width={720}
-        okText={modalMode === 'create' ? t(getKey('add_company')) : modalMode === 'edit' ? t(getKey('update_btn')) : undefined}
-        cancelText={t(getKey('cancel_btn'))}
-        onOk={handleSubmitCompany}
-        footer={modalMode === 'detail' ? null : undefined}
-      >
-        <Form form={form} layout="vertical" className="max-h-[75vh] overflow-y-auto pr-1">
-          <div className="grid grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-2">
-            <Form.Item label={t(getKey('company_name'))} name="name" rules={[{ required: true, message: 'Vui lòng nhập tên công ty' }]}>
-              <Input disabled={modalMode === 'detail'} placeholder="VD: FPT Software" />
-            </Form.Item>
-            <Form.Item label={t(getKey('company_tax_id'))} name="taxId" rules={[{ required: true, message: 'Vui lòng nhập mã số thuế' }]}>
-              <Input disabled={modalMode === 'detail'} placeholder="VD: 0101243150" />
-            </Form.Item>
-            <Form.Item label={t(getKey('company_field'))} name="field" rules={[{ required: true, message: 'Vui lòng chọn lĩnh vực' }]}>
-              <Select disabled={modalMode === 'detail'} options={[{ value: 'Phần mềm & công nghệ', label: 'Phần mềm & công nghệ' }, { value: 'Thương mại điện tử', label: 'Thương mại điện tử' }, { value: 'Gia công phần mềm', label: 'Gia công phần mềm' }, { value: 'Công nghệ số', label: 'Công nghệ số' }]} />
-            </Form.Item>
-            <Form.Item label={t(getKey('company_status'))} name="status" rules={[{ required: true, message: 'Vui lòng chọn trạng thái' }]}>
-              <Select disabled={modalMode === 'detail'} options={[{ value: 'active', label: t(getKey('company_active')) }, { value: 'pending', label: t(getKey('company_pending')) }, { value: 'paused', label: t(getKey('company_paused')) }]} />
-            </Form.Item>
-            <Form.Item label={t(getKey('company_contact'))} name="contact" rules={[{ required: true, message: 'Vui lòng nhập người liên hệ' }]}>
-              <Input disabled={modalMode === 'detail'} placeholder="VD: Nguyễn Văn Hùng" />
-            </Form.Item>
-            <Form.Item label="Số điện thoại" name="phone" rules={[{ required: true, message: 'Vui lòng nhập số điện thoại' }]}>
-              <Input disabled={modalMode === 'detail'} placeholder="0901234567" />
-            </Form.Item>
-            <Form.Item label={t(getKey('email'))} name="email" rules={[{ required: true, message: 'Vui lòng nhập email' }, { type: 'email', message: 'Email không hợp lệ' }]}>
-              <Input disabled={modalMode === 'detail'} placeholder="contact@company.com" />
-            </Form.Item>
-            <Form.Item label="Số đối tác" name="partners">
-              <InputNumber disabled={modalMode === 'detail'} className="!w-full" min={0} />
-            </Form.Item>
-            <Form.Item label="Số sinh viên đang hợp tác" name="students">
-              <InputNumber disabled={modalMode === 'detail'} className="!w-full" min={0} />
-            </Form.Item>
-            <Form.Item label="Trạng thái duyệt" name="reviewStatus">
-              <Select
-                disabled={modalMode === 'detail'}
-                options={[
-                  { value: 'pending', label: 'Chờ duyệt' },
-                  { value: 'approved', label: 'Đã duyệt' },
-                  { value: 'rejected', label: 'Đã từ chối' },
-                ]}
-              />
-            </Form.Item>
-          </div>
-        </Form>
-      </Modal>
-
-      <Modal
-        centered
-        open={publishOpen}
-        title="Công bố danh sách công ty"
-        onCancel={() => setPublishOpen(false)}
-        destroyOnHidden
-        width={560}
-        okText="Công bố"
-        cancelText={t(getKey('cancel_btn'))}
-        okButtonProps={{ className: '!h-10 !rounded-lg !font-medium' }}
-        cancelButtonProps={{ className: '!h-10 !rounded-lg !font-medium' }}
-        onOk={() => setPublishOpen(false)}
-      >
-        <div className="space-y-3 text-sm text-slate-600">
-          <p className="m-0">
-            Chỉ các công ty đã được duyệt sẽ xuất hiện trong danh sách công bố.
-          </p>
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <div className="mb-2 font-medium text-slate-900">Tóm tắt hiện tại</div>
-            <div className="grid grid-cols-3 gap-3 text-center">
-              <div className="rounded-lg bg-white p-3 shadow-sm">
-                <div className="text-2xl font-bold text-[#2196F3]">{companyStats.total}</div>
-                <div className="text-xs text-slate-500">Tổng công ty</div>
-              </div>
-              <div className="rounded-lg bg-white p-3 shadow-sm">
-                <div className="text-2xl font-bold text-[#00A65A]">{reviewStats.approved}</div>
-                <div className="text-xs text-slate-500">Đã duyệt</div>
-              </div>
-              <div className="rounded-lg bg-white p-3 shadow-sm">
-                <div className="text-2xl font-bold text-[#D08A00]">{reviewStats.pending}</div>
-                <div className="text-xs text-slate-500">Chờ duyệt</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Modal>
+      <PublishModal open={publishOpen} onCancel={() => setPublishOpen(false)} onOk={() => setPublishOpen(false)} companyStats={companyStats} reviewStats={reviewStats} />
     </div>
   );
 };
