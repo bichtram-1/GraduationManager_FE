@@ -1,5 +1,5 @@
 import { BankOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, SearchOutlined, SendOutlined, TeamOutlined, DeleteOutlined } from '@ant-design/icons';
-import { Button, Card, Dropdown, Input, message, Modal, Select, Space, Tag, Tabs, Typography } from 'antd';
+import { Button, Card, Dropdown, Form, Input, message, Modal, Select, Space, Tag, Tabs, Typography } from 'antd';
 import FilterTable from '../../components/shared/table/FilterTable';
 import type { ColumnsType } from 'antd/es/table';
 import PublishModal from './components/PublishModal';
@@ -16,6 +16,12 @@ import type { UseQueryResult } from '@tanstack/react-query';
 type CompanyStatus = 'active' | 'pending' | 'paused';
 type ReviewStatus = 'pending' | 'approved' | 'rejected';
 type CompanyTab = 'all' | ReviewStatus;
+
+type CompanyListParams = BaseListParams & {
+  keyword?: string;
+  fieldFilter?: string;
+  statusFilter?: CompanyStatus | 'all';
+};
 
 type CompanyRow = {
   id: string;
@@ -48,35 +54,29 @@ const CompaniesPage = () => {
   const { t } = useTranslation();
   const [tab, setTab] = useState<CompanyTab>('all');
   const [publishOpen, setPublishOpen] = useState(false);
-  const [keyword, setKeyword] = useState('');
-  const [fieldFilter, setFieldFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState<'all' | CompanyStatus>('all');
   const { data: companyList } = companyHooks.useFetchListCompanies();
   const createCompanyMutation = companyHooks.useCreateCompany();
   const updateCompanyMutation = companyHooks.useUpdateCompany();
   const deleteCompanyMutation = companyHooks.useDeleteCompany();
   const companyRows = (companyList?.rows ?? COMPANY_ROWS) as CompanyRow[];
 
-  const filteredRows = useMemo(
-    () => (tab === 'all' ? companyRows : companyRows.filter((row) => row.reviewStatus === tab))
+  const useFilteredCompanyListQuery = (params: BaseListParams) => {
+    const query = companyHooks.useFetchListCompanies();
+    const typedParams = params as CompanyListParams;
+    const normalizedKeyword = (typedParams.keyword ?? '').trim().toLowerCase();
+    const filteredRows = (tab === 'all' ? companyRows : companyRows.filter((row) => row.reviewStatus === tab))
       .filter((row) => {
-        const normalizedKeyword = keyword.trim().toLowerCase();
         const byKeyword =
           !normalizedKeyword ||
           [row.id, row.name, row.taxId, row.contact, row.email, row.field]
             .join(' ')
             .toLowerCase()
             .includes(normalizedKeyword);
-        const byField = fieldFilter === 'all' || row.field === fieldFilter;
-        const byStatus = statusFilter === 'all' || row.status === statusFilter;
+        const byField = !typedParams.fieldFilter || typedParams.fieldFilter === 'all' || row.field === typedParams.fieldFilter;
+        const byStatus = !typedParams.statusFilter || typedParams.statusFilter === 'all' || row.status === typedParams.statusFilter;
 
         return byKeyword && byField && byStatus;
-      }),
-    [companyRows, tab, keyword, fieldFilter, statusFilter],
-  );
-
-  const useFilteredCompanyListQuery = (_params: BaseListParams) => {
-    const query = companyHooks.useFetchListCompanies();
+      });
 
     return {
       ...query,
@@ -87,7 +87,7 @@ const CompaniesPage = () => {
             total: filteredRows.length,
           }
         : query.data,
-      } as UseQueryResult<{ rows: CompanyRow[]; total: number }, Error>;
+    } as UseQueryResult<{ rows: CompanyRow[]; total: number }, Error>;
   };
 
   const handleDelete = (record: CompanyRow) => {
@@ -323,43 +323,41 @@ const CompaniesPage = () => {
           formatFormValues={(values: Record<string, unknown>) => values as ICreateCompany | IUpdateCompany}
           filterRender={() => (
             <div className="mb-4 grid grid-cols-1 gap-3 xl:grid-cols-12">
-              <div className="xl:col-span-5">
+              <Form.Item name="keyword" className="xl:col-span-5 !mb-0">
                 <Input
                   allowClear
-                  value={keyword}
-                  onChange={(event) => setKeyword(event.target.value)}
                   prefix={<SearchOutlined className="text-slate-400" />}
                   placeholder={t(getKey('search_by_company_name'))}
                   className="!h-11 !rounded-[12px] !border-slate-300"
                 />
-              </div>
-              <div className="xl:col-span-7">
-                <Space.Compact block>
-                  <Select
-                    value={fieldFilter}
-                    onChange={setFieldFilter}
-                    className="!h-11 !w-[55%]"
-                    options={[
-                      { value: 'all', label: 'Tất cả lĩnh vực' },
-                      { value: 'Phần mềm & công nghệ', label: 'Phần mềm & công nghệ' },
-                      { value: 'Thương mại điện tử', label: 'Thương mại điện tử' },
-                      { value: 'Gia công phần mềm', label: 'Gia công phần mềm' },
-                      { value: 'Công nghệ số', label: 'Công nghệ số' },
-                    ]}
-                  />
-                  <Select
-                    value={statusFilter}
-                    onChange={setStatusFilter}
-                    className="!h-11 !w-[45%]"
-                    options={[
-                      { value: 'all', label: 'Tất cả trạng thái' },
-                      { value: 'active', label: t(getKey('company_active')) },
-                      { value: 'pending', label: t(getKey('company_pending')) },
-                      { value: 'paused', label: t(getKey('company_paused')) },
-                    ]}
-                  />
-                </Space.Compact>
-              </div>
+              </Form.Item>
+              <Form.Item name="fieldFilter" className="xl:col-span-4 !mb-0">
+                <Select
+                  allowClear
+                  placeholder="Tất cả lĩnh vực"
+                  className="!h-11 !w-full"
+                  options={[
+                    { value: 'all', label: 'Tất cả lĩnh vực' },
+                    { value: 'Phần mềm & công nghệ', label: 'Phần mềm & công nghệ' },
+                    { value: 'Thương mại điện tử', label: 'Thương mại điện tử' },
+                    { value: 'Gia công phần mềm', label: 'Gia công phần mềm' },
+                    { value: 'Công nghệ số', label: 'Công nghệ số' },
+                  ]}
+                />
+              </Form.Item>
+              <Form.Item name="statusFilter" className="xl:col-span-3 !mb-0">
+                <Select
+                  allowClear
+                  placeholder="Tất cả trạng thái"
+                  className="!h-11 !w-full"
+                  options={[
+                    { value: 'all', label: 'Tất cả trạng thái' },
+                    { value: 'active', label: t(getKey('company_active')) },
+                    { value: 'pending', label: t(getKey('company_pending')) },
+                    { value: 'paused', label: t(getKey('company_paused')) },
+                  ]}
+                />
+              </Form.Item>
             </div>
           )}
           actions={{
