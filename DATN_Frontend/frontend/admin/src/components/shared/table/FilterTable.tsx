@@ -147,6 +147,14 @@ const FilterTable = <
     paramVariables || initParams
   );
 
+  useEffect(() => {
+    if (!paramVariables) return;
+    // update internal params when parent provides new paramVariables (e.g., tab change)
+    if (!_.isEqual(paramVariables, internalParams)) {
+      setInternalParams(paramVariables as BaseListParams);
+    }
+  }, [paramVariables]);
+
   const [openModal, setOpenModal] = useState<{
     type: 'create' | 'update' | 'detail';
     open: boolean;

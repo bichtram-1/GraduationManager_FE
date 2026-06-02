@@ -20,7 +20,8 @@ import {
 import ModalCreateEditUser from './components/ModalCreateEditUser';
 import { cn } from '../../constants/commonConst';
 import { getKey } from '@shared/types/I18nKeyType';
-import { BaseListParams } from '@shared/types/GeneralType';
+import { BaseListParams, ListResponseTypeObject } from '@shared/types/GeneralType';
+import type { UseQueryResult } from '@tanstack/react-query';
 
 interface IUserListParams extends BaseListParams {
   role: UserRoleType;
@@ -152,11 +153,31 @@ const UsersPage = () => {
     [role]
   );
 
-  const useRoleUsersQuery = (params: BaseListParams) => {
-    return userHooks.useFetchListUsers({
-      ...params,
-      role,
-    } as IUserListParams);
+  const useRoleUsersQuery = (params: BaseListParams): UseQueryResult<ListResponseTypeObject<IListUser>, Error> => {
+    const typedParams = params as IUserListParams;
+    const query = userHooks.useFetchListUsers({ ...(typedParams), role } as IUserListParams);
+    const dataShape1 = query.data as ListResponseTypeObject<IListUser> | undefined;
+    const dataShape2 = query.data as { results?: { objects?: ListResponseTypeObject<IListUser> } } | undefined;
+    const allRows = dataShape1?.rows ?? dataShape2?.results?.objects?.rows ?? [];
+    const normalizedKeyword = (typedParams.keyword ?? '').trim().toLowerCase();
+
+    const filteredRows = (allRows as IListUser[])
+      .filter((row) => (role ? row.role === role : true))
+      .filter((row) => {
+        if (!normalizedKeyword) return true;
+        return [row.id, row.name, row.email, row.className]
+          .join(' ')
+          .toLowerCase()
+          .includes(normalizedKeyword);
+      })
+      .filter((row) => (typedParams.status ? row.status === typedParams.status : true))
+      .filter((row) => (typedParams.className ? row.className === typedParams.className : true));
+
+    const data = { rows: filteredRows, total: filteredRows.length };
+    return {
+      ...query,
+      data,
+    } as UseQueryResult<ListResponseTypeObject<IListUser>, Error>;
   };
 
   const listParams: IUserListParams = {

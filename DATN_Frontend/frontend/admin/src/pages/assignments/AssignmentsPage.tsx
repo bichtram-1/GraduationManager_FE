@@ -2,6 +2,8 @@ import { TeamOutlined, SearchOutlined, DownloadOutlined, SendOutlined, EditOutli
 import { Button, Card, Checkbox, Form, Input, Modal, Pagination, Radio, Select, Space, Tag, Tabs, Typography, message } from 'antd';
 import { useMemo, useState } from 'react';
 import AssignmentModal from './components/AssignmentModal';
+import AssignmentForm from './components/AssignmentForm';
+import FilterTable from '../../components/shared/table/FilterTable';
 import { assignmentHooks } from '../../hooks/useAssignments';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../constants/commonConst';
@@ -42,19 +44,8 @@ const AssignmentsPage = () => {
   const filteredAssignedRows = useMemo(
     () => rows
       .filter((r) => r.status === 'assigned')
-      .filter((r) => {
-        const normalizedKeyword = listQuery.trim().toLowerCase();
-        const byKeyword =
-          !normalizedKeyword ||
-          [r.studentId, r.name, r.className, r.topic, r.supervisor || '']
-            .join(' ')
-            .toLowerCase()
-            .includes(normalizedKeyword);
-        const byClass = listClassFilter === 'all' || r.className === listClassFilter;
-        const byTeacher = listTeacherFilter === 'all' || (r.supervisor || '') === listTeacherFilter;
-        return byKeyword && byClass && byTeacher;
-      }),
-    [rows, listQuery, listClassFilter, listTeacherFilter],
+      .filter((r) => true),
+    [rows],
   );
 
   const filteredTeachers = useMemo(
@@ -312,70 +303,65 @@ const AssignmentsPage = () => {
         </div>
       ) : (
         <div className="px-4 py-4">
-          <Card>
-            <div className="flex items-start gap-4 justify-between mb-4">
-                <div className="flex items-center gap-3 w-full">
-                  <div className="flex items-center gap-3 flex-1 flex-wrap">
-                    <Select value={listClassFilter} onChange={setListClassFilter} style={{ minWidth: 180, width: 220 }}>
-                      <Select.Option value="all">Tất cả lớp</Select.Option>
-                      <Select.Option value="KTPM2020">KTPM2020</Select.Option>
-                      <Select.Option value="CNPM2020">CNPM2020</Select.Option>
-                    </Select>
-                    <Select value={listTeacherFilter} onChange={setListTeacherFilter} style={{ minWidth: 180, width: 220 }}>
-                      <Select.Option value="all">Tất cả GV</Select.Option>
-                      {teachers.map((teacher) => (
-                        <Select.Option key={teacher.id} value={teacher.name}>{teacher.name}</Select.Option>
-                      ))}
-                    </Select>
-                    <Input allowClear value={listQuery} onChange={(e) => setListQuery(e.target.value)} placeholder="MSSV / tên SV..." style={{ minWidth: 200, flex: 1, maxWidth: 420 }} />
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Button icon={<DownloadOutlined />}>Xuất Excel</Button>
-                    <Button type="primary" icon={<SendOutlined />}>Công bố phân công</Button>
-                  </div>
+          <FilterTable
+            title={`Danh sách đã phân công (${assignedCount})`}
+            columns={[
+              { title: 'MSSV', dataIndex: 'studentId', key: 'studentId', render: (v: string) => <span className="text-[#2563eb]">{v}</span> },
+              { title: 'Họ tên', dataIndex: 'name', key: 'name' },
+              { title: 'Lớp', dataIndex: 'className', key: 'className' },
+              { title: 'GVHD', dataIndex: 'supervisor', key: 'supervisor' },
+              { title: 'Ngày phân', dataIndex: 'assignedAt', key: 'assignedAt' },
+            ]}
+            useQueryHook={(params: any) => {
+              const typed = params as import('../..//api/assignmentApi').IAssignmentListParams;
+              const query = assignmentHooks.useFetchListAssignments(typed);
+              const keyword = (typed.keyword ?? '').trim().toLowerCase();
+              const classFilter = typed.className || 'all';
+              const teacherFilter = typed.supervisor || 'all';
+              const source = query.data?.rows ?? [];
+              const filteredRows = source
+                .filter((r: any) => r.status === 'assigned')
+                .filter((r: any) => {
+                  const byKeyword = !keyword || [r.studentId, r.name, r.className, r.topic, r.supervisor || ''].join(' ').toLowerCase().includes(keyword);
+                  const byClass = classFilter === 'all' || r.className === classFilter;
+                  const byTeacher = teacherFilter === 'all' || (r.supervisor || '') === teacherFilter;
+                  return byKeyword && byClass && byTeacher;
+                });
+              const data = { rows: filteredRows, total: filteredRows.length };
+              // cast to UseQueryResult to satisfy FilterTable's expected hook signature
+              return {
+                ...(query as unknown as import('@tanstack/react-query').UseQueryResult<any, Error>),
+                data,
+              } as import('@tanstack/react-query').UseQueryResult<import('../../type/AssignmentType').IListAssignment extends infer T ? import('@shared/types/GeneralType').ListResponseTypeObject<T> : never, Error>;
+            }}
+            paramVariables={{ page: 1, limit: 10 }}
+            filterRender={() => (
+              <div className="mb-4 flex flex-wrap gap-3 items-center">
+                <Form.Item name="className" className="m-0">
+                  <Select allowClear style={{ minWidth: 180 }} options={[{ value: 'all', label: 'Tất cả lớp' }, { value: 'KTPM2020', label: 'KTPM2020' }, { value: 'CNPM2020', label: 'CNPM2020' }]} />
+                </Form.Item>
+                <Form.Item name="supervisor" className="m-0">
+                  <Select allowClear style={{ minWidth: 180 }} options={[{ value: 'all', label: 'Tất cả GV' }, ...teachers.map((t) => ({ value: t.name, label: t.name }))]} />
+                </Form.Item>
+                <Form.Item name="keyword" className="m-0">
+                  <Input allowClear placeholder="MSSV / tên SV..." style={{ minWidth: 200 }} />
+                </Form.Item>
+                <div className="ml-auto flex gap-2">
+                  <Button icon={<DownloadOutlined />}>Xuất Excel</Button>
+                  <Button type="primary" icon={<SendOutlined />}>Công bố phân công</Button>
                 </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-slate-50 text-slate-600">
-                  <tr>
-                    <th className="px-4 py-3 text-left">MSSV</th>
-                    <th className="px-4 py-3 text-left">Họ tên</th>
-                    <th className="px-4 py-3 text-left">Lớp</th>
-                    <th className="px-4 py-3 text-left">GVHD</th>
-                    <th className="px-4 py-3 text-left">Ngày phân</th>
-                    <th className="px-4 py-3 text-right">{t(getKey('action'))}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredAssignedRows.map((r) => (
-                    <tr key={r.studentId} className="border-t border-slate-100 hover:bg-slate-50">
-                      <td className="px-4 py-3 text-[#2563eb] font-medium">{r.studentId}</td>
-                      <td className="px-4 py-3">{r.name}</td>
-                      <td className="px-4 py-3 text-slate-600">{r.className}</td>
-                      <td className="px-4 py-3">{r.supervisor}</td>
-                      <td className="px-4 py-3">{r.assignedAt || '—'}</td>
-                      <td className="px-4 py-3 text-right">
-                        <Space size={6}>
-                          <Button type="text" size="small" icon={<EyeOutlined />} onClick={() => openDetailAssignment(r)} />
-                          <Button type="text" size="small" icon={<EditOutlined />} onClick={() => openEditAssignment(r)} />
-                          <Button type="text" size="small" danger onClick={() => unassign(r.studentId)} icon={<DeleteOutlined />} />
-                        </Space>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
+              </div>
+            )}
+            updateInfo={{ type: 'modal', modalInfo: { modalContent: <AssignmentForm />, modalProps: { centered: true, width: 760, title: 'Chỉnh sửa phân công' }, modalFunc: updateAssignmentMutation } }}
+            detailInfo={{ type: 'modal', modalInfo: { modalContent: <AssignmentForm disabled />, modalProps: { centered: true, width: 760, title: 'Chi tiết phân công', footer: null }, modalFunc: assignmentHooks.useFetchDetailAssignment } }}
+            formatInitialValues={(d: any) => d || {}}
+            formatFormValues={(v: Record<string, unknown>) => v}
+          />
         </div>
       )}
       </div>
 
-      <div className="mt-4 flex justify-end">
-        <Pagination current={1} total={1} />
-      </div>
+      
 
       <AssignmentModal open={assignmentModalOpen} mode={assignmentModalMode} form={form} onCancel={() => { setAssignmentModalOpen(false); setSelectedAssignment(null); form.resetFields(); }} onOk={submitAssignment} />
     </div>

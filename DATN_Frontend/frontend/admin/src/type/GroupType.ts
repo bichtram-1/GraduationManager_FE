@@ -4,6 +4,8 @@ export interface IGroupMember {
   id: string;
   name: string;
   code?: string;
+  eligible?: boolean;
+  reason?: string;
 }
 
 interface IBaseGroup {
