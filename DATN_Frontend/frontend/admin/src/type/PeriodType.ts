@@ -7,6 +7,8 @@ interface IBasePeriod {
   startDate: string;
   endDate: string;
   regDeadline: string;
+  studentListUrl?: string;
+  studentListFileName?: string;
   numberDN?: number;
   numberSV?: number;
   numberTopics?: number;

@@ -76,8 +76,9 @@ const InternshipStudentsPage = () => {
 
   const useFilteredConfirmationListQuery = (params: BaseListParams) => {
     const query = internshipHooks.useFetchListConfirmationRequests();
-    const typedParams = params as BaseListParams & { keyword?: string };
+    const typedParams = params as BaseListParams & { keyword?: string; companyName?: string };
     const keyword = (typedParams.keyword ?? '').trim().toLowerCase();
+    const companyName = (typedParams.companyName ?? '').trim().toLowerCase();
     // use outer tab state (confirmationTab) like CompaniesPage uses `tab`
     const status = confirmationTab || 'all';
 
@@ -85,6 +86,7 @@ const InternshipStudentsPage = () => {
     // debug removed
     const filteredRows = sourceRows
       .filter((r) => (status === 'all' ? true : r.status === status))
+      .filter((r) => !companyName || r.companyName.toLowerCase().includes(companyName))
       .filter((r) => !keyword || [r.studentId, r.studentName, r.className, r.companyName, r.taxId].join(' ').toLowerCase().includes(keyword));
     // debug removed
 
@@ -136,6 +138,8 @@ const InternshipStudentsPage = () => {
     { title: 'Thông tin công ty', key: 'company', render: (_: unknown, record: IConfirmationRequest) => (
       <div className="text-sm">
         <div className="font-medium text-slate-900">{record.companyName}</div>
+        <div className="text-xs text-slate-500">Địa chỉ công ty: {record.companyAddress}</div>
+        <div className="text-xs text-slate-500">Địa điểm thực tập: {record.internshipLocation}</div>
         <div className="text-xs text-slate-500">MST: {record.taxId}</div>
         <div className="text-xs text-slate-500">Mentor: {record.mentor}</div>
       </div>
@@ -242,13 +246,16 @@ const InternshipStudentsPage = () => {
             updateInfo={{ type: 'modal', modalInfo: { modalContent: <ConfirmationForm />, modalProps: { centered: true, width: 720, title: 'Chỉnh sửa hồ sơ' }, modalFunc: updateConfirmationMutation } }}
             deleteInfo={{ type: 'modal', modalInfo: { modalContent: null, modalProps: {}, modalFunc: deleteConfirmationMutation as unknown as import('@tanstack/react-query').UseMutationResult<IConfirmationRequest, import('axios').AxiosError, { id: string; params: BaseListParams }> } }}
             detailInfo={{ type: 'modal', modalInfo: { modalContent: <ConfirmationForm disabled />, modalProps: { centered: true, width: 720, title: 'Chi tiết hồ sơ', footer: null }, modalFunc: internshipHooks.useFetchDetailConfirmationRequest } }}
-            formatInitialValues={(d) => ({ studentId: d?.studentId ?? '', studentName: d?.studentName ?? '', className: d?.className ?? '', regDate: d?.regDate ?? '', companyName: d?.companyName ?? '', taxId: d?.taxId ?? '', mentor: d?.mentor ?? '', status: d?.status ?? 'pending' })}
+            formatInitialValues={(d) => ({ studentId: d?.studentId ?? '', studentName: d?.studentName ?? '', className: d?.className ?? '', regDate: d?.regDate ?? '', companyName: d?.companyName ?? '', companyAddress: d?.companyAddress ?? '', internshipLocation: d?.internshipLocation ?? '', taxId: d?.taxId ?? '', mentor: d?.mentor ?? '', status: d?.status ?? 'pending' })}
             formatFormValues={(v) => v as unknown as ICreateConfirmationRequest}
             filterRender={() => (
               <div className="mb-4">
                 <div className="mb-3 grid grid-cols-1 gap-3 xl:grid-cols-12">
-                  <Form.Item name="keyword" className="xl:col-span-8 !mb-0">
+                  <Form.Item name="keyword" className="xl:col-span-6 !mb-0">
                     <Input allowClear prefix={<SearchOutlined className="text-slate-400" />} placeholder="Tìm MSSV, tên, lớp, công ty..." className="!h-11 !rounded-[12px] !border-slate-300" />
+                  </Form.Item>
+                  <Form.Item name="companyName" className="xl:col-span-6 !mb-0">
+                    <Input allowClear prefix={<SearchOutlined className="text-slate-400" />} placeholder="Lọc theo tên công ty..." className="!h-11 !rounded-[12px] !border-slate-300" />
                   </Form.Item>
                 </div>
 

@@ -1,7 +1,7 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { Button, Card, Input, Select, message } from 'antd';
 import { ArrowLeftOutlined, MenuOutlined } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '../../../constants/commonConst';
 
 const TEACHERS = [
@@ -37,6 +37,9 @@ type AdvisorBucket = {
 
 type SelectedTopic = AdvisorTopic & {
   reviewerId: string | null;
+  examinerIds?: string[];
+  externalExaminers?: string[];
+  startTime?: string | null;
 };
 
 type CommitteeForm = {
@@ -45,9 +48,7 @@ type CommitteeForm = {
   room: string;
   date: string;
   time: string;
-  advisors: string[];
-  reviewers: string[];
-  members: string[];
+  members: string[]; // committee members (all roles chosen later)
 };
 
 type WorkflowTab = 'pick' | 'sort';
@@ -103,6 +104,7 @@ const ADVISOR_BUCKETS: AdvisorBucket[] = [
 
 const CreateCouncilPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const section2Ref = useRef<HTMLDivElement | null>(null);
   const [form, setForm] = useState<CommitteeForm>({
     name: '',
@@ -110,8 +112,6 @@ const CreateCouncilPage = () => {
     room: '',
     date: '',
     time: '',
-    advisors: [],
-    reviewers: [],
     members: [],
   });
   const [selectedTopics, setSelectedTopics] = useState<SelectedTopic[]>([]);
@@ -141,37 +141,25 @@ const CreateCouncilPage = () => {
     [availableAdvisorBuckets],
   );
   const availableAdvisorIds = useMemo(() => new Set(availableAdvisorBuckets.map((bucket) => bucket.advisorId)), [availableAdvisorBuckets]);
-  const advisorIds = form.advisors;
-  const reviewerIds = form.reviewers;
   const memberIds = form.members;
 
   const teacherNameById = (id: string) => TEACHERS.find((teacher) => teacher.id === id)?.name ?? id;
 
-  const updateAdvisors = (nextAdvisorIds: string[]) => {
-    const sanitizedAdvisorIds = nextAdvisorIds.filter((advisorId) => availableAdvisorIds.has(advisorId));
-    setForm((current) => ({ ...current, advisors: sanitizedAdvisorIds }));
-    setSelectedTopics((current) => current.filter((topic) => sanitizedAdvisorIds.includes(topic.advisorId)));
-  };
-
-  const updateReviewers = (nextReviewerIds: string[]) => {
-    setForm((current) => ({ ...current, reviewers: nextReviewerIds }));
-    setSelectedTopics((current) => current.map((topic) => ({
-      ...topic,
-      reviewerId: topic.reviewerId && nextReviewerIds.includes(topic.reviewerId) ? topic.reviewerId : null,
-    })));
-  };
+  const findTeacherIdByName = (name: string) => TEACHERS.find((t) => t.name === name)?.id;
 
   const updateMembers = (nextMemberIds: string[]) => {
-    setForm((current) => ({ ...current, members: nextMemberIds }));
+    const sanitized = nextMemberIds.filter((id) => availableAdvisorIds.has(id));
+    setForm((current) => ({ ...current, members: sanitized }));
+    setSelectedTopics((current) => current.filter((topic) => sanitized.includes(topic.advisorId)));
   };
 
   const toggleTopic = (topic: AdvisorTopic, enabled: boolean) => {
-    if (!advisorIds.includes(topic.advisorId)) return;
+    if (!memberIds.includes(topic.advisorId)) return;
 
     setSelectedTopics((current) => {
       if (enabled) {
         if (current.some((item) => item.id === topic.id)) return current;
-        return [...current, { ...topic, reviewerId: null }];
+        return [...current, { ...topic, reviewerId: null, examinerIds: [], externalExaminers: [], startTime: null }];
       }
 
       return current.filter((item) => item.id !== topic.id);
@@ -180,6 +168,18 @@ const CreateCouncilPage = () => {
 
   const updateReviewerForTopic = (topicId: string, reviewerId: string | null) => {
     setSelectedTopics((current) => current.map((topic) => (topic.id === topicId ? { ...topic, reviewerId } : topic)));
+  };
+
+  const updateExaminerForTopic = (topicId: string, examinerIds: string[] | null) => {
+    setSelectedTopics((current) => current.map((topic) => (topic.id === topicId ? { ...topic, examinerIds: examinerIds ?? [] } : topic)));
+  };
+
+  const updateExternalExaminersForTopic = (topicId: string, externalIds: string[] | null) => {
+    setSelectedTopics((current) => current.map((topic) => (topic.id === topicId ? { ...topic, externalExaminers: externalIds ?? [] } : topic)));
+  };
+
+  const updateStartTimeForTopic = (topicId: string, startTime: string | null) => {
+    setSelectedTopics((current) => current.map((topic) => (topic.id === topicId ? { ...topic, startTime } : topic)));
   };
 
   const moveSelectedTopic = (sourceId: string, targetId: string) => {
@@ -203,13 +203,8 @@ const CreateCouncilPage = () => {
       return;
     }
 
-    if (advisorIds.length === 0) {
-      message.error('Vui lòng chọn ít nhất 1 giảng viên hướng dẫn');
-      return;
-    }
-
-    if (reviewerIds.length === 0) {
-      message.error('Vui lòng chọn ít nhất 1 giảng viên phản biện');
+    if (memberIds.length === 0) {
+      message.error('Vui lòng chọn ít nhất 1 giảng viên cho thành phần hội đồng');
       return;
     }
 
@@ -224,9 +219,32 @@ const CreateCouncilPage = () => {
         return;
       }
 
-      if (!reviewerIds.includes(topic.reviewerId)) {
-        message.error(`GVPB của ${topic.topicCode} phải nằm trong danh sách giảng viên phản biện của hội đồng`);
+      const hasInternal = topic.examinerIds && topic.examinerIds.length > 0;
+      const hasExternal = topic.externalExaminers && topic.externalExaminers.length > 0;
+      if (!hasInternal && !hasExternal) {
+        message.error(`Đề tài ${topic.topicCode} chưa chọn người chấm (nội bộ hoặc GV ngoài)`);
         return;
+      }
+
+      if (!topic.startTime) {
+        message.error(`Đề tài ${topic.topicCode} chưa nhập thời gian bắt đầu`);
+        return;
+      }
+
+      if (hasInternal) {
+        const conflict = (topic.examinerIds || []).some((id) => id === topic.advisorId || id === topic.reviewerId);
+        if (conflict) {
+          message.error(`Người chấm nội bộ của ${topic.topicCode} không được trùng GVHD hoặc GVPB`);
+          return;
+        }
+      }
+
+      if (hasExternal) {
+        const conflictExt = (topic.externalExaminers || []).some((id) => id === topic.advisorId || id === topic.reviewerId);
+        if (conflictExt) {
+          message.error(`GV ngoài của ${topic.topicCode} không được trùng GVHD hoặc GVPB`);
+          return;
+        }
       }
     }
 
@@ -236,12 +254,56 @@ const CreateCouncilPage = () => {
   };
 
   const selectedCountByAdvisor = (advisorId: string) => selectedTopics.filter((topic) => topic.advisorId === advisorId).length;
-  const visibleAdvisorBuckets = availableAdvisorBuckets.filter((bucket) => advisorIds.includes(bucket.advisorId));
-  const committeeSummary = `${advisorIds.length} GVHD · ${reviewerIds.length} GVPB · ${memberIds.length} UV`;
+  const visibleAdvisorBuckets = availableAdvisorBuckets.filter((bucket) => memberIds.includes(bucket.advisorId));
+  const committeeSummary = `${memberIds.length} thành viên hội đồng`;
 
   const openSortTab = () => {
     if (selectedTopics.length > 0) setWorkflowTab('sort');
   };
+
+  // If navigated here for editing, prefill form and selected topics
+  useEffect(() => {
+    const state: any = (location && (location as any).state) || null;
+    const council = state?.council;
+    if (!council) return;
+
+    // map council to form
+    setForm((current) => ({
+      ...current,
+      name: council.title || current.name,
+      batch: council.batch || current.batch,
+      room: council.room || current.room,
+      // try to map chair/reviewer/member names to teacher ids
+      members: (council.member || []).map((nm: string) => findTeacherIdByName(nm)).filter(Boolean) as string[],
+      date: '',
+      time: '',
+    }));
+
+    // build selectedTopics from council.topics if available
+    const topicsFromCouncil: SelectedTopic[] = [];
+    const councilTopics = council.topics || council.topicGroups || [];
+    councilTopics.forEach((t: any) => {
+      // find advisor bucket/topic by code
+      const found = ADVISOR_BUCKETS.flatMap((b) => b.topics).find((pt) => pt.topicCode === t.code);
+      if (found) {
+        const sel: SelectedTopic = {
+          ...found,
+          reviewerId: null,
+          examinerIds: (t.examiners || []).map((n: string) => findTeacherIdByName(n)).filter(Boolean) as string[],
+          externalExaminers: (t.externalExaminers || []).map((n: string) => findTeacherIdByName(n) || n),
+          startTime: t.startTime || null,
+        };
+        topicsFromCouncil.push(sel);
+      }
+    });
+
+    if (topicsFromCouncil.length > 0) {
+      setSelectedTopics(topicsFromCouncil);
+      setWorkflowTab('sort');
+      // scroll to section 2 after a tick
+      setTimeout(() => section2Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+    }
+  }, [location]);
 
   const scrollToSection2 = () => {
     openSortTab();
@@ -256,7 +318,7 @@ const CreateCouncilPage = () => {
         </button>
         <div>
           <h1 className="text-2xl font-medium">Thêm mới hội đồng bảo vệ</h1>
-          <p className="mt-0.5 text-sm text-gray-600">Chọn nhiều GVHD, nhiều GVPB và gom đề tài theo từng giảng viên hướng dẫn</p>
+          <p className="mt-0.5 text-sm text-gray-600">Chọn thành phần hội đồng trước, sau đó chọn đề tài của các giảng viên đó và sắp xếp.</p>
         </div>
       </div>
 
@@ -302,7 +364,7 @@ const CreateCouncilPage = () => {
                 <div className="mb-2 flex items-center justify-between gap-3">
                   <div>
                     <div className="text-xs text-gray-600">Thành phần hội đồng</div>
-                    <div className="mt-1 text-xs text-gray-500">Chọn nhiều GVHD, nhiều GVPB và ủy viên. Bỏ khung để form nhẹ và dễ nhìn hơn.</div>
+                    <div className="mt-1 text-xs text-gray-500">Chọn nhiều giảng viên. Các vai trò cụ thể sẽ được gán khi sắp xếp đề tài.</div>
                   </div>
                   <div className="rounded-full bg-gray-100 px-3 py-1 text-[11px] text-gray-600">{committeeSummary}</div>
                 </div>
@@ -310,13 +372,13 @@ const CreateCouncilPage = () => {
                 <div className="space-y-4">
                   <div className="grid gap-2 sm:grid-cols-[180px_minmax(0,1fr)] sm:items-start">
                     <div>
-                      <div className="text-sm font-medium text-gray-900">Giảng viên hướng dẫn</div>
-                      <div className="mt-1 text-xs text-gray-500">GVHD quyết định nhóm đề tài nào được gom vào hội đồng</div>
+                      <div className="text-sm font-medium text-gray-900">Thành phần hội đồng</div>
+                      <div className="mt-1 text-xs text-gray-500">Chọn nhiều giảng viên (những người sẽ tham gia trong hội đồng). Các vai trò cụ thể sẽ được gán khi sắp xếp đề tài.</div>
                     </div>
                     <Select
-                      value={form.advisors}
-                      onChange={updateAdvisors}
-                      placeholder={availableAdvisorOptions.length > 0 ? 'Chọn nhiều GVHD' : 'Không còn GVHD có đề tài để phân công'}
+                      value={form.members}
+                      onChange={updateMembers}
+                      placeholder={availableAdvisorOptions.length > 0 ? 'Chọn nhiều giảng viên' : 'Không còn giảng viên có đề tài để phân công'}
                       options={availableAdvisorOptions}
                       className="w-full"
                       mode="multiple"
@@ -324,43 +386,11 @@ const CreateCouncilPage = () => {
                       disabled={availableAdvisorOptions.length === 0}
                     />
                   </div>
-
-                  <div className="grid gap-2 sm:grid-cols-[180px_minmax(0,1fr)] sm:items-start">
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">Giảng viên phản biện</div>
-                      <div className="mt-1 text-xs text-gray-500">GVPB dùng để phân công phản biện cho đề tài đã chọn</div>
-                    </div>
-                    <Select
-                      value={form.reviewers}
-                      onChange={updateReviewers}
-                      placeholder="Chọn nhiều GVPB"
-                      options={teacherOptions}
-                      className="w-full"
-                      mode="multiple"
-                      maxTagCount="responsive"
-                    />
-                  </div>
-
-                  <div className="grid gap-2 sm:grid-cols-[180px_minmax(0,1fr)] sm:items-start">
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">Ủy viên</div>
-                      <div className="mt-1 text-xs text-gray-500">Ủy viên chấm chung và tham gia hội đồng theo vai trò hỗ trợ</div>
-                    </div>
-                    <Select
-                      value={form.members}
-                      onChange={updateMembers}
-                      placeholder="Chọn nhiều ủy viên"
-                      options={teacherOptions}
-                      className="w-full"
-                      mode="multiple"
-                      maxTagCount="responsive"
-                    />
-                  </div>
                 </div>
 
                 <div className="flex flex-wrap justify-end gap-3 pt-2">
                   <Button onClick={() => navigate('/councils')}>Hủy bỏ</Button>
-                  <Button type="primary" onClick={scrollToSection2} disabled={!form.name || !form.room || !form.date || !form.time || advisorIds.length === 0 || reviewerIds.length === 0}>
+                  <Button type="primary" onClick={scrollToSection2} disabled={!form.name || !form.room || !form.date || !form.time || memberIds.length === 0}>
                     Tiếp tục sang phần chọn đề tài
                   </Button>
                 </div>
@@ -400,7 +430,7 @@ const CreateCouncilPage = () => {
               <div className="space-y-4 p-5">
                 {visibleAdvisorBuckets.length === 0 ? (
                   <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 px-4 py-10 text-center text-sm text-gray-500">
-                    Chọn ít nhất 1 giảng viên hướng dẫn còn đề tài chưa phân công để hiển thị danh sách đề tài tương ứng.
+                    Chọn ít nhất 1 giảng viên có đề tài chưa phân công để hiển thị danh sách đề tài tương ứng.
                   </div>
                 ) : (
                   visibleAdvisorBuckets.map((bucket) => {
@@ -472,6 +502,8 @@ const CreateCouncilPage = () => {
                       <th className="px-4 py-3 text-left">GVHD</th>
                       <th className="px-4 py-3 text-left">GVPB</th>
                       <th className="px-4 py-3 text-left">Người chấm</th>
+                      <th className="px-4 py-3 text-left">GV ngoài</th>
+                      <th className="px-4 py-3 text-left">Thời gian</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -503,27 +535,39 @@ const CreateCouncilPage = () => {
                             value={topic.reviewerId || undefined}
                             onChange={(value) => updateReviewerForTopic(topic.id, value ?? null)}
                             placeholder="Chọn GVPB"
-                            options={form.reviewers.map((reviewerId) => ({ value: reviewerId, label: teacherNameById(reviewerId) }))}
+                            options={memberIds
+                              .filter((id) => id !== topic.advisorId)
+                              .map((id) => ({ value: id, label: teacherNameById(id) }))}
                             className="w-full min-w-[220px]"
                             allowClear
                           />
                         </td>
-                        <td className="px-4 py-3 align-top text-gray-600">
-                          <div className="flex flex-wrap gap-1">
-                            <span className="rounded-full bg-gray-100 px-2 py-1 text-[11px] text-gray-700">{teacherNameById(topic.advisorId)}</span>
-                            {topic.reviewerId ? (
-                              <span className="rounded-full bg-blue-50 px-2 py-1 text-[11px] text-blue-700">{teacherNameById(topic.reviewerId)}</span>
-                            ) : (
-                              <span className="rounded-full bg-amber-50 px-2 py-1 text-[11px] text-amber-700">Chưa có GVPB</span>
-                            )}
-                            {form.members && form.members.length > 0 && (
-                              form.members
-                                .filter((mId) => mId !== topic.advisorId && mId !== topic.reviewerId)
-                                .map((mId) => (
-                                  <span key={mId} className="rounded-full bg-gray-50 px-2 py-1 text-[11px] text-gray-700">{teacherNameById(mId)}</span>
-                                ))
-                            )}
-                          </div>
+                        <td className="px-4 py-3 align-top">
+                          <Select
+                            mode="multiple"
+                            value={topic.examinerIds || []}
+                            onChange={(value) => updateExaminerForTopic(topic.id, value ?? [])}
+                            placeholder="Chọn người chấm"
+                            options={memberIds
+                              .filter((id) => id !== topic.advisorId && id !== topic.reviewerId)
+                              .map((id) => ({ value: id, label: teacherNameById(id) }))}
+                            className="w-full min-w-[220px]"
+                            allowClear
+                          />
+                        </td>
+                        <td className="px-4 py-3 align-top">
+                          <Select
+                            mode="multiple"
+                            value={topic.externalExaminers || []}
+                            onChange={(value) => updateExternalExaminersForTopic(topic.id, value ?? [])}
+                            placeholder="Chọn GV ngoài"
+                            options={TEACHERS.filter((t) => !memberIds.includes(t.id)).map((t) => ({ value: t.id, label: t.name }))}
+                            className="w-full min-w-[220px]"
+                            allowClear
+                          />
+                        </td>
+                        <td className="px-4 py-3 align-top">
+                          <Input type="time" value={topic.startTime || ''} onChange={(e) => updateStartTimeForTopic(topic.id, e.target.value || null)} />
                         </td>
                       </tr>
                     ))}
@@ -537,14 +581,14 @@ const CreateCouncilPage = () => {
 
       <div className="mt-6 flex items-center justify-end gap-3">
         <Button onClick={() => navigate('/councils')}>Hủy bỏ</Button>
-        <Button type="primary" onClick={handleSave} disabled={!form.name || !form.room || !form.date || !form.time || advisorIds.length === 0 || reviewerIds.length === 0 || selectedTopics.length === 0}>
+        <Button type="primary" onClick={handleSave} disabled={!form.name || !form.room || !form.date || !form.time || memberIds.length === 0 || selectedTopics.length === 0}>
           Lưu và Công bố
         </Button>
       </div>
 
       <div className={saved ? 'mt-4' : 'hidden'}>
         <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
-          Đã lưu thành công. Hệ thống đã gom đề tài theo GVHD và sẵn sàng phân công GVPB cho từng đề tài.
+          Đã lưu thành công. Hệ thống đã tạo hội đồng và phân công đề tài; bạn có thể kiểm tra các vai trò và thời gian cho từng đề tài.
         </div>
       </div>
     </div>

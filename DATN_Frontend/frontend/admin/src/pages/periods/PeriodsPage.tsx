@@ -194,7 +194,7 @@ const PeriodsPage = () => {
             </div>
           </div>
         )}
-        createInfo={{ type: 'modal', modalInfo: { modalContent: <PeriodForm tab={tab} />, modalProps: { centered: true, width: 820, title: 'Tạo đợt mới' }, modalFunc: createPeriodMutation } }}
+        createInfo={{ type: 'modal', modalInfo: { modalContent: <PeriodForm tab={tab} allowStudentListUpload />, modalProps: { centered: true, width: 820, title: 'Tạo đợt mới' }, modalFunc: createPeriodMutation } }}
         updateInfo={{ type: 'modal', modalInfo: { modalContent: <PeriodForm tab={tab} />, modalProps: { centered: true, width: 820, title: 'Chỉnh sửa đợt' }, modalFunc: updatePeriodMutation } }}
         deleteInfo={{ type: 'modal', modalInfo: { modalContent: null, modalProps: {}, modalFunc: deletePeriodMutation as unknown as import('@tanstack/react-query').UseMutationResult<IListPeriod, import('axios').AxiosError, { id: string; params: BaseListParams }> } }}
         detailInfo={{ type: 'modal', modalInfo: { modalContent: <PeriodForm tab={tab} disabled />, modalProps: { centered: true, width: 820, title: 'Chi tiết đợt', footer: null }, modalFunc: periodHooks.useFetchDetailPeriod as unknown as (id: string, enable: boolean) => import('@tanstack/react-query').UseQueryResult<IDetailPeriod, Error> } }}

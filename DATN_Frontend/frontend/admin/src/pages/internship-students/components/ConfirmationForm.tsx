@@ -23,6 +23,14 @@ const ConfirmationForm: React.FC<Props> = ({ disabled = false }) => {
         <Input disabled={disabled} />
       </Form.Item>
 
+      <Form.Item label="Địa chỉ công ty" name="companyAddress" rules={[{ required: true, message: 'Vui lòng nhập địa chỉ công ty' }]} className="md:col-span-2">
+        <Input disabled={disabled} />
+      </Form.Item>
+
+      <Form.Item label="Địa điểm thực tập" name="internshipLocation" rules={[{ required: true, message: 'Vui lòng nhập địa điểm thực tập' }]} className="md:col-span-2">
+        <Input disabled={disabled} />
+      </Form.Item>
+
       <Form.Item label="Mã số thuế" name="taxId" rules={[{ required: true, message: 'Vui lòng nhập mã số thuế' }]}>
         <Input disabled={disabled} />
       </Form.Item>
