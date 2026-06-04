@@ -4,14 +4,22 @@ import { useMemo, useState } from 'react'
 import { CheckCircle2, FileText, GitBranch, Plus, Upload, Clock3, MessageSquareQuote, Rocket } from 'lucide-react'
 import { StudentPill, StudentSectionHeader, StudentStatCard } from '../../_components/StudentShell'
 
-const milestones = [
+const initialMilestones = [
   { name: 'Bản thảo Chương 1', status: 'Đã duyệt', file: 'chuong1.pdf', repo: 'github.com/user/project', note: 'Phạm vi đề tài và tổng quan', updated: '05/05/2026' },
   { name: 'Bản thảo Chương 2', status: 'Đang chấm điểm', file: 'chuong2.pdf', repo: 'github.com/user/project', note: 'Thiết kế và cơ sở lý thuyết', updated: '14/05/2026' },
   { name: 'Báo cáo chính thức', status: 'Nháp', file: '—', repo: '—', note: 'Hoàn thiện kết luận và phụ lục', updated: '23/05/2026' },
 ]
 
 export default function StudentReportsDATNPage() {
-  const [selectedMilestone, setSelectedMilestone] = useState(milestones[0].name)
+  const [milestones, setMilestones] = useState(initialMilestones)
+  const [selectedMilestone, setSelectedMilestone] = useState(initialMilestones[0].name)
+  const [submitOpen, setSubmitOpen] = useState(false)
+  const [submitForm, setSubmitForm] = useState({
+    name: '',
+    file: '',
+    repo: '',
+    note: '',
+  })
 
   const selected = useMemo(
     () => milestones.find((milestone) => milestone.name === selectedMilestone) ?? milestones[0],
@@ -20,6 +28,40 @@ export default function StudentReportsDATNPage() {
 
   const approvedCount = milestones.filter((milestone) => milestone.status === 'Đã duyệt').length
   const draftCount = milestones.filter((milestone) => milestone.status === 'Nháp').length
+  const reviewCount = milestones.filter((milestone) => milestone.status === 'Đang chấm điểm').length
+
+  const openSubmitModal = () => {
+    setSubmitForm({
+      name: '',
+      file: '',
+      repo: '',
+      note: '',
+    })
+    setSubmitOpen(true)
+  }
+
+  const handleSubmitDraft = () => {
+    if (!submitForm.name.trim() || !submitForm.note.trim()) {
+      alert('Vui lòng nhập tên bản thảo và nội dung.')
+      return
+    }
+
+    const nextMilestone = {
+      name: submitForm.name.trim(),
+      status: 'Đang chấm điểm',
+      file: submitForm.file.trim() || 'draft.pdf',
+      repo: submitForm.repo.trim() || '—',
+      note: submitForm.note.trim(),
+      updated: new Date().toLocaleDateString('vi-VN'),
+    }
+
+    setMilestones((current) => {
+      const next = [...current.filter((item) => item.name !== nextMilestone.name), nextMilestone]
+      return next
+    })
+    setSelectedMilestone(nextMilestone.name)
+    setSubmitOpen(false)
+  }
 
   return (
     <>
@@ -27,7 +69,11 @@ export default function StudentReportsDATNPage() {
         title="Báo cáo ĐATN"
         description="Nộp bản thảo từng giai đoạn, theo dõi phản hồi và trạng thái chấm của giảng viên theo bố cục chi tiết hơn."
         actions={(
-          <button className="inline-flex items-center gap-2 rounded-2xl bg-[#2196F3] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-blue-200 transition hover:bg-[#1976D2]">
+          <button
+            type="button"
+            onClick={openSubmitModal}
+            className="inline-flex items-center gap-2 rounded-2xl bg-[#2196F3] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-blue-200 transition hover:bg-[#1976D2]"
+          >
             <Plus className="h-4 w-4" />
             Nộp bản thảo
           </button>
@@ -37,7 +83,7 @@ export default function StudentReportsDATNPage() {
       <div className="mb-5 grid gap-4 md:grid-cols-3">
         <StudentStatCard title="Đã duyệt" value={`${approvedCount}`} hint="Bản thảo đã được xác nhận" accent="green" />
         <StudentStatCard title="Nháp" value={`${draftCount}`} hint="Giai đoạn chưa nộp chính thức" accent="orange" />
-        <StudentStatCard title="Mốc đang xem" value={selected.name.replace('Bản thảo ', '')} hint="Chi tiết bản thảo được chọn" accent="blue" />
+        <StudentStatCard title="Đang chấm" value={`${reviewCount}`} hint="Bản đã nộp và đang chờ phản hồi" accent="blue" />
       </div>
 
       <section className="mb-5 grid gap-4 rounded-[28px] border border-blue-100 bg-[linear-gradient(135deg,#eff6ff_0%,#ffffff_100%)] p-5 shadow-[0_12px_40px_rgba(15,23,42,0.05)] lg:grid-cols-[1.15fr_0.85fr]">
@@ -68,17 +114,17 @@ export default function StudentReportsDATNPage() {
       </section>
 
       <div className="mb-5 grid gap-4 md:grid-cols-3">
-        <section className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
           <div className="text-xs text-slate-500">Mốc đang xem</div>
           <div className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">{selected.name}</div>
           <div className="mt-2 text-sm text-slate-500">{selected.note}</div>
         </section>
-        <section className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
           <div className="text-xs text-slate-500">File nộp</div>
           <div className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">{selected.file}</div>
           <div className="mt-2 text-sm text-slate-500">Tài liệu đính kèm</div>
         </section>
-        <section className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
           <div className="text-xs text-slate-500">Cập nhật</div>
           <div className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">{selected.updated}</div>
           <div className="mt-2 text-sm text-slate-500">Lần chỉnh cuối</div>
@@ -197,6 +243,87 @@ export default function StudentReportsDATNPage() {
           </section>
         </div>
       </div>
+
+      {submitOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 py-8 backdrop-blur-sm">
+          <div className="relative w-full max-w-2xl overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_30px_120px_rgba(15,23,42,0.3)]">
+            <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-5 py-4">
+              <div>
+                <div className="text-sm font-semibold text-slate-900">Nộp bản thảo ĐATN</div>
+                <div className="text-xs text-slate-500">Nhập giai đoạn, file, repo và nội dung bản thảo</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSubmitOpen(false)}
+                className="rounded-full p-2 text-slate-500 transition hover:bg-slate-200 hover:text-slate-700"
+                aria-label="Đóng popup"
+              >
+                <Plus className="h-4 w-4 rotate-45" />
+              </button>
+            </div>
+
+            <div className="max-h-[75vh] overflow-y-auto p-5">
+              <div className="grid gap-4 md:grid-cols-2">
+                <label className="block">
+                  <div className="text-sm font-medium text-slate-700">Tên bản thảo</div>
+                  <input
+                    value={submitForm.name}
+                    onChange={(event) => setSubmitForm((current) => ({ ...current, name: event.target.value }))}
+                    className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white"
+                    placeholder="Ví dụ: Bản thảo Chương 3"
+                  />
+                </label>
+                <label className="block">
+                  <div className="text-sm font-medium text-slate-700">Tên file</div>
+                  <input
+                    value={submitForm.file}
+                    onChange={(event) => setSubmitForm((current) => ({ ...current, file: event.target.value }))}
+                    className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white"
+                    placeholder="chuong3.pdf"
+                  />
+                </label>
+                <label className="block md:col-span-2">
+                  <div className="text-sm font-medium text-slate-700">Kho mã nguồn / link repo</div>
+                  <input
+                    value={submitForm.repo}
+                    onChange={(event) => setSubmitForm((current) => ({ ...current, repo: event.target.value }))}
+                    className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white"
+                    placeholder="github.com/user/project"
+                  />
+                </label>
+                <label className="block md:col-span-2">
+                  <div className="text-sm font-medium text-slate-700">Nội dung bản thảo</div>
+                  <textarea
+                    rows={5}
+                    value={submitForm.note}
+                    onChange={(event) => setSubmitForm((current) => ({ ...current, note: event.target.value }))}
+                    className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white"
+                    placeholder="Mô tả nội dung, tiến độ, phần đã hoàn thành..."
+                  />
+                </label>
+              </div>
+
+              <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                Bản thảo sau khi gửi sẽ chuyển sang trạng thái <span className="font-semibold">Đang chấm điểm</span> và được chọn ngay trên danh sách.
+              </div>
+
+              <div className="mt-5 flex items-center justify-end gap-3">
+                <button type="button" onClick={() => setSubmitOpen(false)} className="rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSubmitDraft}
+                  className="inline-flex items-center gap-2 rounded-2xl bg-[#2196F3] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-blue-200 transition hover:bg-[#1976D2]"
+                >
+                  <Upload className="h-4 w-4" />
+                  Gửi bản thảo
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }

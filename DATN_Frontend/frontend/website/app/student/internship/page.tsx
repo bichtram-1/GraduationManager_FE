@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState } from 'react'
-import { BarChart3, Building2, CheckCircle2, FileText, MapPin, Search, ShieldCheck, Users, ClipboardList, CalendarDays, Phone, Mail, X, Plus } from 'lucide-react'
+import { BarChart3, Building2, FileText, MapPin, Search, Users, CalendarDays, Phone, Mail, X, Plus } from 'lucide-react'
 import { StudentPill, StudentSectionHeader } from '../_components/StudentShell'
 
 type Company = {
@@ -63,12 +63,12 @@ const companies: Company[] = [
 export default function StudentInternshipPage() {
   const [query, setQuery] = useState('')
   const [selectedCompany, setSelectedCompany] = useState(companies[0])
-  const [note, setNote] = useState('')
   const [declareOpen, setDeclareOpen] = useState(false)
   const [declareForm, setDeclareForm] = useState({
     companyName: '',
     field: '',
     address: '',
+    internshipAddress: '',
     mentor: '',
     phone: '',
     email: '',
@@ -286,6 +286,18 @@ export default function StudentInternshipPage() {
                 </div>
               </label>
 
+              {declareForm.confirmPaper && (
+                <label className="mt-4 block">
+                  <div className="text-sm font-medium text-slate-700">Địa chỉ thực tập</div>
+                  <input
+                    value={declareForm.internshipAddress}
+                    onChange={(event) => setDeclareForm((current) => ({ ...current, internshipAddress: event.target.value }))}
+                    className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white"
+                    placeholder="Nhập địa chỉ nơi thực tập"
+                  />
+                </label>
+              )}
+
               <div className="mt-5 flex items-center justify-end gap-3">
                 <button type="button" onClick={() => setDeclareOpen(false)} className="rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
                   Hủy
@@ -294,7 +306,11 @@ export default function StudentInternshipPage() {
                   type="button"
                   onClick={() => {
                     setDeclareOpen(false)
-                    alert(`Đã gửi khai báo: ${declareForm.companyName || 'Công ty mới'}${declareForm.confirmPaper ? ' + giấy xác nhận thực tập' : ''}`)
+                    alert(
+                      `Đã gửi khai báo: ${declareForm.companyName || 'Công ty mới'}${declareForm.confirmPaper ? ' + giấy xác nhận thực tập' : ''}${
+                        declareForm.internshipAddress ? ` | Địa chỉ thực tập: ${declareForm.internshipAddress}` : ''
+                      }`
+                    )
                   }}
                   className="inline-flex items-center gap-2 rounded-2xl bg-[#2196F3] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-blue-200 transition hover:bg-[#1976D2]"
                 >
