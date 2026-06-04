@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ArrowRight, CalendarDays, CheckCircle2, FileText, GraduationCap, MapPin, Trophy, Upload, Building2, Clock3, TrendingUp } from 'lucide-react'
+import { ArrowRight, CalendarDays, CheckCircle2, FileText, MapPin, Trophy, Upload, Building2, Clock3, TrendingUp } from 'lucide-react'
 import { StudentPill, StudentSectionHeader, StudentStatCard } from './_components/StudentShell'
 
 const internshipPartners = [
@@ -26,22 +26,6 @@ export default function StudentIndexPage() {
       <StudentSectionHeader
         title="Trang chủ sinh viên"
         description="Theo dõi thực tập, đồ án và kết quả học tập với bố cục dashboard nhiều thẻ, đồng bộ phong cách bộ design tham chiếu."
-        actions={
-          <>
-            <Link href="/student/internship" className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 transition hover:bg-slate-50">
-              <Upload className="h-4 w-4" />
-              Đăng ký TTTN
-            </Link>
-            <Link href="/student/thesis-register" className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 transition hover:bg-slate-50">
-              <FileText className="h-4 w-4" />
-              Đăng ký ĐATN
-            </Link>
-            <Link href="/student/results" className="inline-flex items-center gap-2 rounded-2xl bg-[#2196F3] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-blue-200 transition hover:bg-[#1976D2]">
-              <Trophy className="h-4 w-4" />
-              Xem kết quả
-            </Link>
-          </>
-        }
       />
 
       <section className="mb-6 rounded-[28px] border border-blue-100 bg-[linear-gradient(135deg,#eff6ff_0%,#ffffff_100%)] p-5 shadow-[0_12px_40px_rgba(15,23,42,0.05)]">

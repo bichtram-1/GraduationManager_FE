@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ChevronLeft, CheckCircle, Clock, Save, Trophy, Users, LayoutDashboard, FileText, BarChart3, Sparkles } from 'lucide-react'
+import { CheckCircle, Clock, Save, Trophy, Users, LayoutDashboard, FileText, BarChart3, Sparkles } from 'lucide-react'
 import { TeacherPill, TeacherSectionHeader, TeacherStatCard } from '../_components/TeacherShell'
 import { TeacherButton, TeacherCard, TeacherInputClass } from '../_components/TeacherUI'
+import ScoringTable from './ScoringTable'
 
 // Default fallbacks (used if mock API is unavailable)
 const defaultTttnRows = [
@@ -64,7 +65,8 @@ export default function TeacherGradingPage() {
   const [selectedTttnId, setSelectedTttnId] = useState(defaultTttnRows[0].id)
   const [councilList, setCouncilList] = useState(defaultCouncilGroups)
   const [scoreList, setScoreList] = useState(defaultScoreRows)
-  const [loading, setLoading] = useState(false)
+  const [_loading, setLoading] = useState(false)
+  const [showScoringModal, setShowScoringModal] = useState(false)
 
   const notify = (message: string) => {
     setToast(message)
@@ -77,6 +79,7 @@ export default function TeacherGradingPage() {
     fetch('/api/mock/teacher/grading')
       .then((r) => r.ok ? r.json() : null)
       .then((data) => {
+        console.log('mock grading data:', data)
         if (data) {
           setTttnScores(data.tttnRows ?? defaultTttnRows)
           setCouncilList(data.councilGroups ?? defaultCouncilGroups)
@@ -128,7 +131,7 @@ export default function TeacherGradingPage() {
               Chuyển giữa TTTN và ĐATN, nhập điểm trực tiếp trên bảng và giữ mọi thao tác trong một luồng duy nhất như thiết kế gốc.
             </div>
           </div>
-          <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[420px]">
+          <div className="grid gap-3 sm:grid-cols-3 lg:min-w-105">
             <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
               <div className="text-xs text-slate-500">Chấm nhanh</div>
               <div className="mt-2 text-lg font-semibold text-slate-900">1 click</div>
@@ -297,6 +300,23 @@ export default function TeacherGradingPage() {
                       <Clock />
                       {council.done}/{council.total} nhóm đã chấm
                     </div>
+                      {/* show groups inside the council card for quick scan */}
+                      <div className="mt-3 space-y-2 text-sm">
+                        {(council.groups || []).map((g) => (
+                          <div
+                            key={g.groupCode}
+                            role="button"
+                            onClick={() => { setSelectedCouncil(council); setSelectedGroup(g); setShowScoringModal(true) }}
+                            className="flex items-center justify-between gap-3 rounded-md bg-white p-3 ring-1 ring-slate-100 hover:bg-slate-50 cursor-pointer"
+                          >
+                            <div>
+                              <div className="font-medium text-slate-800">Nhóm {g.groupCode}</div>
+                              <div className="text-xs text-slate-500">{g.topic}</div>
+                            </div>
+                            <div className="text-xs text-slate-500">{(g.students || []).length} SV</div>
+                          </div>
+                        ))}
+                      </div>
                   </button>
                 )
               })}
@@ -307,107 +327,90 @@ export default function TeacherGradingPage() {
             <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-5 py-4">
               <div>
                 <div className="text-sm font-semibold text-slate-900">Chấm điểm hội đồng</div>
-                <div className="text-xs text-slate-500">Thang điểm và vai trò được hiển thị như thiết kế mẫu</div>
+                  <div className="text-xs text-slate-500">Thang điểm và vai trò được hiển thị như thiết kế mẫu</div>
+                  <div className="text-xs text-slate-400">debug: groups={selectedCouncil?.groups?.length ?? 0}</div>
               </div>
               <TeacherPill tone="green">Đang chấm</TeacherPill>
             </div>
-            {selectedGroup ? (
-              <table className="w-full text-sm">
-                <thead className="bg-slate-50 text-slate-600">
-                  <tr>
-                    <th className="px-5 py-3 text-left">MSSV</th>
-                    <th className="px-5 py-3 text-left">Họ tên</th>
-                    <th className="px-5 py-3 text-left">Ghi chú</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {selectedGroup.students.map((s) => (
-                    <tr key={s.id} className="border-t border-slate-100 transition hover:bg-slate-50/80">
-                      <td className="px-5 py-4 font-medium text-[#1976D2]">{s.id}</td>
-                      <td className="px-5 py-4 text-slate-900">{s.name}</td>
-                      <td className="px-5 py-4 text-slate-600">—</td>
+              <div className="p-4">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-50 text-slate-600">
+                    <tr>
+                      <th className="px-5 py-3 text-left">Mã nhóm</th>
+                      <th className="px-5 py-3 text-left">Tên đề tài</th>
+                      <th className="px-5 py-3 text-left">Thành viên nhóm</th>
+                      <th className="px-5 py-3 text-left">GVHD</th>
+                      <th className="px-5 py-3 text-left">Trạng thái</th>
+                      <th className="px-5 py-3 text-left">Hành động</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <table className="w-full text-sm">
-                <thead className="bg-slate-50 text-slate-600">
-                  <tr>
-                    <th className="px-5 py-3 text-left">MSSV</th>
-                    <th className="px-5 py-3 text-left">Họ tên</th>
-                    <th className="px-5 py-3 text-left">Điểm Ủy viên</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {scoreList.map((row) => (
-                    <tr key={row.id} className="border-t border-slate-100 transition hover:bg-slate-50/80">
-                      <td className="px-5 py-4 font-medium text-[#1976D2]">{row.id}</td>
-                      <td className="px-5 py-4 text-slate-900">{row.name}</td>
-                      <td className="px-5 py-4 text-slate-600">{row.member || '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
+                  </thead>
+                  <tbody>
+                    {(selectedCouncil.groups || []).map((g) => {
+                      const membersStr = (g.students || []).map((s) => `${s.id} - ${s.name}`).join(', ')
+                      const hasScore = (g.students || []).some((s) => !!(scoreList.find((r) => r.id === s.id)?.member))
+                      return (
+                        <tr key={g.groupCode} className="border-t border-slate-100 transition hover:bg-slate-50/80">
+                          <td className="px-5 py-4">
+                            <button type="button" onClick={() => { setSelectedGroup(g); setSelectedCouncil(selectedCouncil); setShowScoringModal(true) }} className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-3 py-1 text-xs text-[#1976D2] hover:bg-slate-100">
+                              {g.groupCode}
+                            </button>
+                          </td>
+                          <td className="px-5 py-4 text-slate-900">
+                            <div className="text-sm text-[#1976D2]">{g.topic}</div>
+                            <div className="text-xs text-slate-500"></div>
+                          </td>
+                          <td className="px-5 py-4 text-slate-700 max-w-[320px] truncate">{membersStr}</td>
+                          <td className="px-5 py-4 text-slate-700">{selectedCouncil.members?.[0]?.name ?? '—'}</td>
+                          <td className="px-5 py-4">
+                            {hasScore ? <span className="inline-flex items-center gap-2 rounded-md bg-emerald-50 px-2 py-1 text-emerald-700 text-xs">Đã chấm</span> : <span className="inline-flex items-center gap-2 rounded-md bg-amber-50 px-2 py-1 text-amber-700 text-xs">Chưa chấm</span>}
+                          </td>
+                          <td className="px-5 py-4">
+                            <div className="flex items-center gap-2">
+                              <TeacherButton variant={hasScore ? 'secondary' : 'primary'} onClick={() => { setSelectedGroup(g); setSelectedCouncil(selectedCouncil); setShowScoringModal(true) }}>
+                                {hasScore ? 'Chấm lại' : 'Vào chấm điểm'}
+                              </TeacherButton>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
             <div className="flex items-center justify-between border-t border-slate-200 px-5 py-4">
               <div className="text-xs text-slate-500">Điểm theo từng vai trò của hội đồng sẽ được cập nhật khi bạn vào phiên chấm.</div>
-              <TeacherButton variant="primary" onClick={() => notify('Đã lưu điểm hội đồng')}>
-                <span className="inline-flex items-center gap-2"><Save className="h-4 w-4" /> Lưu điểm</span>
-              </TeacherButton>
             </div>
           </section>
 
-          <section className="rounded-[28px] border border-slate-200 bg-[linear-gradient(135deg,#eff6ff_0%,#ffffff_100%)] p-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
-            <div className="text-sm font-semibold text-slate-900">Chi tiết phiên chấm</div>
-            <div className="mt-4 space-y-3 text-sm text-slate-600">
-              <div className="flex items-center gap-2"><LayoutDashboard className="h-4 w-4 text-[#1976D2]" /> Hội đồng: {selectedCouncil.code}</div>
-              <div className="flex items-center gap-2"><FileText className="h-4 w-4 text-[#1976D2]" /> {selectedCouncil.name}</div>
-              <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-[#1976D2]" /> {selectedCouncil.date}</div>
-              <div className="flex items-center gap-2"><Users className="h-4 w-4 text-[#1976D2]" /> {selectedCouncil.done}/{selectedCouncil.total} nhóm đã chấm</div>
-            </div>
-
-            <div className="mt-4">
-              <div className="text-sm font-medium text-slate-900">Thành viên hội đồng</div>
-              <div className="mt-2 space-y-2 text-sm text-slate-700">
-                {(selectedCouncil.members || []).map((m) => (
-                  <div key={m.id} className="flex items-center justify-between rounded-md bg-white/90 p-3 ring-1 ring-slate-200">
-                    <div>
-                      <div className="font-medium">{m.name}</div>
-                      <div className="text-xs text-slate-500">{m.role}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="mt-4">
-              <div className="text-sm font-medium text-slate-900">Nhóm trong phiên</div>
-              <div className="mt-2 space-y-2">
-                {(selectedCouncil.groups || []).map((g) => (
-                  <button key={g.groupCode} type="button" onClick={() => setSelectedGroup(g)} className={`w-full text-left rounded-md p-3 ${selectedGroup?.groupCode === g.groupCode ? 'bg-[#e6f2ff] ring-1 ring-blue-200' : 'bg-white/90 ring-1 ring-slate-200'}`}>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-medium">Nhóm {g.groupCode} - {g.topic}</div>
-                        <div className="text-xs text-slate-500">{g.students.length} thành viên</div>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="mt-5 rounded-[24px] bg-white/85 p-4 ring-1 ring-slate-200">
-              <div className="text-xs text-slate-500">Nhắc nhanh</div>
-              <div className="mt-2 text-sm text-slate-700">Bấm vào một nhóm để hiện danh sách sinh viên trong nhóm và bắt đầu chấm.</div>
-            </div>
-          </section>
+          {/* Chi tiết phiên chấm removed as requested */}
         </div>
       )}
 
       {toast && (
         <div className="fixed right-6 top-20 z-50 rounded-2xl bg-emerald-500 px-4 py-3 text-sm text-white shadow-lg">
           ✓ {toast}
+        </div>
+      )}
+
+      {showScoringModal && selectedGroup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowScoringModal(false)} />
+          <div className="relative w-[95%] max-w-5xl rounded-2xl bg-white p-6 shadow-lg">
+            <div className="mb-4 flex items-start justify-between">
+              <div>
+                <div className="text-lg font-semibold text-slate-900">Chấm điểm hội đồng — Nhóm {selectedGroup.groupCode}</div>
+                <div className="text-sm text-slate-500">{selectedGroup.topic}</div>
+              </div>
+              <div className="flex items-center gap-3">
+                <button type="button" onClick={() => setShowScoringModal(false)} className="rounded-md px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">Đóng</button>
+              </div>
+            </div>
+            <ScoringTable
+              groupId={`${selectedCouncil.code}-${selectedGroup.groupCode}`}
+              students={(selectedGroup.students || []).map((s) => ({ id: s.id, name: s.name }))}
+              canEditReport={selectedCouncil.members?.some((m) => m.role.toLowerCase().includes('hướng dẫn') || m.role.toLowerCase().includes('phản biện')) || selectedCouncil.role === 'GVPB'}
+            />
+          </div>
         </div>
       )}
     </>

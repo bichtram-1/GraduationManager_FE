@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState } from 'react'
-import { BarChart3, Building2, FileText, MapPin, Search, Users, CalendarDays, Phone, Mail, X, Plus } from 'lucide-react'
+import { BarChart3, Building2, MapPin, Search, Users, CalendarDays, Phone, Mail, X, Plus } from 'lucide-react'
 import { StudentPill, StudentSectionHeader } from '../_components/StudentShell'
 
 type Company = {
@@ -62,7 +62,7 @@ const companies: Company[] = [
 
 export default function StudentInternshipPage() {
   const [query, setQuery] = useState('')
-  const [selectedCompany, setSelectedCompany] = useState(companies[0])
+  // removed selectedCompany detail panel
   const [declareOpen, setDeclareOpen] = useState(false)
   const [declareForm, setDeclareForm] = useState({
     companyName: '',
@@ -87,7 +87,6 @@ export default function StudentInternshipPage() {
     { title: 'Công ty mở slot', value: companies.length.toString(), hint: 'Đã được Khoa phê duyệt' },
     { title: 'Slot đang mở', value: companies.reduce((total, company) => total + company.slots, 0).toString(), hint: 'Có thể khai báo ngay' },
     { title: 'Đã xem hôm nay', value: '12', hint: 'Sinh viên tương tác với danh sách' },
-    { title: 'Đang nổi bật', value: selectedCompany.name, hint: 'Đơn vị đang được chọn' },
   ]
 
   return (
@@ -146,7 +145,10 @@ export default function StudentInternshipPage() {
 
         <div className="divide-y divide-slate-100">
           {filtered.map((company) => (
-            <div key={company.code} className={`flex flex-col gap-4 px-5 py-4 hover:bg-slate-50/80 md:flex-row md:items-center md:justify-between ${selectedCompany.code === company.code ? 'bg-blue-50/50' : ''}`}>
+            <div
+              key={company.code}
+              className={`flex flex-col gap-4 px-5 py-4 hover:bg-slate-50/80 md:flex-row md:items-center md:justify-between`}
+            >
               <div className="flex items-start gap-4">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#eff6ff] text-[#1976D2]">
                   <Building2 className="h-4 w-4" />
@@ -166,63 +168,19 @@ export default function StudentInternshipPage() {
                 </div>
               </div>
               <div className="flex items-center gap-3 self-start md:self-auto">
-                <div className="text-right">
-                  <div className="text-xs text-slate-500">Slot</div>
-                  <div className="text-sm font-medium text-emerald-600">{company.slots}</div>
+                <div className="text-right whitespace-nowrap">
+                  <div className="text-sm font-medium text-emerald-600">
+                    <span className="text-xs text-slate-500 inline-block mr-2 align-middle">Slot</span>
+                    <span className="align-middle">{company.slots}</span>
+                  </div>
                 </div>
-                <button onClick={() => setSelectedCompany(company)} className="inline-flex items-center gap-2 rounded-2xl bg-[#2196F3] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-blue-200 transition hover:bg-[#1976D2]">
-                  <FileText className="h-4 w-4" />
-                  Khai báo
-                </button>
               </div>
             </div>
           ))}
         </div>
       </section>
 
-      <div className="mt-6 grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-        <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm font-semibold text-slate-900">Chi tiết công ty</div>
-              <div className="text-xs text-slate-500">Xem nhanh đơn vị đang được chọn</div>
-            </div>
-            <StudentPill tone="blue">{selectedCompany.code}</StudentPill>
-          </div>
-          <div className="mt-4 grid gap-4 md:grid-cols-2">
-            <div className="rounded-[24px] bg-slate-50 p-4">
-              <div className="text-xs text-slate-500">Tên công ty</div>
-              <div className="mt-1 text-lg font-semibold text-slate-900">{selectedCompany.name}</div>
-            </div>
-            <div className="rounded-[24px] bg-slate-50 p-4">
-              <div className="text-xs text-slate-500">Lĩnh vực</div>
-              <div className="mt-1 text-lg font-semibold text-slate-900">{selectedCompany.field}</div>
-            </div>
-            <div className="rounded-[24px] bg-slate-50 p-4 md:col-span-2">
-              <div className="text-xs text-slate-500">Địa chỉ</div>
-              <div className="mt-1 text-sm text-slate-700">{selectedCompany.address}</div>
-            </div>
-            <div className="rounded-[24px] bg-slate-50 p-4">
-              <div className="text-xs text-slate-500">Mentor</div>
-              <div className="mt-1 text-sm font-medium text-slate-900">{selectedCompany.mentor}</div>
-              <div className="mt-1 text-xs text-slate-500">{selectedCompany.phone}</div>
-            </div>
-            <div className="rounded-[24px] bg-slate-50 p-4">
-              <div className="text-xs text-slate-500">Slot còn lại</div>
-              <div className="mt-1 text-3xl font-semibold text-emerald-600">{selectedCompany.slots}</div>
-            </div>
-            <div className="rounded-[24px] bg-slate-50 p-4 md:col-span-2">
-              <div className="text-xs text-slate-500">Điểm nhấn</div>
-              <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                {selectedCompany.highlights.map((item) => (
-                  <div key={item} className="rounded-2xl bg-white px-3 py-2 text-xs text-slate-600 ring-1 ring-slate-200">{item}</div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-      </div>
+      {/* Company detail panel removed per request */}
 
       {declareOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 py-8 backdrop-blur-sm">
