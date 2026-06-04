@@ -49,6 +49,7 @@ const ViTranslation = {
   topic_management_desc: 'Duyệt đề tài ĐATN do giảng viên tạo',
   group_management: 'Quản lý nhóm',
   group_management_desc: 'Quản lý các nhóm',
+  group_review: 'Duyệt nhóm đồ án',
   council_management: 'Phân công hội đồng',
   council_management_desc: 'Tạo hội đồng bảo vệ và phân công giảng viên phản biện',
   period_management: 'Quản lý đợt',

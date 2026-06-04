@@ -113,6 +113,14 @@
   color: var(--color-slate-dark) !important;
 }
 
+/* Resizer between sidebar and content */
+.sider-resizer {
+  background: transparent;
+}
+.sider-resizer:hover {
+  background: rgba(0,0,0,0.04);
+}
+
 /* FilterTable Figma styles */
 .filter-table-card {
   border: 1px solid var(--color-gray-border) !important;

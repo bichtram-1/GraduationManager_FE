@@ -26,6 +26,7 @@ const Assignments = lazy(() => import('./pages/assignments/AssignmentsPage'));
 const Councils = lazy(() => import('./pages/councils/CouncilsPage'));
 const CouncilsCreate = lazy(() => import('./pages/councils/components/CreateCouncilPage'));
 const GroupsAdmin = lazy(() => import('./pages/groups/GroupsAdminPage'));
+const ReviewGroupsAdmin = lazy(() => import('./pages/groups/ReviewGroupsPage'));
 const InternshipStudents = lazy(() => import('./pages/internship-students/InternshipStudentsPage'));
 const Periods = lazy(() => import('./pages/periods/PeriodsPage'));
 
@@ -78,8 +79,11 @@ function App() {
                 <Route path={ROUTES.COUNCILS} element={<Councils />} />
                 <Route path={ROUTES.COUNCILS_CREATE} element={<CouncilsCreate />} />
                 <Route path={ROUTES.GROUPS} element={<GroupsAdmin />} />
+                <Route path={ROUTES.GROUPS_REVIEW} element={<ReviewGroupsAdmin />} />
                 <Route path={ROUTES.ASSIGNMENTS} element={<Assignments />} />
                 <Route path={ROUTES.INTERNSHIP_STUDENTS} element={<InternshipStudents />} />
+                <Route path={ROUTES.INTERNSHIP_STUDENTS_CONFIRM} element={<InternshipStudents />} />
+                <Route path={ROUTES.INTERNSHIP_STUDENTS_NOCOMPANY} element={<InternshipStudents />} />
                 <Route path={ROUTES.PERIODS} element={<Periods />} />
               </Route>
               {/* Những route cần bọc Auth Layout */}

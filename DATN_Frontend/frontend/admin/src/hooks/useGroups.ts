@@ -53,4 +53,30 @@ export const groupHooks = {
       },
     });
   },
+
+  useApproveGroup: () => {
+    const queryClient = useQueryClient();
+    return useMutation<IDetailGroup, AxiosError, { id: string }>(
+      {
+        mutationFn: ({ id }: { id: string }) => groupApi.approveGroup({ id }),
+        onSuccess: (_, variables) => {
+          queryClient.invalidateQueries({ queryKey: [QueryKey.groups.list] });
+          if (variables?.id) queryClient.invalidateQueries({ queryKey: [QueryKey.groups.detail, variables.id] });
+        },
+      }
+    );
+  },
+
+  useRejectGroup: () => {
+    const queryClient = useQueryClient();
+    return useMutation<IDetailGroup, AxiosError, { id: string }>(
+      {
+        mutationFn: ({ id }: { id: string }) => groupApi.rejectGroup({ id }),
+        onSuccess: (_, variables) => {
+          queryClient.invalidateQueries({ queryKey: [QueryKey.groups.list] });
+          if (variables?.id) queryClient.invalidateQueries({ queryKey: [QueryKey.groups.detail, variables.id] });
+        },
+      }
+    );
+  },
 };

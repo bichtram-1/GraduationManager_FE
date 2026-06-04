@@ -65,4 +65,14 @@ export const groupApi = {
     groupStore = groupStore.filter((group) => group.id !== id);
     return { success: true, id };
   },
+  
+  approveGroup: async ({ id }: { id: string }) => {
+    groupStore = groupStore.map((g) => (g.id === id ? { ...g, status: 'APPROVED' } : g));
+    return groupStore.find((g) => g.id === id) as IDetailGroup;
+  },
+
+  rejectGroup: async ({ id }: { id: string }) => {
+    groupStore = groupStore.map((g) => (g.id === id ? { ...g, status: 'DISSOLVED' } : g));
+    return groupStore.find((g) => g.id === id) as IDetailGroup;
+  },
 };

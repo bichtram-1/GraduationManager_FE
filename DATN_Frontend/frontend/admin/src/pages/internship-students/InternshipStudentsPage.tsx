@@ -1,7 +1,8 @@
 import { BankOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, FileTextOutlined, SearchOutlined, SolutionOutlined, TeamOutlined, EyeOutlined, EditOutlined, DeleteOutlined, SendOutlined } from '@ant-design/icons';
 import { Button, Card, Form, Input, Select, Space, Tag, Tabs, Typography, message } from 'antd';
 import RemindModal from './components/RemindModal';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../constants/commonConst';
 import { getKey } from '@shared/types/I18nKeyType';
@@ -33,7 +34,9 @@ const noCompanyStatusMeta: Record<NoCompanyStatus, { label: string; color: strin
 
 const InternshipStudentsPage = () => {
   const { t } = useTranslation();
-  const [mode, setMode] = useState<ModeKey>('confirmations');
+  const location = useLocation();
+  const initialMode = location.pathname.includes('/no-company') ? 'no-company' : location.pathname.includes('/confirmations') ? 'confirmations' : 'confirmations';
+  const [mode, setMode] = useState<ModeKey>(initialMode);
   const [confirmationTab, setConfirmationTab] = useState<ConfirmationTab>('all');
   const [noCompanyTab, setNoCompanyTab] = useState<NoCompanyTab>('all');
   const [remindOpen, setRemindOpen] = useState(false);
@@ -51,6 +54,11 @@ const InternshipStudentsPage = () => {
 
   const confirmationRows = confirmationList?.rows ?? INITIAL_CONFIRMATIONS;
   const noCompanyRows = noCompanyList?.rows ?? INITIAL_NO_COMPANY_STUDENTS;
+
+  useEffect(() => {
+    if (location.pathname.includes('/no-company')) setMode('no-company');
+    else if (location.pathname.includes('/confirmations')) setMode('confirmations');
+  }, [location.pathname]);
 
   const summary = useMemo(() => ({
     confirmations: confirmationRows.length,
@@ -206,17 +214,7 @@ const InternshipStudentsPage = () => {
         ))}
       </div>
 
-      <Card className="mb-5 rounded-[20px] border border-slate-100 px-4 pt-3 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-12 lg:items-end">
-          <div className="lg:col-span-5">
-            <div className="mb-1 text-sm font-medium text-slate-700">Chọn nghiệp vụ quản lý</div>
-            <Select value={mode} onChange={(v) => setMode(v)} className="!h-11 !w-full" options={[{ value: 'confirmations', label: 'Quản lý sinh viên đăng ký giấy xác nhận thực tập' }, { value: 'no-company', label: 'Quản lý sinh viên chưa có công ty' }]} />
-          </div>
-          <div className="lg:col-span-7">
-            <div className="rounded-[16px] border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">Chuyển giữa 2 luồng xử lý để xem nhanh danh sách đăng ký và danh sách sinh viên chưa có công ty.</div>
-          </div>
-        </div>
-      </Card>
+      {/* Selector removed — submenu links now control the active internship management view */}
 
       <div className="mb-5 rounded-[20px] border border-slate-100 bg-white px-4 pt-3 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
         <Tabs

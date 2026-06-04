@@ -51,6 +51,7 @@ const GroupsAdminPage: React.FC = () => {
   const { data: groupList } = groupHooks.useFetchListGroups();
   const updateGroupMutation = groupHooks.useUpdateGroup();
   const deleteGroupMutation = groupHooks.useDeleteGroup();
+  
   const groups = (groupList?.rows as Group[] | undefined) ?? [];
   const supervisors = useMemo(() => Array.from(new Set(groups.map((g) => g.supervisor))), [groups]);
 
@@ -249,7 +250,7 @@ const GroupsAdminPage: React.FC = () => {
             const r = record as IListGroup;
             return (
               <Space>
-                <Tooltip title="Thêm thành viên">
+                    <Tooltip title="Thêm thành viên">
                   <Button type="text" size="small" onClick={() => setAddModalGroup(r)} icon={<PlusOutlined />} />
                 </Tooltip>
                 <Tooltip title="Ghép nhóm">

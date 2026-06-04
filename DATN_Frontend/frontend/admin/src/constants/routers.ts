@@ -7,10 +7,13 @@ export const ROUTES = {
   COMPANIES: '/companies',
   TOPICS: '/topics',
   GROUPS: '/groups',
+  GROUPS_REVIEW: '/groups/review',
   COUNCILS: '/councils',
   COUNCILS_CREATE: '/councils/create',
   ASSIGNMENTS: '/assignments',
   INTERNSHIP_STUDENTS: '/internship-students',
+  INTERNSHIP_STUDENTS_CONFIRM: '/internship-students/confirmations',
+  INTERNSHIP_STUDENTS_NOCOMPANY: '/internship-students/no-company',
   PERIODS: '/periods',
   FORGOTPW: '/forgot-password',
 };
@@ -24,10 +27,14 @@ export const HEADER_TITLES: Record<RoutePath, keyof I18nKey> = {
   [ROUTES.COMPANIES]: 'company_management',
   [ROUTES.TOPICS]: 'topic_management',
   [ROUTES.GROUPS]: 'group_management',
+  [ROUTES.GROUPS_REVIEW]: 'group_review',
   [ROUTES.COUNCILS]: 'council_management',
+  [ROUTES.COUNCILS_CREATE]: 'council_management',
   [ROUTES.PERIODS]: 'period_management',
   [ROUTES.ASSIGNMENTS]: 'assignment_management',
   [ROUTES.INTERNSHIP_STUDENTS]: 'internship_students',
+  [ROUTES.INTERNSHIP_STUDENTS_CONFIRM]: 'internship_students',
+  [ROUTES.INTERNSHIP_STUDENTS_NOCOMPANY]: 'internship_students',
   [ROUTES.FORGOTPW]: 'forgot_password_title',
 };
 

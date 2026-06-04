@@ -83,6 +83,10 @@ const DefaultNavigate = ({ collapsed, onToggle }: IDefaultNavigate) => {
       key: ROUTES.GROUPS,
       label: 'Quản lý nhóm',
       icon: <TeamOutlined style={{ fontSize: 20 }} />,
+      children: [
+        { key: ROUTES.GROUPS, label: 'Danh sách nhóm' },
+        { key: ROUTES.GROUPS_REVIEW, label: 'Duyệt nhóm đồ án' },
+      ],
     },
     {
       key: ROUTES.COUNCILS,
@@ -98,6 +102,10 @@ const DefaultNavigate = ({ collapsed, onToggle }: IDefaultNavigate) => {
       key: ROUTES.INTERNSHIP_STUDENTS,
       label: t(getKey('internship_students')),
       icon: <SolutionOutlined style={{ fontSize: 20 }} />,
+      children: [
+        { key: ROUTES.INTERNSHIP_STUDENTS_CONFIRM, label: 'Quản lý sinh viên đăng ký giấy thực tập' },
+        { key: ROUTES.INTERNSHIP_STUDENTS_NOCOMPANY, label: 'Quản lý sinh viên chưa có công ty' },
+      ],
     },
     {
       key: ROUTES.PERIODS,

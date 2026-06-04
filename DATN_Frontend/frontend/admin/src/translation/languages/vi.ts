@@ -39,6 +39,7 @@ const ViTranslation = {
   company_management: 'Quản lý công ty',
   company_management_desc: 'Quản lý doanh nghiệp tiếp nhận thực tập và đồ án',
   internship_students: 'Quản lý SV TTTN',
+  group_review: 'Duyệt nhóm đồ án',
   internship_students_desc: 'Theo dõi sinh viên đăng ký giấy xác nhận và sinh viên chưa có công ty',
   company_list: 'Danh sách công ty',
   add_company: 'Thêm công ty',
