@@ -283,6 +283,7 @@ const ViTranslation = {
   tier_4: 'Hạng 4',
   // General options
   all: 'Tất cả',
+  status: 'Trạng thái',
   // Roles
   brand_owner: 'Chủ thương hiệu',
   gas_station_owner: 'Chủ trạm xăng',

@@ -5,10 +5,10 @@ type ConfirmationRow = IConfirmationRequest;
 type NoCompanyRow = INoCompanyStudent;
 
 const MOCK_CONFIRMATIONS: ConfirmationRow[] = [
-  { id: 'CR001', studentId: '20520001', studentName: 'Nguyễn Văn A', className: 'KTPM2020', companyName: 'FPT Software', taxId: '0123456789', mentor: 'Trần Văn Mentor', regDate: '15/04/2026', status: 'pending' },
-  { id: 'CR002', studentId: '20520002', studentName: 'Trần Thị B', className: 'CNPM2020', companyName: 'VNG Corp', taxId: '0987654321', mentor: 'Nguyễn Thị Guide', regDate: '16/04/2026', status: 'approved' },
-  { id: 'CR003', studentId: '20520003', studentName: 'Lê Văn C', className: 'KTPM2020', companyName: 'TMA Solutions', taxId: '0112233445', mentor: 'Phạm Văn Hướng', regDate: '17/04/2026', status: 'pending' },
-  { id: 'CR004', studentId: '20520004', studentName: 'Phạm Thị D', className: 'HTTT2020', companyName: 'Shopee VN', taxId: '0556677889', mentor: 'Võ Thị Lead', regDate: '18/04/2026', status: 'rejected' },
+  { id: 'CR001', studentId: '20520001', studentName: 'Nguyễn Văn A', className: 'KTPM2020', companyName: 'FPT Software', companyAddress: 'Số 10 Phạm Văn Bạch, Cầu Giấy, Hà Nội', internshipLocation: 'Tòa nhà FPT, Hà Nội', taxId: '0123456789', mentor: 'Trần Văn Mentor', regDate: '15/04/2026', status: 'pending' },
+  { id: 'CR002', studentId: '20520002', studentName: 'Trần Thị B', className: 'CNPM2020', companyName: 'VNG Corp', companyAddress: '123 Nam Kỳ Khởi Nghĩa, Quận 1, TP.HCM', internshipLocation: 'VNG Campus, TP.HCM', taxId: '0987654321', mentor: 'Nguyễn Thị Guide', regDate: '16/04/2026', status: 'approved' },
+  { id: 'CR003', studentId: '20520003', studentName: 'Lê Văn C', className: 'KTPM2020', companyName: 'TMA Solutions', companyAddress: '111 Nguyễn Đình Chính, Phú Nhuận, TP.HCM', internshipLocation: 'TMA Tower, TP.HCM', taxId: '0112233445', mentor: 'Phạm Văn Hướng', regDate: '17/04/2026', status: 'pending' },
+  { id: 'CR004', studentId: '20520004', studentName: 'Phạm Thị D', className: 'HTTT2020', companyName: 'Shopee VN', companyAddress: 'Lầu 10, Tòa nhà Capital Place, Hà Nội', internshipLocation: 'Shopee Office, Hà Nội', taxId: '0556677889', mentor: 'Võ Thị Lead', regDate: '18/04/2026', status: 'rejected' },
 ];
 
 const MOCK_NO_COMPANY: NoCompanyRow[] = [

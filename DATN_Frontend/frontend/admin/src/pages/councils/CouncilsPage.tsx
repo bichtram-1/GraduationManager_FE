@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { message } from 'antd';
+import { message, Modal } from 'antd';
 import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../constants/routers';
@@ -16,6 +16,15 @@ type CouncilCard = {
   member: string[];
   topicGroups: { code: string; title: string; members: number }[];
   external?: { name: string; council: string }[];
+  // per-topic assignments (optional)
+  topics?: {
+    code: string;
+    title: string;
+    members: number;
+    examiners?: string[]; // internal examiners
+    externalExaminers?: string[];
+    startTime?: string; // hh:mm
+  }[];
   accent: 'blue' | 'green';
 };
 
@@ -42,6 +51,11 @@ const COUNCILS: CouncilCard[] = [
       { code: 'G02', title: 'AI nhận diện hình ảnh', members: 1 },
       { code: 'G03', title: 'Nền tảng e-commerce', members: 2 },
     ],
+    topics: [
+      { code: 'G01', title: 'IoT giám sát nông nghiệp', members: 2, examiners: ['TS. Lê Văn N'], startTime: '09:00' },
+      { code: 'G02', title: 'AI nhận diện hình ảnh', members: 1, examiners: ['ThS. Lê Thị Z'], externalExaminers: ['TS. Lý Văn G'], startTime: '10:00' },
+      { code: 'G03', title: 'Nền tảng e-commerce', members: 2 },
+    ],
     external: [{ name: 'TS. Lý Văn G', council: 'HĐ2' }],
     accent: 'blue',
   },
@@ -59,12 +73,16 @@ const COUNCILS: CouncilCard[] = [
       { code: 'G04', title: 'Quản lý ký túc xá', members: 1 },
       { code: 'G05', title: 'Ứng dụng học tập gamification', members: 1 },
     ],
+    topics: [
+      { code: 'G04', title: 'Quản lý ký túc xá', members: 1, examiners: ['TS. Phạm Văn K'], startTime: '13:30' },
+      { code: 'G05', title: 'Ứng dụng học tập gamification', members: 1, examiners: ['TS. Phạm Văn K'], startTime: '14:15' },
+    ],
     accent: 'green',
   },
 ];
 
 const CouncilsPage: React.FC = () => {
-  const [externalFormCouncilId, setExternalFormCouncilId] = useState<string | null>(null);
+  const [selectedCouncilForView, setSelectedCouncilForView] = useState<CouncilCard | null>(null);
   const [activeTab, setActiveTab] = useState<'list' | 'filter'>('list');
   const [query, setQuery] = useState('');
   const [roomFilter, setRoomFilter] = useState('all');
@@ -106,8 +124,19 @@ const CouncilsPage: React.FC = () => {
     const confirmed = window.confirm(`Bạn có chắc muốn xóa ${council.title}?`);
     if (!confirmed) return;
     setCouncils((prev) => prev.filter((item) => item.id !== councilId));
-    setExternalFormCouncilId((current) => (current === councilId ? null : current));
     message.success('Đã xóa hội đồng');
+  };
+
+  const handleViewCouncil = (councilId: string) => {
+    const council = councils.find((c) => c.id === councilId);
+    if (!council) return;
+    setSelectedCouncilForView(council);
+  };
+
+  const handleEditCouncil = (councilId: string) => {
+    const council = councils.find((c) => c.id === councilId);
+    // navigate to create page with state for editing (CreateCouncilPage can read history.state later)
+    navigate(ROUTES.COUNCILS_CREATE, { state: { council } });
   };
 
   useEffect(() => {
@@ -210,7 +239,19 @@ const CouncilsPage: React.FC = () => {
         </div>
 
         <div>
-          {filteredCouncils.map((c) => (
+          {filteredCouncils.map((c) => {
+            const internSet = new Set<string>();
+            const extSet = new Set<string>();
+            if (c.topics) {
+              c.topics.forEach((t) => {
+                (t.examiners || []).forEach((e) => internSet.add(e));
+                (t.externalExaminers || []).forEach((e) => extSet.add(e));
+              });
+            }
+            const aggregatedInternal = Array.from(internSet);
+            const aggregatedExternal = Array.from(extSet);
+
+            return (
             <div className="ov-card" key={c.id}>
               <div className="ov-head">
                 <div>
@@ -223,22 +264,16 @@ const CouncilsPage: React.FC = () => {
                     <span className="chip">{c.rejected} bị loại</span>
                   </div>
                   <div className="action-row">
-                    <button className="btn btns btn-icon" onClick={() => message.info(`Xem chi tiết ${c.id} (mô phỏng)`) }>
+                    <button className="btn btns btn-icon" onClick={() => handleViewCouncil(c.id)}>
                       <EyeOutlined /> Xem
                     </button>
-                    <button className="btn btns btn-icon" onClick={() => message.info(`Mở chỉnh sửa ${c.id} (mô phỏng)`) }>
+                    <button className="btn btns btn-icon" onClick={() => handleEditCouncil(c.id)}>
                       <EditOutlined /> Sửa
                     </button>
                     <button className="btn btns btn-icon" onClick={() => handleDeleteCouncil(c.id)}>
                       <DeleteOutlined /> Xóa
                     </button>
-                    <button
-                      className="btn btnp btn-icon"
-                      onClick={() => setExternalFormCouncilId((cur) => (cur === c.id ? null : c.id))}
-                    >
-                      <PlusOutlined />
-                      {externalFormCouncilId === c.id ? 'Đóng thêm GV ngoài' : 'Thêm GV ngoài'}
-                    </button>
+                    
                   </div>
                 </div>
               </div>
@@ -261,10 +296,17 @@ const CouncilsPage: React.FC = () => {
                 </div>
 
                 <div className="role-col">
-                  <div className="role-name">Ủy viên</div>
-                  <div className="role-title">Thành viên hội đồng</div>
+                  <div className="role-name">Người chấm</div>
+                  <div className="role-title">Danh sách người chấm</div>
                   <div className="chip-wrap">
-                    {c.member.length ? c.member.map((t) => <span key={t} className="chip">{t}</span>) : <span className="muted">Chưa phân công</span>}
+                    {aggregatedInternal.length || aggregatedExternal.length ? (
+                      <>
+                        {aggregatedInternal.map((t) => <span key={t} className="chip">{t}</span>)}
+                        {aggregatedExternal.map((t) => <span key={t} className="chip" style={{ background: '#eeedfe' }}>{t}</span>)}
+                      </>
+                    ) : (
+                      <span className="muted">Chưa phân công</span>
+                    )}
                   </div>
                 </div>
 
@@ -273,12 +315,33 @@ const CouncilsPage: React.FC = () => {
                   <div className="role-title">Danh sách nhóm đã phân</div>
                   {c.topicGroups.length ? (
                     <div className="topic-list">
-                      {c.topicGroups.map((topic) => (
-                        <div className="topic-item" key={topic.code}>
-                          <div className="topic-item-title">{topic.code} - {topic.title}</div>
-                          <div className="topic-item-meta">{topic.members} sinh viên</div>
-                        </div>
-                      ))}
+                      {c.topics && c.topics.length ? (
+                        c.topics.map((topic) => (
+                          <div className="topic-item" key={topic.code}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <div>
+                                <div className="topic-item-title">{topic.code} - {topic.title}</div>
+                                <div className="topic-item-meta">{Array.isArray((topic as any).members) ? `${(topic as any).members.length} sinh viên` : `${topic.members} sinh viên`}</div>
+                              </div>
+                              {topic.startTime && <div className="chip">{topic.startTime}</div>}
+                            </div>
+                            {Array.isArray((topic as any).members) && (topic as any).members.length > 0 && (
+                              <div style={{ marginTop: 8, color: 'var(--color-text-secondary)', fontSize: 13 }}>{(topic as any).members.join(', ')}</div>
+                            )}
+                            <div style={{ marginTop: 8 }} />
+                          </div>
+                        ))
+                      ) : (
+                        c.topicGroups.map((topic) => (
+                          <div className="topic-item" key={topic.code}>
+                            <div className="topic-item-title">{topic.code} - {topic.title}</div>
+                            <div className="topic-item-meta">{Array.isArray((topic as any).members) ? `${(topic as any).members.length} sinh viên` : `${topic.members} sinh viên`}</div>
+                            {Array.isArray((topic as any).members) && (topic as any).members.length > 0 && (
+                              <div style={{ marginTop: 8, color: 'var(--color-text-secondary)', fontSize: 13 }}>{(topic as any).members.join(', ')}</div>
+                            )}
+                          </div>
+                        ))
+                      )}
                     </div>
                   ) : (
                     <span className="muted">Chưa phân nhóm đề tài</span>
@@ -288,34 +351,75 @@ const CouncilsPage: React.FC = () => {
                 <div className="role-col">
                   <div className="role-name">GV ngoài</div>
                   <div className="role-title">Giảng viên ngoài hội đồng</div>
-                  <div style={{ display: 'flex', flexWrap: 'nowrap', gap: 8, alignItems: 'center', overflowX: 'auto' }}>
-                    {c.external?.length ? (
-                      <>
-                        <span className="chip" style={{ background: '#eeedfe' }}>{c.external[0].name} ({c.external[0].council})</span>
-                        <button className="btn btns btn-xs" onClick={() => message.info('Đây là trạng thái mô phỏng của giao diện mẫu.')}> <DeleteOutlined /> </button>
-                      </>
-                    ) : (
-                      <span className="muted">Chưa có giảng viên ngoài</span>
-                    )}
+                  <div className="chip-wrap">
+                    {c.external && c.external.length ? c.external.map((e) => <span key={e.name} className="chip">{e.name}</span>) : <span className="muted">Chưa có giảng viên ngoài</span>}
                   </div>
-
-                  {externalFormCouncilId === c.id && (
-                    <div style={{ marginTop: 10, padding: 12, borderRadius: 8, background: '#fafafa', border: '1px solid var(--color-border-tertiary)' }}>
-                      <div style={{ marginBottom: 8, color: 'var(--color-text-secondary)' }}>Thêm giảng viên chấm chéo</div>
-                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                        <select style={{ flex: 1, minWidth: 220 }} defaultValue="TS. Lý Văn G (HĐ2)">
-                          <option>TS. Lý Văn G (HĐ2)</option>
-                          <option>TS. Đặng Văn I (HĐ2)</option>
-                        </select>
-                        <button className="btn btnp" onClick={() => { setExternalFormCouncilId(null); message.success('Đã thêm GV ngoài (mô phỏng)'); }}>Xác nhận</button>
-                        <button className="btn btns" onClick={() => setExternalFormCouncilId(null)}>Hủy</button>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
+          <Modal
+            title={selectedCouncilForView?.title}
+            open={!!selectedCouncilForView}
+            onCancel={() => setSelectedCouncilForView(null)}
+            footer={null}
+          >
+            {selectedCouncilForView && (
+              <div>
+                <div style={{ marginBottom: 8 }}><strong>{selectedCouncilForView.dateTime}</strong> · {selectedCouncilForView.room}</div>
+                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 8 }}>
+                  <div>
+                    <div className="role-name">GVHD</div>
+                    <div className="chip-wrap">{selectedCouncilForView.chair.map((t) => <span key={t} className="chip">{t}</span>)}</div>
+                  </div>
+                  <div>
+                    <div className="role-name">GVPB</div>
+                    <div className="chip-wrap">{selectedCouncilForView.reviewer.map((t) => <span key={t} className="chip">{t}</span>)}</div>
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: 12 }}>
+                  <div className="role-name">Chi tiết thành viên</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginTop: 8 }}>
+                    <div>
+                      <div className="muted">GVHD</div>
+                      <div style={{ marginTop: 6 }}>{selectedCouncilForView.chair.map((t) => <div key={t} className="chip" style={{ display: 'inline-block', marginRight: 6 }}>{t}</div>)}</div>
+                    </div>
+                    <div>
+                      <div className="muted">GVPB</div>
+                      <div style={{ marginTop: 6 }}>{selectedCouncilForView.reviewer.map((t) => <div key={t} className="chip" style={{ display: 'inline-block', marginRight: 6 }}>{t}</div>)}</div>
+                    </div>
+                    <div>
+                      <div className="muted">Thành viên</div>
+                      <div style={{ marginTop: 6 }}>{selectedCouncilForView.member && selectedCouncilForView.member.length ? selectedCouncilForView.member.map((t) => <div key={t} className="chip" style={{ display: 'inline-block', marginRight: 6 }}>{t}</div>) : <div className="muted">Không có</div>}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="role-name">Nhóm đề tài</div>
+                  <div className="topic-list">
+                    {(selectedCouncilForView.topics || selectedCouncilForView.topicGroups || []).map((topic: any) => (
+                      <div key={topic.code} className="topic-item">
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <div className="topic-item-title">{topic.code} - {topic.title}</div>
+                          {topic.startTime && <div className="chip">{topic.startTime}</div>}
+                        </div>
+                        <div className="topic-item-meta">{Array.isArray(topic.members) ? `${topic.members.length} sinh viên` : `${topic.members} sinh viên`}</div>
+                        {Array.isArray(topic.members) && topic.members.length > 0 && (
+                          <div style={{ marginTop: 8, color: 'var(--color-text-secondary)', fontSize: 13 }}>{topic.members.join(', ')}</div>
+                        )}
+                        <div style={{ marginTop: 8 }}>
+                          {(topic.examiners || []).map((e: string) => <span key={e} className="chip">{e}</span>)} {(topic.externalExaminers || []).map((e: string) => <span key={e} className="chip" style={{ background: '#eeedfe' }}>{e}</span>)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </Modal>
 
           {filteredCouncils.length === 0 && (
             <div className="ov-card" style={{ textAlign: 'center', color: 'var(--color-text-secondary)' }}>

@@ -1,14 +1,19 @@
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getKey } from '@shared/types/I18nKeyType';
-import { Table, Button, Drawer, Modal, Tooltip, Avatar, Tag, Input, Select, Space, message } from 'antd';
-import { ExclamationCircleOutlined, EyeOutlined, PlusOutlined, SwapOutlined, DeleteOutlined, LockOutlined } from '@ant-design/icons';
+import { Button, Modal, Tooltip, Tag, Input, Select, Space, message, Form } from 'antd';
+import { PlusOutlined, SwapOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
 import AddMemberModal from './components/AddMemberModal';
 import MergeModal from './components/MergeModal';
-import type { GroupStatus, IGroupMember, IListGroup } from '../../type/GroupType';
+import FilterTable from '../../components/shared/table/FilterTable';
+import GroupForm from './components/GroupForm';
+import type { GroupStatus, IGroupMember, IListGroup, IDetailGroup, ICreateGroup, IUpdateGroup } from '../../type/GroupType';
 import { groupHooks } from '../../hooks/useGroups';
+import type { BaseListParams, ListResponseTypeObject } from '@shared/types/GeneralType';
+import type { UseQueryResult, UseMutationResult } from '@tanstack/react-query';
+import { AxiosError } from 'axios';
 
-type Student = IGroupMember & { eligible: boolean; reason?: string };
+type Student = IGroupMember & { eligible?: boolean; reason?: string };
 type Group = IListGroup & {
   id: string;
   code: string;
@@ -28,29 +33,6 @@ const sampleStudents: Student[] = [
   { id: 's5', name: 'Hoàng Văn E', code: 'SV005', eligible: true },
 ];
 
-const initialGroups: Group[] = [
-  {
-    id: 'g01',
-    code: 'NH01',
-    title: 'Hệ thống phân tích dữ liệu',
-    supervisor: 'TS. Nguyễn Văn A',
-    members: [sampleStudents[0], sampleStudents[2]],
-    maxMembers: 4,
-    status: 'WARNING',
-    registrationBatch: 'HK1/2024',
-  },
-  {
-    id: 'g02',
-    code: 'NH02',
-    title: 'Ứng dụng web cho doanh nghiệp',
-    supervisor: 'PGS. Mai Thị H',
-    members: [sampleStudents[1], sampleStudents[4]],
-    maxMembers: 3,
-    status: 'APPROVED',
-    registrationBatch: 'HK1/2024',
-  },
-];
-
 const STATUS_META: Record<Group['status'], { label: string; color: string }> = {
   PENDING: { label: 'Chờ duyệt', color: 'default' },
   APPROVED: { label: 'Đã duyệt', color: 'green' },
@@ -62,11 +44,6 @@ const STATUS_META: Record<Group['status'], { label: string; color: string }> = {
 
 const GroupsAdminPage: React.FC = () => {
   const { t } = useTranslation();
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string | null>(null);
-  const [batchFilter, setBatchFilter] = useState<string | null>(null);
-  const [supervisorFilter, setSupervisorFilter] = useState<string | null>(null);
-  const [drawerGroup, setDrawerGroup] = useState<IListGroup | null>(null);
   const [addModalGroup, setAddModalGroup] = useState<IListGroup | null>(null);
   const [mergeMode, setMergeMode] = useState(false);
   const [mergeLeft, setMergeLeft] = useState<string | null>(null);
@@ -74,7 +51,7 @@ const GroupsAdminPage: React.FC = () => {
   const { data: groupList } = groupHooks.useFetchListGroups();
   const updateGroupMutation = groupHooks.useUpdateGroup();
   const deleteGroupMutation = groupHooks.useDeleteGroup();
-  const groups = (groupList?.rows as Group[] | undefined) ?? initialGroups;
+  const groups = (groupList?.rows as Group[] | undefined) ?? [];
   const supervisors = useMemo(() => Array.from(new Set(groups.map((g) => g.supervisor))), [groups]);
 
   const total = groups.length;
@@ -82,47 +59,13 @@ const GroupsAdminPage: React.FC = () => {
   const withWarnings = groups.filter((g) => g.status === 'WARNING').length;
   const missing = groups.filter((g) => g.status === 'MISSING').length;
 
-  const filtered = groups.filter((g) => {
-    const q = search.trim().toLowerCase();
-    if (q) {
-      const inGroup = [g.code, g.title, g.supervisor, g.registrationBatch].join(' ').toLowerCase().includes(q);
-      const inMembers = g.members.some((m) => `${m.name} ${m.code}`.toLowerCase().includes(q));
-      if (!inGroup && !inMembers) return false;
-    }
-    if (statusFilter && g.status !== statusFilter) return false;
-    if (batchFilter && g.registrationBatch !== batchFilter) return false;
-    if (supervisorFilter && g.supervisor !== supervisorFilter) return false;
-    return true;
-  });
 
-  function openDrawer(g: Group) {
-    setDrawerGroup(g);
-  }
-
-  async function saveGroup(updated: Group) {
-    await updateGroupMutation.mutateAsync({
-      id: updated.id,
-      body: {
-        title: updated.title,
-        supervisor: updated.supervisor,
-        members: updated.members,
-        maxMembers: updated.maxMembers,
-        status: updated.status,
-        registrationBatch: updated.registrationBatch,
-        code: updated.code,
-      },
-      index: 0,
-      params: { page: 1, limit: 10 },
-    });
-    setDrawerGroup(null);
-    message.success('Đã lưu thay đổi');
-  }
 
   function openAddMember(g: Group) {
     setAddModalGroup(g);
   }
 
-  async function addMemberToGroup(groupId: string, student: Student, _force = false) {
+  async function addMemberToGroup(groupId: string, student: IGroupMember, _force = false) {
     const group = groups.find((item) => item.id === groupId);
     if (!group) return;
     const already = group.members.find((member) => member.id === student.id);
@@ -139,43 +82,9 @@ const GroupsAdminPage: React.FC = () => {
     message.success('Đã thêm thành viên (mô phỏng)');
   }
 
-  function removeMember(groupId: string, studentId: string) {
-    Modal.confirm({
-      title: 'Xác nhận loại sinh viên',
-      icon: <ExclamationCircleOutlined />,
-      content: 'Bạn có chắc muốn xóa sinh viên này khỏi nhóm? Hành động này sẽ ghi nhận là "bị loại"',
-      async onOk() {
-        const group = groups.find((item) => item.id === groupId);
-        if (!group) return;
-        const left = group.members.filter((member) => member.id !== studentId);
-        const newStatus = left.length < 2 ? 'MISSING' : group.status;
-        await updateGroupMutation.mutateAsync({
-          id: groupId,
-          body: { members: left, status: newStatus },
-          index: 0,
-          params: { page: 1, limit: 10 },
-        });
-        message.success('Đã loại sinh viên (mô phỏng)');
-      },
-    });
-  }
+  // removeMember handled via Update mutation or AddMemberModal flows
 
-  function promptDelete(group: Group) {
-    Modal.confirm({
-      title: 'Xóa nhóm — xác nhận',
-      icon: <ExclamationCircleOutlined />,
-      content: (
-        <div>
-          <div>Ghi lý do xóa:</div>
-          <Input.TextArea id="delete-reason" rows={3} />
-        </div>
-      ),
-      onOk() {
-        deleteGroupMutation.mutate({ id: group.id, params: { page: 1, limit: 10 } });
-        message.success('Đã xóa nhóm (mô phỏng)');
-      },
-    });
-  }
+  // delete handled by FilterTable delete flow
 
   function doMerge() {
     if (!mergeLeft || !mergeRight) return message.error('Chọn cả nhóm chính và nhóm phụ');
@@ -213,7 +122,7 @@ const GroupsAdminPage: React.FC = () => {
       title: 'Mã nhóm',
       dataIndex: 'code',
       key: 'code',
-      width: 110,
+      width: 120,
       render: (code: string) => <span className="font-semibold text-[#2563eb]">{code}</span>,
     },
     { title: 'Tên đề tài', dataIndex: 'title', key: 'title', render: (t: string) => <div className="font-semibold text-slate-900">{t}</div> },
@@ -221,7 +130,7 @@ const GroupsAdminPage: React.FC = () => {
     {
       title: 'Thành viên',
       key: 'members',
-      render: (_: unknown, record: Group) => (
+      render: (_: unknown, record: IListGroup) => (
         <Space>
           {record.members.map((m) => (
             <Tooltip key={m.id} title={m.eligible ? m.name : `${m.name} — ${m.reason}`}>
@@ -236,32 +145,12 @@ const GroupsAdminPage: React.FC = () => {
     {
       title: 'Trạng thái',
       key: 'status',
-      render: (_: unknown, r: Group) => {
-        const meta = STATUS_META[r.status];
+      render: (_: unknown, r: IListGroup) => {
+          const meta = STATUS_META[r.status as GroupStatus];
         return <Tag color={meta.color} className="!px-2 !py-[2px] !text-xs !font-medium">{meta.label}</Tag>;
       },
     },
-    { title: 'Số thành viên', key: 'count', render: (_: unknown, r: Group) => `${r.members.length}/${r.maxMembers}` },
-    {
-      title: t ? t(getKey('action')) : 'Hành động',
-      key: 'action',
-      render: (_: unknown, r: Group) => (
-        <Space size={4}>
-          <Tooltip title="Xem / Sửa">
-            <Button type="text" size="small" onClick={() => openDrawer(r)} icon={<EyeOutlined />} />
-          </Tooltip>
-          <Tooltip title="Thêm thành viên">
-            <Button type="text" size="small" onClick={() => openAddMember(r)} icon={<PlusOutlined />} />
-          </Tooltip>
-          <Tooltip title="Ghép nhóm">
-            <Button type="text" size="small" onClick={() => { setMergeMode(true); setMergeLeft(r.id); }} icon={<SwapOutlined />} />
-          </Tooltip>
-          <Tooltip title="Xóa">
-            <Button type="text" size="small" danger onClick={() => promptDelete(r)} icon={<DeleteOutlined />} />
-          </Tooltip>
-        </Space>
-      ),
-    },
+      { title: 'Số thành viên', key: 'count', render: (_: unknown, r: IListGroup) => `${r.members.length}/${r.maxMembers}` },
   ];
 
   return (
@@ -275,31 +164,8 @@ const GroupsAdminPage: React.FC = () => {
             <h1 className="m-0 text-[34px] font-bold leading-[40px] text-slate-900">Quản lý Nhóm Đồ án</h1>
             <p className="mt-2 mb-0 text-[17px] leading-[26px] text-slate-600">Quản lý nhóm sinh viên, trạng thái, thành viên và thao tác nhanh.</p>
           </div>
-          <div className="flex w-full max-w-[560px] items-center gap-2">
-            <Input.Search
-              size="large"
-              placeholder="Tìm nhóm, mã, đề tài, sinh viên, giảng viên"
-              onSearch={(v) => setSearch(v)}
-              className="flex-1"
-            />
-            <Button size="large" type="primary" onClick={() => message.info('Xuất Excel (mô phỏng)')}>Xuất</Button>
-          </div>
+          <div />
         </div>
-      </div>
-
-      <div className="mb-4 rounded-2xl border border-slate-100 bg-white p-4 shadow-[0_8px_20px_rgba(15,23,42,0.04)]">
-        <div className="flex flex-wrap gap-3">
-          <Select placeholder="Trạng thái" allowClear style={{ width: 190 }} onChange={(v) => setStatusFilter(v)} size="large">
-          {Object.keys(STATUS_META).map((k) => <Select.Option key={k} value={k}>{STATUS_META[k as Group['status']].label}</Select.Option>)}
-        </Select>
-        <Select placeholder="Đợt đăng ký" allowClear style={{ width: 180 }} onChange={(v) => setBatchFilter(v)} size="large">
-          <Select.Option value="HK1/2024">HK1/2024</Select.Option>
-          <Select.Option value="HK2/2024">HK2/2024</Select.Option>
-        </Select>
-        <Select placeholder="Giảng viên" allowClear style={{ width: 260 }} onChange={(v) => setSupervisorFilter(v)} size="large">
-          {supervisors.map((s) => <Select.Option key={s} value={s}>{s}</Select.Option>)}
-        </Select>
-      </div>
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -321,63 +187,107 @@ const GroupsAdminPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-[0_8px_20px_rgba(15,23,42,0.04)]">
-        <Table
-          rowKey="id"
-          dataSource={filtered}
-          columns={columns}
-          pagination={{ pageSize: 8 }}
-          size="middle"
-          rowClassName={() => 'hover:bg-slate-50'}
-        />
-      </div>
+      <FilterTable<IListGroup, IDetailGroup, ICreateGroup, IUpdateGroup>
+        title="Danh sách nhóm"
+        createButtonLabel={undefined}
+        columns={columns}
+        useQueryHook={(params: BaseListParams) => {
+          const typedParams = params as BaseListParams & { keyword?: string; status?: string; registrationBatch?: string; supervisor?: string };
+          const query = groupHooks.useFetchListGroups();
+          const normalizedKeyword = (typedParams.keyword ?? '').trim().toLowerCase();
+          const status = typedParams.status;
+          const batch = typedParams.registrationBatch;
+          const supervisor = typedParams.supervisor;
 
-      <Drawer width={640} placement="right" onClose={() => setDrawerGroup(null)} open={!!drawerGroup} title={drawerGroup?.code + ' — ' + drawerGroup?.title}>
-        {drawerGroup && (
-          <div className="space-y-3">
-            <div>
-              <div className="text-sm text-gray-600">Tên đề tài</div>
-              <Input defaultValue={drawerGroup.title} onChange={(e) => setDrawerGroup({ ...drawerGroup, title: e.target.value })} />
-            </div>
-            <div>
-              <div className="text-sm text-gray-600">Số thành viên tối đa</div>
-              <Input type="number" defaultValue={drawerGroup.maxMembers} onChange={(e) => setDrawerGroup({ ...drawerGroup, maxMembers: Number(e.target.value) })} />
-            </div>
-            <div>
-              <div className="text-sm text-gray-600">Giảng viên hướng dẫn</div>
-              <Select value={drawerGroup.supervisor} style={{ width: '100%' }} onChange={(v) => setDrawerGroup({ ...drawerGroup, supervisor: v })}>
-                {supervisors.map((s) => <Select.Option key={s} value={s}>{s}</Select.Option>)}
-              </Select>
-            </div>
+          const allRows = (query.data?.rows ?? groups) as IListGroup[];
+          const filteredRows = allRows.filter((g) => {
+            if (normalizedKeyword) {
+              const inGroup = [g.code, g.title, g.supervisor, g.registrationBatch].join(' ').toLowerCase().includes(normalizedKeyword);
+              const inMembers = g.members.some((m) => `${m.name} ${m.code || ''}`.toLowerCase().includes(normalizedKeyword));
+              if (!inGroup && !inMembers) return false;
+            }
+            if (status && g.status !== status) return false;
+            if (batch && g.registrationBatch !== batch) return false;
+            if (supervisor && g.supervisor !== supervisor) return false;
+            return true;
+          });
 
-            <div>
-              <div className="text-sm text-gray-600 mb-2">Thành viên</div>
-              <div className="flex flex-col gap-2">
-                {drawerGroup.members.map((m) => (
-                  <div key={m.id} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Avatar>{m.name.split(' ').slice(-1)[0]}</Avatar>
-                      <div>
-                        <div className="font-medium">{m.name} <span className="text-xs text-gray-500">{m.code}</span></div>
-                        {!m.eligible && <div className="text-red-600 text-sm">{m.reason}</div>}
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      {!m.eligible && <Button danger size="small" onClick={() => removeMember(drawerGroup.id, m.id)} icon={<DeleteOutlined />} />}
-                      {!m.eligible && <Button size="small" onClick={() => { setGroups((prev) => prev.map((g) => g.id === drawerGroup.id ? { ...g, status: 'LOCKED' } : g)); message.info('Đã khóa nhóm (mô phỏng)'); }} icon={<LockOutlined />}>Khóa</Button>}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2">
-              <Button onClick={() => setDrawerGroup(null)}>Hủy</Button>
-              <Button type="primary" onClick={() => saveGroup(drawerGroup)}>Lưu</Button>
-            </div>
+          const data = { rows: filteredRows, total: filteredRows.length };
+          return {
+            ...query,
+            data,
+          } as UseQueryResult<ListResponseTypeObject<IListGroup>, Error>;
+        }}
+        filterRender={() => (
+          <div className="grid grid-cols-1 gap-3 xl:grid-cols-12">
+            <Form.Item name="keyword" className={"xl:col-span-5 !mb-0"}>
+              <Input
+                allowClear
+                prefix={<SearchOutlined className={"text-slate-400"} />}
+                placeholder={"Tìm nhóm, mã, đề tài, sinh viên, giảng viên"}
+                className={"!h-11 !rounded-[12px] !border-slate-300"}
+              />
+            </Form.Item>
+            <Form.Item name="registrationBatch" className={"xl:col-span-3 !mb-0"}>
+              <Select allowClear placeholder="Đợt đăng ký" className={"!h-11 !w-full"} options={[{value: 'HK1/2024', label: 'HK1/2024'}, {value: 'HK2/2024', label: 'HK2/2024'}]} />
+            </Form.Item>
+            <Form.Item name="status" className={"xl:col-span-2 !mb-0"}>
+              <Select allowClear placeholder="Trạng thái" className={"!h-11 !w-full"} options={Object.keys(STATUS_META).map((k) => ({ value: k, label: STATUS_META[k as Group['status']].label }))} />
+            </Form.Item>
+            <Form.Item name="supervisor" className={"xl:col-span-2 !mb-0"}>
+              <Select allowClear placeholder="Giảng viên" className={"!h-11 !w-full"} options={supervisors.map((s) => ({ value: s, label: s }))} />
+            </Form.Item>
           </div>
         )}
-      </Drawer>
+        paramVariables={{ page: 1, limit: 10 }}
+        actions={{
+          isDetail: true,
+          isEdit: true,
+          isDelete: true,
+          isDeleteDisabled: (record) => (record as IListGroup).status === 'DISSOLVED',
+          customAction: (record: unknown) => {
+            const r = record as IListGroup;
+            return (
+              <Space>
+                <Tooltip title="Thêm thành viên">
+                  <Button type="text" size="small" onClick={() => setAddModalGroup(r)} icon={<PlusOutlined />} />
+                </Tooltip>
+                <Tooltip title="Ghép nhóm">
+                  <Button type="text" size="small" onClick={() => { setMergeMode(true); setMergeLeft(r.id); }} icon={<SwapOutlined />} />
+                </Tooltip>
+              </Space>
+            );
+          },
+        }}
+        deleteInfo={{
+          type: 'modal',
+          modalInfo: {
+            modalContent: null,
+            modalProps: {},
+                // cast to expected mutation type so FilterTable's generics align
+                modalFunc: groupHooks.useDeleteGroup() as unknown as UseMutationResult<IListGroup, AxiosError, { id: string; params: BaseListParams }>,
+          },
+        }}
+        updateInfo={{
+          type: 'modal',
+          modalInfo: {
+            modalContent: <GroupForm />,
+            modalProps: {},
+            modalFunc: groupHooks.useUpdateGroup(),
+          },
+        }}
+        detailInfo={{
+          type: 'modal',
+          modalInfo: {
+            modalContent: <GroupForm />,
+            modalProps: { footer: null },
+            // cast detail hook signature to match FilterTable expected type
+            modalFunc: groupHooks.useFetchDetailGroup as unknown as (id: string, enable: boolean) => UseQueryResult<IDetailGroup, Error>,
+          },
+        }}
+      />
+
+      {/* Drawer removed: edit/detail handled by FilterTable modal with GroupForm */}
 
       <AddMemberModal open={!!addModalGroup} onCancel={() => setAddModalGroup(null)} group={addModalGroup} sampleStudents={sampleStudents} onAdd={addMemberToGroup} />
 

@@ -11,9 +11,11 @@ import { useTranslation } from 'react-i18next';
 import { getKey } from '@shared/types/I18nKeyType';
 import type { ColumnsType } from 'antd/es/table';
 import { useMemo, useState } from 'react';
-import PeriodModal from './components/PeriodModal';
+import FilterTable from '../../components/shared/table/FilterTable';
+import PeriodForm from './components/PeriodForm';
 import { periodHooks } from '../../hooks/usePeriods';
-import type { BatchStatus, BatchType, ICreatePeriod, IUpdatePeriod, IListPeriod } from '../../type/PeriodType';
+import type { BatchStatus, BatchType, ICreatePeriod, IUpdatePeriod, IListPeriod, IDetailPeriod } from '../../type/PeriodType';
+import type { BaseListParams } from '@shared/types/GeneralType';
 
 type PeriodModalMode = 'create' | 'edit' | 'detail';
 
@@ -32,14 +34,9 @@ const batchTabs: Array<{ key: BatchType; label: string; icon: JSX.Element }> = [
 const PeriodsPage = () => {
   const { t } = useTranslation();
   const [tab, setTab] = useState<BatchType>('tttn');
-  const [open, setOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<PeriodModalMode>('create');
-  const [selectedPeriod, setSelectedPeriod] = useState<IListPeriod | null>(null);
   const [keyword, setKeyword] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | BatchStatus>('all');
-  const [form] = Form.useForm();
-  const listParams = { page: 1, limit: 1000, type: tab, status: statusFilter, keyword };
-  const { data: periodList } = periodHooks.useFetchListPeriods(listParams);
+  const listParams = { page: 1, limit: 10, type: tab, status: statusFilter, keyword };
   const createPeriodMutation = periodHooks.useCreatePeriod();
   const updatePeriodMutation = periodHooks.useUpdatePeriod();
   const deletePeriodMutation = periodHooks.useDeletePeriod();
@@ -49,68 +46,8 @@ const PeriodsPage = () => {
     setTab(nextTab);
   };
 
-  const filteredRows = periodList?.rows ?? [];
 
-  const handleOpenCreate = () => {
-    setModalMode('create');
-    setSelectedPeriod(null);
-    form.resetFields();
-    form.setFieldsValue({
-      type: tab,
-      status: 'open',
-    });
-    setOpen(true);
-  };
-
-  const handleOpenEdit = (record: IListPeriod) => {
-    setModalMode('edit');
-    setSelectedPeriod(record);
-    form.setFieldsValue(record);
-    setOpen(true);
-  };
-
-  const handleOpenDetail = (record: IListPeriod) => {
-    setModalMode('detail');
-    setSelectedPeriod(record);
-    form.setFieldsValue(record);
-    setOpen(true);
-  };
-
-  const handleDelete = (record: IListPeriod) => {
-    Modal.confirm({
-      centered: true,
-      title: 'Xóa đợt?',
-      content: `Bạn có chắc muốn xóa ${record.name}?`,
-      okText: 'Xóa',
-      cancelText: 'Hủy',
-      okButtonProps: { danger: true },
-      onOk: () => deletePeriodMutation.mutate({ id: record.id, params: { page: 1, limit: 10 } }),
-    });
-  };
-
-  const handleSubmit = async () => {
-    try {
-      const values = await form.validateFields();
-      if (modalMode === 'edit' && selectedPeriod) {
-        await updatePeriodMutation.mutateAsync({
-          id: selectedPeriod.id,
-          body: values as IUpdatePeriod,
-          index: 0,
-          params: { page: 1, limit: 10 },
-        });
-      } else {
-        await createPeriodMutation.mutateAsync({
-          body: values as ICreatePeriod,
-          params: { page: 1, limit: 10 },
-        });
-      }
-      setOpen(false);
-      setSelectedPeriod(null);
-      form.resetFields();
-    } catch {
-      // noop
-    }
-  };
+  // FilterTable will handle modal lifecycle; we keep mutations here to pass into props
 
   const columns = useMemo<ColumnsType<IListPeriod>>(
     () => [
@@ -189,18 +126,7 @@ const PeriodsPage = () => {
           );
         },
       },
-      {
-        title: t(getKey('action')),
-        key: 'actions',
-        align: 'right',
-        render: (_: unknown, record) => (
-          <Space size={4}>
-            <Button type="text" size="small" icon={<EyeOutlined className="text-[#2196F3]" />} className="!px-2" onClick={() => handleOpenDetail(record)} />
-            <Button type="text" size="small" icon={<FormOutlined className="text-[#2196F3]" />} className="!px-2" onClick={() => handleOpenEdit(record)} />
-            <Button type="text" size="small" icon={<DeleteOutlined className="text-[#F44336]" />} className="!px-2" onClick={() => handleDelete(record)} />
-          </Space>
-        ),
-      },
+      // actions column is provided by FilterTable
     ],
     [tab],
   );
@@ -237,61 +163,44 @@ const PeriodsPage = () => {
         />
       </div>
 
-      <Card className="overflow-hidden rounded-[18px] border border-slate-100 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
-        <div className="mb-4 flex items-center justify-between gap-4">
-          <span className="text-[18px] font-bold text-navyDark">Danh sách đợt</span>
-          <Button
-            type="primary"
-            icon={<PlusOutlined className="text-white" />}
-            onClick={handleOpenCreate}
-            className="!h-10 !rounded-[8px] !bg-primary !px-5 !flex !items-center !gap-2 !font-medium hover:!bg-blueDark"
-          >
-            <span className="text-white text-base font-medium text-center w-full">Tạo đợt mới</span>
-          </Button>
-        </div>
-        <div className="mb-4 grid grid-cols-1 gap-3 xl:grid-cols-12">
-          <div className="xl:col-span-8">
-            <Input
-              allowClear
-              value={keyword}
-              onChange={(event) => setKeyword(event.target.value)}
-              placeholder="Tìm theo tên đợt, mã đợt, thời gian..."
-              className="!h-11 !rounded-[12px] !border-slate-300"
-            />
+      <FilterTable<IListPeriod, IDetailPeriod, ICreatePeriod, IUpdatePeriod>
+        title="Danh sách đợt"
+        pageTitle="Quản lý đợt"
+        createButtonLabel="Tạo đợt mới"
+        columns={columns}
+        useQueryHook={(params) => periodHooks.useFetchListPeriods(params)}
+        paramVariables={listParams}
+        filterRender={() => (
+          <div className="mb-4 grid grid-cols-1 gap-3 xl:grid-cols-12">
+            <div className="xl:col-span-8">
+              <Form.Item name="keyword" className="m-0">
+                <Input allowClear placeholder="Tìm theo tên đợt, mã đợt, thời gian..." onChange={(e) => setKeyword(e.target.value)} />
+              </Form.Item>
+            </div>
+            <div className="xl:col-span-4">
+              <Form.Item name="status" className="m-0" initialValue={statusFilter}>
+                <Select
+                  onChange={(v) => setStatusFilter(v)}
+                  className="!w-full"
+                  options={[
+                    { value: 'all', label: 'Tất cả trạng thái' },
+                    { value: 'open', label: 'Đang mở' },
+                    { value: 'published', label: 'Đã công bố' },
+                    { value: 'grading', label: 'Chấm điểm' },
+                    { value: 'closed', label: 'Đã đóng' },
+                  ]}
+                />
+              </Form.Item>
+            </div>
           </div>
-          <div className="xl:col-span-4">
-            <Select
-              value={statusFilter}
-              onChange={setStatusFilter}
-              className="!h-11 !w-full"
-              options={[
-                { value: 'all', label: 'Tất cả trạng thái' },
-                { value: 'open', label: 'Đang mở' },
-                { value: 'published', label: 'Đã công bố' },
-                { value: 'grading', label: 'Chấm điểm' },
-                { value: 'closed', label: 'Đã đóng' },
-              ]}
-            />
-          </div>
-        </div>
-        <Table
-          rowKey="id"
-          columns={columns}
-          dataSource={filteredRows}
-          pagination={{
-            total: filteredRows.length,
-            pageSize: 10,
-            position: ['bottomCenter'],
-            showQuickJumper: false,
-            showTotal(total, range) {
-              return <span className="pl-2">Hiển thị {range[0]} đến {range[1]} trong {total} mục</span>;
-            },
-          }}
-          scroll={{ x: 'max-content' }}
-        />
-      </Card>
-
-      <PeriodModal open={open} modalMode={modalMode} tab={tab} form={form} onCancel={() => { setOpen(false); setSelectedPeriod(null); form.resetFields(); }} onOk={handleSubmit} />
+        )}
+        createInfo={{ type: 'modal', modalInfo: { modalContent: <PeriodForm tab={tab} allowStudentListUpload />, modalProps: { centered: true, width: 820, title: 'Tạo đợt mới' }, modalFunc: createPeriodMutation } }}
+        updateInfo={{ type: 'modal', modalInfo: { modalContent: <PeriodForm tab={tab} />, modalProps: { centered: true, width: 820, title: 'Chỉnh sửa đợt' }, modalFunc: updatePeriodMutation } }}
+        deleteInfo={{ type: 'modal', modalInfo: { modalContent: null, modalProps: {}, modalFunc: deletePeriodMutation as unknown as import('@tanstack/react-query').UseMutationResult<IListPeriod, import('axios').AxiosError, { id: string; params: BaseListParams }> } }}
+        detailInfo={{ type: 'modal', modalInfo: { modalContent: <PeriodForm tab={tab} disabled />, modalProps: { centered: true, width: 820, title: 'Chi tiết đợt', footer: null }, modalFunc: periodHooks.useFetchDetailPeriod as unknown as (id: string, enable: boolean) => import('@tanstack/react-query').UseQueryResult<IDetailPeriod, Error> } }}
+        formatInitialValues={(data: any) => data || {}}
+        formatFormValues={(values: Record<string, unknown>) => values as unknown as ICreatePeriod}
+      />
     </div>
   );
 };

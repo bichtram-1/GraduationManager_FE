@@ -50,6 +50,12 @@ const ConfirmationModal: React.FC<Props> = ({ open, mode, form, onCancel, onOk }
         <Form.Item label="Công ty" name="companyName" rules={[{ required: true, message: 'Vui lòng nhập công ty' }]}>
           <Input disabled={mode === 'detail'} />
         </Form.Item>
+        <Form.Item label="Địa chỉ công ty" name="companyAddress" rules={[{ required: true, message: 'Vui lòng nhập địa chỉ công ty' }]}>
+          <Input disabled={mode === 'detail'} />
+        </Form.Item>
+        <Form.Item label="Địa điểm thực tập" name="internshipLocation" rules={[{ required: true, message: 'Vui lòng nhập địa điểm thực tập' }]}>
+          <Input disabled={mode === 'detail'} />
+        </Form.Item>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <Form.Item label="Mã số thuế" name="taxId" rules={[{ required: true, message: 'Vui lòng nhập mã số thuế' }]}>
             <Input disabled={mode === 'detail'} />

@@ -7,6 +7,8 @@ export interface IConfirmationRequest {
   studentName: string;
   className: string;
   companyName: string;
+  companyAddress: string;
+  internshipLocation: string;
   taxId: string;
   mentor: string;
   regDate: string;
