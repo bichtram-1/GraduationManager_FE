@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { key: 'review-groups', href: '/teacher/review-groups', label: 'Đánh giá', icon: ClipboardCheck },
   { key: 'students', href: '/teacher/students', label: 'Hướng dẫn sinh viên', icon: Users },
   { key: 'grading', href: '/teacher/grading', label: 'Chấm điểm', icon: Trophy },
+  { key: 'councils', href: '/teacher/councils', label: 'Hội đồng', icon: Building2 },
 ]
 
 function getActiveKey(pathname: string) {
@@ -21,6 +22,7 @@ function getActiveKey(pathname: string) {
   if (pathname.startsWith('/teacher/review-groups')) return 'review-groups'
   if (pathname.startsWith('/teacher/students')) return 'students'
   if (pathname.startsWith('/teacher/grading')) return 'grading'
+  if (pathname.startsWith('/teacher/councils')) return 'councils'
   return 'home'
 }
 
