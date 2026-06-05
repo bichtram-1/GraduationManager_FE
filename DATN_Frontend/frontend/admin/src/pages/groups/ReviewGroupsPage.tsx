@@ -21,6 +21,7 @@ const ReviewGroupsPage: React.FC = () => {
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | string>('all');
   const [savingId, setSavingId] = useState<string | null>(null);
+  
 
   const filtered = useMemo(() => {
     const s = query.trim().toLowerCase();
@@ -79,6 +80,8 @@ const ReviewGroupsPage: React.FC = () => {
     }
   };
 
+  
+
   const columns = [
     { title: 'Mã nhóm', dataIndex: 'code', key: 'code', render: (c: string) => <div style={{ color: '#2563eb', fontWeight: 700 }}>{c}</div> },
     { title: 'Tên đề tài', dataIndex: 'title', key: 'title', render: (t: string) => <div style={{ fontWeight: 600 }}>{t}</div> },
@@ -96,6 +99,7 @@ const ReviewGroupsPage: React.FC = () => {
         {(statusFilter === 'APPROVED' || statusFilter === 'DISSOLVED') && (
           <Button size="small" onClick={() => doSetPending(r.id)} loading={savingId === r.id} disabled={savingId === r.id}>Chờ duyệt</Button>
         )}
+        {/* add/merge actions removed from Review page; managed in GroupsAdminPage */}
       </Space>
     ) },
   ];
@@ -133,6 +137,8 @@ const ReviewGroupsPage: React.FC = () => {
       </div>
 
       <Table rowKey="id" dataSource={filtered} columns={columns} />
+
+      
     </div>
   );
 };

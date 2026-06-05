@@ -48,4 +48,8 @@ export const QueryKey = {
     list: 'topicsList',
     detail: 'topicsDetail',
   },
+  classes: {
+    list: 'classesList',
+    detail: 'classesDetail',
+  },
 } as const;

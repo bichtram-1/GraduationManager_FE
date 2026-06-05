@@ -10,6 +10,7 @@ import {
   SolutionOutlined,
   UserOutlined,
   DashboardOutlined,
+  FileDoneOutlined,
 } from '@ant-design/icons';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -80,6 +81,11 @@ const DefaultNavigate = ({ collapsed, onToggle }: IDefaultNavigate) => {
       icon: <BookOutlined style={{ fontSize: 20 }} />,
     },
     {
+      key: ROUTES.CLASSES,
+      label: 'Quản lý lớp',
+      icon: <BookOutlined style={{ fontSize: 20 }} />,
+    },
+    {
       key: ROUTES.GROUPS,
       label: 'Quản lý nhóm',
       icon: <TeamOutlined style={{ fontSize: 20 }} />,
@@ -97,6 +103,11 @@ const DefaultNavigate = ({ collapsed, onToggle }: IDefaultNavigate) => {
       key: ROUTES.ASSIGNMENTS,
       label: t(getKey('assignment_management')),
       icon: <CrownOutlined style={{ fontSize: 20 }} />,
+    },
+    {
+      key: ROUTES.STUDENT_SCORES,
+      label: t(getKey('student_score_management')),
+      icon: <FileDoneOutlined style={{ fontSize: 20 }} />,
     },
     {
       key: ROUTES.INTERNSHIP_STUDENTS,

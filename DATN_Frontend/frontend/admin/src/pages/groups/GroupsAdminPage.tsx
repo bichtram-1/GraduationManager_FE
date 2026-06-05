@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getKey } from '@shared/types/I18nKeyType';
 import { Button, Modal, Tooltip, Tag, Input, Select, Space, message, Form } from 'antd';
-import { PlusOutlined, SwapOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
+import { SwapOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
 import AddMemberModal from './components/AddMemberModal';
 import MergeModal from './components/MergeModal';
 import FilterTable from '../../components/shared/table/FilterTable';
@@ -83,16 +83,30 @@ const GroupsAdminPage: React.FC = () => {
     message.success('Đã thêm thành viên (mô phỏng)');
   }
 
+  async function removeMemberFromGroup(groupId: string, memberId: string) {
+    const group = groups.find((item) => item.id === groupId);
+    if (!group) return;
+    const newMembers = group.members.filter((m) => m.id !== memberId);
+    const newStatus = newMembers.length < 2 ? 'MISSING' : group.status === 'LOCKED' ? 'LOCKED' : group.status;
+    await updateGroupMutation.mutateAsync({ id: groupId, body: { members: newMembers, status: newStatus }, index: 0, params: { page: 1, limit: 10 } });
+    message.success('Đã xóa thành viên (mô phỏng)');
+  }
+
   // removeMember handled via Update mutation or AddMemberModal flows
 
   // delete handled by FilterTable delete flow
 
   function doMerge() {
+    return doMergeWithMembers(undefined);
+  }
+
+  async function doMergeWithMembers(moveMemberIds?: string[] | undefined) {
     if (!mergeLeft || !mergeRight) return message.error('Chọn cả nhóm chính và nhóm phụ');
     if (mergeLeft === mergeRight) return message.error('Không thể chọn cùng nhóm');
     const left = groups.find((g) => g.id === mergeLeft)!;
     const right = groups.find((g) => g.id === mergeRight)!;
-    const totalMembers = left.members.length + right.members.length;
+    const membersToMove = moveMemberIds && moveMemberIds.length ? right.members.filter((m) => moveMemberIds.includes(m.id)) : right.members;
+    const totalMembers = left.members.length + membersToMove.length;
     if (totalMembers > left.maxMembers) return message.error('Vượt quá số lượng tối đa của nhóm chính');
     Modal.confirm({
       title: 'Xác nhận ghép nhóm',
@@ -100,16 +114,14 @@ const GroupsAdminPage: React.FC = () => {
       async onOk() {
         await updateGroupMutation.mutateAsync({
           id: left.id,
-          body: { members: [...left.members, ...right.members] },
+          body: { members: [...left.members, ...membersToMove] },
           index: 0,
           params: { page: 1, limit: 10 },
         });
-        await updateGroupMutation.mutateAsync({
-          id: right.id,
-          body: { status: 'DISSOLVED' },
-          index: 0,
-          params: { page: 1, limit: 10 },
-        });
+        // remove moved members from right; if none remain, dissolve
+        const remaining = right.members.filter((m) => !membersToMove.some((mm) => mm.id === m.id));
+        const rightBody: any = remaining.length ? { members: remaining } : { status: 'DISSOLVED' };
+        await updateGroupMutation.mutateAsync({ id: right.id, body: rightBody, index: 0, params: { page: 1, limit: 10 } });
         setMergeMode(false);
         setMergeLeft(null);
         setMergeRight(null);
@@ -249,14 +261,13 @@ const GroupsAdminPage: React.FC = () => {
           customAction: (record: unknown) => {
             const r = record as IListGroup;
             return (
-              <Space>
-                    <Tooltip title="Thêm thành viên">
-                  <Button type="text" size="small" onClick={() => setAddModalGroup(r)} icon={<PlusOutlined />} />
-                </Tooltip>
-                <Tooltip title="Ghép nhóm">
-                  <Button type="text" size="small" onClick={() => { setMergeMode(true); setMergeLeft(r.id); }} icon={<SwapOutlined />} />
-                </Tooltip>
-              </Space>
+              <div className="pointer-events-auto">
+                <Space>
+                  <Tooltip title="Ghép nhóm">
+                    <Button type="text" size="small" onClick={() => { setMergeMode(true); setMergeLeft(r.id); }} icon={<SwapOutlined />} />
+                  </Tooltip>
+                </Space>
+              </div>
             );
           },
         }}
@@ -272,7 +283,7 @@ const GroupsAdminPage: React.FC = () => {
         updateInfo={{
           type: 'modal',
           modalInfo: {
-            modalContent: <GroupForm />,
+            modalContent: <GroupForm sampleStudents={sampleStudents} />,
             modalProps: {},
             modalFunc: groupHooks.useUpdateGroup(),
           },
@@ -280,7 +291,7 @@ const GroupsAdminPage: React.FC = () => {
         detailInfo={{
           type: 'modal',
           modalInfo: {
-            modalContent: <GroupForm />,
+            modalContent: <GroupForm readOnly />,
             modalProps: { footer: null },
             // cast detail hook signature to match FilterTable expected type
             modalFunc: groupHooks.useFetchDetailGroup as unknown as (id: string, enable: boolean) => UseQueryResult<IDetailGroup, Error>,
