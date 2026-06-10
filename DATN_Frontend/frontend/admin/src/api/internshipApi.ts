@@ -1,6 +1,9 @@
 import type { BaseListParams } from '@shared/types/GeneralType';
 import type { ConfirmationStatus, IConfirmationRequest, ICreateConfirmationRequest, ICreateNoCompanyStudent, INoCompanyStudent, IUpdateConfirmationRequest, IUpdateNoCompanyStudent, NoCompanyStatus } from '../type/InternshipType';
 
+import axiosInstance from './axiosInstance';
+const USE_MOCK = import.meta.env.VITE_USE_MOCK_AUTH === 'true';
+
 type ConfirmationRow = IConfirmationRequest & { periodId?: string };
 type NoCompanyRow = INoCompanyStudent & { periodId?: string };
 
@@ -26,55 +29,109 @@ let noCompanyStore = [...MOCK_NO_COMPANY];
 
 export const internshipApi = {
   getListConfirmationRequest: async (params?: { periodId?: string }) => {
-    const rows = params?.periodId
-      ? confirmationStore.filter((row) => row.periodId === params.periodId)
-      : confirmationStore;
-    return { rows, total: rows.length };
+    if (USE_MOCK) {
+      const rows = params?.periodId
+        ? confirmationStore.filter((row) => row.periodId === params.periodId)
+        : confirmationStore;
+      return { rows, total: rows.length };
+    }
+
+    const response = await axiosInstance.get('/private/v1/internships/confirmations', { params });
+    return response?.data?.results?.objects;
   },
 
-  getConfirmationRequestDetail: async (id: string) => confirmationStore.find((row) => row.id === id),
+  getConfirmationRequestDetail: async (id: string) => {
+    if (USE_MOCK) {
+      return confirmationStore.find((row) => row.id === id);
+    }
+
+    const response = await axiosInstance.get(`/private/v1/internships/confirmations/${id}`);
+    return response?.data?.results?.object;
+  },
 
   createConfirmationRequest: async ({ body, params }: { body: ICreateConfirmationRequest; params: BaseListParams & { periodId?: string } }) => {
-    const nextId = `CR${String(confirmationStore.length + 1).padStart(3, '0')}`;
-    const newRow: ConfirmationRow = { id: nextId, periodId: params?.periodId, ...body };
-    confirmationStore = [newRow, ...confirmationStore];
-    return newRow;
+    if (USE_MOCK) {
+      const nextId = `CR${String(confirmationStore.length + 1).padStart(3, '0')}`;
+      const newRow: ConfirmationRow = { id: nextId, periodId: params?.periodId, ...body };
+      confirmationStore = [newRow, ...confirmationStore];
+      return newRow;
+    }
+
+    const response = await axiosInstance.post('/private/v1/internships/confirmations', body, { params });
+    return response?.data?.results?.object;
   },
 
   updateConfirmationRequest: async ({ id, body }: { id: string; body: IUpdateConfirmationRequest; index: number; params: BaseListParams }) => {
-    confirmationStore = confirmationStore.map((row) => (row.id === id ? { ...row, ...body, id } : row));
-    return confirmationStore.find((row) => row.id === id);
+    if (USE_MOCK) {
+      confirmationStore = confirmationStore.map((row) => (row.id === id ? { ...row, ...body, id } : row));
+      return confirmationStore.find((row) => row.id === id);
+    }
+
+    const response = await axiosInstance.patch(`/private/v1/internships/confirmations/${id}`, body);
+    return response?.data?.results?.object;
   },
 
   deleteConfirmationRequest: async ({ id }: { id: string; params: BaseListParams }) => {
-    confirmationStore = confirmationStore.filter((row) => row.id !== id);
-    return { success: true, id };
+    if (USE_MOCK) {
+      confirmationStore = confirmationStore.filter((row) => row.id !== id);
+      return { success: true, id };
+    }
+
+    const response = await axiosInstance.delete(`/private/v1/internships/confirmations/${id}`);
+    return response?.data;
   },
 
   getListNoCompanyStudent: async (params?: { periodId?: string }) => {
-    const rows = params?.periodId
-      ? noCompanyStore.filter((row) => row.periodId === params.periodId)
-      : noCompanyStore;
-    return { rows, total: rows.length };
+    if (USE_MOCK) {
+      const rows = params?.periodId
+        ? noCompanyStore.filter((row) => row.periodId === params.periodId)
+        : noCompanyStore;
+      return { rows, total: rows.length };
+    }
+
+    const response = await axiosInstance.get('/private/v1/internships/no-company', { params });
+    return response?.data?.results?.objects;
   },
 
-  getNoCompanyStudentDetail: async (id: string) => noCompanyStore.find((row) => row.id === id),
+  getNoCompanyStudentDetail: async (id: string) => {
+    if (USE_MOCK) {
+      return noCompanyStore.find((row) => row.id === id);
+    }
+
+    const response = await axiosInstance.get(`/private/v1/internships/no-company/${id}`);
+    return response?.data?.results?.object;
+  },
 
   createNoCompanyStudent: async ({ body, params }: { body: ICreateNoCompanyStudent; params: BaseListParams & { periodId?: string } }) => {
-    const nextId = `NC${String(noCompanyStore.length + 1).padStart(3, '0')}`;
-    const newRow: NoCompanyRow = { id: nextId, periodId: params?.periodId, ...body };
-    noCompanyStore = [newRow, ...noCompanyStore];
-    return newRow;
+    if (USE_MOCK) {
+      const nextId = `NC${String(noCompanyStore.length + 1).padStart(3, '0')}`;
+      const newRow: NoCompanyRow = { id: nextId, periodId: params?.periodId, ...body };
+      noCompanyStore = [newRow, ...noCompanyStore];
+      return newRow;
+    }
+
+    const response = await axiosInstance.post('/private/v1/internships/no-company', body, { params });
+    return response?.data?.results?.object;
   },
 
   updateNoCompanyStudent: async ({ id, body }: { id: string; body: IUpdateNoCompanyStudent; index: number; params: BaseListParams }) => {
-    noCompanyStore = noCompanyStore.map((row) => (row.id === id ? { ...row, ...body, id } : row));
-    return noCompanyStore.find((row) => row.id === id);
+    if (USE_MOCK) {
+      noCompanyStore = noCompanyStore.map((row) => (row.id === id ? { ...row, ...body, id } : row));
+      return noCompanyStore.find((row) => row.id === id);
+    }
+
+    const response = await axiosInstance.patch(`/private/v1/internships/no-company/${id}`, body);
+    return response?.data?.results?.object;
   },
 
   deleteNoCompanyStudent: async ({ id }: { id: string; params: BaseListParams }) => {
-    noCompanyStore = noCompanyStore.filter((row) => row.id !== id);
-    return { success: true, id };
+    if (USE_MOCK) {
+      noCompanyStore = noCompanyStore.filter((row) => row.id !== id);
+      return { success: true, id };
+    }
+
+    const response = await axiosInstance.delete(`/private/v1/internships/no-company/${id}`);
+    return response?.data;
   },
 };
 

@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { NextIntlClientProvider } from 'next-intl';
+import { AbstractIntlMessages, NextIntlClientProvider } from 'next-intl';
 import { getLocale } from 'next-intl/server';
 import ViMessages from '@/lib/i18/messages/vi';
 import QueryProvider from '@/lib/providers/QueryProvider';
 import AntdProvider from '@/lib/providers/AntdProvider';
+import { PeriodProvider } from '@/lib/providers/PeriodProvider';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -34,9 +35,11 @@ export default async function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <QueryProvider>
           <AntdProvider>
-            <NextIntlClientProvider locale={locale} messages={ViMessages as any}>
-              {children}
-            </NextIntlClientProvider>
+            <PeriodProvider>
+              <NextIntlClientProvider locale={locale} messages={ViMessages as AbstractIntlMessages}>
+                {children}
+              </NextIntlClientProvider>
+            </PeriodProvider>
           </AntdProvider>
         </QueryProvider>
       </body>

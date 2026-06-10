@@ -1,7 +1,7 @@
 import GradesClient from './GradesClient'
 
-export default function CouncilGradesPage({ params }: { params: { councilId: string } }) {
-  const { councilId } = params
+export default async function CouncilGradesPage({ params }: { params: Promise<{ councilId: string }> }) {
+  const { councilId } = await params
 
   return (
     <div className="p-6">

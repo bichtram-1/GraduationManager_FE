@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react'
 import { TeacherButton, TeacherInputClass } from '../_components/TeacherUI'
+import { teacherApi } from '@/lib/api/teacherApi'
 
 type Student = { id: string; name: string; class?: string }
 type Score = { presentation: number | null; demo: number | null; qna: number | null; report: number | null }
@@ -49,35 +50,39 @@ export default function ScoringTable({
 
   useEffect(() => {
     // load saved scores by groupId
+    let mounted = true
     async function load() {
       if (!groupId) return
       setLoading(true)
       try {
-        const res = await fetch(`/api/teacher/scores?group=${encodeURIComponent(groupId)}`)
-        if (res.ok) {
-          const j = await res.json()
-          if (j?.data?.rows) {
-            const loaded = j.data.rows as { id: string; presentation?: number | null; demo?: number | null; qna?: number | null; report?: number | null }[]
-            setRows((cur) => cur.map((r) => {
-              const found = loaded.find((x) => x.id === r.member.id)
-              if (!found) return r
-              return { ...r, score: { presentation: found.presentation ?? null, demo: found.demo ?? null, qna: found.qna ?? null, report: found.report ?? null } }
-            }))
-          }
+        const j = await teacherApi.getScores(groupId)
+        if (!mounted) return
+        if (j?.data?.rows) {
+          const loaded = j.data.rows as { id: string; presentation?: number | null; demo?: number | null; qna?: number | null; report?: number | null }[]
+          setRows((cur) => cur.map((r) => {
+            const found = loaded.find((x) => x.id === r.member.id)
+            if (!found) return r
+            return { ...r, score: { presentation: found.presentation ?? null, demo: found.demo ?? null, qna: found.qna ?? null, report: found.report ?? null } }
+          }))
         }
       } catch (_) {
         // ignore
-      } finally { setLoading(false) }
+      } finally {
+        if (mounted) setLoading(false)
+      }
     }
     load()
+    return () => {
+      mounted = false
+    }
   }, [groupId])
 
   async function save() {
     const payload = rows.map((r) => ({ id: r.member.id, ...r.score }))
     setLoading(true)
     try {
-      const res = await fetch('/api/teacher/scores', { method: 'POST', body: JSON.stringify({ group: groupId, rows: payload }), headers: { 'content-type': 'application/json' } })
-      if (res.ok) {
+      const res = await teacherApi.saveScores(groupId, payload)
+      if (res?.ok || res?.success) {
         alert('Lưu thành công (mock)')
       } else {
         alert('Lưu thất bại (mock)')
@@ -112,14 +117,12 @@ export default function ScoringTable({
               <th className="px-5 py-3 text-left">Vấn đáp (0-2)</th>
               <th className="px-5 py-3 text-left">Tổng thành phần</th>
               <th className="px-5 py-3 text-left">Điểm báo cáo</th>
-              <th className="px-5 py-3 text-left">Điểm tổng</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((r, i) => {
               const s = r.score
               const comp = computeTotalComp(s)
-              const total = Math.round((comp * 0.8 + (s.report ?? 0) * 0.2) * 100) / 100
               return (
                 <tr key={r.member.id} className="border-t border-slate-100">
                   <td className="px-5 py-4 font-medium text-[#1976D2]">{r.member.id}</td>
@@ -130,7 +133,6 @@ export default function ScoringTable({
                   <td className="px-5 py-4"><input className={TeacherInputClass('w-20')} value={s.qna ?? ''} onChange={(e) => update(i, { qna: e.target.value === '' ? null : clamp(Number(e.target.value), 0, 2) })} /></td>
                   <td className="px-5 py-4">{comp}</td>
                   <td className="px-5 py-4"><input disabled={!canEditReport} className={`${TeacherInputClass('w-20')} ${!canEditReport ? 'opacity-60' : ''}`} value={s.report ?? ''} onChange={(e) => update(i, { report: e.target.value === '' ? null : clamp(Number(e.target.value), 0, reportMax) })} /></td>
-                  <td className="px-5 py-4">{total}</td>
                 </tr>
               )
             })}

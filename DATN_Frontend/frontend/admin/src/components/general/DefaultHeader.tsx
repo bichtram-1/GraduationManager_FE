@@ -83,7 +83,7 @@ const DefaultHeader = () => {
               value={selectedPeriod?.id}
               onChange={handlePeriodChange}
               bordered={false}
-              popupClassName="rounded-xl shadow-lg"
+              classNames={{ popup: { root: 'rounded-xl shadow-lg' } }}
             >
               {tttnPeriods.length > 0 && (
                 <Select.OptGroup label="Đợt Thực tập tốt nghiệp (TTTN)">

@@ -1,6 +1,9 @@
 import type { BaseListParams, ListResponseType } from '@shared/types/GeneralType';
 import type { AssignmentRow, AssignmentStatus, ICreateAssignment, IDetailAssignment, IUpdateAssignment } from '../type/AssignmentType';
 
+import axiosInstance from './axiosInstance';
+const USE_MOCK = import.meta.env.VITE_USE_MOCK_AUTH === 'true';
+
 export interface IAssignmentListParams extends BaseListParams {
   status?: AssignmentStatus | 'all';
   className?: string | 'all';
@@ -45,44 +48,76 @@ const filterAssignments = (rows: AssignmentRow[], params: IAssignmentListParams)
 
 export const assignmentApi = {
   getListAssignment: async (params: IAssignmentListParams): Promise<ListResponseType<AssignmentRow>['results']['objects']> => {
-    const rows = filterAssignments(assignmentStore, params);
-    const page = params.page || 1;
-    const limit = params.limit || rows.length || 10;
-    const start = (page - 1) * limit;
-    return {
-      rows: rows.slice(start, start + limit),
-      total: rows.length,
-    };
+    if (USE_MOCK) {
+      const rows = filterAssignments(assignmentStore, params);
+      const page = params.page || 1;
+      const limit = params.limit || rows.length || 10;
+      const start = (page - 1) * limit;
+      return {
+        rows: rows.slice(start, start + limit),
+        total: rows.length,
+      };
+    }
+
+    const response = await axiosInstance.get('/private/v1/assignments', { params });
+    return response?.data?.results?.objects;
   },
 
   getAssignmentDetail: async (id: string): Promise<IDetailAssignment | undefined> => {
-    return assignmentStore.find((row) => row.studentId === id);
+    if (USE_MOCK) {
+      return assignmentStore.find((row) => row.studentId === id);
+    }
+
+    const response = await axiosInstance.get(`/private/v1/assignments/${id}`);
+    return response?.data?.results?.object;
   },
 
   createAssignment: async ({ body }: { body: ICreateAssignment; params: BaseListParams }) => {
-    const newRow: AssignmentRow = {
-      studentId: body.studentId,
-      name: body.name,
-      className: body.className,
-      topic: body.topic || '—',
-      supervisor: body.supervisor || null,
-      assignedAt: body.assignedAt || null,
-      status: body.status || 'unassigned',
-    };
-    assignmentStore = [newRow, ...assignmentStore];
-    return newRow;
+    if (USE_MOCK) {
+      const newRow: AssignmentRow = {
+        studentId: body.studentId,
+        name: body.name,
+        className: body.className,
+        topic: body.topic || '—',
+        supervisor: body.supervisor || null,
+        assignedAt: body.assignedAt || null,
+        status: body.status || 'unassigned',
+      };
+      assignmentStore = [newRow, ...assignmentStore];
+      return newRow;
+    }
+
+    const response = await axiosInstance.post('/private/v1/assignments', body);
+    return response?.data?.results?.object;
   },
 
   updateAssignment: async ({ id, body }: { id: string; body: IUpdateAssignment; index: number; params: BaseListParams }) => {
-    const updated = assignmentStore.map((row) => (row.studentId === id ? { ...row, ...body, studentId: id } : row));
-    assignmentStore = updated;
-    return updated.find((row) => row.studentId === id) as AssignmentRow;
+    if (USE_MOCK) {
+      const updated = assignmentStore.map((row) => (row.studentId === id ? { ...row, ...body, studentId: id } : row));
+      assignmentStore = updated;
+      return updated.find((row) => row.studentId === id) as AssignmentRow;
+    }
+
+    const response = await axiosInstance.patch(`/private/v1/assignments/${id}`, body);
+    return response?.data?.results?.object;
   },
 
   deleteAssignment: async ({ id }: { id: string; params: BaseListParams }) => {
-    assignmentStore = assignmentStore.filter((row) => row.studentId !== id);
-    return { success: true, id };
+    if (USE_MOCK) {
+      assignmentStore = assignmentStore.filter((row) => row.studentId !== id);
+      return { success: true, id };
+    }
+
+    const response = await axiosInstance.delete(`/private/v1/assignments/${id}`);
+    return response?.data;
   },
 
-  getTeachers: async () => TEACHERS,
+  getTeachers: async () => {
+    if (USE_MOCK) {
+      return TEACHERS;
+    }
+
+    const response = await axiosInstance.get('/private/v1/teachers');
+    return response?.data?.results?.objects || response?.data?.results?.object;
+  },
 };

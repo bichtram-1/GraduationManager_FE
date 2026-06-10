@@ -23,7 +23,7 @@ export default function StudentReportsTTTNPage() {
 
   const selectedReport = useMemo(
     () => reports.find((report) => report.week === selectedWeek) ?? reports[0],
-    [selectedWeek]
+    [selectedWeek, reports]
   )
 
   const approvedCount = reports.filter((report) => report.status === 'Đã duyệt').length
@@ -294,15 +294,30 @@ export default function StudentReportsTTTNPage() {
                     placeholder="Mô tả công việc, kết quả, khó khăn và hướng xử lý..."
                   />
                 </label>
-                <label className="block md:col-span-2">
-                  <div className="text-sm font-medium text-slate-700">Tên file đính kèm</div>
-                  <input
-                    value={submitForm.file}
-                    onChange={(event) => setSubmitForm((current) => ({ ...current, file: event.target.value }))}
-                    className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white"
-                    placeholder="week4.pdf"
-                  />
-                </label>
+                <div className="block md:col-span-2">
+                  <div className="text-sm font-medium text-slate-700 mb-1">Tải file đính kèm lên</div>
+                  <div className="flex items-center justify-center w-full">
+                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer bg-slate-50 hover:bg-slate-100/50 transition">
+                      <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center">
+                        <Upload className="h-8 w-8 text-slate-400 mb-2" />
+                        <p className="text-sm text-slate-500 font-medium">
+                          {submitForm.file ? `Đã chọn: ${submitForm.file}` : 'Kéo thả hoặc nhấp để chọn file nhật ký'}
+                        </p>
+                        <p className="text-xs text-slate-400 mt-1">Hỗ trợ PDF, Word, ZIP (tối đa 20MB)</p>
+                      </div>
+                      <input
+                        type="file"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) {
+                            setSubmitForm((current) => ({ ...current, file: file.name }))
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
+                </div>
               </div>
 
               <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">

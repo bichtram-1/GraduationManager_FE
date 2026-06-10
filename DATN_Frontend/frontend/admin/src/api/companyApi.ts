@@ -1,6 +1,9 @@
 import type { BaseListParams } from '@shared/types/GeneralType';
 import type { CompanyReviewStatus, CompanyStatus, ICreateCompany, IDetailCompany, IListCompany, IUpdateCompany } from '../type/CompanyType';
 
+import axiosInstance from './axiosInstance';
+const USE_MOCK = import.meta.env.VITE_USE_MOCK_AUTH === 'true';
+
 type CompanyRow = IListCompany & {
   phone: string;
   email: string;
@@ -21,49 +24,74 @@ let companyStore = [...MOCK_COMPANIES];
 
 export const companyApi = {
   getListCompany: async () => {
-    return {
-      rows: companyStore,
-      total: companyStore.length,
-    };
+    if (USE_MOCK) {
+      return {
+        rows: companyStore,
+        total: companyStore.length,
+      };
+    }
+
+    const response = await axiosInstance.get('/private/v1/companies');
+    return response?.data?.results?.objects;
   },
 
   getCompanyDetail: async (id: string): Promise<IDetailCompany> => {
-    const company = companyStore.find((item) => item.id === id);
+    if (USE_MOCK) {
+      const company = companyStore.find((item) => item.id === id);
 
-    if (!company) {
-      throw new Error('Company not found');
+      if (!company) {
+        throw new Error('Company not found');
+      }
+
+      return company;
     }
 
-    return company;
+    const response = await axiosInstance.get(`/private/v1/companies/${id}`);
+    return response?.data?.results?.object;
   },
 
   createCompany: async ({ body }: { body: ICreateCompany; params: BaseListParams }) => {
-    const nextId = `C${String(companyStore.length + 1).padStart(3, '0')}`;
-    const newCompany: CompanyRow = {
-      id: nextId,
-      name: body.name,
-      taxId: body.taxId,
-      field: body.field,
-      contact: body.contact,
-      phone: body.phone || '',
-      email: body.email || '',
-      partners: body.partners || 0,
-      students: body.students || 0,
-      status: body.status,
-      reviewStatus: body.reviewStatus || 'pending',
-    };
-    companyStore = [newCompany, ...companyStore];
-    return newCompany;
+    if (USE_MOCK) {
+      const nextId = `C${String(companyStore.length + 1).padStart(3, '0')}`;
+      const newCompany: CompanyRow = {
+        id: nextId,
+        name: body.name,
+        taxId: body.taxId,
+        field: body.field,
+        contact: body.contact,
+        phone: body.phone || '',
+        email: body.email || '',
+        partners: body.partners || 0,
+        students: body.students || 0,
+        status: body.status,
+        reviewStatus: body.reviewStatus || 'pending',
+      };
+      companyStore = [newCompany, ...companyStore];
+      return newCompany;
+    }
+
+    const response = await axiosInstance.post('/private/v1/companies', body);
+    return response?.data?.results?.object;
   },
 
   updateCompany: async ({ id, body }: { id: string; body: IUpdateCompany; index: number; params: BaseListParams }) => {
-    const updated = companyStore.map((company) => (company.id === id ? { ...company, ...body, id } : company));
-    companyStore = updated;
-    return updated.find((company) => company.id === id) as IDetailCompany;
+    if (USE_MOCK) {
+      const updated = companyStore.map((company) => (company.id === id ? { ...company, ...body, id } : company));
+      companyStore = updated;
+      return updated.find((company) => company.id === id) as IDetailCompany;
+    }
+
+    const response = await axiosInstance.patch(`/private/v1/companies/${id}`, body);
+    return response?.data?.results?.object;
   },
 
   deleteCompany: async ({ id }: { id: string; params: BaseListParams }) => {
-    companyStore = companyStore.filter((company) => company.id !== id);
-    return { success: true, id };
+    if (USE_MOCK) {
+      companyStore = companyStore.filter((company) => company.id !== id);
+      return { success: true, id };
+    }
+
+    const response = await axiosInstance.delete(`/private/v1/companies/${id}`);
+    return response?.data;
   },
 };

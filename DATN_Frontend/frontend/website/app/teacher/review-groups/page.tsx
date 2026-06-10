@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { ClipboardCheck, Clock3, Eye, FileText, Search, ShieldCheck, Users } from 'lucide-react'
 import { TeacherSectionHeader, TeacherStatCard, TeacherPill } from '../_components/TeacherShell'
 import { TeacherButton, TeacherCard, TeacherInputClass, TeacherToolbar } from '../_components/TeacherUI'
+import { usePeriod } from '@/lib/providers/PeriodProvider'
+import { teacherApi } from '@/lib/api/teacherApi'
 
 type Segment = 'Nhóm hướng dẫn' | 'Nhóm phản biện'
 type EvaluationValue = '' | 'dat' | 'khongdat'
@@ -55,6 +57,7 @@ const defaultGuidanceGroups: GuidanceGroup[] = []
 const defaultReviewGroups: ReviewGroup[] = []
 
 export default function TeacherReviewGroupsPage() {
+  const { selectedPeriod } = usePeriod()
   const [segment, setSegment] = useState<Segment>('Nhóm hướng dẫn')
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'reviewed'>('all')
   const [query, setQuery] = useState('')
@@ -66,10 +69,11 @@ export default function TeacherReviewGroupsPage() {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
+    let mounted = true
     setLoading(true)
-    fetch('/api/mock/teacher/review-groups')
-      .then((response) => (response.ok ? response.json() : null))
+    teacherApi.getReviewGroups({ periodId: selectedPeriod?.id })
       .then((data: ReviewApiResponse | null) => {
+        if (!mounted) return
         // Support both shapes: { guidanceGroups, reviewGroups } (new) and
         // { tttnGroups, datnGroups } (mock API current).
         const nextGuidanceGroups: GuidanceGroup[] = data?.guidanceGroups ?? data?.tttnGroups ?? []
@@ -80,8 +84,13 @@ export default function TeacherReviewGroupsPage() {
         setSelectedGuidanceId((current) => current ?? nextGuidanceGroups[0]?.id ?? null)
         setSelectedReviewId((current) => current ?? nextReviewGroups[0]?.id ?? null)
       })
-      .finally(() => setLoading(false))
-  }, [])
+      .finally(() => {
+        if (mounted) setLoading(false)
+      })
+    return () => {
+      mounted = false
+    }
+  }, [selectedPeriod?.id])
 
   const filteredGuidanceGroups = useMemo(() => {
     const search = query.toLowerCase()
@@ -123,16 +132,8 @@ export default function TeacherReviewGroupsPage() {
 
     setSavingId(groupId)
     try {
-      const response = await fetch('/api/mock/teacher/review-groups', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ segment: segmentType, groupId, evaluation }),
-      })
-
-      if (!response.ok) return
-
-      const data = (await response.json()) as { group?: GuidanceGroup | ReviewGroup }
-      if (!data.group) return
+      const data = await teacherApi.updateReviewGroupStatus(groupId, evaluation === 'dat' ? 'accept' : 'reject')
+      if (!data?.group) return
 
       if (segmentType === 'Nhóm hướng dẫn') {
         setGuidanceGroups((current) => current.map((group) => (group.id === groupId ? (data.group as GuidanceGroup) : group)))

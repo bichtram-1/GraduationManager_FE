@@ -1,9 +1,10 @@
 'use client'
 
-import { Button, Checkbox, Form, Input, Typography, message } from 'antd'
+import { Button, Checkbox, Form, Input, message } from 'antd'
 import { useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { LockKeyhole, User } from 'lucide-react'
+import Image from 'next/image'
 
 const ROLE_OPTIONS = [
   { value: 'teacher', label: 'Giảng viên', hint: 'gv@caothang.edu.vn' },
@@ -12,7 +13,6 @@ const ROLE_OPTIONS = [
 
 export default function LoginPage() {
   const [form] = Form.useForm()
-  const router = useRouter()
   const searchParams = useSearchParams()
   const [messageApi, messageContextHolder] = message.useMessage()
   const [role, setRole] = useState<'teacher' | 'student'>('teacher')
@@ -24,18 +24,6 @@ export default function LoginPage() {
     student: { email: 'sinhvien@gmail.com', password: DEFAULT_PASSWORD },
   }
 
-  // Helper to compute a safe redirect target. Allows only internal paths that start with '/'.
-  function getSafeTarget() {
-    const from = searchParams?.get('from')
-    if (from && typeof from === 'string') {
-      try {
-        const decoded = decodeURIComponent(from)
-        if (decoded.startsWith('/') && !decoded.startsWith('//')) return decoded
-      } catch (e) {}
-    }
-    return role === 'teacher' ? '/teacher' : '/student'
-  }
-
   const onGoogleSignIn = () => {
     // Redirect to server mock-login which sets cookie and redirects
     setLoading(true)
@@ -45,12 +33,11 @@ export default function LoginPage() {
     window.location.assign(url)
   }
 
-  const onFinish = (values: any) => {
+  const onFinish = (values: Record<string, unknown>) => {
     setLoading(true)
 
     setTimeout(() => {
-      const email = (values.email || '').toString().trim()
-      const password = (values.password || '').toString()
+      const password = typeof values.password === 'string' ? values.password : ''
 
       // Accept any email if password matches DEFAULT_PASSWORD, otherwise fail.
       const ok = password === DEFAULT_PASSWORD
@@ -72,14 +59,12 @@ export default function LoginPage() {
     }, 400)
   }
 
-  
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-(--grayLightest) px-4">
       <div className="max-w-md w-full">
         {messageContextHolder}
         <div className="mb-6 flex flex-col items-center text-center">
-          <img src="/image-3.png" alt="Logo" className="mb-4 h-20 w-20 object-contain" />
+          <Image src="/image-3.png" alt="Logo" width={80} height={80} className="mb-4 object-contain" />
           <h2 className="m-0 text-3xl font-semibold text-slate-900">Đăng nhập</h2>
           <p className="m-0 mt-2 text-sm leading-6 text-slate-500">Chọn vai trò và nhập tài khoản</p>
         </div>
@@ -141,7 +126,6 @@ export default function LoginPage() {
             </Button>
           </Form.Item>
         </Form>
-      
 
         <div className="mt-6 border-t border-slate-100 pt-4 text-center text-xs text-slate-500">© 2026 Trường Cao đẳng Kỹ thuật Cao Thắng</div>
       </div>

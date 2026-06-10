@@ -1,7 +1,9 @@
 "use client"
 
+import { usePeriod } from '@/lib/providers/PeriodProvider'
+import { topicApi } from '@/lib/api/topicApi'
 import Link from 'next/link'
-import { CalendarDays, CheckCircle2, Clock3, FileText, Users } from 'lucide-react'
+import { CalendarDays, CheckCircle2, Clock3, Users } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { StudentPill, StudentSectionHeader } from '../_components/StudentShell'
 
@@ -28,19 +30,20 @@ const initialRegistration: Registration = {
 }
 
 export default function ThesisRegisterPage() {
+  const { selectedPeriod } = usePeriod()
   const [topics, setTopics] = useState<Topic[]>([])
   const [loading, setLoading] = useState(true)
   const [registration, setRegistration] = useState<Registration | null>(initialRegistration)
 
   useEffect(() => {
     let mounted = true
+    setLoading(true)
     async function load() {
       try {
-        const res = await fetch('/api/mock/teacher/topics')
-        const json = await res.json()
+        const data = await topicApi.getTopics({ periodId: selectedPeriod?.id })
         if (!mounted) return
-        setTopics(json.topics ?? [])
-      } catch (err) {
+        setTopics(data)
+      } catch (_err) {
         setTopics([])
       } finally {
         setLoading(false)
@@ -50,7 +53,7 @@ export default function ThesisRegisterPage() {
     return () => {
       mounted = false
     }
-  }, [])
+  }, [selectedPeriod?.id])
 
   const handleRegister = (id: string) => {
     const selectedTopic = topics.find((topic) => topic.id === id)

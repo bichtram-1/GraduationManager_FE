@@ -219,7 +219,7 @@ const CustomTreeSelect: React.FC<CustomTreeSelectProps> = ({
   };
 
   // Convert flat TreeSelect value to nested array format
-  const convertToNestedValue = (flatValue: unknown[]) => {
+  const convertToNestedValue = (flatValue: any[]) => {
     const brandMap = new Map<string, {
       id: string;
       name: string;
@@ -266,7 +266,7 @@ const CustomTreeSelect: React.FC<CustomTreeSelectProps> = ({
 
   const findBrandIdForStation = (stationId: string): string | null => {
     for (const [brandId, stations] of Object.entries(STATIONS_BY_BRAND)) {
-      if (stations.some(s => s.id === stationId)) {
+      if (stations.some((s: any) => s.id === stationId)) {
         return brandId;
       }
     }
@@ -335,7 +335,7 @@ const CustomTreeSelect: React.FC<CustomTreeSelectProps> = ({
   }, [debouncedSearch]);
 
   // Lazy load children khi expand brand lần đầu
-  const loadChildren = async (node: unknown) => {
+  const loadChildren = async (node: any) => {
     const n = getNodeByKey(treeData, node.key);
     if (!n || n.nodeType !== 'brand') return;
     // Nếu đã loaded & không search -> bỏ qua

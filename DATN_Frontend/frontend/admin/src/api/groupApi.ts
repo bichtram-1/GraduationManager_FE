@@ -1,6 +1,9 @@
 import type { BaseListParams } from '@shared/types/GeneralType';
 import type { ICreateGroup, IDetailGroup, IGroupMember, IListGroup, IUpdateGroup } from '../type/GroupType';
 
+import axiosInstance from './axiosInstance';
+const USE_MOCK = import.meta.env.VITE_USE_MOCK_AUTH === 'true';
+
 const sampleStudents: IGroupMember[] = [
   { id: 's1', name: 'Nguyễn Văn A', code: 'SV001' },
   { id: 's2', name: 'Trần Thị B', code: 'SV002' },
@@ -36,43 +39,78 @@ let groupStore = [...MOCK_GROUPS];
 
 export const groupApi = {
   getListGroup: async () => {
-    return {
-      rows: groupStore,
-      total: groupStore.length,
-    };
+    if (USE_MOCK) {
+      return {
+        rows: groupStore,
+        total: groupStore.length,
+      };
+    }
+
+    const response = await axiosInstance.get('/private/v1/groups');
+    return response?.data?.results?.objects;
   },
 
   getGroupDetail: async (id: string): Promise<IDetailGroup | undefined> => {
-    return groupStore.find((group) => group.id === id);
+    if (USE_MOCK) {
+      return groupStore.find((group) => group.id === id);
+    }
+
+    const response = await axiosInstance.get(`/private/v1/groups/${id}`);
+    return response?.data?.results?.object;
   },
 
   createGroup: async ({ body }: { body: ICreateGroup; params: BaseListParams }) => {
-    const newGroup: IListGroup = {
-      ...body,
-      id: `g${String(groupStore.length + 1).padStart(2, '0')}`,
-    };
-    groupStore = [newGroup, ...groupStore];
-    return newGroup;
+    if (USE_MOCK) {
+      const newGroup: IListGroup = {
+        ...body,
+        id: `g${String(groupStore.length + 1).padStart(2, '0')}`,
+      };
+      groupStore = [newGroup, ...groupStore];
+      return newGroup;
+    }
+
+    const response = await axiosInstance.post('/private/v1/groups', body);
+    return response?.data?.results?.object;
   },
 
   updateGroup: async ({ id, body }: { id: string; body: IUpdateGroup; index: number; params: BaseListParams }) => {
-    const updated = groupStore.map((group) => (group.id === id ? { ...group, ...body, id } : group));
-    groupStore = updated;
-    return updated.find((group) => group.id === id) as IDetailGroup;
+    if (USE_MOCK) {
+      const updated = groupStore.map((group) => (group.id === id ? { ...group, ...body, id } : group));
+      groupStore = updated;
+      return updated.find((group) => group.id === id) as IDetailGroup;
+    }
+
+    const response = await axiosInstance.patch(`/private/v1/groups/${id}`, body);
+    return response?.data?.results?.object;
   },
 
   deleteGroup: async ({ id }: { id: string; params: BaseListParams }) => {
-    groupStore = groupStore.filter((group) => group.id !== id);
-    return { success: true, id };
+    if (USE_MOCK) {
+      groupStore = groupStore.filter((group) => group.id !== id);
+      return { success: true, id };
+    }
+
+    const response = await axiosInstance.delete(`/private/v1/groups/${id}`);
+    return response?.data;
   },
   
   approveGroup: async ({ id }: { id: string }) => {
-    groupStore = groupStore.map((g) => (g.id === id ? { ...g, status: 'APPROVED' } : g));
-    return groupStore.find((g) => g.id === id) as IDetailGroup;
+    if (USE_MOCK) {
+      groupStore = groupStore.map((g) => (g.id === id ? { ...g, status: 'APPROVED' } : g));
+      return groupStore.find((g) => g.id === id) as IDetailGroup;
+    }
+
+    const response = await axiosInstance.post(`/private/v1/groups/${id}/approve`);
+    return response?.data?.results?.object;
   },
 
   rejectGroup: async ({ id }: { id: string }) => {
-    groupStore = groupStore.map((g) => (g.id === id ? { ...g, status: 'DISSOLVED' } : g));
-    return groupStore.find((g) => g.id === id) as IDetailGroup;
+    if (USE_MOCK) {
+      groupStore = groupStore.map((g) => (g.id === id ? { ...g, status: 'DISSOLVED' } : g));
+      return groupStore.find((g) => g.id === id) as IDetailGroup;
+    }
+
+    const response = await axiosInstance.post(`/private/v1/groups/${id}/reject`);
+    return response?.data?.results?.object;
   },
 };

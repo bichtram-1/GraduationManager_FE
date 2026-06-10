@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-type Stored = Record<string, any>
+type Stored = Record<string, { rows: unknown; updatedAt?: string }>
 
 // Simple in-memory store for dev/mock purposes. Resets when server restarts.
 const store: Stored = {}
@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     if (!group) return NextResponse.json({ error: 'missing group' }, { status: 400 })
     store[group] = { rows, updatedAt: new Date().toISOString() }
     return NextResponse.json({ ok: true, stored: store[group] })
-  } catch (err) {
+  } catch {
     return NextResponse.json({ error: 'invalid json' }, { status: 400 })
   }
 }

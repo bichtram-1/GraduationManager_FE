@@ -4,7 +4,9 @@ import type { ReactNode } from 'react'
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { BookOpen, Building2, CalendarDays, ClipboardCheck, GraduationCap, Home, LogOut, Menu, Search, Trophy, User, Users } from 'lucide-react'
+import { BookOpen, Building2, CalendarDays, ClipboardCheck, GraduationCap, Home, LogOut, Menu, Trophy, Users } from 'lucide-react'
+import { Select } from 'antd'
+import { usePeriod } from '@/lib/providers/PeriodProvider'
 
 const NAV_ITEMS = [
   { key: 'home', href: '/teacher', label: 'Trang chủ', icon: Home },
@@ -28,6 +30,7 @@ function getActiveKey(pathname: string) {
 
 export function TeacherShell({ children }: { children: ReactNode }) {
   const pathname = usePathname()
+  const { periods, selectedPeriod, setSelectedPeriod } = usePeriod()
   const [profileOpen, setProfileOpen] = useState(false)
 
   const activeKey = useMemo(() => getActiveKey(pathname), [pathname])
@@ -50,13 +53,40 @@ export function TeacherShell({ children }: { children: ReactNode }) {
             </div>
           </Link>
 
-          <div className="hidden max-w-lg flex-1 px-6 lg:block">
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                placeholder="Tìm đề tài, sinh viên, hội đồng..."
-                className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-white"
-              />
+          {/* Global Period Selector (replacing search bar) */}
+          <div className="hidden max-w-sm flex-1 px-6 sm:flex items-center justify-center">
+            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1 rounded-[12px] shadow-sm w-full">
+              <span className="text-xs font-semibold text-slate-500 shrink-0">Đợt hoạt động:</span>
+              <Select
+                className="w-full"
+                placeholder="Chọn đợt hoạt động"
+                value={selectedPeriod?.id}
+                onChange={(id) => {
+                  const period = periods.find((p) => p.id === id)
+                  setSelectedPeriod(period)
+                }}
+                variant="borderless"
+                classNames={{ popup: { root: 'rounded-xl shadow-lg' } }}
+              >
+                {periods.filter(p => p.type === 'tttn').length > 0 && (
+                  <Select.OptGroup label="Đợt Thực tập tốt nghiệp (TTTN)">
+                    {periods.filter(p => p.type === 'tttn').map(p => (
+                      <Select.Option key={p.id} value={p.id}>
+                        <span className="font-medium text-slate-700 text-sm">{p.name}</span>
+                      </Select.Option>
+                    ))}
+                  </Select.OptGroup>
+                )}
+                {periods.filter(p => p.type === 'datn').length > 0 && (
+                  <Select.OptGroup label="Đợt Đồ án tốt nghiệp (ĐATN)">
+                    {periods.filter(p => p.type === 'datn').map(p => (
+                      <Select.Option key={p.id} value={p.id}>
+                        <span className="font-medium text-slate-700 text-sm">{p.name}</span>
+                      </Select.Option>
+                    ))}
+                  </Select.OptGroup>
+                )}
+              </Select>
             </div>
           </div>
 

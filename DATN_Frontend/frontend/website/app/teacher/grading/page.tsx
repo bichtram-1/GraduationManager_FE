@@ -5,6 +5,8 @@ import { CheckCircle, Clock, Save, Trophy, Users, LayoutDashboard, FileText, Bar
 import { TeacherPill, TeacherSectionHeader, TeacherStatCard } from '../_components/TeacherShell'
 import { TeacherButton, TeacherCard, TeacherInputClass } from '../_components/TeacherUI'
 import ScoringTable from './ScoringTable'
+import { usePeriod } from '@/lib/providers/PeriodProvider'
+import { teacherApi } from '@/lib/api/teacherApi'
 
 // Default fallbacks (used if mock API is unavailable)
 const defaultTttnRows = [
@@ -57,6 +59,7 @@ const defaultScoreRows = [
 ]
 
 export default function TeacherGradingPage() {
+  const { selectedPeriod } = usePeriod()
   const [mode, setMode] = useState<'tttn' | 'council'>('tttn')
   const [tttnScores, setTttnScores] = useState(defaultTttnRows)
   const [toast, setToast] = useState<string | null>(null)
@@ -75,11 +78,12 @@ export default function TeacherGradingPage() {
 
   // Load mock data from server if available
   useEffect(() => {
+    let mounted = true
     setLoading(true)
-    fetch('/api/mock/teacher/grading')
-      .then((r) => r.ok ? r.json() : null)
+    teacherApi.getGradingData({ periodId: selectedPeriod?.id })
       .then((data) => {
-        console.log('mock grading data:', data)
+        if (!mounted) return
+        console.log('grading data:', data)
         if (data) {
           setTttnScores(data.tttnRows ?? defaultTttnRows)
           setCouncilList(data.councilGroups ?? defaultCouncilGroups)
@@ -91,8 +95,13 @@ export default function TeacherGradingPage() {
         }
       })
       .catch(() => {})
-      .finally(() => setLoading(false))
-  }, [])
+      .finally(() => {
+        if (mounted) setLoading(false)
+      })
+    return () => {
+      mounted = false
+    }
+  }, [selectedPeriod?.id])
 
   const updateTttn = (index: number, value: string) => {
     if (value !== '' && !/^\d*\.?\d*$/.test(value)) return

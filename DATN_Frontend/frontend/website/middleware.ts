@@ -39,7 +39,14 @@ export function middleware(req: NextRequest) {
     return NextResponse.redirect(loginUrl)
   }
 
-  // 3. Token ok → cho qua
+  // 3. Nếu vào trang chủ "/" và đã login -> redirect đến cổng tương ứng
+  if (pathname === '/') {
+    const url = req.nextUrl.clone()
+    url.pathname = token === 'mock-token-teacher' ? '/teacher' : '/student'
+    return NextResponse.redirect(url)
+  }
+
+  // 4. Token ok → cho qua
   return NextResponse.next()
 }
 

@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { CheckCircle2, Clock3, Search, ShieldCheck, Users, XCircle } from 'lucide-react'
 import { TeacherBadge, TeacherButton, TeacherCard, TeacherPageHeader, TeacherToolbar } from '../_components/TeacherUI'
+import { usePeriod } from '@/lib/providers/PeriodProvider'
+import { teacherApi } from '@/lib/api/teacherApi'
 
 type ApprovalStatus = 'pending' | 'accepted' | 'rejected'
 
@@ -19,6 +21,7 @@ type GroupApproval = {
 }
 
 export default function TeacherGroupsPage() {
+  const { selectedPeriod } = usePeriod()
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | ApprovalStatus>('all')
   const [groups, setGroups] = useState<GroupApproval[]>([])
@@ -27,16 +30,21 @@ export default function TeacherGroupsPage() {
   const [savingId, setSavingId] = useState<string | null>(null)
 
   useEffect(() => {
+    let mounted = true
     setLoading(true)
-    fetch('/api/mock/teacher/groups')
-      .then((response) => response.ok ? response.json() : null)
-      .then((data) => {
-        const items = (data?.groups ?? []) as GroupApproval[]
+    teacherApi.getGroups({ periodId: selectedPeriod?.id })
+      .then((items) => {
+        if (!mounted) return
         setGroups(items)
         setSelectedGroupId((current) => current ?? items[0]?.id ?? null)
       })
-      .finally(() => setLoading(false))
-  }, [])
+      .finally(() => {
+        if (mounted) setLoading(false)
+      })
+    return () => {
+      mounted = false
+    }
+  }, [selectedPeriod?.id])
 
   const filteredGroups = useMemo(() => {
     const search = query.toLowerCase()
@@ -56,16 +64,8 @@ export default function TeacherGroupsPage() {
   const handleAction = async (groupId: string, action: 'accept' | 'reject') => {
     setSavingId(groupId)
     try {
-      const response = await fetch('/api/mock/teacher/groups', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ groupId, action }),
-      })
-
-      if (!response.ok) return
-
-      const data = (await response.json()) as { group?: GroupApproval }
-      if (data.group) {
+      const data = await teacherApi.updateGroupStatus(groupId, action)
+      if (data?.group) {
         setGroups((current) => current.map((item) => (item.id === data.group?.id ? data.group! : item)))
       }
     } finally {

@@ -1,6 +1,9 @@
 import type { BaseListParams, ListResponseType } from '@shared/types/GeneralType';
 import type { BatchStatus, BatchType, ICreatePeriod, IDetailPeriod, IListPeriod, IUpdatePeriod } from '../type/PeriodType';
 
+import axiosInstance from './axiosInstance';
+const USE_MOCK = import.meta.env.VITE_USE_MOCK_AUTH === 'true';
+
 export interface IPeriodListParams extends BaseListParams {
   type?: BatchType | 'all';
   status?: BatchStatus | 'all';
@@ -78,41 +81,66 @@ const filterPeriods = (rows: IListPeriod[], params: IPeriodListParams) => {
 
 export const periodApi = {
   getListPeriod: async (params: IPeriodListParams): Promise<ListResponseType<IListPeriod>['results']['objects']> => {
-    const rows = filterPeriods(periodStore, params);
-    const page = params.page || 1;
-    const limit = params.limit || rows.length || 10;
-    const start = (page - 1) * limit;
-    const pagedRows = rows.slice(start, start + limit);
+    if (USE_MOCK) {
+      const rows = filterPeriods(periodStore, params);
+      const page = params.page || 1;
+      const limit = params.limit || rows.length || 10;
+      const start = (page - 1) * limit;
+      const pagedRows = rows.slice(start, start + limit);
 
-    return {
-      rows: pagedRows,
-      total: rows.length,
-    };
+      return {
+        rows: pagedRows,
+        total: rows.length,
+      };
+    }
+
+    const response = await axiosInstance.get('/private/v1/periods', { params });
+    return response?.data?.results?.objects;
   },
 
   getPeriodDetail: async (id: string): Promise<IDetailPeriod | undefined> => {
-    return periodStore.find((row) => row.id === id);
+    if (USE_MOCK) {
+      return periodStore.find((row) => row.id === id);
+    }
+
+    const response = await axiosInstance.get(`/private/v1/periods/${id}`);
+    return response?.data?.results?.object;
   },
 
   createPeriod: async ({ body }: { body: ICreatePeriod; params: BaseListParams }) => {
-    const nextId = `B${String(periodStore.length + 1).padStart(3, '0')}`;
-    const newPeriod: IListPeriod = {
-      id: nextId,
-      ...body,
-    };
-    periodStore = [newPeriod, ...periodStore];
-    return newPeriod as IDetailPeriod;
+    if (USE_MOCK) {
+      const nextId = `B${String(periodStore.length + 1).padStart(3, '0')}`;
+      const newPeriod: IListPeriod = {
+        id: nextId,
+        ...body,
+      };
+      periodStore = [newPeriod, ...periodStore];
+      return newPeriod as IDetailPeriod;
+    }
+
+    const response = await axiosInstance.post('/private/v1/periods', body);
+    return response?.data?.results?.object;
   },
 
   updatePeriod: async ({ id, body }: { id: string; body: IUpdatePeriod; index: number; params: BaseListParams }) => {
-    const current = periodStore.find((row) => row.id === id);
-    const updated = { ...current, ...body, id } as IListPeriod;
-    periodStore = periodStore.map((row) => (row.id === id ? updated : row));
-    return updated as IDetailPeriod;
+    if (USE_MOCK) {
+      const current = periodStore.find((row) => row.id === id);
+      const updated = { ...current, ...body, id } as IListPeriod;
+      periodStore = periodStore.map((row) => (row.id === id ? updated : row));
+      return updated as IDetailPeriod;
+    }
+
+    const response = await axiosInstance.patch(`/private/v1/periods/${id}`, body);
+    return response?.data?.results?.object;
   },
 
   deletePeriod: async ({ id }: { id: string; params: BaseListParams }) => {
-    periodStore = periodStore.filter((row) => row.id !== id);
-    return { success: true, id };
+    if (USE_MOCK) {
+      periodStore = periodStore.filter((row) => row.id !== id);
+      return { success: true, id };
+    }
+
+    const response = await axiosInstance.delete(`/private/v1/periods/${id}`);
+    return response?.data;
   },
 };

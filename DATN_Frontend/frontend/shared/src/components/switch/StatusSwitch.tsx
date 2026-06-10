@@ -6,8 +6,8 @@ interface StatusSwitchProps {
   checked: boolean;
   checkedValue?: string;
   uncheckedValue?: string;
-  useQueryHook: unknown;
-  params: unknown;
+  useQueryHook: any;
+  params: any;
   id: string;
   index: number;
   currentValue?: string;
