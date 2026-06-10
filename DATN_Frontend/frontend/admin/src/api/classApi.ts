@@ -8,8 +8,8 @@ const sampleStudents: IClassMember[] = [
 ];
 
 const MOCK_CLASSES: IListClass[] = [
-  { id: 'c01', code: 'KTPM2020', name: 'Kỹ thuật phần mềm 2020', year: '2020', supervisor: 'TS. Nguyễn Văn A', members: [sampleStudents[0], sampleStudents[1]], maxStudents: 40, status: 'ACTIVE' },
-  { id: 'c02', code: 'CNPM2021', name: 'Công nghệ phần mềm 2021', year: '2021', supervisor: 'PGS. Mai Thị H', members: [sampleStudents[2]], maxStudents: 35, status: 'ACTIVE' },
+  { id: 'c01', code: 'KTPM2020', name: 'Kỹ thuật phần mềm 2020', level: 'Đại học chính quy', course: 'Khóa 2020', major: 'Kỹ thuật phần mềm', supervisor: 'TS. Nguyễn Văn A', members: [sampleStudents[0], sampleStudents[1]], maxStudents: 40, status: 'ACTIVE' },
+  { id: 'c02', code: 'CNPM2021', name: 'Công nghệ phần mềm 2021', level: 'Đại học chính quy', course: 'Khóa 2021', major: 'Công nghệ phần mềm', supervisor: 'PGS. Mai Thị H', members: [sampleStudents[2]], maxStudents: 35, status: 'ACTIVE' },
 ];
 
 let classStore = [...MOCK_CLASSES];

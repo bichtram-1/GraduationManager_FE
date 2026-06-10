@@ -1,17 +1,22 @@
 import React, { useMemo, useState } from 'react';
 import { Button, Space, Tag, Input, Table, message, Modal } from 'antd';
 import { groupHooks } from '../../hooks/useGroups';
+import { useTranslation } from 'react-i18next';
+import { getKey, I18nKey } from '@shared/types/I18nKeyType';
+import { STATUS_CODE, cn } from '../../constants/commonConst';
+import { formatNumber } from '@shared/utils/numberUtils';
 
 const { Search } = Input;
 
-const STATUS_META: Record<string, { label: string; color: string }> = {
-  PENDING: { label: 'Chờ duyệt', color: 'orange' },
-  APPROVED: { label: 'Đã chấp nhận', color: 'green' },
-  DISSOLVED: { label: 'Đã từ chối', color: 'red' },
-  WARNING: { label: 'Cảnh báo', color: 'gold' },
+const STATUS_META: Record<string, { labelKey: keyof I18nKey; color: string }> = {
+  [STATUS_CODE.PENDING_UP]: { labelKey: 'status_pending', color: 'orange' },
+  [STATUS_CODE.APPROVED_UP]: { labelKey: 'status_approved', color: 'green' },
+  [STATUS_CODE.DISSOLVED]: { labelKey: 'status_rejected', color: 'red' },
+  [STATUS_CODE.WARNING]: { labelKey: 'status_warning', color: 'gold' },
 };
 
 const ReviewGroupsPage: React.FC = () => {
+  const { t } = useTranslation();
   const { data: q } = groupHooks.useFetchListGroups();
   const updateGroup = groupHooks.useUpdateGroup();
   const approveGroup = groupHooks.useApproveGroup();
@@ -21,7 +26,6 @@ const ReviewGroupsPage: React.FC = () => {
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | string>('all');
   const [savingId, setSavingId] = useState<string | null>(null);
-  
 
   const filtered = useMemo(() => {
     const s = query.trim().toLowerCase();
@@ -32,22 +36,22 @@ const ReviewGroupsPage: React.FC = () => {
     });
   }, [groups, query, statusFilter]);
 
-  const pending = groups.filter((g) => g.status === 'PENDING').length;
-  const accepted = groups.filter((g) => g.status === 'APPROVED').length;
-  const rejected = groups.filter((g) => g.status === 'DISSOLVED').length;
+  const pending = groups.filter((g) => g.status === STATUS_CODE.PENDING_UP).length;
+  const accepted = groups.filter((g) => g.status === STATUS_CODE.APPROVED_UP).length;
+  const rejected = groups.filter((g) => g.status === STATUS_CODE.DISSOLVED).length;
 
   const doAction = async (id: string, action: 'approve' | 'reject') => {
     if (action === 'reject') {
       Modal.confirm({
-        title: 'Xác nhận từ chối nhóm',
-        content: 'Bạn có chắc muốn từ chối nhóm này? Hành động sẽ không thể hoàn tác.',
+        title: t(getKey('confirm_reject_group')),
+        content: t(getKey('confirm_reject_group_desc')),
         async onOk() {
           setSavingId(id);
           try {
             await rejectGroup.mutateAsync({ id });
-            message.success('Đã từ chối nhóm');
+            message.success(t(getKey('rejected_group_msg')));
           } catch (e) {
-            message.error('Không thể cập nhật trạng thái');
+            message.error(t(getKey('update_status_err_msg')));
           } finally {
             setSavingId(null);
           }
@@ -56,13 +60,12 @@ const ReviewGroupsPage: React.FC = () => {
       return;
     }
 
-    // approve
     setSavingId(id);
     try {
       await approveGroup.mutateAsync({ id });
-      message.success('Đã chấp nhận nhóm');
+      message.success(t(getKey('approved_group_msg')));
     } catch (e) {
-      message.error('Không thể cập nhật trạng thái');
+      message.error(t(getKey('update_status_err_msg')));
     } finally {
       setSavingId(null);
     }
@@ -71,74 +74,72 @@ const ReviewGroupsPage: React.FC = () => {
   const doSetPending = async (id: string) => {
     setSavingId(id);
     try {
-      await updateGroup.mutateAsync({ id, body: { status: 'PENDING' }, index: 0, params: { page: 1, limit: 10 } });
-      message.success('Đã chuyển về trạng thái Chờ duyệt');
+      await updateGroup.mutateAsync({ id, body: { status: STATUS_CODE.PENDING_UP }, index: 0, params: { page: 1, limit: 10 } });
+      message.success(t(getKey('set_pending_group_msg')));
     } catch (e) {
-      message.error('Không thể cập nhật trạng thái');
+      message.error(t(getKey('update_status_err_msg')));
     } finally {
       setSavingId(null);
     }
   };
 
-  
-
   const columns = [
-    { title: 'Mã nhóm', dataIndex: 'code', key: 'code', render: (c: string) => <div style={{ color: '#2563eb', fontWeight: 700 }}>{c}</div> },
-    { title: 'Tên đề tài', dataIndex: 'title', key: 'title', render: (t: string) => <div style={{ fontWeight: 600 }}>{t}</div> },
-    { title: 'Giảng viên', dataIndex: 'supervisor', key: 'supervisor' },
-    { title: 'Thành viên', key: 'members', render: (_: any, r: any) => r.members.map((m: any) => m.name).join(', ') },
-    { title: 'Trạng thái', key: 'status', render: (_: any, r: any) => <Tag color={STATUS_META[r.status]?.color}>{STATUS_META[r.status]?.label ?? r.status}</Tag> },
-    { title: 'Thao tác', key: 'action', render: (_: any, r: any) => (
+    { title: t(getKey('group_code')), dataIndex: 'code', key: 'code', render: (c: string) => <div className="text-primary font-bold">{c}</div> },
+    { title: t(getKey('topic_name')), dataIndex: 'title', key: 'title', ellipsis: true, render: (titleText: string) => <div className="font-semibold">{titleText}</div> },
+    { title: t(getKey('teacher')), dataIndex: 'supervisor', key: 'supervisor', ellipsis: true },
+    { title: t(getKey('members')), key: 'members', ellipsis: true, render: (_: any, r: any) => r.members.map((m: any) => m.name).join(', ') },
+    { title: t(getKey('group_status')), key: 'status', render: (_: any, r: any) => {
+      const meta = STATUS_META[r.status];
+      return <Tag color={meta?.color}>{meta ? t(getKey(meta.labelKey)) : r.status}</Tag>;
+    } },
+    { title: t(getKey('action')), key: 'action', render: (_: any, r: any) => (
       <Space>
-        {r.status !== 'APPROVED' && (
-          <Button size="small" type="primary" loading={savingId === r.id} disabled={savingId === r.id} onClick={() => doAction(r.id, 'approve')}>Chấp nhận</Button>
+        {r.status !== STATUS_CODE.APPROVED_UP && (
+          <Button size="small" type="primary" loading={savingId === r.id} disabled={savingId === r.id} onClick={() => doAction(r.id, 'approve')}>{t(getKey('accept'))}</Button>
         )}
-        {r.status !== 'DISSOLVED' && (
-          <Button size="small" danger loading={savingId === r.id} disabled={savingId === r.id} onClick={() => doAction(r.id, 'reject')}>Từ chối</Button>
+        {r.status !== STATUS_CODE.DISSOLVED && (
+          <Button size="small" danger loading={savingId === r.id} disabled={savingId === r.id} onClick={() => doAction(r.id, 'reject')}>{t(getKey('reject'))}</Button>
         )}
-        {(statusFilter === 'APPROVED' || statusFilter === 'DISSOLVED') && (
-          <Button size="small" onClick={() => doSetPending(r.id)} loading={savingId === r.id} disabled={savingId === r.id}>Chờ duyệt</Button>
+        {(statusFilter === STATUS_CODE.APPROVED_UP || statusFilter === STATUS_CODE.DISSOLVED) && (
+          <Button size="small" onClick={() => doSetPending(r.id)} loading={savingId === r.id} disabled={savingId === r.id}>{t(getKey('status_pending'))}</Button>
         )}
-        {/* add/merge actions removed from Review page; managed in GroupsAdminPage */}
       </Space>
     ) },
   ];
 
   return (
     <div>
-      <div style={{ marginBottom: 18 }}>
-        <h1 style={{ margin: 0, fontSize: 28, fontWeight: 700 }}>Duyệt nhóm đồ án</h1>
-        <div style={{ color: '#6b7280' }}>Duyệt các nhóm sinh viên đăng ký vào đề tài (quyền admin hiển thị nhiều nhóm hơn)</div>
+      <div className="mb-[18px]">
+        <h1 className="m-0 text-[28px] font-bold">{t(getKey('group_review'))}</h1>
+        <div className="text-gray-500">{t(getKey('group_review_desc'))}</div>
       </div>
 
-      <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
-        <div style={{ padding: 12, background: '#fff', borderRadius: 12, boxShadow: '0 8px 20px rgba(15,23,42,0.04)', minWidth: 160 }}>
-          <div style={{ color: '#6b7280' }}>Chờ duyệt</div>
-          <div style={{ fontSize: 22, fontWeight: 700 }}>{pending}</div>
+      <div className="flex gap-3 mb-4">
+        <div className="p-3 bg-white rounded-xl shadow-md min-w-[160px]">
+          <div className="text-gray-500">{t(getKey('status_pending'))}</div>
+          <div className="text-[22px] font-bold">{formatNumber(pending)}</div>
         </div>
-        <div style={{ padding: 12, background: '#fff', borderRadius: 12, boxShadow: '0 8px 20px rgba(15,23,42,0.04)', minWidth: 160 }}>
-          <div style={{ color: '#6b7280' }}>Đã chấp nhận</div>
-          <div style={{ fontSize: 22, fontWeight: 700 }}>{accepted}</div>
+        <div className="p-3 bg-white rounded-xl shadow-md min-w-[160px]">
+          <div className="text-gray-500">{t(getKey('status_approved'))}</div>
+          <div className="text-[22px] font-bold">{formatNumber(accepted)}</div>
         </div>
-        <div style={{ padding: 12, background: '#fff', borderRadius: 12, boxShadow: '0 8px 20px rgba(15,23,42,0.04)', minWidth: 160 }}>
-          <div style={{ color: '#6b7280' }}>Đã từ chối</div>
-          <div style={{ fontSize: 22, fontWeight: 700 }}>{rejected}</div>
+        <div className="p-3 bg-white rounded-xl shadow-md min-w-[160px]">
+          <div className="text-gray-500">{t(getKey('status_rejected'))}</div>
+          <div className="text-[22px] font-bold">{formatNumber(rejected)}</div>
         </div>
       </div>
 
-      <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-        <Search placeholder="Tìm mã, đề tài, giảng viên, sinh viên" onSearch={(v) => setQuery(v)} allowClear style={{ width: 420 }} />
+      <div className="mb-3 flex justify-between gap-3">
+        <Search placeholder={t(getKey('search_groups_placeholder'))} onSearch={(v) => setQuery(v)} allowClear className="w-[420px]" />
         <div>
-          <Button type={statusFilter === 'all' ? 'primary' : 'default'} onClick={() => setStatusFilter('all')} style={{ marginRight: 8 }}>Tất cả</Button>
-          <Button type={statusFilter === 'PENDING' ? 'primary' : 'default'} onClick={() => setStatusFilter('PENDING')} style={{ marginRight: 8 }}>Chờ duyệt</Button>
-          <Button type={statusFilter === 'APPROVED' ? 'primary' : 'default'} onClick={() => setStatusFilter('APPROVED')} style={{ marginRight: 8 }}>Đã chấp nhận</Button>
-          <Button type={statusFilter === 'DISSOLVED' ? 'primary' : 'default'} onClick={() => setStatusFilter('DISSOLVED')}>Đã từ chối</Button>
+          <Button type={statusFilter === 'all' ? 'primary' : 'default'} onClick={() => setStatusFilter('all')} className="mr-2">{t(getKey('all_tab'))}</Button>
+          <Button type={statusFilter === STATUS_CODE.PENDING_UP ? 'primary' : 'default'} onClick={() => setStatusFilter(STATUS_CODE.PENDING_UP)} className="mr-2">{t(getKey('status_pending'))}</Button>
+          <Button type={statusFilter === STATUS_CODE.APPROVED_UP ? 'primary' : 'default'} onClick={() => setStatusFilter(STATUS_CODE.APPROVED_UP)} className="mr-2">{t(getKey('status_approved'))}</Button>
+          <Button type={statusFilter === STATUS_CODE.DISSOLVED ? 'primary' : 'default'} onClick={() => setStatusFilter(STATUS_CODE.DISSOLVED)}>{t(getKey('status_rejected'))}</Button>
         </div>
       </div>
 
       <Table rowKey="id" dataSource={filtered} columns={columns} />
-
-      
     </div>
   );
 };

@@ -10,7 +10,7 @@ import { getKey } from '@shared/types/I18nKeyType';
 import CustomInput from '../../../components/shared/input/CustomInput';
 import { PASSWORD_PATTERN } from '@shared/constants/regex';
 import { generateRandomPassword } from '@shared/utils/password-generator';
-import { DEFAULT_PASSWORD } from '../../../constants/commonConst';
+import { DEFAULT_PASSWORD, USER_ROLE, STATUS_CODE } from '../../../constants/commonConst';
 // SearchSelect (achievements) removed — not used
 import { userHooks } from '../../../hooks/useUsers';
 import { IDetailUser, UserRoleType } from 'src/type/UserType';
@@ -138,24 +138,24 @@ const ModalCreateEditUser = ({ detail, mode = 'create', role }: IModalCreateEdit
 
       <Flex gap={16}>
         <Form.Item
-          label={role === 'student' ? 'MSSV' : 'Mã giảng viên'}
+          label={role === USER_ROLE.STUDENT ? t(getKey('student_id')) : t(getKey('teacher_id'))}
           name="id"
-          rules={[{ required: isCreateMode, message: 'Vui lòng nhập mã người dùng' }]}
+          rules={[{ required: isCreateMode, message: t(getKey('please_enter_user_id')) }]}
           className="flex-1"
         >
           <CustomInput
-            placeholder={role === 'student' ? 'Nhập MSSV' : 'Nhập mã giảng viên'}
+            placeholder={role === USER_ROLE.STUDENT ? t(getKey('enter_student_id')) : t(getKey('enter_teacher_id'))}
             readOnly={!isCreateMode || isDetailMode}
           />
         </Form.Item>
 
         <Form.Item
-          label={role === 'student' ? 'Lớp' : 'Khoa'}
+          label={role === USER_ROLE.STUDENT ? t(getKey('class')) : t(getKey('department'))}
           name="className"
           className="flex-1"
         >
           <CustomInput
-            placeholder={role === 'student' ? 'VD: KTPM2020' : 'VD: Khoa CNPM'}
+            placeholder={role === USER_ROLE.STUDENT ? t(getKey('example_class')) : t(getKey('example_department'))}
             readOnly={isDetailMode}
           />
         </Form.Item>
@@ -172,11 +172,11 @@ const ModalCreateEditUser = ({ detail, mode = 'create', role }: IModalCreateEdit
         <Form.Item label={t(getKey('status'))} name="status" className="flex-1">
           <Select
             disabled={isDetailMode}
-            placeholder="Chọn trạng thái"
+            placeholder={t(getKey('status'))}
             options={[
-              { value: 'active', label: 'Đang hoạt động' },
-              { value: 'inactive', label: 'Không hoạt động' },
-              { value: 'deleted', label: 'Đã xóa' },
+              { value: STATUS_CODE.ACTIVE, label: t(getKey('status_active')) },
+              { value: STATUS_CODE.INACTIVE, label: t(getKey('status_inactive')) },
+              { value: STATUS_CODE.DELETED, label: t(getKey('status_deleted')) },
             ]}
           />
         </Form.Item>

@@ -1,25 +1,36 @@
 import { Form, Input, Select } from 'antd';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
+import { getKey } from '@shared/types/I18nKeyType';
+import { STATUS_CODE } from '../../../constants/commonConst';
 
 type Props = { disabled?: boolean };
 
 const StudentForm: React.FC<Props> = ({ disabled = false }) => {
+  const { t } = useTranslation();
+
   return (
     <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-      <Form.Item label="MSSV" name="studentId" rules={[{ required: true, message: 'Vui lòng nhập MSSV' }]}>
+      <Form.Item label={t(getKey('student_id'))} name="studentId" rules={[{ required: true, message: t(getKey('please_enter_student_id')) }]}>
         <Input disabled={disabled} />
       </Form.Item>
-      <Form.Item label="Họ tên" name="studentName" rules={[{ required: true, message: 'Vui lòng nhập họ tên' }]}>
+      <Form.Item label={t(getKey('student_name'))} name="studentName" rules={[{ required: true, message: t(getKey('please_enter_fullname')) }]}>
         <Input disabled={disabled} />
       </Form.Item>
-      <Form.Item label="Lớp" name="className" rules={[{ required: true, message: 'Vui lòng nhập lớp' }]}>
+      <Form.Item label={t(getKey('class_name'))} name="className" rules={[{ required: true, message: t(getKey('please_enter_class')) }]}>
         <Input disabled={disabled} />
       </Form.Item>
-      <Form.Item label="SĐT" name="phone" rules={[{ required: true, message: 'Vui lòng nhập số điện thoại' }]}>
+      <Form.Item label={t(getKey('phone_number'))} name="phone" rules={[{ required: true, message: t(getKey('please_enter_phone')) }]}>
         <Input disabled={disabled} />
       </Form.Item>
-      <Form.Item label="Trạng thái" name="status" rules={[{ required: true, message: 'Vui lòng chọn trạng thái' }]}>
-        <Select disabled={disabled} options={[{ value: 'not_registered', label: 'Chưa đăng ký' }, { value: 'searching', label: 'Đang tìm' }]} />
+      <Form.Item label={t(getKey('status'))} name="status" rules={[{ required: true, message: t(getKey('please_select_status')) }]}>
+        <Select
+          disabled={disabled}
+          options={[
+            { value: STATUS_CODE.NOT_REGISTERED, label: t(getKey('not_registered_list')) },
+            { value: STATUS_CODE.SEARCHING, label: t(getKey('searching_list')) },
+          ]}
+        />
       </Form.Item>
     </div>
   );

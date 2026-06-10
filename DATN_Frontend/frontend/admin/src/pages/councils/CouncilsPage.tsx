@@ -3,6 +3,9 @@ import { message, Modal } from 'antd';
 import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../constants/routers';
+import { useTranslation } from 'react-i18next';
+import { getKey } from '@shared/types/I18nKeyType';
+import { formatNumber } from '@shared/utils/numberUtils';
 
 type CouncilCard = {
   id: string;
@@ -29,10 +32,10 @@ type CouncilCard = {
 };
 
 const COUNCIL_STATS = [
-  { value: 3, label: 'Hội đồng hoạt động' },
-  { value: 21, label: 'Nhóm đủ điều kiện' },
-  { value: 4, label: 'Nhóm bị loại' },
-  { value: 2, label: 'GV chấm chéo' },
+  { value: 3, labelKey: 'active_councils' },
+  { value: 21, labelKey: 'eligible_groups' },
+  { value: 4, labelKey: 'rejected_groups' },
+  { value: 2, labelKey: 'cross_assessors' },
 ];
 
 const COUNCILS: CouncilCard[] = [
@@ -82,6 +85,7 @@ const COUNCILS: CouncilCard[] = [
 ];
 
 const CouncilsPage: React.FC = () => {
+  const { t } = useTranslation();
   const [selectedCouncilForView, setSelectedCouncilForView] = useState<CouncilCard | null>(null);
   const [activeTab, setActiveTab] = useState<'list' | 'filter'>('list');
   const [query, setQuery] = useState('');
@@ -121,10 +125,10 @@ const CouncilsPage: React.FC = () => {
   const handleDeleteCouncil = (councilId: string) => {
     const council = councils.find((item) => item.id === councilId);
     if (!council) return;
-    const confirmed = window.confirm(`Bạn có chắc muốn xóa ${council.title}?`);
+    const confirmed = window.confirm(t(getKey('confirm_delete_council'), { title: council.title }));
     if (!confirmed) return;
     setCouncils((prev) => prev.filter((item) => item.id !== councilId));
-    message.success('Đã xóa hội đồng');
+    message.success(t(getKey('delete_council_success')));
   };
 
   const handleViewCouncil = (councilId: string) => {
@@ -149,7 +153,7 @@ const CouncilsPage: React.FC = () => {
   }, []);
 
   return (
-    <div className="council-ui min-h-screen bg-[#f5f4f0] text-[#1a1916]">
+    <div className="council-ui min-h-screen bg-[var(--color-background-secondary)] text-[var(--color-text-primary)]">
       <style>{`
         .council-ui { --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; --color-background-primary: #ffffff; --color-background-secondary: #f5f4f0; --color-text-primary: #1a1916; --color-text-secondary: #6b6966; --color-border-tertiary: #e5e3dc; --border-radius-md: 8px; font-family: var(--font-sans); }
         .council-ui .page { max-width: 1200px; margin: 0 auto; padding: 1.5rem 1rem; }
@@ -193,17 +197,17 @@ const CouncilsPage: React.FC = () => {
       <div className="page">
         <div className="header">
           <div>
-            <h1 className="title">Quản lý Hội đồng Bảo vệ</h1>
-            <div className="subtitle">Phân công giảng viên, đề tài và lịch bảo vệ</div>
+            <h1 className="title">{t(getKey('council_management'))}</h1>
+            <div className="subtitle">{t(getKey('council_management_desc'))}</div>
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn btnp" onClick={() => navigate(ROUTES.COUNCILS_CREATE)}>Tạo hội đồng mới</button>
+          <div className="flex gap-2">
+            <button className="btn btnp" onClick={() => navigate(ROUTES.COUNCILS_CREATE)}>{t(getKey('create_new_council'))}</button>
           </div>
         </div>
 
         <div className="tabs">
-          <button className={`tab ${activeTab === 'list' ? 'on' : ''}`} onClick={() => setActiveTab('list')}>Danh sách hội đồng</button>
-          <button className={`tab ${activeTab === 'filter' ? 'on' : ''}`} onClick={() => setActiveTab('filter')}>Bộ lọc</button>
+          <button className={`tab ${activeTab === 'list' ? 'on' : ''}`} onClick={() => setActiveTab('list')}>{t(getKey('council_list_tab'))}</button>
+          <button className={`tab ${activeTab === 'filter' ? 'on' : ''}`} onClick={() => setActiveTab('filter')}>{t(getKey('filter_tab'))}</button>
         </div>
 
         {activeTab === 'filter' && (
@@ -212,28 +216,28 @@ const CouncilsPage: React.FC = () => {
               className="filter-input"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Tìm theo mã, tên hội đồng, phòng..."
+              placeholder={t(getKey('search_council_placeholder'))}
             />
             <select className="filter-input" value={roomFilter} onChange={(event) => setRoomFilter(event.target.value)}>
-              <option value="all">Tất cả phòng</option>
+              <option value="all">{t(getKey('all_rooms'))}</option>
               {rooms.map((room) => (
                 <option value={room} key={room}>{room}</option>
               ))}
             </select>
             <select className="filter-input" value={sessionFilter} onChange={(event) => setSessionFilter(event.target.value as 'all' | 'morning' | 'afternoon')}>
-              <option value="all">Tất cả buổi</option>
-              <option value="morning">Buổi sáng</option>
-              <option value="afternoon">Buổi chiều</option>
+              <option value="all">{t(getKey('all_sessions'))}</option>
+              <option value="morning">{t(getKey('morning_session'))}</option>
+              <option value="afternoon">{t(getKey('afternoon_session'))}</option>
             </select>
-            <button className="btn btns" onClick={resetFilters}>Đặt lại</button>
+            <button className="btn btns" onClick={resetFilters}>{t(getKey('reset_filters'))}</button>
           </div>
         )}
 
         <div className="stats">
           {COUNCIL_STATS.map((s) => (
-            <div className="scard" key={s.label}>
-              <div className="sv">{s.value}</div>
-              <div style={{ marginTop: 6, color: 'var(--color-text-secondary)', fontSize: 12 }}>{s.label}</div>
+            <div className="scard" key={s.labelKey}>
+              <div className="sv">{formatNumber(s.value)}</div>
+              <div className="mt-1.5 text-[var(--color-text-secondary)] text-xs">{t(getKey(s.labelKey as any))}</div>
             </div>
           ))}
         </div>
@@ -255,104 +259,111 @@ const CouncilsPage: React.FC = () => {
             <div className="ov-card" key={c.id}>
               <div className="ov-head">
                 <div>
-                  <div style={{ fontSize: 14, fontWeight: 600 }}>{c.title}</div>
-                  <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 6 }}>{c.dateTime} · {c.room}</div>
+                  <div className="text-sm font-semibold">{c.title}</div>
+                  <div className="text-xs text-[var(--color-text-secondary)] mt-1.5">{c.dateTime} · {c.room}</div>
                 </div>
                 <div className="head-actions">
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                    <span className="chip">{c.achieved} nhóm đạt</span>
-                    <span className="chip">{c.rejected} bị loại</span>
+                  <div className="flex gap-2 flex-wrap justify-end">
+                    <span className="chip">{t(getKey('groups_achieved'), { count: formatNumber(c.achieved) })}</span>
+                    <span className="chip">{t(getKey('groups_rejected'), { count: formatNumber(c.rejected) })}</span>
                   </div>
                   <div className="action-row">
                     <button className="btn btns btn-icon" onClick={() => handleViewCouncil(c.id)}>
-                      <EyeOutlined /> Xem
+                      <EyeOutlined /> {t(getKey('view_btn'))}
                     </button>
                     <button className="btn btns btn-icon" onClick={() => handleEditCouncil(c.id)}>
-                      <EditOutlined /> Sửa
+                      <EditOutlined /> {t(getKey('edit_btn'))}
                     </button>
                     <button className="btn btns btn-icon" onClick={() => handleDeleteCouncil(c.id)}>
-                      <DeleteOutlined /> Xóa
+                      <DeleteOutlined /> {t(getKey('delete_btn'))}
                     </button>
-                    
                   </div>
                 </div>
               </div>
 
               <div className="council-body">
                 <div className="role-col">
-                  <div className="role-name">GVHD</div>
-                  <div className="role-title">Giảng viên hướng dẫn</div>
+                  <div className="role-name">{t(getKey('advisor_short'))}</div>
+                  <div className="role-title">{t(getKey('advisor_full'))}</div>
                   <div className="chip-wrap">
                     {c.chair.map((t) => <span key={t} className="chip">{t}</span>)}
                   </div>
                 </div>
 
                 <div className="role-col">
-                  <div className="role-name">GVPB</div>
-                  <div className="role-title">Giảng viên phản biện</div>
+                  <div className="role-name">{t(getKey('reviewer_short'))}</div>
+                  <div className="role-title">{t(getKey('reviewer_full'))}</div>
                   <div className="chip-wrap">
                     {c.reviewer.map((t) => <span key={t} className="chip">{t}</span>)}
                   </div>
                 </div>
 
                 <div className="role-col">
-                  <div className="role-name">Người chấm</div>
-                  <div className="role-title">Danh sách người chấm</div>
+                  <div className="role-name">{t(getKey('examiner_title'))}</div>
+                  <div className="role-title">{t(getKey('examiner_list'))}</div>
                   <div className="chip-wrap">
                     {aggregatedInternal.length || aggregatedExternal.length ? (
                       <>
                         {aggregatedInternal.map((t) => <span key={t} className="chip">{t}</span>)}
-                        {aggregatedExternal.map((t) => <span key={t} className="chip" style={{ background: '#eeedfe' }}>{t}</span>)}
+                        {aggregatedExternal.map((t) => <span key={t} className="chip bg-[var(--color-purple-lightest)]">{t}</span>)}
                       </>
                     ) : (
-                      <span className="muted">Chưa phân công</span>
+                      <span className="muted">{t(getKey('not_assigned'))}</span>
                     )}
                   </div>
                 </div>
 
                 <div className="role-col">
-                  <div className="role-name">Nhóm đề tài</div>
-                  <div className="role-title">Danh sách nhóm đã phân</div>
+                  <div className="role-name">{t(getKey('topic_group'))}</div>
+                  <div className="role-title">{t(getKey('assigned_topic_groups_list'))}</div>
                   {c.topicGroups.length ? (
                     <div className="topic-list">
                       {c.topics && c.topics.length ? (
                         c.topics.map((topic) => (
                           <div className="topic-item" key={topic.code}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div className="flex justify-between items-center">
                               <div>
                                 <div className="topic-item-title">{topic.code} - {topic.title}</div>
-                                <div className="topic-item-meta">{Array.isArray((topic as any).members) ? `${(topic as any).members.length} sinh viên` : `${topic.members} sinh viên`}</div>
+                                <div className="topic-item-meta">
+                                  {Array.isArray((topic as any).members)
+                                    ? t(getKey('students_count_suffix'), { count: formatNumber((topic as any).members.length) })
+                                    : t(getKey('students_count_suffix'), { count: formatNumber(topic.members) })}
+                                </div>
                               </div>
                               {topic.startTime && <div className="chip">{topic.startTime}</div>}
                             </div>
                             {Array.isArray((topic as any).members) && (topic as any).members.length > 0 && (
-                              <div style={{ marginTop: 8, color: 'var(--color-text-secondary)', fontSize: 13 }}>{(topic as any).members.join(', ')}</div>
+                              <div className="mt-2 text-[var(--color-text-secondary)] text-[13px]">{(topic as any).members.join(', ')}</div>
                             )}
-                            <div style={{ marginTop: 8 }} />
+                            <div className="mt-2" />
                           </div>
                         ))
                       ) : (
                         c.topicGroups.map((topic) => (
                           <div className="topic-item" key={topic.code}>
                             <div className="topic-item-title">{topic.code} - {topic.title}</div>
-                            <div className="topic-item-meta">{Array.isArray((topic as any).members) ? `${(topic as any).members.length} sinh viên` : `${topic.members} sinh viên`}</div>
+                            <div className="topic-item-meta">
+                              {Array.isArray((topic as any).members)
+                                ? t(getKey('students_count_suffix'), { count: formatNumber((topic as any).members.length) })
+                                : t(getKey('students_count_suffix'), { count: formatNumber(topic.members) })}
+                            </div>
                             {Array.isArray((topic as any).members) && (topic as any).members.length > 0 && (
-                              <div style={{ marginTop: 8, color: 'var(--color-text-secondary)', fontSize: 13 }}>{(topic as any).members.join(', ')}</div>
+                              <div className="mt-2 text-[var(--color-text-secondary)] text-[13px]">{(topic as any).members.join(', ')}</div>
                             )}
                           </div>
                         ))
                       )}
                     </div>
                   ) : (
-                    <span className="muted">Chưa phân nhóm đề tài</span>
+                    <span className="muted">{t(getKey('not_assigned_topic_groups'))}</span>
                   )}
                 </div>
 
                 <div className="role-col">
-                  <div className="role-name">GV ngoài</div>
-                  <div className="role-title">Giảng viên ngoài hội đồng</div>
+                  <div className="role-name">{t(getKey('external_teachers_short'))}</div>
+                  <div className="role-title">{t(getKey('external_teachers_title'))}</div>
                   <div className="chip-wrap">
-                    {c.external && c.external.length ? c.external.map((e) => <span key={e.name} className="chip">{e.name}</span>) : <span className="muted">Chưa có giảng viên ngoài</span>}
+                    {c.external && c.external.length ? c.external.map((e) => <span key={e.name} className="chip">{e.name}</span>) : <span className="muted">{t(getKey('no_external_teachers'))}</span>}
                   </div>
                 </div>
               </div>
@@ -367,51 +378,55 @@ const CouncilsPage: React.FC = () => {
           >
             {selectedCouncilForView && (
               <div>
-                <div style={{ marginBottom: 8 }}><strong>{selectedCouncilForView.dateTime}</strong> · {selectedCouncilForView.room}</div>
-                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 8 }}>
+                <div className="mb-2"><strong>{selectedCouncilForView.dateTime}</strong> · {selectedCouncilForView.room}</div>
+                <div className="flex gap-3 flex-wrap mb-2">
                   <div>
-                    <div className="role-name">GVHD</div>
+                    <div className="role-name">{t(getKey('advisor_short'))}</div>
                     <div className="chip-wrap">{selectedCouncilForView.chair.map((t) => <span key={t} className="chip">{t}</span>)}</div>
                   </div>
                   <div>
-                    <div className="role-name">GVPB</div>
+                    <div className="role-name">{t(getKey('reviewer_short'))}</div>
                     <div className="chip-wrap">{selectedCouncilForView.reviewer.map((t) => <span key={t} className="chip">{t}</span>)}</div>
                   </div>
                 </div>
 
-                <div style={{ marginBottom: 12 }}>
-                  <div className="role-name">Chi tiết thành viên</div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginTop: 8 }}>
+                <div className="mb-3">
+                  <div className="role-name">{t(getKey('member_details'))}</div>
+                  <div className="grid grid-cols-3 gap-2 mt-2">
                     <div>
-                      <div className="muted">GVHD</div>
-                      <div style={{ marginTop: 6 }}>{selectedCouncilForView.chair.map((t) => <div key={t} className="chip" style={{ display: 'inline-block', marginRight: 6 }}>{t}</div>)}</div>
+                      <div className="muted">{t(getKey('advisor_short'))}</div>
+                      <div className="mt-1.5">{selectedCouncilForView.chair.map((t) => <div key={t} className="chip inline-block mr-1.5">{t}</div>)}</div>
                     </div>
                     <div>
-                      <div className="muted">GVPB</div>
-                      <div style={{ marginTop: 6 }}>{selectedCouncilForView.reviewer.map((t) => <div key={t} className="chip" style={{ display: 'inline-block', marginRight: 6 }}>{t}</div>)}</div>
+                      <div className="muted">{t(getKey('reviewer_short'))}</div>
+                      <div className="mt-1.5">{selectedCouncilForView.reviewer.map((t) => <div key={t} className="chip inline-block mr-1.5">{t}</div>)}</div>
                     </div>
                     <div>
-                      <div className="muted">Thành viên</div>
-                      <div style={{ marginTop: 6 }}>{selectedCouncilForView.member && selectedCouncilForView.member.length ? selectedCouncilForView.member.map((t) => <div key={t} className="chip" style={{ display: 'inline-block', marginRight: 6 }}>{t}</div>) : <div className="muted">Không có</div>}</div>
+                      <div className="muted">{t(getKey('member_title'))}</div>
+                      <div className="mt-1.5">{selectedCouncilForView.member && selectedCouncilForView.member.length ? selectedCouncilForView.member.map((t) => <div key={t} className="chip inline-block mr-1.5">{t}</div>) : <div className="muted">{t(getKey('none'))}</div>}</div>
                     </div>
                   </div>
                 </div>
 
                 <div>
-                  <div className="role-name">Nhóm đề tài</div>
+                  <div className="role-name">{t(getKey('topic_group'))}</div>
                   <div className="topic-list">
                     {(selectedCouncilForView.topics || selectedCouncilForView.topicGroups || []).map((topic: any) => (
                       <div key={topic.code} className="topic-item">
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <div className="flex justify-between">
                           <div className="topic-item-title">{topic.code} - {topic.title}</div>
                           {topic.startTime && <div className="chip">{topic.startTime}</div>}
                         </div>
-                        <div className="topic-item-meta">{Array.isArray(topic.members) ? `${topic.members.length} sinh viên` : `${topic.members} sinh viên`}</div>
+                        <div className="topic-item-meta">
+                          {Array.isArray(topic.members)
+                            ? t(getKey('students_count_suffix'), { count: formatNumber(topic.members.length) })
+                            : t(getKey('students_count_suffix'), { count: formatNumber(topic.members) })}
+                        </div>
                         {Array.isArray(topic.members) && topic.members.length > 0 && (
-                          <div style={{ marginTop: 8, color: 'var(--color-text-secondary)', fontSize: 13 }}>{topic.members.join(', ')}</div>
+                          <div className="mt-2 text-[var(--color-text-secondary)] text-[13px]">{topic.members.join(', ')}</div>
                         )}
-                        <div style={{ marginTop: 8 }}>
-                          {(topic.examiners || []).map((e: string) => <span key={e} className="chip">{e}</span>)} {(topic.externalExaminers || []).map((e: string) => <span key={e} className="chip" style={{ background: '#eeedfe' }}>{e}</span>)}
+                        <div className="mt-2">
+                          {(topic.examiners || []).map((e: string) => <span key={e} className="chip">{e}</span>)} {(topic.externalExaminers || []).map((e: string) => <span key={e} className="chip bg-[var(--color-purple-lightest)]">{e}</span>)}
                         </div>
                       </div>
                     ))}
@@ -422,8 +437,8 @@ const CouncilsPage: React.FC = () => {
           </Modal>
 
           {filteredCouncils.length === 0 && (
-            <div className="ov-card" style={{ textAlign: 'center', color: 'var(--color-text-secondary)' }}>
-              Không có hội đồng phù hợp với bộ lọc hiện tại.
+            <div className="ov-card text-center text-[var(--color-text-secondary)]">
+              {t(getKey('no_matching_council'))}
             </div>
           )}
         </div>

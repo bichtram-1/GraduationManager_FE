@@ -2,6 +2,7 @@ import React, { createContext, useEffect, useState } from 'react';
 import { DetailUserProps } from '../type/UserType';
 import { getCookie } from '@shared/utils/cookie';
 import { STORAGES } from '@shared/constants/storage';
+import { IListPeriod } from '../type/PeriodType';
 
 export interface LocationDefaultProps {
   province: { label: string | null; value: string | null };
@@ -27,6 +28,8 @@ interface GlobalVariableContextProps {
   setLoadingUpload: (loadingUpload: LoadingUploadProps) => void;
   user: DetailUserProps | undefined;
   setUser: (user: DetailUserProps | undefined) => void;
+  selectedPeriod: IListPeriod | undefined;
+  setSelectedPeriod: (period: IListPeriod | undefined) => void;
 }
 
 const GlobalVariableContext = createContext<
@@ -48,6 +51,19 @@ export const GlobalVariableProvider: React.FC<{
     avatar: false,
   });
   const [user, setUser] = useState<DetailUserProps>();
+  const [selectedPeriod, setSelectedPeriodState] = useState<IListPeriod | undefined>(() => {
+    const saved = localStorage.getItem('selected_period');
+    return saved ? JSON.parse(saved) : undefined;
+  });
+
+  const setSelectedPeriod = (period: IListPeriod | undefined) => {
+    setSelectedPeriodState(period);
+    if (period) {
+      localStorage.setItem('selected_period', JSON.stringify(period));
+    } else {
+      localStorage.removeItem('selected_period');
+    }
+  };
 
   useEffect(() => {
     if(!user) {
@@ -67,6 +83,8 @@ export const GlobalVariableProvider: React.FC<{
         setLoadingUpload,
         user,
         setUser,
+        selectedPeriod,
+        setSelectedPeriod,
       }}
     >
       {children}
@@ -81,3 +99,4 @@ export const useGlobalVariable = () => {
   }
   return context;
 };
+

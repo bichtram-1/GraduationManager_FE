@@ -2,7 +2,10 @@ import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { Button, Card, Input, Select, message } from 'antd';
 import { ArrowLeftOutlined, MenuOutlined } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { cn } from '../../../constants/commonConst';
+import { cn, STATUS_CODE } from '../../../constants/commonConst';
+import { useTranslation } from 'react-i18next';
+import { getKey } from '@shared/types/I18nKeyType';
+import { formatNumber } from '@shared/utils/numberUtils';
 
 const TEACHERS = [
   { id: 'GV01', name: 'TS. Nguyễn Văn X' },
@@ -48,7 +51,7 @@ type CommitteeForm = {
   room: string;
   date: string;
   time: string;
-  members: string[]; // committee members (all roles chosen later)
+  members: string[];
 };
 
 type WorkflowTab = 'pick' | 'sort';
@@ -103,6 +106,7 @@ const ADVISOR_BUCKETS: AdvisorBucket[] = [
 ];
 
 const CreateCouncilPage = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const section2Ref = useRef<HTMLDivElement | null>(null);
@@ -131,7 +135,6 @@ const CreateCouncilPage = () => {
     [],
   );
 
-  const teacherOptions = useMemo(() => TEACHERS.map((teacher) => ({ value: teacher.id, label: teacher.name })), []);
   const availableAdvisorOptions = useMemo(
     () =>
       availableAdvisorBuckets.map((bucket) => ({
@@ -199,42 +202,42 @@ const CreateCouncilPage = () => {
 
   const handleSave = () => {
     if (!form.name || !form.room || !form.date || !form.time) {
-      message.error('Vui lòng điền đầy đủ thông tin hội đồng');
+      message.error(t(getKey('please_fill_all_council_info')));
       return;
     }
 
     if (memberIds.length === 0) {
-      message.error('Vui lòng chọn ít nhất 1 giảng viên cho thành phần hội đồng');
+      message.error(t(getKey('please_select_at_least_one_teacher')));
       return;
     }
 
     if (selectedTopics.length === 0) {
-      message.error('Vui lòng chọn ít nhất 1 đề tài');
+      message.error(t(getKey('please_select_at_least_one_topic')));
       return;
     }
 
     for (const topic of selectedTopics) {
       if (!topic.reviewerId) {
-        message.error(`Đề tài ${topic.topicCode} chưa chọn GVPB`);
+        message.error(t(getKey('topic_missing_reviewer'), { code: topic.topicCode }));
         return;
       }
 
       const hasInternal = topic.examinerIds && topic.examinerIds.length > 0;
       const hasExternal = topic.externalExaminers && topic.externalExaminers.length > 0;
       if (!hasInternal && !hasExternal) {
-        message.error(`Đề tài ${topic.topicCode} chưa chọn người chấm (nội bộ hoặc GV ngoài)`);
+        message.error(t(getKey('topic_missing_examiners'), { code: topic.topicCode }));
         return;
       }
 
       if (!topic.startTime) {
-        message.error(`Đề tài ${topic.topicCode} chưa nhập thời gian bắt đầu`);
+        message.error(t(getKey('topic_missing_start_time'), { code: topic.topicCode }));
         return;
       }
 
       if (hasInternal) {
         const conflict = (topic.examinerIds || []).some((id) => id === topic.advisorId || id === topic.reviewerId);
         if (conflict) {
-          message.error(`Người chấm nội bộ của ${topic.topicCode} không được trùng GVHD hoặc GVPB`);
+          message.error(t(getKey('examiner_conflict'), { code: topic.topicCode }));
           return;
         }
       }
@@ -242,20 +245,20 @@ const CreateCouncilPage = () => {
       if (hasExternal) {
         const conflictExt = (topic.externalExaminers || []).some((id) => id === topic.advisorId || id === topic.reviewerId);
         if (conflictExt) {
-          message.error(`GV ngoài của ${topic.topicCode} không được trùng GVHD hoặc GVPB`);
+          message.error(t(getKey('external_examiner_conflict'), { code: topic.topicCode }));
           return;
         }
       }
     }
 
     setSaved(true);
-    message.success(`Đã tạo hội đồng và gom ${selectedTopics.length} đề tài theo GVHD`);
+    message.success(t(getKey('create_council_success'), { count: formatNumber(selectedTopics.length) }));
     navigate('/councils');
   };
 
   const selectedCountByAdvisor = (advisorId: string) => selectedTopics.filter((topic) => topic.advisorId === advisorId).length;
   const visibleAdvisorBuckets = availableAdvisorBuckets.filter((bucket) => memberIds.includes(bucket.advisorId));
-  const committeeSummary = `${memberIds.length} thành viên hội đồng`;
+  const committeeSummary = t(getKey('members_count_label'), { count: formatNumber(memberIds.length) });
 
   const openSortTab = () => {
     if (selectedTopics.length > 0) setWorkflowTab('sort');
@@ -317,8 +320,8 @@ const CreateCouncilPage = () => {
           <ArrowLeftOutlined />
         </button>
         <div>
-          <h1 className="text-2xl font-medium">Thêm mới hội đồng bảo vệ</h1>
-          <p className="mt-0.5 text-sm text-gray-600">Chọn thành phần hội đồng trước, sau đó chọn đề tài của các giảng viên đó và sắp xếp.</p>
+          <h1 className="text-2xl font-medium">{t(getKey('create_council'))}</h1>
+          <p className="mt-0.5 text-sm text-gray-600">{t(getKey('create_council_desc'))}</p>
         </div>
       </div>
 
@@ -326,36 +329,36 @@ const CreateCouncilPage = () => {
         <Card className="overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-gray-50 px-5 py-4">
             <div>
-              <div className="text-sm font-semibold text-[#185FA5]">BƯỚC 1</div>
-              <div className="font-medium">PHẦN 1: Thông tin chung</div>
+              <div className="text-sm font-semibold text-[var(--color-primary)]">BƯỚC 1</div>
+              <div className="font-medium">{t(getKey('step1_title'))}</div>
             </div>
-            <div className="rounded-full bg-white px-3 py-1 text-[11px] text-gray-600 shadow-sm">Nhập trước, chọn sau</div>
+            <div className="rounded-full bg-white px-3 py-1 text-[11px] text-gray-600 shadow-sm">{t(getKey('step1_desc'))}</div>
           </div>
           <div className="space-y-4 p-5 md:p-6">
               <div>
-                <div className="mb-1 text-xs text-gray-600">Tên hội đồng</div>
+                <div className="mb-1 text-xs text-gray-600">{t(getKey('council_name'))}</div>
                 <Input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="VD: Hội đồng số 1" />
               </div>
 
               <div>
-                <div className="mb-1 text-xs text-gray-600">Chọn đợt</div>
-                <Select value={form.batch} onChange={(value) => setForm({ ...form, batch: value })} style={{ width: '100%' }}>
+                <div className="mb-1 text-xs text-gray-600">{t(getKey('select_period'))}</div>
+                <Select value={form.batch} onChange={(value) => setForm({ ...form, batch: value })} className="w-full">
                   <Select.Option value="Đợt ĐATN Học kỳ 2 - 2026">Đợt ĐATN Học kỳ 2 - 2026</Select.Option>
                 </Select>
               </div>
 
               <div>
-                <div className="mb-1 text-xs text-gray-600">Phòng bảo vệ</div>
+                <div className="mb-1 text-xs text-gray-600">{t(getKey('defense_room'))}</div>
                 <Input value={form.room} onChange={(event) => setForm({ ...form, room: event.target.value })} placeholder="VD: A1.401" />
               </div>
 
               <div className="flex gap-2">
                 <div className="flex-1">
-                  <div className="mb-1 text-xs text-gray-600">Ngày bảo vệ</div>
+                  <div className="mb-1 text-xs text-gray-600">{t(getKey('defense_date'))}</div>
                   <Input type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} />
                 </div>
                 <div className="flex-1">
-                  <div className="mb-1 text-xs text-gray-600">Giờ bắt đầu</div>
+                  <div className="mb-1 text-xs text-gray-600">{t(getKey('start_time'))}</div>
                   <Input type="time" value={form.time} onChange={(event) => setForm({ ...form, time: event.target.value })} />
                 </div>
               </div>
@@ -363,8 +366,8 @@ const CreateCouncilPage = () => {
               <div>
                 <div className="mb-2 flex items-center justify-between gap-3">
                   <div>
-                    <div className="text-xs text-gray-600">Thành phần hội đồng</div>
-                    <div className="mt-1 text-xs text-gray-500">Chọn nhiều giảng viên. Các vai trò cụ thể sẽ được gán khi sắp xếp đề tài.</div>
+                    <div className="text-xs text-gray-600">{t(getKey('committee_members'))}</div>
+                    <div className="mt-1 text-xs text-gray-500">{t(getKey('committee_members_desc'))}</div>
                   </div>
                   <div className="rounded-full bg-gray-100 px-3 py-1 text-[11px] text-gray-600">{committeeSummary}</div>
                 </div>
@@ -372,13 +375,13 @@ const CreateCouncilPage = () => {
                 <div className="space-y-4">
                   <div className="grid gap-2 sm:grid-cols-[180px_minmax(0,1fr)] sm:items-start">
                     <div>
-                      <div className="text-sm font-medium text-gray-900">Thành phần hội đồng</div>
-                      <div className="mt-1 text-xs text-gray-500">Chọn nhiều giảng viên (những người sẽ tham gia trong hội đồng). Các vai trò cụ thể sẽ được gán khi sắp xếp đề tài.</div>
+                      <div className="text-sm font-medium text-gray-900">{t(getKey('committee_members'))}</div>
+                      <div className="mt-1 text-xs text-gray-500">{t(getKey('committee_members_select_desc'))}</div>
                     </div>
                     <Select
                       value={form.members}
                       onChange={updateMembers}
-                      placeholder={availableAdvisorOptions.length > 0 ? 'Chọn nhiều giảng viên' : 'Không còn giảng viên có đề tài để phân công'}
+                      placeholder={availableAdvisorOptions.length > 0 ? t(getKey('select_teachers_placeholder')) : t(getKey('no_teachers_available'))}
                       options={availableAdvisorOptions}
                       className="w-full"
                       mode="multiple"
@@ -389,9 +392,9 @@ const CreateCouncilPage = () => {
                 </div>
 
                 <div className="flex flex-wrap justify-end gap-3 pt-2">
-                  <Button onClick={() => navigate('/councils')}>Hủy bỏ</Button>
+                  <Button onClick={() => navigate('/councils')}>{t(getKey('cancel_btn_text'))}</Button>
                   <Button type="primary" onClick={scrollToSection2} disabled={!form.name || !form.room || !form.date || !form.time || memberIds.length === 0}>
-                    Tiếp tục sang phần chọn đề tài
+                    {t(getKey('continue_to_select_topics'))}
                   </Button>
                 </div>
               </div>
@@ -402,27 +405,27 @@ const CreateCouncilPage = () => {
           <Card className="overflow-hidden">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-gray-50 px-5 py-4">
               <div>
-                <div className="text-sm font-semibold text-[#185FA5]">BƯỚC 2</div>
-                <div className="font-medium">PHẦN 2: Chọn đề tài và sắp xếp</div>
-                <div className="mt-1 text-xs text-gray-500">Chỉ hiển thị sau khi đã nhập xong thông tin chung để màn hình thoáng hơn.</div>
+                <div className="text-sm font-semibold text-[var(--color-primary)]">BƯỚC 2</div>
+                <div className="font-medium">{t(getKey('step2_title'))}</div>
+                <div className="mt-1 text-xs text-gray-500">{t(getKey('step2_desc'))}</div>
               </div>
-              <div className="rounded-full bg-gray-100 px-3 py-1 text-[11px] text-gray-600">Đã chọn {selectedTopics.length} đề tài</div>
+              <div className="rounded-full bg-gray-100 px-3 py-1 text-[11px] text-gray-600">{t(getKey('selected_topics_count'), { count: formatNumber(selectedTopics.length) })}</div>
             </div>
 
             <div className="flex gap-2 border-b border-gray-200 px-5 pt-4">
               <button
                 type="button"
                 onClick={() => setWorkflowTab('pick')}
-                className={`rounded-t-lg px-4 py-2 text-sm font-medium ${workflowTab === 'pick' ? 'border border-b-0 border-gray-200 bg-white text-[#185FA5]' : 'bg-gray-50 text-gray-600'}`}
+                className={`rounded-t-lg px-4 py-2 text-sm font-medium ${workflowTab === 'pick' ? 'border border-b-0 border-gray-200 bg-white text-[var(--color-primary)]' : 'bg-gray-50 text-gray-600'}`}
               >
-                1. Chọn đề tài
+                {t(getKey('select_topics_tab'))}
               </button>
               <button
                 type="button"
                 onClick={openSortTab}
-                className={`rounded-t-lg px-4 py-2 text-sm font-medium ${workflowTab === 'sort' ? 'border border-b-0 border-gray-200 bg-white text-[#185FA5]' : 'bg-gray-50 text-gray-600'}`}
+                className={`rounded-t-lg px-4 py-2 text-sm font-medium ${workflowTab === 'sort' ? 'border border-b-0 border-gray-200 bg-white text-[var(--color-primary)]' : 'bg-gray-50 text-gray-600'}`}
               >
-                2. Sắp xếp đề tài đã chọn
+                {t(getKey('sort_topics_tab'))}
               </button>
             </div>
 
@@ -430,7 +433,7 @@ const CreateCouncilPage = () => {
               <div className="space-y-4 p-5">
                 {visibleAdvisorBuckets.length === 0 ? (
                   <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 px-4 py-10 text-center text-sm text-gray-500">
-                    Chọn ít nhất 1 giảng viên có đề tài chưa phân công để hiển thị danh sách đề tài tương ứng.
+                    {t(getKey('select_teachers_first_desc'))}
                   </div>
                 ) : (
                   visibleAdvisorBuckets.map((bucket) => {
@@ -440,23 +443,23 @@ const CreateCouncilPage = () => {
                       <div key={bucket.advisorId} className="overflow-hidden rounded-xl border border-gray-200">
                         <div className="flex flex-wrap items-center justify-between gap-3 bg-gray-50 px-4 py-3">
                           <div>
-                            <div className="text-sm font-medium">GVHD: {bucket.advisorName}</div>
+                            <div className="text-sm font-medium">{t(getKey('advisor_short'))}: {bucket.advisorName}</div>
                             <div className="mt-1 text-xs text-gray-500">
-                              {bucket.topics.length} đề tài · đã chọn {selectedInBucket} đề tài
+                              {t(getKey('topics_selected_count'), { total: formatNumber(bucket.topics.length), count: formatNumber(selectedInBucket) })}
                             </div>
                           </div>
-                          <div className="rounded-full bg-white px-3 py-1 text-[11px] text-gray-600">Đang hoạt động</div>
+                          <div className="rounded-full bg-white px-3 py-1 text-[11px] text-gray-600">{t(getKey('status_active'))}</div>
                         </div>
 
                         <div className="overflow-x-auto bg-white">
                           <table className="w-full border-collapse text-sm">
                             <thead className="bg-white text-gray-500">
                               <tr>
-                                <th className="w-14 px-4 py-3 text-left">Chọn</th>
-                                <th className="w-24 px-4 py-3 text-left">Mã nhóm</th>
-                                <th className="px-4 py-3 text-left">Đề tài</th>
-                                <th className="px-4 py-3 text-left">Sinh viên</th>
-                                <th className="w-28 px-4 py-3 text-left">Thời lượng</th>
+                                <th className="w-14 px-4 py-3 text-left">{t(getKey('select_column'))}</th>
+                                <th className="w-24 px-4 py-3 text-left">{t(getKey('group_code'))}</th>
+                                <th className="px-4 py-3 text-left">{t(getKey('topic_name'))}</th>
+                                <th className="px-4 py-3 text-left">{t(getKey('student_name'))}</th>
+                                <th className="w-28 px-4 py-3 text-left">{t(getKey('duration_column'))}</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -470,13 +473,13 @@ const CreateCouncilPage = () => {
                                         type="checkbox"
                                         checked={checked}
                                         onChange={(event) => toggleTopic(topic, event.target.checked)}
-                                        className="h-4 w-4 accent-[#185FA5]"
+                                        className="h-4 w-4 accent-[var(--color-primary)]"
                                       />
                                     </td>
-                                    <td className="px-4 py-3 align-top font-medium text-[#2196F3]">{topic.topicCode}</td>
+                                    <td className="px-4 py-3 align-top font-medium text-[var(--color-blue-md)]">{topic.topicCode}</td>
                                     <td className="px-4 py-3 align-top font-medium text-gray-900">{topic.topicName}</td>
                                     <td className="px-4 py-3 align-top text-xs text-gray-600">{topic.members.join(', ')}</td>
-                                    <td className="px-4 py-3 align-top text-gray-600">~{topic.minutes} phút</td>
+                                    <td className="px-4 py-3 align-top text-gray-600">{t(getKey('minutes_suffix'), { count: formatNumber(topic.minutes) })}</td>
                                   </tr>
                                 );
                               })}
@@ -489,21 +492,21 @@ const CreateCouncilPage = () => {
                 )}
               </div>
             ) : selectedTopics.length === 0 ? (
-              <div className="px-5 py-16 text-center text-gray-500">Chưa có đề tài nào. Quay lại tab chọn đề tài để tick các nhóm muốn đưa vào hội đồng.</div>
+              <div className="px-5 py-16 text-center text-gray-500">{t(getKey('no_topics_selected_message'))}</div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse text-sm">
                   <thead className="bg-gray-50 text-gray-600">
                     <tr>
                       <th className="w-12 px-4 py-3 text-left"></th>
-                      <th className="w-20 px-4 py-3 text-left">STT</th>
-                      <th className="w-28 px-4 py-3 text-left">Mã nhóm</th>
-                      <th className="px-4 py-3 text-left">Tên đề tài</th>
-                      <th className="px-4 py-3 text-left">GVHD</th>
-                      <th className="px-4 py-3 text-left">GVPB</th>
-                      <th className="px-4 py-3 text-left">Người chấm</th>
-                      <th className="px-4 py-3 text-left">GV ngoài</th>
-                      <th className="px-4 py-3 text-left">Thời gian</th>
+                      <th className="w-20 px-4 py-3 text-left">{t(getKey('stt'))}</th>
+                      <th className="w-28 px-4 py-3 text-left">{t(getKey('group_code'))}</th>
+                      <th className="px-4 py-3 text-left">{t(getKey('topic_name'))}</th>
+                      <th className="px-4 py-3 text-left">{t(getKey('advisor_short'))}</th>
+                      <th className="px-4 py-3 text-left">{t(getKey('reviewer_short'))}</th>
+                      <th className="px-4 py-3 text-left">{t(getKey('examiner_title'))}</th>
+                      <th className="px-4 py-3 text-left">{t(getKey('external_teachers_short'))}</th>
+                      <th className="px-4 py-3 text-left">{t(getKey('time'))}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -526,15 +529,15 @@ const CreateCouncilPage = () => {
                         <td className="px-4 py-3 align-top text-gray-400">
                           <MenuOutlined />
                         </td>
-                        <td className="px-4 py-3 align-top font-medium text-gray-700">{index + 1}</td>
-                        <td className="px-4 py-3 align-top font-medium text-[#2196F3]">{topic.topicCode}</td>
+                        <td className="px-4 py-3 align-top font-medium text-gray-700">{formatNumber(index + 1)}</td>
+                        <td className="px-4 py-3 align-top font-medium text-[var(--color-blue-md)]">{topic.topicCode}</td>
                         <td className="px-4 py-3 align-top font-medium text-gray-900">{topic.topicName}</td>
                         <td className="px-4 py-3 align-top text-gray-600">{teacherNameById(topic.advisorId)}</td>
                         <td className="px-4 py-3 align-top">
                           <Select
                             value={topic.reviewerId || undefined}
                             onChange={(value) => updateReviewerForTopic(topic.id, value ?? null)}
-                            placeholder="Chọn GVPB"
+                            placeholder={t(getKey('select_reviewer_placeholder'))}
                             options={memberIds
                               .filter((id) => id !== topic.advisorId)
                               .map((id) => ({ value: id, label: teacherNameById(id) }))}
@@ -547,7 +550,7 @@ const CreateCouncilPage = () => {
                             mode="multiple"
                             value={topic.examinerIds || []}
                             onChange={(value) => updateExaminerForTopic(topic.id, value ?? [])}
-                            placeholder="Chọn người chấm"
+                            placeholder={t(getKey('select_examiners_placeholder'))}
                             options={memberIds
                               .filter((id) => id !== topic.advisorId && id !== topic.reviewerId)
                               .map((id) => ({ value: id, label: teacherNameById(id) }))}
@@ -560,7 +563,7 @@ const CreateCouncilPage = () => {
                             mode="multiple"
                             value={topic.externalExaminers || []}
                             onChange={(value) => updateExternalExaminersForTopic(topic.id, value ?? [])}
-                            placeholder="Chọn GV ngoài"
+                            placeholder={t(getKey('select_external_placeholder'))}
                             options={TEACHERS.filter((t) => !memberIds.includes(t.id)).map((t) => ({ value: t.id, label: t.name }))}
                             className="w-full min-w-[220px]"
                             allowClear
@@ -580,15 +583,15 @@ const CreateCouncilPage = () => {
       </div>
 
       <div className="mt-6 flex items-center justify-end gap-3">
-        <Button onClick={() => navigate('/councils')}>Hủy bỏ</Button>
+        <Button onClick={() => navigate('/councils')}>{t(getKey('cancel_btn_text'))}</Button>
         <Button type="primary" onClick={handleSave} disabled={!form.name || !form.room || !form.date || !form.time || memberIds.length === 0 || selectedTopics.length === 0}>
-          Lưu và Công bố
+          {t(getKey('save_and_publish_btn'))}
         </Button>
       </div>
 
       <div className={saved ? 'mt-4' : 'hidden'}>
         <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
-          Đã lưu thành công. Hệ thống đã tạo hội đồng và phân công đề tài; bạn có thể kiểm tra các vai trò và thời gian cho từng đề tài.
+          {t(getKey('save_council_success_desc'))}
         </div>
       </div>
     </div>

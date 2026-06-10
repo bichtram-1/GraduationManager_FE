@@ -35,10 +35,10 @@ export const HEADER_TITLES: Record<RoutePath, keyof I18nKey> = {
   [ROUTES.PERIODS]: 'period_management',
   [ROUTES.ASSIGNMENTS]: 'assignment_management',
   [ROUTES.STUDENT_SCORES]: 'student_score_management',
-  [ROUTES.CLASSES]: 'topic_management',
+  [ROUTES.CLASSES]: 'class_management',
   [ROUTES.INTERNSHIP_STUDENTS]: 'internship_students',
-  [ROUTES.INTERNSHIP_STUDENTS_CONFIRM]: 'internship_students',
-  [ROUTES.INTERNSHIP_STUDENTS_NOCOMPANY]: 'internship_students',
+  [ROUTES.INTERNSHIP_STUDENTS_CONFIRM]: 'internship_students_confirm',
+  [ROUTES.INTERNSHIP_STUDENTS_NOCOMPANY]: 'internship_students_nocompany',
   [ROUTES.FORGOTPW]: 'forgot_password_title',
 };
 

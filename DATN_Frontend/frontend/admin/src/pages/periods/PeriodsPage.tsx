@@ -16,20 +16,17 @@ import PeriodForm from './components/PeriodForm';
 import { periodHooks } from '../../hooks/usePeriods';
 import type { BatchStatus, BatchType, ICreatePeriod, IUpdatePeriod, IListPeriod, IDetailPeriod } from '../../type/PeriodType';
 import type { BaseListParams } from '@shared/types/GeneralType';
+import { STATUS_CODE, cn } from '../../constants/commonConst';
+import { formatNumber } from '@shared/utils/numberUtils';
 
 type PeriodModalMode = 'create' | 'edit' | 'detail';
 
-const statusMap: Record<BatchStatus, { label: string; color: string; background: string }> = {
-  open: { label: 'Đang mở', color: '#00A65A', background: '#E8F9EE' },
-  published: { label: 'Đã công bố', color: '#2B6CB0', background: '#EBF4FF' },
-  grading: { label: 'Chấm điểm', color: '#D08A00', background: '#FFF7E6' },
-  closed: { label: 'Đã đóng', color: '#C53030', background: '#FFEDED' },
-};
-
-const batchTabs: Array<{ key: BatchType; label: string; icon: JSX.Element }> = [
-  { key: 'tttn', label: 'Đợt Thực tập (TTTN)', icon: <TeamOutlined /> },
-  { key: 'datn', label: 'Đợt Đồ án (ĐATN)', icon: <ReadOutlined /> },
-];
+const getStatusMeta = (t: any) => ({
+  [STATUS_CODE.OPEN]: { label: t(getKey('period_status_open')), className: '!bg-[var(--color-green-light)] !text-[var(--color-green-medium)]' },
+  [STATUS_CODE.PUBLISHED]: { label: t(getKey('period_status_published')), className: '!bg-[var(--color-blue-light)] !text-[var(--color-blue-medium)]' },
+  [STATUS_CODE.GRADING]: { label: t(getKey('period_status_grading')), className: '!bg-[var(--color-gold-light)] !text-[var(--color-gold-medium)]' },
+  [STATUS_CODE.CLOSED]: { label: t(getKey('period_status_closed')), className: '!bg-[var(--color-red-light)] !text-[var(--color-red-medium)]' },
+} as const);
 
 const PeriodsPage = () => {
   const { t } = useTranslation();
@@ -46,31 +43,34 @@ const PeriodsPage = () => {
     setTab(nextTab);
   };
 
-
-  // FilterTable will handle modal lifecycle; we keep mutations here to pass into props
+  const batchTabs = useMemo(() => [
+    { key: 'tttn' as const, label: t(getKey('period_management')) + ' (TTTN)', icon: <TeamOutlined /> },
+    { key: 'datn' as const, label: t(getKey('period_management')) + ' (ĐATN)', icon: <ReadOutlined /> },
+  ], [t]);
 
   const columns = useMemo<ColumnsType<IListPeriod>>(
     () => [
       {
-        title: 'Tên đợt',
+        title: t(getKey('create_period')),
         dataIndex: 'name',
         key: 'name',
-        render: (name: string) => <span className="font-medium text-[#2563eb]">{name}</span>,
+        ellipsis: true,
+        render: (name: string) => <span className="font-medium text-primary">{name}</span>,
       },
       {
-        title: 'Bắt đầu',
+        title: t(getKey('start_date')),
         dataIndex: 'startDate',
         key: 'startDate',
         render: (value: string) => <span className="text-slate-600">{value}</span>,
       },
       {
-        title: 'Kết thúc',
+        title: t(getKey('end_date')),
         dataIndex: 'endDate',
         key: 'endDate',
         render: (value: string) => <span className="text-slate-600">{value}</span>,
       },
       {
-        title: 'Hạn ĐK',
+        title: t(getKey('registration_deadline')),
         dataIndex: 'regDeadline',
         key: 'regDeadline',
         render: (value: string) => <span className="text-slate-600">{value}</span>,
@@ -78,129 +78,113 @@ const PeriodsPage = () => {
       ...(tab === 'tttn'
         ? [
             {
-              title: 'Số DN',
+              title: t(getKey('companies_count')),
               dataIndex: 'numberDN',
               key: 'numberDN',
-              render: (value?: number) => <span>{value ?? '-'}</span>,
+              render: (value?: number) => <span>{value !== undefined ? formatNumber(value) : '-'}</span>,
             },
             {
-              title: 'Số SV',
+              title: t(getKey('students_count_short')),
               dataIndex: 'numberSV',
               key: 'numberSV',
-              render: (value?: number) => <span>{value ?? '-'}</span>,
+              render: (value?: number) => <span>{value !== undefined ? formatNumber(value) : '-'}</span>,
             },
           ]
         : [
             {
-              title: 'Số đề tài',
+              title: t(getKey('topics_count')),
               dataIndex: 'numberTopics',
               key: 'numberTopics',
-              render: (value?: number) => <span>{value ?? '-'}</span>,
+              render: (value?: number) => <span>{value !== undefined ? formatNumber(value) : '-'}</span>,
             },
             {
-              title: 'Số hội đồng',
+              title: t(getKey('councils_count')),
               dataIndex: 'numberCouncils',
               key: 'numberCouncils',
-              render: (value?: number) => <span>{value ?? '-'}</span>,
+              render: (value?: number) => <span>{value !== undefined ? formatNumber(value) : '-'}</span>,
             },
           ]),
       {
-        title: 'Trạng thái',
+        title: t(getKey('group_status')),
         dataIndex: 'status',
         key: 'status',
         render: (value: BatchStatus) => {
-          const badge = statusMap[value];
+          const badge = getStatusMeta(t)[value];
           return (
-            <Tag
-              style={{
-                margin: 0,
-                borderRadius: 999,
-                padding: '0 10px',
-                border: 'none',
-                backgroundColor: badge.background,
-                color: badge.color,
-              }}
-            >
-              {badge.label}
+            <Tag className={cn('!m-0 !rounded-full !px-2.5 !py-[2px] !border-none', badge?.className)}>
+              {badge?.label || value}
             </Tag>
           );
         },
       },
-      // actions column is provided by FilterTable
     ],
-    [tab],
+    [tab, t],
   );
 
   return (
     <div className="pb-4">
       <div className="mb-5 rounded-[22px] border border-slate-100 bg-white px-6 py-5 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
-        <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-[#2196F3]/10 px-3 py-1 text-xs font-medium text-[#1976d2]">
+        <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
           <TeamOutlined />
-          Danh mục đợt
+          {t(getKey('period_management'))}
         </div>
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="m-0 text-[34px] font-bold leading-[40px] text-navyDark">Quản lý đợt</h1>
-            <p className="mt-2 mb-0 text-[18px] leading-[26px] text-grayDark">Vòng đời các đợt TTTN / ĐATN</p>
+            <h1 className="!m-0 !text-[34px] !font-bold !leading-[40px] !text-navyDark">
+              {t(getKey('period_management'))}
+            </h1>
+            <p className="mt-2 mb-0 text-[18px] leading-[26px] text-grayDark">
+              {t(getKey('period_management_desc'))}
+            </p>
           </div>
         </div>
       </div>
 
       <div className="mb-5 rounded-[20px] border border-slate-100 bg-white px-4 pt-3 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
-        <Tabs
-          activeKey={tab}
-          onChange={handleTabChange}
-          items={batchTabs.map((item) => ({
-            key: item.key,
-            label: (
-              <span className="flex items-center gap-2 text-sm font-medium">
-                {item.icon}
-                {item.label}
-              </span>
-            ),
-          }))}
-          className="batch-tabs"
-        />
+        <Tabs activeKey={tab} onChange={handleTabChange} items={batchTabs} />
       </div>
 
-      <FilterTable<IListPeriod, IDetailPeriod, ICreatePeriod, IUpdatePeriod>
-        title="Danh sách đợt"
-        pageTitle="Quản lý đợt"
-        createButtonLabel="Tạo đợt mới"
-        columns={columns}
-        useQueryHook={(params) => periodHooks.useFetchListPeriods(params)}
-        paramVariables={listParams}
-        filterRender={() => (
-          <div className="mb-4 grid grid-cols-1 gap-3 xl:grid-cols-12">
-            <div className="xl:col-span-8">
-              <Form.Item name="keyword" className="m-0">
-                <Input allowClear placeholder="Tìm theo tên đợt, mã đợt, thời gian..." onChange={(e) => setKeyword(e.target.value)} />
+      <Card className="overflow-hidden rounded-[18px] border border-slate-100 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
+        <FilterTable<IListPeriod, IDetailPeriod, ICreatePeriod, IUpdatePeriod>
+          title={t(getKey('period_list'))}
+          pageTitle={t(getKey('period_management'))}
+          createButtonLabel={t(getKey('create_period'))}
+          columns={columns}
+          useQueryHook={periodHooks.useFetchListPeriods}
+          paramVariables={listParams}
+          filterRender={() => (
+            <div className="mb-4 grid grid-cols-1 gap-3 xl:grid-cols-12">
+              <Form.Item name="keyword" className="xl:col-span-8 !mb-0">
+                <Input
+                  allowClear
+                  placeholder={t(getKey('search_period_placeholder'))}
+                  onChange={(e) => setKeyword(e.target.value)}
+                  className="!h-11 !rounded-[12px] !border-slate-300"
+                />
               </Form.Item>
-            </div>
-            <div className="xl:col-span-4">
-              <Form.Item name="status" className="m-0" initialValue={statusFilter}>
+              <Form.Item name="status" className="xl:col-span-4 !mb-0">
                 <Select
-                  onChange={(v) => setStatusFilter(v)}
-                  className="!w-full"
+                  allowClear
+                  placeholder={t(getKey('group_status'))}
+                  onChange={(v) => setStatusFilter(v || 'all')}
+                  className="!h-11 !w-full"
                   options={[
-                    { value: 'all', label: 'Tất cả trạng thái' },
-                    { value: 'open', label: 'Đang mở' },
-                    { value: 'published', label: 'Đã công bố' },
-                    { value: 'grading', label: 'Chấm điểm' },
-                    { value: 'closed', label: 'Đã đóng' },
+                    { value: 'all', label: t(getKey('all_tab')) },
+                    { value: STATUS_CODE.OPEN, label: t(getKey('period_status_open')) },
+                    { value: STATUS_CODE.PUBLISHED, label: t(getKey('period_status_published')) },
+                    { value: STATUS_CODE.GRADING, label: t(getKey('period_status_grading')) },
+                    { value: STATUS_CODE.CLOSED, label: t(getKey('period_status_closed')) },
                   ]}
                 />
               </Form.Item>
             </div>
-          </div>
-        )}
-        createInfo={{ type: 'modal', modalInfo: { modalContent: <PeriodForm tab={tab} allowStudentListUpload />, modalProps: { centered: true, width: 820, title: 'Tạo đợt mới' }, modalFunc: createPeriodMutation } }}
-        updateInfo={{ type: 'modal', modalInfo: { modalContent: <PeriodForm tab={tab} />, modalProps: { centered: true, width: 820, title: 'Chỉnh sửa đợt' }, modalFunc: updatePeriodMutation } }}
-        deleteInfo={{ type: 'modal', modalInfo: { modalContent: null, modalProps: {}, modalFunc: deletePeriodMutation as unknown as import('@tanstack/react-query').UseMutationResult<IListPeriod, import('axios').AxiosError, { id: string; params: BaseListParams }> } }}
-        detailInfo={{ type: 'modal', modalInfo: { modalContent: <PeriodForm tab={tab} disabled />, modalProps: { centered: true, width: 820, title: 'Chi tiết đợt', footer: null }, modalFunc: periodHooks.useFetchDetailPeriod as unknown as (id: string, enable: boolean) => import('@tanstack/react-query').UseQueryResult<IDetailPeriod, Error> } }}
-        formatInitialValues={(data: any) => data || {}}
-        formatFormValues={(values: Record<string, unknown>) => values as unknown as ICreatePeriod}
-      />
+          )}
+          createInfo={{ type: 'modal', modalInfo: { modalContent: <PeriodForm tab={tab} allowStudentListUpload />, modalProps: { centered: true, width: 820, title: t(getKey('create_period')) }, modalFunc: createPeriodMutation } }}
+          updateInfo={{ type: 'modal', modalInfo: { modalContent: <PeriodForm tab={tab} />, modalProps: { centered: true, width: 820, title: t(getKey('edit_period')) }, modalFunc: updatePeriodMutation } }}
+          detailInfo={{ type: 'modal', modalInfo: { modalContent: <PeriodForm tab={tab} disabled />, modalProps: { centered: true, width: 820, title: t(getKey('detail_period')), footer: null }, modalFunc: periodHooks.useFetchDetailPeriod as unknown as (id: string, enable: boolean) => import('@tanstack/react-query').UseQueryResult<IDetailPeriod, Error> } }}
+          deleteInfo={{ type: 'modal', modalInfo: { modalContent: null, modalProps: {}, modalFunc: deletePeriodMutation } }}
+        />
+      </Card>
     </div>
   );
 };

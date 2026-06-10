@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
-import { Form, Input, InputNumber, Select, Space, Tooltip, Button, Modal } from 'antd';
+import { Form, Input, InputNumber, Select, Button, Modal } from 'antd';
 import { ExclamationCircleOutlined } from '@ant-design/icons';
 import type { IDetailGroup, IGroupMember } from '../../../type/GroupType';
 import AddMemberModal from './AddMemberModal';
+import { useTranslation } from 'react-i18next';
+import { getKey } from '@shared/types/I18nKeyType';
+import { STATUS_CODE } from '../../../constants/commonConst';
 
 interface Props {
   detail?: IDetailGroup;
@@ -10,24 +13,24 @@ interface Props {
   readOnly?: boolean;
 }
 
-const statusOptions = [
-  { value: 'PENDING', label: 'Chờ duyệt' },
-  { value: 'APPROVED', label: 'Đã duyệt' },
-  { value: 'WARNING', label: 'Có cảnh báo' },
-  { value: 'MISSING', label: 'Thiếu thành viên' },
-  { value: 'LOCKED', label: 'Bị khóa' },
-  { value: 'DISSOLVED', label: 'Đã giải thể' },
-];
-
 const GroupForm: React.FC<Props> = ({ detail, sampleStudents, readOnly }) => {
+  const { t } = useTranslation();
   const [adding, setAdding] = useState(false);
   const formInstance = Form.useFormInstance();
 
+  const statusOptions = [
+    { value: STATUS_CODE.PENDING_UP, label: t(getKey('status_pending')) },
+    { value: STATUS_CODE.APPROVED_UP, label: t(getKey('status_approved')) },
+    { value: STATUS_CODE.WARNING, label: t(getKey('status_warning')) },
+    { value: STATUS_CODE.MISSING, label: t(getKey('status_missing')) },
+    { value: STATUS_CODE.LOCKED, label: t(getKey('status_locked')) },
+    { value: STATUS_CODE.DISSOLVED, label: t(getKey('status_dissolved')) },
+  ];
+
   const onAdd = (_groupId: string, student: IGroupMember) => {
-    // insert into form list so changes are saved on modal submit
     const members = formInstance.getFieldValue('members') || detail?.members || [];
     const exists = (members || []).some((m: IGroupMember) => m.id === student.id);
-    if (exists) return Modal.info({ title: 'Đã tồn tại', content: 'Thành viên đã có trong nhóm.' });
+    if (exists) return Modal.info({ title: t(getKey('already_exists')), content: t(getKey('member_already_in_group')) });
     const newMembers = [...members, student];
     formInstance.setFieldsValue({ members: newMembers });
     setAdding(false);
@@ -36,45 +39,46 @@ const GroupForm: React.FC<Props> = ({ detail, sampleStudents, readOnly }) => {
   const onRemove = (memberId: string) => {
     const members = formInstance.getFieldValue('members') || detail?.members || [];
     Modal.confirm({
-      title: 'Xác nhận xóa thành viên',
+      title: t(getKey('confirm_remove_member')),
       icon: <ExclamationCircleOutlined />,
-      content: 'Bạn có chắc muốn xóa thành viên này khỏi nhóm?',
+      content: t(getKey('confirm_remove_member_desc')),
       async onOk() {
         const newMembers = (members || []).filter((m: IGroupMember) => m.id !== memberId);
         formInstance.setFieldsValue({ members: newMembers });
       },
     });
   };
+
   return (
     <>
-      <Form.Item name="code" label="Mã nhóm" rules={[{ required: true }]}>
+      <Form.Item name="code" label={t(getKey('group_code'))} rules={[{ required: true }]}>
         <Input disabled={readOnly} />
       </Form.Item>
 
-      <Form.Item name="title" label="Tên đề tài" rules={[{ required: true }]}>
+      <Form.Item name="title" label={t(getKey('topic_name'))} rules={[{ required: true }]}>
         <Input disabled={readOnly} />
       </Form.Item>
 
-      <Form.Item name="supervisor" label="Giảng viên hướng dẫn" rules={[{ required: true }]}>
+      <Form.Item name="supervisor" label={t(getKey('supervisor_teacher'))} rules={[{ required: true }]}>
         <Input disabled={readOnly} />
       </Form.Item>
 
-      <Form.Item name="maxMembers" label="Số thành viên tối đa" rules={[{ required: true }]}>
-        <InputNumber disabled={readOnly} min={1} style={{ width: '100%' }} />
+      <Form.Item name="maxMembers" label={t(getKey('max_members_count'))} rules={[{ required: true }]}>
+        <InputNumber disabled={readOnly} min={1} className="w-full" />
       </Form.Item>
 
-      <Form.Item name="registrationBatch" label="Đợt đăng ký">
+      <Form.Item name="registrationBatch" label={t(getKey('registration_period'))}>
         <Input disabled={readOnly} />
       </Form.Item>
 
-      <Form.Item name="status" label="Trạng thái">
+      <Form.Item name="status" label={t(getKey('status'))}>
         <Select disabled={readOnly} options={statusOptions} />
       </Form.Item>
 
       <div>
         <div className="mb-2 flex items-center justify-between">
-          <div className="text-sm font-medium">Thành viên</div>
-          {!readOnly && <Button size="small" onClick={() => setAdding(true)}>Thêm thành viên</Button>}
+          <div className="text-sm font-medium">{t(getKey('members'))}</div>
+          {!readOnly && <Button size="small" onClick={() => setAdding(true)}>{t(getKey('add_member'))}</Button>}
         </div>
 
         <Form.List name="members" initialValue={detail?.members || []}>
@@ -84,13 +88,13 @@ const GroupForm: React.FC<Props> = ({ detail, sampleStudents, readOnly }) => {
                 <div key={field.key} className="flex items-center gap-2 mb-2">
                   <Form.Item noStyle shouldUpdate>
                     <Form.Item name={[field.name, 'code']} label={undefined} rules={[{ required: true }]}>
-                      <Input disabled={readOnly} placeholder="Mã SV" style={{ width: 120 }} />
+                      <Input disabled={readOnly} placeholder={t(getKey('student_id_short'))} className="w-[120px]" />
                     </Form.Item>
                   </Form.Item>
-                  <Form.Item name={[field.name, 'name']} label={undefined} rules={[{ required: true }]} style={{ flex: 1 }}>
-                    <Input disabled={readOnly} placeholder="Họ và tên" />
+                  <Form.Item name={[field.name, 'name']} label={undefined} rules={[{ required: true }]} className="flex-1">
+                    <Input disabled={readOnly} placeholder={t(getKey('enter_student_name'))} />
                   </Form.Item>
-                  {!readOnly && <Button type="text" danger size="small" onClick={() => { onRemove(formInstance.getFieldValue(['members', field.name, 'id'])); remove(field.name); }}>Xóa</Button>}
+                  {!readOnly && <Button type="text" danger size="small" onClick={() => { onRemove(formInstance.getFieldValue(['members', field.name, 'id'])); remove(field.name); }}>{t(getKey('delete'))}</Button>}
                 </div>
               ))}
             </div>

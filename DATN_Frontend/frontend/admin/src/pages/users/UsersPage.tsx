@@ -18,7 +18,7 @@ import {
   UserStatusType,
 } from '../../type/UserType';
 import ModalCreateEditUser from './components/ModalCreateEditUser';
-import { cn } from '../../constants/commonConst';
+import { cn, STATUS_CODE, USER_ROLE } from '../../constants/commonConst';
 import { getKey } from '@shared/types/I18nKeyType';
 import { BaseListParams, ListResponseTypeObject } from '@shared/types/GeneralType';
 import type { UseQueryResult } from '@tanstack/react-query';
@@ -36,10 +36,10 @@ const UsersPage = () => {
   const createMutation = userHooks.useCreateUser();
   const updateMutation = userHooks.useUpdateUser();
   const deleteMutation = userHooks.useDeleteUser();
-  const [role, setRole] = useState<UserRoleType>('student');
+  const [role, setRole] = useState<UserRoleType>(USER_ROLE.STUDENT);
 
   const classFilterOptions =
-    role === 'student'
+    role === USER_ROLE.STUDENT
       ? [
           { value: 'KTPM2020', label: 'KTPM2020' },
           { value: 'CNPM2020', label: 'CNPM2020' },
@@ -52,97 +52,82 @@ const UsersPage = () => {
         ];
 
   const statusFilterOptions = [
-    { value: 'active', label: 'Đang hoạt động' },
-    { value: 'inactive', label: 'Không hoạt động' },
-    { value: 'deleted', label: 'Đã xóa' },
+    { value: STATUS_CODE.ACTIVE, label: t(getKey('status_active')) },
+    { value: STATUS_CODE.INACTIVE, label: t(getKey('status_inactive')) },
+    { value: STATUS_CODE.DELETED, label: t(getKey('status_deleted')) },
   ];
 
   const tabItems = [
-    { key: 'student', label: 'Quản lý sinh viên', icon: <TeamOutlined /> },
-    { key: 'teacher', label: 'Quản lý giảng viên', icon: <UserOutlined /> },
+    { key: USER_ROLE.STUDENT, label: t(getKey('student_management')), icon: <TeamOutlined /> },
+    { key: USER_ROLE.TEACHER, label: t(getKey('teacher_management')), icon: <UserOutlined /> },
   ];
 
   const columns = useMemo(
     () => [
       {
-        title: role === 'student' ? 'MSSV' : 'Mã giảng viên',
+        title: role === USER_ROLE.STUDENT ? t(getKey('student_id')) : t(getKey('teacher_id')),
         dataIndex: 'id',
         key: 'id',
         render: (id: string) => <a className={cn('text-primary')}>{id}</a>,
         width: 140,
       },
       {
-        title: 'Họ tên',
+        title: t(getKey('fullname')),
         dataIndex: 'name',
         key: 'name',
         ellipsis: true,
       },
       {
-        title: 'Email',
+        title: t(getKey('email')),
         dataIndex: 'email',
         key: 'email',
         ellipsis: true,
       },
       {
-        title: role === 'student' ? 'Lớp' : 'Khoa',
+        title: role === USER_ROLE.STUDENT ? t(getKey('class')) : t(getKey('department')),
         dataIndex: 'className',
         key: 'className',
         render: (value: string) => value || '-',
         width: 160,
       },
       {
-        title: 'SĐT',
+        title: t(getKey('phone_number')),
         dataIndex: 'phone',
         key: 'phone',
         width: 140,
         render: (value: string) => value || '-',
       },
       {
-        title: 'Trạng thái',
+        title: t(getKey('status')),
         dataIndex: 'status',
         key: 'status',
-        width: 140,
+        width: 150,
         render: (status: UserStatusType) => {
           if (!status) return null;
-          if (status === 'active') {
+          if (status === STATUS_CODE.ACTIVE) {
             return (
               <Tag
-                style={{
-                  backgroundColor: '#E8F9EE',
-                  color: '#00A65A',
-                  borderRadius: 999,
-                  padding: '0 10px',
-                }}
+                className="!m-0 !rounded-full !px-2.5 !py-[2px] !border-none !bg-[var(--color-green-light)] !text-[var(--color-green-medium)]"
               >
-                Đang hoạt động
+                {t(getKey('status_active'))}
               </Tag>
             );
           }
-          if (status === 'inactive') {
+          if (status === STATUS_CODE.INACTIVE) {
             return (
               <Tag
-                style={{
-                  backgroundColor: '#FFF7E6',
-                  color: '#D08A00',
-                  borderRadius: 999,
-                  padding: '0 10px',
-                }}
+                className="!m-0 !rounded-full !px-2.5 !py-[2px] !border-none !bg-[var(--color-gold-light)] !text-[var(--color-gold-medium)]"
               >
-                Không hoạt động
+                {t(getKey('status_inactive'))}
               </Tag>
             );
           }
-          if (status === 'deleted') {
+          if (status === STATUS_CODE.DELETED) {
             return (
               <Tag
-                style={{
-                  backgroundColor: '#FFEDED',
-                  color: '#C53030',
-                  borderRadius: 999,
-                  padding: '0 10px',
-                }}
+                className="!m-0 !rounded-full !px-2.5 !py-[2px] !border-none !bg-[var(--color-red-light)] !text-[var(--color-red-medium)]"
               >
-                Đã xóa
+                {t(getKey('status_deleted'))}
               </Tag>
             );
           }
@@ -150,7 +135,7 @@ const UsersPage = () => {
         },
       },
     ],
-    [role]
+    [role, t]
   );
 
   const useRoleUsersQuery = (params: BaseListParams): UseQueryResult<ListResponseTypeObject<IListUser>, Error> => {
@@ -190,9 +175,9 @@ const UsersPage = () => {
     <div className={cn('relative overflow-hidden pb-4')}>
       <div className={cn('mb-5 flex items-center justify-start rounded-[22px] border border-slate-100 bg-white px-6 py-5 shadow-[0_12px_28px_rgba(15,23,42,0.05)]')}>
         <div>
-          <div className={cn('mb-2 inline-flex items-center gap-2 rounded-full bg-[#2196F3]/10 px-3 py-1 text-xs font-medium text-[#1976d2]')}>
+          <div className={cn('mb-2 inline-flex items-center gap-2 rounded-full bg-[var(--color-blue-md)]/10 px-3 py-1 text-xs font-medium text-[var(--color-blue-login-mid)]')}>
             <FilterOutlined />
-            Danh mục người dùng
+            {t(getKey('user_category'))}
           </div>
           <h1 className={cn('m-0 text-[34px] font-bold leading-[40px] text-navyDark')}>{t(getKey('user_management'))}</h1>
           <p className={cn('mt-2 mb-0 text-[18px] leading-[26px] text-grayDark')}>{t(getKey('user_management_desc'))}</p>
@@ -215,7 +200,7 @@ const UsersPage = () => {
       />
 
       <FilterTable<IListUser, IDetailUser, ICreateUser, IUpdateUser>
-        title={role === 'student' ? 'Danh sách sinh viên' : 'Danh sách giảng viên'}
+        title={role === USER_ROLE.STUDENT ? t(getKey('student_list')) : t(getKey('teacher_list'))}
         createButtonLabel={t(getKey('add_new_modal_btn'))}
         columns={columns}
         useQueryHook={useRoleUsersQuery}
@@ -224,7 +209,7 @@ const UsersPage = () => {
           isDetail: true,
           isEdit: true,
           isDelete: true,
-          isDeleteDisabled: (record) => (record as IListUser).status === 'deleted',
+          isDeleteDisabled: (record) => (record as IListUser).status === STATUS_CODE.DELETED,
         }}
         deleteInfo={{
           type: 'modal',
@@ -265,9 +250,9 @@ const UsersPage = () => {
                 allowClear
                 prefix={<SearchOutlined className={cn('text-slate-400')} />}
                 placeholder={
-                  role === 'student'
-                    ? 'Tìm theo MSSV, họ tên, email, lớp...'
-                    : 'Tìm theo mã giảng viên, họ tên, email, khoa...'
+                  role === USER_ROLE.STUDENT
+                    ? t(getKey('search_placeholder_student'))
+                    : t(getKey('search_placeholder_teacher'))
                 }
                 className={cn('!h-11 !rounded-[12px] !border-slate-300')}
               />
@@ -275,7 +260,7 @@ const UsersPage = () => {
             <Form.Item name="className" className={cn('xl:col-span-3 !mb-0')}>
               <Select
                 allowClear
-                placeholder={role === 'student' ? 'Lọc theo lớp' : 'Lọc theo khoa'}
+                placeholder={role === USER_ROLE.STUDENT ? t(getKey('student_filter_class')) : t(getKey('teacher_filter_department'))}
                 className={cn('!h-11 !w-full')}
                 options={classFilterOptions}
               />
@@ -283,7 +268,7 @@ const UsersPage = () => {
             <Form.Item name="status" className={cn('xl:col-span-4 !mb-0')}>
               <Select
                 allowClear
-                placeholder="Lọc theo trạng thái"
+                placeholder={t(getKey('filter_by_status'))}
                 className={cn('!h-11 !w-full')}
                 options={statusFilterOptions}
               />

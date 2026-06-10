@@ -19,10 +19,25 @@
   --color-black-alpha-10: rgba(0, 0, 0, 0.1);
   --color-shadow-sm: 0px 1px 3px 0px rgba(0, 0, 0, 0.1), 0px 1px 2px 0px rgba(0, 0, 0, 0.1);
   --color-gold-medium: #D08700;
+  --color-gold-light: #FFF7E6;
+  --color-green-medium: #00A65A;
+  --color-green-light: #E8F9EE;
+  --color-red-medium: #C53030;
+  --color-red-light: #FFEDED;
   --color-navy-dark: #101828;
   --color-gray-dark: #4a5565;
   --color-gray-medium: #6a7282;
   --color-gray-silver: #d1d5dc;
+  --color-blue-google: #4285F4;
+  --color-blue-login-start: #1565c0;
+  --color-blue-login-mid: #1976d2;
+  --color-blue-login-end: #2196f3;
+  --shadow-login-btn: 0px 14px 28px rgba(25, 118, 210, 0.28);
+  --color-blue-md: #2196F3;
+  --color-green-md: #4CAF50;
+  --color-amber-md: #FFC107;
+  --color-red-md: #F44336;
+  --color-purple-lightest: #eeedfe;
 }
 
 /* Định nghĩa CSS tùy chỉnh cho thanh cuộn toàn cục */

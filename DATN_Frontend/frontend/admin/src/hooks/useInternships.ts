@@ -6,10 +6,10 @@ import type { BaseListParams } from '@shared/types/GeneralType';
 import type { IConfirmationRequest, ICreateConfirmationRequest, ICreateNoCompanyStudent, INoCompanyStudent, IUpdateConfirmationRequest, IUpdateNoCompanyStudent } from '../type/InternshipType';
 
 export const internshipHooks = {
-  useFetchListConfirmationRequests: () => {
+  useFetchListConfirmationRequests: (params?: { periodId?: string }) => {
     return useQuery({
-      queryKey: [QueryKey.internships.confirmations.list],
-      queryFn: () => internshipApi.getListConfirmationRequest(),
+      queryKey: [QueryKey.internships.confirmations.list, params],
+      queryFn: () => internshipApi.getListConfirmationRequest(params),
     });
   },
 
@@ -54,12 +54,13 @@ export const internshipHooks = {
     });
   },
 
-  useFetchListNoCompanyStudents: () => {
+  useFetchListNoCompanyStudents: (params?: { periodId?: string }) => {
     return useQuery({
-      queryKey: [QueryKey.internships.noCompany.list],
-      queryFn: () => internshipApi.getListNoCompanyStudent(),
+      queryKey: [QueryKey.internships.noCompany.list, params],
+      queryFn: () => internshipApi.getListNoCompanyStudent(params),
     });
   },
+
 
   useFetchDetailNoCompanyStudent: (id: string, enabled: boolean = true) => {
     return useQuery({

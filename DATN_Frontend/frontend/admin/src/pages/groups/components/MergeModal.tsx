@@ -1,6 +1,10 @@
 import React from 'react';
 import { Modal, Select } from 'antd';
 import type { IListGroup } from '../../../type/GroupType';
+import { useTranslation } from 'react-i18next';
+import { getKey } from '@shared/types/I18nKeyType';
+import { STATUS_CODE } from '../../../constants/commonConst';
+import { formatNumber } from '@shared/utils/numberUtils';
 
 type Props = {
   open: boolean;
@@ -14,46 +18,46 @@ type Props = {
 };
 
 const MergeModal: React.FC<Props> = ({ open, onCancel, onOk, mergeLeft, mergeRight, setMergeLeft, setMergeRight, groups }) => {
+  const { t } = useTranslation();
   const right = groups.find((g) => g.id === mergeRight);
   const [selected, setSelected] = React.useState<string[] | undefined>(undefined);
 
   React.useEffect(() => {
-    // reset selection when right changes
     setSelected(undefined);
   }, [mergeRight]);
 
   const rightMembers = right?.members ?? [];
 
   return (
-    <Modal title="Ghép nhóm" open={!!open} onCancel={onCancel} onOk={() => onOk(selected)} okText="Xác nhận">
+    <Modal title={t(getKey('merge_groups'))} open={!!open} onCancel={onCancel} onOk={() => onOk(selected)} okText={t(getKey('confirm_btn'))}>
       <div className="grid grid-cols-3 gap-4">
         <div>
-          <div className="text-sm text-gray-600">Nhóm chính</div>
+          <div className="text-sm text-gray-600">{t(getKey('main_group'))}</div>
           {mergeLeft ? (
             <div className="p-2 border rounded text-sm">{`${groups.find((g) => g.id === mergeLeft)?.code || ''} — ${groups.find((g) => g.id === mergeLeft)?.title || ''}`}</div>
           ) : (
-            <Select style={{ width: '100%' }} value={mergeLeft || undefined} onChange={(v) => setMergeLeft(v)}>
-              {groups.filter((g) => g.status !== 'DISSOLVED').map((g) => <Select.Option key={g.id} value={g.id}>{g.code} — {g.title}</Select.Option>)}
+            <Select className="w-full" value={mergeLeft || undefined} onChange={(v) => setMergeLeft(v)}>
+              {groups.filter((g) => g.status !== STATUS_CODE.DISSOLVED).map((g) => <Select.Option key={g.id} value={g.id}>{g.code} — {g.title}</Select.Option>)}
             </Select>
           )}
         </div>
         <div>
-          <div className="text-sm text-gray-600">Nhóm phụ</div>
-          <Select style={{ width: '100%' }} value={mergeRight || undefined} onChange={(v) => setMergeRight(v)}>
-            {groups.filter((g) => g.status !== 'DISSOLVED').map((g) => <Select.Option key={g.id} value={g.id}>{g.code} — {g.title}</Select.Option>)}
+          <div className="text-sm text-gray-600">{t(getKey('sub_group'))}</div>
+          <Select className="w-full" value={mergeRight || undefined} onChange={(v) => setMergeRight(v)}>
+            {groups.filter((g) => g.status !== STATUS_CODE.DISSOLVED).map((g) => <Select.Option key={g.id} value={g.id}>{g.code} — {g.title}</Select.Option>)}
           </Select>
         </div>
         <div>
-          <div className="text-sm text-gray-600">Preview</div>
+          <div className="text-sm text-gray-600">{t(getKey('preview'))}</div>
           <div className="p-3 border rounded">
-            {mergeLeft && mergeRight ? `${groups.find((g) => g.id === mergeLeft)!.members.length + groups.find((g) => g.id === mergeRight)!.members.length} thành viên` : 'Chọn 2 nhóm để xem preview'}
+            {mergeLeft && mergeRight ? t(getKey('members_count_label'), { count: formatNumber(groups.find((g) => g.id === mergeLeft)!.members.length + groups.find((g) => g.id === mergeRight)!.members.length) }) : t(getKey('select_groups_for_preview'))}
           </div>
         </div>
       </div>
 
       <div className="mt-4">
-        <div className="text-sm text-gray-600 mb-2">Chọn thành viên từ nhóm phụ để chuyển (mặc định chọn tất cả)</div>
-        {rightMembers.length === 0 ? <div className="text-sm text-gray-500">Chưa chọn nhóm phụ hoặc nhóm phụ không có thành viên</div> : (
+        <div className="text-sm text-gray-600 mb-2">{t(getKey('select_members_to_transfer'))}</div>
+        {rightMembers.length === 0 ? <div className="text-sm text-gray-500">{t(getKey('no_sub_group_or_no_members'))}</div> : (
           <div className="grid gap-2">
             {rightMembers.map((m) => (
               <label key={m.id} className="inline-flex items-center gap-2">

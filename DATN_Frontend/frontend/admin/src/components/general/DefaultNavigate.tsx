@@ -114,8 +114,8 @@ const DefaultNavigate = ({ collapsed, onToggle }: IDefaultNavigate) => {
       label: t(getKey('internship_students')),
       icon: <SolutionOutlined style={{ fontSize: 20 }} />,
       children: [
-        { key: ROUTES.INTERNSHIP_STUDENTS_CONFIRM, label: 'Quản lý sinh viên đăng ký giấy thực tập' },
-        { key: ROUTES.INTERNSHIP_STUDENTS_NOCOMPANY, label: 'Quản lý sinh viên chưa có công ty' },
+        { key: ROUTES.INTERNSHIP_STUDENTS_CONFIRM, label: t(getKey('internship_students_confirm')) },
+        { key: ROUTES.INTERNSHIP_STUDENTS_NOCOMPANY, label: t(getKey('internship_students_nocompany')) },
       ],
     },
     {
