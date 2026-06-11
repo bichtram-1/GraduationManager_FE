@@ -1,0 +1,216 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-primary: #155dfc;
+  --color-blue-medium: #3b82f6;
+  --color-base: #f0f0f0;
+  --color-white: #ffffff;
+  --color-black: #000000;
+  --color-near-black: #0a0a0a;
+  --color-slate-dark: #364153;
+  --color-blue-light: #eff6ff;
+  --color-indigo-light: #e0e7ff;
+  --color-gray-lightest: #f9fafb;
+  --color-gray-border: #e5e7eb;
+  --color-black-alpha-10: rgba(0, 0, 0, 0.1);
+  --color-shadow-sm: 0px 1px 3px 0px rgba(0, 0, 0, 0.1), 0px 1px 2px 0px rgba(0, 0, 0, 0.1);
+  --color-gold-medium: #D08700;
+  --color-gold-light: #FFF7E6;
+  --color-green-medium: #00A65A;
+  --color-green-light: #E8F9EE;
+  --color-red-medium: #C53030;
+  --color-red-light: #FFEDED;
+  --color-navy-dark: #101828;
+  --color-gray-dark: #4a5565;
+  --color-gray-medium: #6a7282;
+  --color-gray-silver: #d1d5dc;
+  --color-blue-google: #4285F4;
+  --color-blue-login-start: #1565c0;
+  --color-blue-login-mid: #1976d2;
+  --color-blue-login-end: #2196f3;
+  --shadow-login-btn: 0px 14px 28px rgba(25, 118, 210, 0.28);
+  --color-blue-md: #2196F3;
+  --color-green-md: #4CAF50;
+  --color-amber-md: #FFC107;
+  --color-red-md: #F44336;
+  --color-purple-lightest: #eeedfe;
+}
+
+/* Định nghĩa CSS tùy chỉnh cho thanh cuộn toàn cục */
+.ant-table-content, .ant-table-body {
+  scrollbar-width: thin !important; /* Firefox */
+  scrollbar-color: var(--color-primary) var(--color-base) !important; /* Firefox */
+
+  /* Webkit browsers */
+  &::-webkit-scrollbar {
+    width: 8px !important; /* Độ rộng thanh cuộn dọc */
+    height: 8px !important; /* Độ cao thanh cuộn ngang */
+    border-radius: 8px !important;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: var(--color-base) !important; /* Màu nền */
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: var(--color-primary) !important; /* Màu của thanh cuộn */
+    border-radius: 8px !important; /* Góc bo tròn */
+  }
+}
+
+/* Cố định chiều cao của Text Area */
+.ant-input {
+  resize: none !important;
+}
+
+/* Modal styles (Figma) */
+.ant-modal .ant-modal-content {
+  border: 0.8px solid rgba(0, 0, 0, 0.1) !important;
+  border-radius: 10px !important;
+}
+
+.ant-modal .ant-form-item-label > label {
+  font-size: 14px !important;
+  font-weight: 500 !important;
+}
+
+/* Áp dụng cho modal confirm*/
+.custom-confirm-modal .ant-modal-confirm-btns {
+  text-align: center !important;
+  margin-top: 24px;
+}
+
+.custom-confirm-modal .ant-btn {
+  margin: 0 8px;
+}
+
+/* Custom css pagination table */
+.ant-pagination .ant-pagination-total-text {
+  margin-right: auto !important;
+}
+
+/* Sidebar light menu styles (Figma) */
+.sidebar-light-menu.ant-menu-light .ant-menu-item,
+.sidebar-light-menu.ant-menu-light .ant-menu-submenu-title {
+  height: 48px !important;
+  line-height: 48px !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  border-radius: 10px !important;
+  margin-bottom: 8px !important;
+  font-size: 16px !important;
+  font-weight: 500 !important;
+  color: var(--color-slate-dark) !important;
+}
+
+.sidebar-light-menu .ant-menu-title-content {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.sidebar-light-menu.ant-menu-light .ant-menu-item-selected {
+  background-color: var(--color-blue-light) !important;
+  color: var(--color-primary) !important;
+}
+
+.sidebar-light-menu.ant-menu-light .ant-menu-item-selected .ant-menu-item-icon,
+.sidebar-light-menu.ant-menu-light .ant-menu-item-selected .anticon {
+  color: var(--color-primary) !important;
+}
+
+.sidebar-light-menu.ant-menu-light .ant-menu-item:not(.ant-menu-item-selected):hover {
+  background-color: var(--color-gray-lightest) !important;
+  color: var(--color-slate-dark) !important;
+}
+
+/* Resizer between sidebar and content */
+.sider-resizer {
+  background: transparent;
+}
+.sider-resizer:hover {
+  background: rgba(0,0,0,0.04);
+}
+
+/* FilterTable Figma styles */
+.filter-table-card {
+  border: 1px solid var(--color-gray-border) !important;
+  border-radius: 10px !important;
+  box-shadow: var(--color-shadow-sm) !important;
+}
+
+.filter-table-card .ant-card-body {
+  padding: 0 !important;
+}
+
+.filter-table-card .filter-table-header {
+  padding: 24px 24px 0 24px;
+}
+
+.filter-table-card .filter-table-title {
+  font-size: 18px !important;
+  font-weight: 600 !important;
+  color: var(--color-near-black) !important;
+  letter-spacing: -0.45px;
+  margin: 0 !important;
+  line-height: 18px;
+}
+
+.filter-table-card .ant-table-thead > tr > th,
+.filter-table-card .ant-table-thead > tr > td {
+  background: var(--color-gray-lightest) !important;
+  color: var(--color-slate-dark) !important;
+  font-weight: 500 !important;
+  font-size: 14px !important;
+  border-bottom: 1px solid var(--color-black-alpha-10) !important;
+  padding: 12px 24px !important;
+}
+
+.filter-table-card .ant-table-tbody > tr > td {
+  border-bottom: 1px solid var(--color-black-alpha-10) !important;
+  color: var(--color-near-black);
+  font-size: 14px;
+  font-weight: 400;
+  padding: 14px 24px !important;
+}
+
+.filter-table-card .ant-table-tbody > tr:last-child > td {
+  border-bottom: none !important;
+}
+
+.filter-table-card .ant-table-tbody > tr:hover > td {
+  background: var(--color-gray-lightest) !important;
+}
+
+.filter-table-card .ant-table {
+  border-radius: 0 !important;
+}
+
+.filter-table-card .ant-table-container {
+  border-radius: 0 !important;
+}
+
+/* Tabs underline and active color to match Figma */
+.ant-tabs-nav .ant-tabs-tab.ant-tabs-tab-active {
+  color: var(--color-primary) !important;
+}
+.ant-tabs-ink-bar {
+  background: var(--color-primary) !important;
+  height: 2px !important;
+  border-radius: 2px !important;
+}
+
+/* Inputs inside filter header: larger height and rounded */
+.filter-table-card .filter-table-header .ant-input,
+.filter-table-card .filter-table-header .ant-input-affix-wrapper {
+  height: 40px !important;
+  border-radius: 8px !important;
+}
+
+.filter-table-card .filter-table-header .ant-input::placeholder {
+  color: #98a0ab !important;
+}
