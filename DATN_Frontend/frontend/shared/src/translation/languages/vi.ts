@@ -511,6 +511,7 @@ const ViTranslation = {
   topic_missing_reviewer: 'Đề tài {{code}} chưa chọn GVPB',
   topic_missing_examiners: 'Đề tài {{code}} chưa chọn người chấm (nội bộ hoặc GV ngoài)',
   topic_missing_start_time: 'Đề tài {{code}} chưa nhập thời gian bắt đầu',
+  time: 'Thời gian',
   examiner_conflict: 'Người chấm nội bộ của {{code}} không được trùng GVHD hoặc GVPB',
   external_examiner_conflict: 'GV ngoài của {{code}} không được trùng GVHD hoặc GVPB',
   create_council_success: 'Đã tạo hội đồng và gom {{count}} đề tài theo GVHD',

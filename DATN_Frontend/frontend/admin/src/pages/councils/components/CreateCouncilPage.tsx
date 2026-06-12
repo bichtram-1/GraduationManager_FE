@@ -124,26 +124,24 @@ const CreateCouncilPage = () => {
   const [saved, setSaved] = useState(false);
   const [workflowTab, setWorkflowTab] = useState<WorkflowTab>('pick');
 
-  const availableAdvisorBuckets = useMemo(
-    () =>
-      ADVISOR_BUCKETS
-        .map((bucket) => ({
-          ...bucket,
-          topics: bucket.topics.filter((topic) => !topic.assignedCouncilId),
-        }))
-        .filter((bucket) => bucket.topics.length > 0),
-    [],
+  const [advisorBuckets, setAdvisorBuckets] = useState<AdvisorBucket[]>(() =>
+    ADVISOR_BUCKETS
+      .map((bucket) => ({
+        ...bucket,
+        topics: bucket.topics.filter((topic) => !topic.assignedCouncilId),
+      }))
+      .filter((bucket) => bucket.topics.length > 0)
   );
 
   const availableAdvisorOptions = useMemo(
     () =>
-      availableAdvisorBuckets.map((bucket) => ({
+      advisorBuckets.map((bucket) => ({
         value: bucket.advisorId,
         label: bucket.advisorName,
       })),
-    [availableAdvisorBuckets],
+    [advisorBuckets],
   );
-  const availableAdvisorIds = useMemo(() => new Set(availableAdvisorBuckets.map((bucket) => bucket.advisorId)), [availableAdvisorBuckets]);
+  const availableAdvisorIds = useMemo(() => new Set(advisorBuckets.map((bucket) => bucket.advisorId)), [advisorBuckets]);
   const memberIds = form.members;
 
   const teacherNameById = (id: string) => TEACHERS.find((teacher) => teacher.id === id)?.name ?? id;
@@ -183,6 +181,18 @@ const CreateCouncilPage = () => {
 
   const updateStartTimeForTopic = (topicId: string, startTime: string | null) => {
     setSelectedTopics((current) => current.map((topic) => (topic.id === topicId ? { ...topic, startTime } : topic)));
+  };
+
+  const updateTopicMinutes = (topicId: string, minutes: number) => {
+    setAdvisorBuckets((current) =>
+      current.map((bucket) => ({
+        ...bucket,
+        topics: bucket.topics.map((topic) => (topic.id === topicId ? { ...topic, minutes } : topic)),
+      }))
+    );
+    setSelectedTopics((current) =>
+      current.map((topic) => (topic.id === topicId ? { ...topic, minutes } : topic))
+    );
   };
 
   const moveSelectedTopic = (sourceId: string, targetId: string) => {
@@ -257,7 +267,7 @@ const CreateCouncilPage = () => {
   };
 
   const selectedCountByAdvisor = (advisorId: string) => selectedTopics.filter((topic) => topic.advisorId === advisorId).length;
-  const visibleAdvisorBuckets = availableAdvisorBuckets.filter((bucket) => memberIds.includes(bucket.advisorId));
+  const visibleAdvisorBuckets = advisorBuckets.filter((bucket) => memberIds.includes(bucket.advisorId));
   const committeeSummary = t(getKey('members_count_label'), { count: formatNumber(memberIds.length) });
 
   const openSortTab = () => {
@@ -479,7 +489,16 @@ const CreateCouncilPage = () => {
                                     <td className="px-4 py-3 align-top font-medium text-[var(--color-blue-md)]">{topic.topicCode}</td>
                                     <td className="px-4 py-3 align-top font-medium text-gray-900">{topic.topicName}</td>
                                     <td className="px-4 py-3 align-top text-xs text-gray-600">{topic.members.join(', ')}</td>
-                                    <td className="px-4 py-3 align-top text-gray-600">{t(getKey('minutes_suffix'), { count: formatNumber(topic.minutes) })}</td>
+                                    <td className="px-4 py-3 align-top">
+                                      <Input
+                                        type="number"
+                                        value={topic.minutes}
+                                        onChange={(e) => updateTopicMinutes(topic.id, parseInt(e.target.value) || 0)}
+                                        min={0}
+                                        className="w-24"
+                                        suffix="p"
+                                      />
+                                    </td>
                                   </tr>
                                 );
                               })}
@@ -570,7 +589,15 @@ const CreateCouncilPage = () => {
                           />
                         </td>
                         <td className="px-4 py-3 align-top">
-                          <Input type="time" value={topic.startTime || ''} onChange={(e) => updateStartTimeForTopic(topic.id, e.target.value || null)} />
+                          <Input
+                            type="datetime-local"
+                            value={topic.startTime || ''}
+                            onChange={(e) => updateStartTimeForTopic(topic.id, e.target.value || null)}
+                            className="w-full min-w-[200px]"
+                          />
+                          <div className="text-xs text-gray-500 mt-1">
+                            (Dự kiến: {topic.minutes}p)
+                          </div>
                         </td>
                       </tr>
                     ))}
