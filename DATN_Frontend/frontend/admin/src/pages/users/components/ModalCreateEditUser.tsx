@@ -100,9 +100,15 @@ const ModalCreateEditUser = ({ detail, mode = 'create', role }: IModalCreateEdit
         {t(getKey('add_user_desc'))}
       </p>
 
-      <Form.Item name="role" hidden initialValue={role}>
-        <Input />
-      </Form.Item>
+      {role === USER_ROLE.STUDENT ? (
+        <Form.Item name="role" hidden initialValue={USER_ROLE.STUDENT}>
+          <Input />
+        </Form.Item>
+      ) : (
+        <Form.Item name="role" hidden initialValue={USER_ROLE.TEACHER}>
+          <Input />
+        </Form.Item>
+      )}
 
       {/* ===== Họ tên + Email (2 cột) ===== */}
       <Flex gap={16}>
@@ -140,13 +146,20 @@ const ModalCreateEditUser = ({ detail, mode = 'create', role }: IModalCreateEdit
         <Form.Item
           label={role === USER_ROLE.STUDENT ? t(getKey('student_id')) : t(getKey('teacher_id'))}
           name="id"
-          rules={[{ required: isCreateMode, message: t(getKey('please_enter_user_id')) }]}
+          rules={[{ required: isCreateMode && role === USER_ROLE.STUDENT, message: t(getKey('please_enter_user_id')) }]}
           className="flex-1"
         >
-          <CustomInput
-            placeholder={role === USER_ROLE.STUDENT ? t(getKey('enter_student_id')) : t(getKey('enter_teacher_id'))}
-            readOnly={!isCreateMode || isDetailMode}
-          />
+          {isCreateMode && role === USER_ROLE.TEACHER ? (
+            <CustomInput
+              placeholder="Tự động tạo bởi hệ thống"
+              disabled
+            />
+          ) : (
+            <CustomInput
+              placeholder={role === USER_ROLE.STUDENT ? t(getKey('enter_student_id')) : t(getKey('enter_teacher_id'))}
+              readOnly={!isCreateMode || isDetailMode}
+            />
+          )}
         </Form.Item>
 
         <Form.Item
@@ -181,6 +194,72 @@ const ModalCreateEditUser = ({ detail, mode = 'create', role }: IModalCreateEdit
           />
         </Form.Item>
       </Flex>
+
+      {/* ===== Giới tính + Ngày sinh (2 cột) ===== */}
+      <Flex gap={16}>
+        <Form.Item label="Giới tính" name="gender" className="flex-1">
+          <Select
+            disabled={isDetailMode}
+            placeholder="Chọn giới tính"
+            options={[
+              { value: 'Nam', label: 'Nam' },
+              { value: 'Nu', label: 'Nữ' },
+              { value: 'Khac', label: 'Khác' },
+            ]}
+          />
+        </Form.Item>
+
+        <Form.Item label="Ngày sinh" name="dateOfBirth" className="flex-1">
+          <CustomInput
+            type="date"
+            readOnly={isDetailMode}
+            placeholder="YYYY-MM-DD"
+          />
+        </Form.Item>
+      </Flex>
+
+      {/* ===== Học vị + Chuyên môn + Vai trò chi tiết (Cho Giảng viên) ===== */}
+      {role === USER_ROLE.TEACHER && (
+        <>
+          <Flex gap={16}>
+            <Form.Item label="Học vị" name="academicDegree" className="flex-1">
+              <Select
+                disabled={isDetailMode}
+                placeholder="Chọn học vị"
+                options={[
+                  { value: 'ThS', label: 'Thạc sĩ (ThS)' },
+                  { value: 'TS', label: 'Tiến sĩ (TS)' },
+                  { value: 'PGS.TS', label: 'Phó Giáo sư, Tiến sĩ (PGS.TS)' },
+                  { value: 'GS.TS', label: 'Giáo sư, Tiến sĩ (GS.TS)' },
+                  { value: 'CN', label: 'Cử nhân (CN)' },
+                  { value: 'KS', label: 'Kỹ sư (KS)' },
+                ]}
+              />
+            </Form.Item>
+
+            <Form.Item label="Chuyên môn" name="specialization" className="flex-1">
+              <CustomInput
+                placeholder="Ví dụ: Phần mềm, An toàn thông tin"
+                readOnly={isDetailMode}
+              />
+            </Form.Item>
+          </Flex>
+
+          <Flex gap={16}>
+            <Form.Item label="Vai trò chi tiết" name="role" className="flex-1">
+              <Select
+                disabled={isDetailMode}
+                placeholder="Chọn vai trò"
+                options={[
+                  { value: USER_ROLE.TEACHER, label: 'Giảng viên (TEACHER)' },
+                  { value: USER_ROLE.ADMIN, label: 'Quản trị viên (ADMIN)' },
+                ]}
+              />
+            </Form.Item>
+            <div className="flex-1" />
+          </Flex>
+        </>
+      )}
 
       {/* ===== Mật khẩu — chỉ hiện ở create mode ===== */}
       {/* Edit mode: reset qua nút "Đặt lại mật khẩu" ở header, không cần field này */}

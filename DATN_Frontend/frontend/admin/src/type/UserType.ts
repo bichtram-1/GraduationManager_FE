@@ -20,7 +20,11 @@ interface IBaseUser {
   className?: string;
   phone?: string;
   avatar?: string;
-  achievement?: IValueLabel; // IValueLabel thay string ID — dùng được trực tiếp trong SearchSelect
+  achievement?: IValueLabel | null; // IValueLabel thay string ID — dùng được trực tiếp trong SearchSelect
+  gender?: 'Nam' | 'Nu' | 'Khac';
+  dateOfBirth?: string;
+  academicDegree?: string;
+  specialization?: string;
 }
 
 /** Dùng khi fetch detail 1 user (modal edit/detail) */
