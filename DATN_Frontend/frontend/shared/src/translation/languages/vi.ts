@@ -387,6 +387,7 @@ const ViTranslation = {
   student_management: 'Quản lý sinh viên',
   teacher_management: 'Quản lý giảng viên',
   please_enter_fullname: 'Vui lòng nhập họ tên',
+  fullname: 'Họ tên',
   filter_by_status: 'Lọc theo trạng thái',
   search_placeholder_student: 'Tìm theo MSSV, họ tên, email, lớp...',
   search_placeholder_teacher: 'Tìm theo mã giảng viên, họ tên, email, khoa...',

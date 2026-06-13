@@ -16,6 +16,8 @@ interface IBaseClass {
   members: IClassMember[];
   maxStudents: number;
   status: ClassStatus;
+  studentListUrl?: string;
+  studentListFileName?: string;
 }
 
 export interface IListClass extends IBaseClass {

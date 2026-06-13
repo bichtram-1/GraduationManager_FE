@@ -8,7 +8,7 @@ export interface UserLoginType {
 
 export interface DataLoginType {
   email: string;
-  password: string;
+  password?: string;
 }
 
 export interface DataLogoutType {

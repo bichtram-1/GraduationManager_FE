@@ -25,7 +25,7 @@ export const authApi = {
       } as ISignInResponse;
     }
 
-    const response = await axiosInstance.post('/v1/auth/login', body);
+    const response = await axiosInstance.post('/api/dang-nhap-gia-lap', body);
     return response?.data;
   },
   signOut: async (body: DataLogoutType) => {
@@ -33,12 +33,12 @@ export const authApi = {
       await new Promise((r) => setTimeout(r, MOCK_DELAY));
       return { results: {} } as IEmptyResponse;
     }
-    return await axiosInstance.post('/v1/auth/logout', body);
+    return await axiosInstance.post('/api/dang-xuat', body);
   },
   refreshToken(data: { refreshToken: string }) {
     if (USE_MOCK_AUTH) {
       return Promise.resolve({ results: { object: { accessToken: 'mock-access-token-new', refreshToken: 'mock-refresh-token' } } } as ISignInResponse);
     }
-    return axiosInstance.post('/v1/auth/refresh-token', data);
+    return axiosInstance.post('/api/lam-moi-token', data);
   },
 };

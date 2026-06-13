@@ -115,7 +115,7 @@ export const userApi = {
     }
 
     const response = await axiosInstance.get<ListResponseType<IListUser>>(
-      '/private/v1/users',
+      '/api/admin/sinh-vien',
       { params }
     );
     return response?.data?.results?.objects;
@@ -128,7 +128,7 @@ export const userApi = {
     }
 
     const response = await axiosInstance.get<DetailResponseType<IDetailUser>>(
-      `/private/v1/users/${id}`
+      `/api/admin/sinh-vien/${id}`
     );
     return response?.data?.results?.object;
   },
@@ -147,7 +147,7 @@ export const userApi = {
       } as IDetailUser;
     }
 
-    const response = await axiosInstance.post('/private/v1/users', body);
+    const response = await axiosInstance.post('/api/admin/sinh-vien', body);
     return response.data?.results?.object;
   },
 
@@ -165,7 +165,7 @@ export const userApi = {
       return { ...existed, ...body, id } as IDetailUser;
     }
 
-    const response = await axiosInstance.patch(`/private/v1/users/${id}`, body);
+    const response = await axiosInstance.patch(`/api/admin/sinh-vien/${id}`, body);
     return response.data?.results?.object;
   },
 
@@ -174,13 +174,13 @@ export const userApi = {
       return { success: true, id };
     }
 
-    const response = await axiosInstance.delete(`/private/v1/users/${id}`);
+    const response = await axiosInstance.delete(`/api/admin/sinh-vien/${id}`);
     return response.data;
   },
 
   resetUserPassword: async ({ id }: { id: string }) => {
     const response = await axiosInstance.post(
-      `/private/v1/users/${id}/reset-password`
+      `/api/admin/sinh-vien/${id}/reset-password`
     );
     return response.data?.results?.object ?? response.data;
   },

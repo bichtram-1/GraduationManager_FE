@@ -1,11 +1,10 @@
 import React from 'react';
-import { UploadOutlined } from '@ant-design/icons';
-import { Button, Form, Input, InputNumber, Select, Space, Typography, Upload, message } from 'antd';
+import { Form, Input, InputNumber, Select } from 'antd';
 import type { BatchType } from '../../../type/PeriodType';
-import { uploadApi } from '../../../api/uploadApi';
 import { useTranslation } from 'react-i18next';
 import { getKey } from '@shared/types/I18nKeyType';
 import { STATUS_CODE, DATE_DISPLAY_FORMAT } from '../../../constants/commonConst';
+import { classHooks } from '../../../hooks/useClasses';
 
 type Props = {
   tab: BatchType;
@@ -13,37 +12,24 @@ type Props = {
   allowStudentListUpload?: boolean;
 };
 
-const PeriodForm: React.FC<Props> = ({ tab, disabled, allowStudentListUpload = false }) => {
+const PeriodForm: React.FC<Props> = ({ tab, disabled }) => {
   const { t } = useTranslation();
   const form = Form.useFormInstance();
-  const [studentListFileName, setStudentListFileName] = React.useState('');
 
-  const handleStudentListUpload = async (file: File) => {
-    const isValidFile = /\.(csv|xls|xlsx)$/i.test(file.name);
-    if (!isValidFile) {
-      message.error(t(getKey('select_csv_excel_error')));
-      return false;
-    }
+  const { data: classesData, isLoading: isClassesLoading } = classHooks.useFetchListClasses();
+  const classesList = React.useMemo(() => {
+    if (!classesData) return [];
+    if (Array.isArray(classesData)) return classesData;
+    if (Array.isArray((classesData as any).rows)) return (classesData as any).rows;
+    return [];
+  }, [classesData]);
 
-    try {
-      const uploadedUrl = await uploadApi.uploadSingleAndGetUrl(file, 'users');
-      form.setFieldsValue({
-        studentListUrl: uploadedUrl,
-        studentListFileName: file.name,
-      });
-      setStudentListFileName(file.name);
-      message.success(t(getKey('upload_student_list_success')));
-    } catch {
-      form.setFieldsValue({
-        studentListUrl: undefined,
-        studentListFileName: undefined,
-      });
-      setStudentListFileName('');
-      message.error(t(getKey('upload_student_list_error')));
-    }
-
-    return false;
-  };
+  const classOptions = React.useMemo(() => {
+    return classesList.map((c: any) => ({
+      value: c.id,
+      label: `${c.code} - ${c.name}`,
+    }));
+  }, [classesList]);
 
   return (
     <>
@@ -51,47 +37,23 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled, allowStudentListUpload = f
         <Input />
       </Form.Item>
 
-      {allowStudentListUpload && !disabled && (
-        <Form.Item
-          name="studentListUrl"
-          label={t(getKey('upload_student_list_label'))}
-          rules={[{ required: true, message: t(getKey('upload_student_list_required')) }]}
-        >
-          <Space direction="vertical" size={8} className="w-full">
-            <Upload beforeUpload={handleStudentListUpload} maxCount={1} showUploadList={false} disabled={disabled}>
-              <Button icon={<UploadOutlined />} disabled={disabled}>
-                {t(getKey('select_csv_excel_file'))}
-              </Button>
-            </Upload>
-            <Typography.Text type="secondary">
-              {studentListFileName || t(getKey('no_file_uploaded'))}
-            </Typography.Text>
-          </Space>
-        </Form.Item>
-      )}
-
-      <Form.Item name="studentListFileName" hidden>
-        <Input />
+      <Form.Item
+        name="classIds"
+        label={t(getKey('class_label')) || 'Lớp học'}
+        rules={[{ required: true, message: 'Vui lòng chọn ít nhất một lớp học!' }]}
+      >
+        <Select
+          mode="multiple"
+          allowClear
+          loading={isClassesLoading}
+          disabled={disabled}
+          placeholder="Chọn các lớp học tham gia đợt..."
+          optionFilterProp="label"
+          options={classOptions}
+          className="w-full"
+        />
       </Form.Item>
 
-      {disabled && (form.getFieldValue('studentListUrl') || form.getFieldValue('studentListFileName')) && (
-        <div className="mb-4 rounded-md border border-slate-200 bg-slate-50/80 p-4">
-          <div className="text-sm font-medium text-gray-700">{t(getKey('uploaded_student_list'))}</div>
-          <div className="mt-2 flex flex-col gap-2 text-sm text-slate-600">
-            <span>
-              {t(getKey('file_label'))}:{' '}
-              <span className="font-medium text-slate-800">
-                {form.getFieldValue('studentListFileName') || t(getKey('no_file_name'))}
-              </span>
-            </span>
-            {form.getFieldValue('studentListUrl') ? (
-              <Button type="link" href={form.getFieldValue('studentListUrl')} target="_blank" rel="noreferrer" className="w-fit p-0">
-                {t(getKey('view_download_student_list'))}
-              </Button>
-            ) : null}
-          </div>
-        </div>
-      )}
 
       <Form.Item name="name" label={t(getKey('period_name_label'))} rules={[{ required: true, message: t(getKey('period_name_required')) }]}>
         <Input disabled={disabled} placeholder={tab === 'tttn' ? 'VD: TTTN HK1/2026-2027' : 'VD: ĐATN HK1/2026-2027'} />
