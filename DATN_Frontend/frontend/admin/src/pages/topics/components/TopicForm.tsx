@@ -36,7 +36,22 @@ const TopicForm: React.FC<Props> = ({ disabled = false }) => {
         />
       </Form.Item>
 
-      <Form.Item label={t(getKey('reject_reason'))} name="rejectReason" className="md:col-span-2">
+      <Form.Item
+        label={t(getKey('reject_reason'))}
+        name="rejectReason"
+        className="md:col-span-2"
+        dependencies={['status']}
+        rules={[
+          ({ getFieldValue }) => ({
+            validator(_, value) {
+              if (getFieldValue('status') === STATUS_CODE.REJECTED && (!value || !value.trim())) {
+                return Promise.reject(new Error(t(getKey('reject_reason_required'))));
+              }
+              return Promise.resolve();
+            },
+          }),
+        ]}
+      >
         <Input.TextArea disabled={disabled} rows={3} placeholder={t(getKey('please_enter_reject_reason'))} />
       </Form.Item>
     </div>

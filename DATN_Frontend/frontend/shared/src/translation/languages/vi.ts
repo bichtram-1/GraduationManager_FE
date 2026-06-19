@@ -140,6 +140,7 @@ const ViTranslation = {
   class_management: 'Quản lý lớp học',
   class_management_desc: 'Quản lý danh sách lớp học và giáo viên chủ nhiệm',
   create_class: 'Tạo lớp mới',
+  class_label: 'Lớp học',
   edit_class: 'Chỉnh sửa lớp học',
   detail_class: 'Chi tiết lớp học',
   period_management: 'Quản lý đợt',
@@ -311,7 +312,7 @@ const ViTranslation = {
   total_users_sub: '',
   students_per_course: 'Số lượng học viên theo khóa học',
   students_legend: 'Học viên',
-  learning_progress: 'Tiến độ học tập',
+  learning_progress: 'Tiến độ đề tài',
   recent_activities: 'Hoạt động gần đây',
   // Courses
   
@@ -405,7 +406,7 @@ const ViTranslation = {
   milestones_sub: 'Các cột mốc chính của kỳ hiện tại',
   last_updated: 'Cập nhật gần nhất',
   students_per_course_sub: 'Biểu đồ số lượng sinh viên theo khóa học',
-  learning_progress_sub: 'Phân bổ tiến độ học tập',
+  learning_progress_sub: 'Phân bổ tiến độ đề tài của sinh viên',
   company_registration: 'Đăng ký công ty',
   info_review: 'Duyệt thông tin',
   internship_start: 'Bắt đầu thực tập',
@@ -572,10 +573,14 @@ const ViTranslation = {
   please_enter_teacher: 'Vui lòng nhập giảng viên',
   please_enter_slots: 'Vui lòng nhập slot',
   please_enter_reject_reason: 'Nhập lý do từ chối (nếu có)',
+  reject_reason_required: 'Lý do từ chối là bắt buộc khi chuyển trạng thái đề tài sang Từ chối!',
   status_approved_topic: 'Đã duyệt',
   status_rejected_topic: 'Từ chối',
   add_topic_title: 'Thêm đề tài',
   proposing_teacher_label: 'Giảng viên đề xuất',
+  change_topic_status_approved_content: 'Đề tài sẽ được duyệt để sinh viên có thể đăng ký.',
+  change_topic_status_rejected_content: 'Đề tài sẽ bị chuyển sang trạng thái từ chối. Vui lòng nhập lý do:',
+  change_topic_status_pending_content: 'Đề tài sẽ được đưa về chờ duyệt để xem xét lại.',
 };
 
 export default ViTranslation;

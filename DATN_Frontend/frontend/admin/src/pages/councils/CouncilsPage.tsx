@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { message, Modal } from 'antd';
-import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EditOutlined, EyeOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import { councilHooks } from '../../hooks/useCouncils';
 import { ROUTES } from '../../constants/routers';
 import { useTranslation } from 'react-i18next';
 import { getKey } from '@shared/types/I18nKeyType';
@@ -31,68 +32,23 @@ type CouncilCard = {
   accent: 'blue' | 'green';
 };
 
-const COUNCIL_STATS = [
-  { value: 3, labelKey: 'active_councils' },
-  { value: 21, labelKey: 'eligible_groups' },
-  { value: 4, labelKey: 'rejected_groups' },
-  { value: 2, labelKey: 'cross_assessors' },
-];
-
-const COUNCILS: CouncilCard[] = [
-  {
-    id: 'HD01',
-    title: 'Hội đồng 1 — HK1/2024',
-    dateTime: '20/12/2024 · 08:00–12:00',
-    room: 'Phòng B1.01',
-    achieved: 8,
-    rejected: 1,
-    chair: ['TS. Nguyễn Văn A', 'TS. Trần Thị B'],
-    reviewer: ['TS. Phạm Văn D', 'TS. Hoàng Thị E'],
-    member: ['ThS. Nguyễn Thị F'],
-    topicGroups: [
-      { code: 'G01', title: 'IoT giám sát nông nghiệp', members: 2 },
-      { code: 'G02', title: 'AI nhận diện hình ảnh', members: 1 },
-      { code: 'G03', title: 'Nền tảng e-commerce', members: 2 },
-    ],
-    topics: [
-      { code: 'G01', title: 'IoT giám sát nông nghiệp', members: 2, examiners: ['TS. Lê Văn N'], startTime: '09:00' },
-      { code: 'G02', title: 'AI nhận diện hình ảnh', members: 1, examiners: ['ThS. Lê Thị Z'], externalExaminers: ['TS. Lý Văn G'], startTime: '10:00' },
-      { code: 'G03', title: 'Nền tảng e-commerce', members: 2 },
-    ],
-    external: [{ name: 'TS. Lý Văn G', council: 'HĐ2' }],
-    accent: 'blue',
-  },
-  {
-    id: 'HD02',
-    title: 'Hội đồng 2 — HK1/2024',
-    dateTime: '20/12/2024 · 13:30–17:30',
-    room: 'Phòng B1.02',
-    achieved: 7,
-    rejected: 2,
-    chair: ['TS. Lý Văn G', 'PGS. Mai Thị H'],
-    reviewer: ['TS. Đặng Văn I'],
-    member: [],
-    topicGroups: [
-      { code: 'G04', title: 'Quản lý ký túc xá', members: 1 },
-      { code: 'G05', title: 'Ứng dụng học tập gamification', members: 1 },
-    ],
-    topics: [
-      { code: 'G04', title: 'Quản lý ký túc xá', members: 1, examiners: ['TS. Phạm Văn K'], startTime: '13:30' },
-      { code: 'G05', title: 'Ứng dụng học tập gamification', members: 1, examiners: ['TS. Phạm Văn K'], startTime: '14:15' },
-    ],
-    accent: 'green',
-  },
-];
-
 const CouncilsPage: React.FC = () => {
   const { t } = useTranslation();
+  const { data: councils = [] } = councilHooks.useFetchListCouncils();
+  const deleteCouncilMutation = councilHooks.useDeleteCouncil();
   const [selectedCouncilForView, setSelectedCouncilForView] = useState<CouncilCard | null>(null);
   const [activeTab, setActiveTab] = useState<'list' | 'filter'>('list');
   const [query, setQuery] = useState('');
   const [roomFilter, setRoomFilter] = useState('all');
   const [sessionFilter, setSessionFilter] = useState<'all' | 'morning' | 'afternoon'>('all');
-  const [councils, setCouncils] = useState<CouncilCard[]>(COUNCILS);
   const navigate = useNavigate();
+
+  const councilStats = useMemo(() => [
+    { value: councils.length, labelKey: 'active_councils' },
+    { value: councils.reduce((acc, c) => acc + (c.topicGroups?.length ?? 0), 0), labelKey: 'eligible_groups' },
+    { value: councils.reduce((acc, c) => acc + (c.rejected ?? 0), 0), labelKey: 'rejected_groups' },
+    { value: councils.reduce((acc, c) => acc + (c.chair?.length ?? 0) + (c.reviewer?.length ?? 0), 0), labelKey: 'cross_assessors' },
+  ], [councils]);
 
   const getSession = (dateTime: string) => {
     const matched = dateTime.match(/(\d{2}):(\d{2})/);
@@ -127,8 +83,14 @@ const CouncilsPage: React.FC = () => {
     if (!council) return;
     const confirmed = window.confirm(t(getKey('confirm_delete_council'), { title: council.title }));
     if (!confirmed) return;
-    setCouncils((prev) => prev.filter((item) => item.id !== councilId));
-    message.success(t(getKey('delete_council_success')));
+    deleteCouncilMutation.mutate(councilId, {
+      onSuccess: () => {
+        message.success(t(getKey('delete_council_success')));
+      },
+      onError: (err: any) => {
+        message.error(err.message || t(getKey('config_error_message')));
+      }
+    });
   };
 
   const handleViewCouncil = (councilId: string) => {
@@ -234,7 +196,7 @@ const CouncilsPage: React.FC = () => {
         )}
 
         <div className="stats">
-          {COUNCIL_STATS.map((s) => (
+          {councilStats.map((s) => (
             <div className="scard" key={s.labelKey}>
               <div className="sv">{formatNumber(s.value)}</div>
               <div className="mt-1.5 text-[var(--color-text-secondary)] text-xs">{t(getKey(s.labelKey as any))}</div>

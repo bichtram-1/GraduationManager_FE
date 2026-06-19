@@ -16,6 +16,12 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled }) => {
   const { t } = useTranslation();
   const form = Form.useFormInstance();
 
+  React.useEffect(() => {
+    if (form) {
+      form.setFieldValue('type', tab);
+    }
+  }, [form, tab]);
+
   const { data: classesData, isLoading: isClassesLoading } = classHooks.useFetchListClasses();
   const classesList = React.useMemo(() => {
     if (!classesData) return [];
@@ -33,7 +39,7 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled }) => {
 
   return (
     <>
-      <Form.Item name="type" hidden>
+      <Form.Item name="type" initialValue={tab} hidden>
         <Input />
       </Form.Item>
 

@@ -3,7 +3,6 @@ import {
   Button,
   Card,
   Descriptions,
-  Divider,
   Form,
   Input,
   InputNumber,
@@ -13,7 +12,6 @@ import {
   Table,
   Tag,
   Tabs,
-  Typography,
   Row,
   Col,
 } from 'antd';
@@ -23,6 +21,8 @@ import { useTranslation } from 'react-i18next';
 import { getKey, I18nKey } from '@shared/types/I18nKeyType';
 import { STATUS_CODE, cn } from '../../constants/commonConst';
 import { formatNumber } from '@shared/utils/numberUtils';
+import { useGlobalVariable } from '../../hooks/GlobalVariableProvider';
+import { scoreHooks } from '../../hooks/useScores';
 
 type ScoreMode = 'internship' | 'project';
 type ScoreStatus = 'draft' | 'reviewing' | 'finalized';
@@ -65,35 +65,10 @@ const scoreBand = (score: number) => {
   return { labelKey: 'score_failed' as const, className: '!bg-[var(--color-red-light)] !text-[var(--color-red-medium)]' };
 };
 
-const normalizeText = (v?: string) => (v ?? '').toLowerCase().trim();
-
-const buildFinalScore = (mode: ScoreMode, values: Partial<Record<string, number>>) => {
-  if (mode === 'internship') return Number((Number(values.finalScore ?? 0)).toFixed(1));
-  const defense = Number(values.defenseScore ?? 0);
-  const demo = Number(values.demoScore ?? 0);
-  const qa = Number(values.qaScore ?? 0);
-  const report = Number(values.reportScore ?? 0);
-  const componentTotal = defense + demo + qa; // max 10
-  const final = componentTotal * 0.8 + report * 0.2;
-  return Number(final.toFixed(1));
-};
-
-const initialInternships: InternshipScoreRow[] = [
-  { id: 'IS001', studentId: '20520001', studentName: 'Nguyễn Văn A', className: 'KTPM2020', mentor: 'Trần Văn Hùng', period: 'Đợt 1', companyName: 'FPT Software', finalScore: 8.7, status: 'finalized' },
-  { id: 'IS002', studentId: '20520002', studentName: 'Trần Thị B', className: 'CNPM2020', mentor: 'Lê Thị Mai', period: 'Đợt 2', companyName: 'VNG Corp', finalScore: 8.0, status: 'reviewing' },
-];
-
-const initialProjects: ProjectScoreRow[] = [
-  { id: 'PJ001', studentId: '20521001', studentName: 'Đặng Văn E', className: 'KTPM2021', mentor: 'Nguyễn Minh Quân', period: 'Đợt 1', topicName: 'Hệ thống quản lý học tập', defenseScore: 2.7, demoScore: 4.4, qaScore: 1.8, reportScore: 8.5, finalScore: 0, status: 'finalized' },
-  { id: 'PJ002', studentId: '20521002', studentName: 'Bùi Thị F', className: 'CNPM2021', mentor: 'Trần Thị Hạnh', period: 'Đợt 2', topicName: 'Ứng dụng quản lý công việc', defenseScore: 2.3, demoScore: 3.6, qaScore: 1.9, reportScore: 8.0, finalScore: 0, status: 'reviewing' },
-];
-initialProjects.forEach((p) => { p.finalScore = buildFinalScore('project', p as any); });
-
 const StudentScoresPage: React.FC = () => {
   const { t } = useTranslation();
+  const { selectedPeriod } = useGlobalVariable();
   const [mode, setMode] = useState<ScoreMode>('internship');
-  const [internshipData, setInternshipData] = useState(initialInternships);
-  const [projectData, setProjectData] = useState(initialProjects);
   const [editOpen, setEditOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<ScoreRow | null>(null);
@@ -103,20 +78,20 @@ const StudentScoresPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<'all' | ScoreStatus>('all');
   const [classFilter, setClassFilter] = useState<string | undefined>(undefined);
 
-  const sourceRows = mode === 'internship' ? internshipData : projectData;
+  const updateScoreMutation = scoreHooks.useUpdateScore();
 
-  const filteredRows = useMemo(() => {
-    const k = normalizeText(keyword);
-    return sourceRows.filter((row) => {
-      if (statusFilter !== 'all' && row.status !== statusFilter) return false;
-      if (classFilter && normalizeText(row.className) !== normalizeText(classFilter)) return false;
-      if (k) {
-        const subj = 'companyName' in row ? row.companyName : (row as ProjectScoreRow).topicName;
-        return [row.studentId, row.studentName, subj].some((v) => normalizeText(String(v)).includes(k));
-      }
-      return true;
-    });
-  }, [sourceRows, keyword, statusFilter, classFilter]);
+  // Fetch score data from API
+  const { data: scoresData, isLoading } = scoreHooks.useFetchListScores({
+    periodId: selectedPeriod?.id || '',
+    mode,
+    keyword,
+    className: classFilter,
+    status: statusFilter === 'all' ? undefined : statusFilter,
+  });
+
+  const sourceRows = useMemo(() => (scoresData?.rows ?? []) as ScoreRow[], [scoresData]);
+
+  const filteredRows = sourceRows;
 
   const summary = useMemo(() => {
     const total = sourceRows.length;
@@ -135,22 +110,36 @@ const StudentScoresPage: React.FC = () => {
   const openEditModal = (record: ScoreRow) => {
     setEditingRecord(record);
     setEditOpen(true);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     editForm.setFieldsValue({ ...record } as any);
   };
 
   const handleSaveEdit = async () => {
     const values = await editForm.validateFields();
     if (!editingRecord) return;
-    if ('companyName' in editingRecord) {
-      const nextFinal = buildFinalScore('internship', values);
-      setInternshipData((prev) => prev.map((p) => (p.id === editingRecord.id ? ({ ...p, ...(values as any), finalScore: nextFinal } as InternshipScoreRow) : p)));
-    } else {
-      const nextFinal = buildFinalScore('project', values as any);
-      setProjectData((prev) => prev.map((p) => (p.id === editingRecord.id ? ({ ...p, ...(values as any), finalScore: nextFinal } as ProjectScoreRow) : p)));
-    }
-    setEditOpen(false);
-    setEditingRecord(null);
-    editForm.resetFields();
+
+    updateScoreMutation.mutate(
+      {
+        id: editingRecord.id,
+        body: {
+          mode,
+          status: values.status,
+          finalScore: values.finalScore,
+          defenseScore: values.defenseScore,
+          demoScore: values.demoScore,
+          qaScore: values.qaScore,
+          reportScore: values.reportScore,
+          dot_id: selectedPeriod?.id ? Number(selectedPeriod.id) : undefined,
+        },
+      },
+      {
+        onSuccess: () => {
+          setEditOpen(false);
+          setEditingRecord(null);
+          editForm.resetFields();
+        },
+      }
+    );
   };
 
   const openDetailModal = (record: ScoreRow) => { setDetailRecord(record); setDetailOpen(true); };
@@ -189,7 +178,7 @@ const StudentScoresPage: React.FC = () => {
     if (!editingRecord) return null;
     const isIntern = 'companyName' in editingRecord;
     return (
-      <Form form={editForm} layout="vertical" initialValues={editingRecord as any}>
+      <Form form={editForm} layout="vertical" initialValues={editingRecord}>
         <Row gutter={16}>
           {isIntern ? (
             <Col span={24}>
@@ -232,7 +221,7 @@ const StudentScoresPage: React.FC = () => {
   };
 
   return (
-    <div className="pb-4">
+    <div className="text-gray-800 pb-4">
       <div className="mb-5 rounded-[22px] border border-slate-100 bg-white px-6 py-5 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
         <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-[var(--color-blue-light)] px-3 py-1 text-xs font-medium text-[var(--color-primary)]">
           <FileDoneOutlined /> {t(getKey('student_score_management'))}
@@ -244,6 +233,14 @@ const StudentScoresPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {selectedPeriod && (
+        <div className={cn('mb-5 p-4 rounded-[18px] border flex items-center justify-between shadow-[0_12px_28px_rgba(15,23,42,0.02)] bg-blue-50 border-blue-200 text-blue-700')}>
+          <div>
+            {t(getKey('showing'))} {t(getKey('student_score_management'))} {t(getKey('of'))}: <strong className="underline">{selectedPeriod.name}</strong>
+          </div>
+        </div>
+      )}
 
       <div className="mb-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Card className="rounded-[18px] border border-slate-100 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
@@ -332,7 +329,7 @@ const StudentScoresPage: React.FC = () => {
             </div>
           </div>
 
-          <Table rowKey="id" dataSource={filteredRows} columns={columns} scroll={{ x: 1300 }} />
+          <Table rowKey="id" dataSource={filteredRows} columns={columns} scroll={{ x: 1300 }} loading={isLoading} />
         </div>
       </div>
 

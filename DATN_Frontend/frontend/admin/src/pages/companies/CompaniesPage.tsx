@@ -37,15 +37,7 @@ type CompanyRow = {
   status: CompanyStatus;
   reviewStatus: ReviewStatus;
 };
-
-const COMPANY_ROWS: CompanyRow[] = [
-  { id: 'C001', name: 'FPT Software', taxId: '0101243150', field: 'Phần mềm & công nghệ', contact: 'Nguyễn Văn Hùng', phone: '0901234567', email: 'hungnv@fpt.com', partners: 4, students: 18, status: 'active', reviewStatus: 'approved' },
-  { id: 'C002', name: 'VNG Corporation', taxId: '0303010740', field: 'Công nghệ số', contact: 'Lê Thị Mai', phone: '0909111222', email: 'mai.lt@vng.com', partners: 2, students: 9, status: 'active', reviewStatus: 'approved' },
-  { id: 'C003', name: 'TMA Solutions', taxId: '0309876543', field: 'Gia công phần mềm', contact: 'Trần Minh Khoa', phone: '0933444555', email: 'khoa.tm@tma.com', partners: 1, students: 5, status: 'pending', reviewStatus: 'pending' },
-  { id: 'C004', name: 'Shopee Vietnam', taxId: '0315643210', field: 'Thương mại điện tử', contact: 'Phạm Thị Linh', phone: '0911222333', email: 'linh.pt@shopee.vn', partners: 3, students: 12, status: 'paused', reviewStatus: 'rejected' },
-];
-
-const getReviewMeta = (t: any) => ({
+const getReviewMeta = (t: (key: string) => string) => ({
   [STATUS_CODE.APPROVED]: { label: t(getKey('status_approved')), className: 'bg-[var(--color-green-light)] text-[var(--color-green-medium)]' },
   [STATUS_CODE.REJECTED]: { label: t(getKey('status_rejected')), className: 'bg-[var(--color-red-light)] text-[var(--color-red-medium)]' },
   [STATUS_CODE.PENDING]: { label: t(getKey('status_pending')), className: 'bg-[var(--color-gold-light)] text-[var(--color-gold-medium)]' },
@@ -59,7 +51,7 @@ const CompaniesPage = () => {
   const createCompanyMutation = companyHooks.useCreateCompany();
   const updateCompanyMutation = companyHooks.useUpdateCompany();
   const deleteCompanyMutation = companyHooks.useDeleteCompany();
-  const companyRows = (companyList?.rows ?? COMPANY_ROWS) as CompanyRow[];
+  const companyRows = (companyList?.rows ?? []) as CompanyRow[];
 
   const useFilteredCompanyListQuery = (params: BaseListParams) => {
     const query = companyHooks.useFetchListCompanies();

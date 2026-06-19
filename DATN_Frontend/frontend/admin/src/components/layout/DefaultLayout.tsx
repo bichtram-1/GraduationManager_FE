@@ -1,5 +1,7 @@
 import { useState, Suspense, useRef, useEffect } from 'react';
 import { App, Layout } from 'antd';
+import { useQueryClient } from '@tanstack/react-query';
+import { QueryKey } from '../../constants/queryKey';
 
 import { Outlet } from 'react-router-dom';
 import {
@@ -12,6 +14,120 @@ import DefaultHeader from '../general/DefaultHeader';
 import Loading from '../shared/general/Loading';
 
 const { Header, Sider, Content } = Layout;
+
+const RealtimeListener = () => {
+  const { notification } = App.useApp();
+  const queryClient = useQueryClient();
+
+  // Use refs to keep stable references to notification and queryClient,
+  // preventing the SSE connection from resetting/recreating on every layout re-render.
+  const notificationRef = useRef(notification);
+  const queryClientRef = useRef(queryClient);
+
+  useEffect(() => {
+    notificationRef.current = notification;
+  }, [notification]);
+
+  useEffect(() => {
+    queryClientRef.current = queryClient;
+  }, [queryClient]);
+
+  useEffect(() => {
+    const backendUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+    let lastEventId = '';
+    let eventSource: EventSource | null = null;
+
+    const connectSSE = () => {
+      const url = `${backendUrl}/v1/realtime/stream` + (lastEventId ? `?last_event_id=${lastEventId}` : '');
+      eventSource = new EventSource(url);
+
+      eventSource.addEventListener('connected', (e: MessageEvent) => {
+        try {
+          const res = JSON.parse(e.data);
+          console.log('Realtime SSE connected:', res);
+        } catch (err) {
+          console.error(err);
+        }
+      });
+
+      eventSource.addEventListener('notification', (e: MessageEvent) => {
+        try {
+          const data = JSON.parse(e.data);
+          notificationRef.current.info({
+            message: data.title || 'Thông báo mới',
+            description: data.message || '',
+            placement: 'topRight',
+            duration: 6,
+          });
+
+          // Invalidate lists in query client
+          if (data.type === 'topic_proposed') {
+            queryClientRef.current.invalidateQueries({ queryKey: [QueryKey.topics.list] });
+          } else if (data.type === 'internship_declared' || data.type === 'internship_updated') {
+            queryClientRef.current.invalidateQueries({ queryKey: [QueryKey.internships.confirmations.list] });
+            queryClientRef.current.invalidateQueries({ queryKey: [QueryKey.companies.list] });
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      });
+
+      eventSource.addEventListener('score_updated', (e: MessageEvent) => {
+        try {
+          const data = JSON.parse(e.data);
+          console.log('Realtime score updated:', data);
+          queryClientRef.current.invalidateQueries({ queryKey: ['scores'] });
+
+          notificationRef.current.success({
+            message: 'Cập nhật điểm số',
+            description: 'Điểm của sinh viên vừa được hội đồng cập nhật realtime.',
+            placement: 'bottomRight',
+            duration: 4,
+          });
+        } catch (err) {
+          console.error(err);
+        }
+      });
+
+      eventSource.addEventListener('slot_updated', (e: MessageEvent) => {
+        try {
+          const data = JSON.parse(e.data);
+          console.log('Realtime slot/group updated:', data);
+          queryClientRef.current.invalidateQueries({ queryKey: [QueryKey.topics.list] });
+          queryClientRef.current.invalidateQueries({ queryKey: [QueryKey.groups.list] });
+          queryClientRef.current.invalidateQueries({ queryKey: [QueryKey.classes.list] });
+
+          notificationRef.current.open({
+            message: 'Đồng bộ hệ thống',
+            description: 'Thông tin đăng ký đề tài, nhóm và lớp học vừa được cập nhật realtime.',
+            placement: 'bottomRight',
+            duration: 4,
+          });
+        } catch (err) {
+          console.error(err);
+        }
+      });
+
+      eventSource.onerror = (err) => {
+        console.error('SSE connection error:', err);
+        if (eventSource) {
+          eventSource.close();
+        }
+        setTimeout(connectSSE, 5000);
+      };
+    };
+
+    connectSSE();
+
+    return () => {
+      if (eventSource) {
+        eventSource.close();
+      }
+    };
+  }, []);
+
+  return null;
+};
 
 const AppLayout = () => {
   const [collapsed, setCollapsed] = useState<boolean>(false);
@@ -98,6 +214,7 @@ const AppLayout = () => {
           >
             <Suspense fallback={<Loading />}>
               <App>
+                <RealtimeListener />
                 <Outlet />
               </App>
             </Suspense>
