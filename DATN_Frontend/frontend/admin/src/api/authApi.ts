@@ -26,7 +26,34 @@ export const authApi = {
     }
 
     const response = await axiosInstance.post('/api/dang-nhap-gia-lap', body);
-    return response?.data;
+    const resData = response?.data;
+
+    if (resData?.success && resData?.data) {
+      const backendData = resData.data;
+      let mappedRole = 'student';
+      if (backendData.role === 'ADMIN') {
+        mappedRole = 'admin';
+      } else if (backendData.role === 'GIANG_VIEN') {
+        mappedRole = 'teacher';
+      }
+
+      return {
+        results: {
+          object: {
+            accessToken: backendData.access_token,
+            refreshToken: backendData.refresh_token,
+            user: {
+              id: String(backendData.user?.giang_vien_id || backendData.user?.sinh_vien_id || 'u-unknown'),
+              full_name: backendData.user?.ho_ten || 'Người dùng',
+              email: backendData.user?.email,
+              role: mappedRole,
+            },
+          },
+        },
+      } as ISignInResponse;
+    }
+
+    return resData;
   },
   signOut: async (body: DataLogoutType) => {
     if (USE_MOCK_AUTH) {
