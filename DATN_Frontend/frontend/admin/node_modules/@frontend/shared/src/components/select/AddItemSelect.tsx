@@ -9,9 +9,9 @@ interface AddItemSelectProps {
   fieldNames?: OptionItem;
   multiple?: 'multiple' | 'tags' | undefined;
   options: OptionItem[];
-  value?: unknown;
+  value?: any;
   onChange?: (value: unknown) => void;
-  style?: unknown;
+  style?: React.CSSProperties;
   size?: 'small' | 'middle' | 'large';
 }
 
@@ -37,7 +37,7 @@ export const AddItemSelect: React.FC<AddItemSelectProps> = ({
       optionLabelProp="label"
       labelInValue={true}
       className="custom-select-tags"
-      popupClassName="custom-dropdown"
+      classNames={{ popup: { root: 'custom-dropdown' } }}
       placeholder={placeholder}
       mode={multiple}
       fieldNames={fieldNames}

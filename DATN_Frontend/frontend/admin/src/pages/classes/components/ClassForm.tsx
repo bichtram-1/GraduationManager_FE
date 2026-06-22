@@ -5,6 +5,7 @@ import type { IDetailClass } from '../../../type/ClassType';
 import { useTranslation } from 'react-i18next';
 import { getKey } from '@shared/types/I18nKeyType';
 import { uploadApi } from '../../../api/uploadApi';
+import * as XLSX from 'xlsx';
 
 type Props = {
   disabled?: boolean;
@@ -26,6 +27,82 @@ const ClassForm: React.FC<Props> = ({ disabled = false, detail }) => {
     }
   }, [detail, form]);
 
+  const parseExcelFile = (file: File): Promise<Array<{ id: string; name: string; code: string }>> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target?.result as ArrayBuffer);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+
+          if (rows.length <= 1) {
+            resolve([]);
+            return;
+          }
+
+          // Tìm dòng tiêu đề
+          let headerRowIndex = 0;
+          let mssvCol = 0;
+          let nameCol = 1;
+
+          for (let i = 0; i < Math.min(3, rows.length); i++) {
+            const row = rows[i];
+            if (!row) continue;
+            for (let colIndex = 0; colIndex < row.length; colIndex++) {
+              const cellValue = row[colIndex];
+              if (cellValue === undefined || cellValue === null) continue;
+              const cellClean = String(cellValue).toLowerCase().trim();
+              if (
+                cellClean.includes('mssv') ||
+                cellClean.includes('mã số') ||
+                cellClean.includes('sinh viên id') ||
+                cellClean.includes('code') ||
+                cellClean.includes('ms')
+              ) {
+                mssvCol = colIndex;
+                headerRowIndex = i;
+              }
+              if (
+                cellClean.includes('họ tên') ||
+                cellClean.includes('tên') ||
+                cellClean.includes('name') ||
+                cellClean.includes('fullname')
+              ) {
+                nameCol = colIndex;
+                headerRowIndex = i;
+              }
+            }
+          }
+
+          const parsedMembers: Array<{ id: string; name: string; code: string }> = [];
+          for (let rowIndex = headerRowIndex + 1; rowIndex < rows.length; rowIndex++) {
+            const row = rows[rowIndex];
+            if (!row) continue;
+            const code = row[mssvCol] ? String(row[mssvCol]).trim() : '';
+            const name = row[nameCol] ? String(row[nameCol]).trim() : '';
+
+            if (code && name) {
+              parsedMembers.push({
+                id: `s_${Date.now()}_${rowIndex}`,
+                name,
+                code,
+              });
+            }
+          }
+
+          resolve(parsedMembers);
+        } catch (err) {
+          reject(err);
+        }
+      };
+      reader.onerror = (err) => reject(err);
+      reader.readAsArrayBuffer(file);
+    });
+  };
+
   const handleStudentListUpload = async (file: File) => {
     const isValidFile = /\.(csv|xls|xlsx)$/i.test(file.name);
     if (!isValidFile) {
@@ -35,13 +112,17 @@ const ClassForm: React.FC<Props> = ({ disabled = false, detail }) => {
 
     try {
       const uploadedUrl = await uploadApi.uploadSingleAndGetUrl(file, 'users');
+      const parsedMembers = await parseExcelFile(file);
+
       form.setFieldsValue({
         studentListUrl: uploadedUrl,
         studentListFileName: file.name,
+        members: parsedMembers,
       });
       setStudentListFileName(file.name);
       message.success(t(getKey('upload_student_list_success')) || 'Tải danh sách sinh viên thành công!');
-    } catch {
+    } catch (err) {
+      console.error(err);
       form.setFieldsValue({
         studentListUrl: undefined,
         studentListFileName: undefined,

@@ -6,7 +6,7 @@ import { FC, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 // Định nghĩa đối tượng ánh xạ giữa mã ngôn ngữ và đối tượng locale của antd
-const localeMappings: { [key: string]: unknown } = {
+const localeMappings: { [key: string]: any } = {
   en: enUS,
   vi: viVN,
   fr: frFR,

@@ -6,6 +6,7 @@ export interface IAssignmentListParams extends BaseListParams {
   status?: AssignmentStatus | 'all';
   className?: string | 'all';
   supervisor?: string | 'all';
+  periodId?: string;
 }
 
 export const assignmentApi = {
