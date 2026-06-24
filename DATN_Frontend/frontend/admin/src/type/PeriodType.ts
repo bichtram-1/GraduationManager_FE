@@ -10,6 +10,8 @@ interface IBasePeriod {
   studentListUrl?: string;
   studentListFileName?: string;
   classIds?: string[];
+  externalStudentIds?: string[];
+  externalStudents?: any[];
   numberDN?: number;
   numberSV?: number;
   numberTopics?: number;
