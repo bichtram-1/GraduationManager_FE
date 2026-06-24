@@ -28,6 +28,7 @@ const AssignmentsPage = () => {
   const [assignmentModalOpen, setAssignmentModalOpen] = useState(false);
   const [assignmentModalMode, setAssignmentModalMode] = useState<AssignmentModalMode>('create');
   const [selectedAssignment, setSelectedAssignment] = useState<AssignmentRow | null>(null);
+  const [manualClassFilter, setManualClassFilter] = useState('all');
   const [form] = Form.useForm();
   const { data: assignmentList } = assignmentHooks.useFetchListAssignments({ page: 1, limit: 1000 });
   const { data: teachers = [] } = assignmentHooks.useFetchTeachers();
@@ -35,11 +36,17 @@ const AssignmentsPage = () => {
   const updateAssignmentMutation = assignmentHooks.useUpdateAssignment();
 
   const rows = assignmentList?.rows ?? [];
+  const classOptions = useMemo(
+    () => Array.from(new Set(rows.map((r) => r.className))),
+    [rows]
+  );
   const assignedCount = rows.filter((r) => r.status === STATUS_CODE.ASSIGNED).length;
 
   const filtered = useMemo(
-    () => rows.filter((r) => r.status === STATUS_CODE.UNASSIGNED),
-    [rows],
+    () => rows
+      .filter((r) => r.status === STATUS_CODE.UNASSIGNED)
+      .filter((r) => manualClassFilter === 'all' || r.className === manualClassFilter),
+    [rows, manualClassFilter],
   );
 
   const filteredAssignedRows = useMemo(
@@ -207,11 +214,15 @@ const AssignmentsPage = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   <Tag className="rounded-full m-0">{t(getKey('selected_count_label'), { count: formatNumber(Object.values(selectedStudents).filter(Boolean).length) })}</Tag>
-                  <Select defaultValue="all" className="w-[140px]">
-                    <Select.Option value="all">{t(getKey('all'))}</Select.Option>
-                    <Select.Option value="k2020">{t(getKey('course_class'))} 2020</Select.Option>
-                    <Select.Option value="ktpm">KTPM</Select.Option>
-                  </Select>
+                  <Select
+                    value={manualClassFilter}
+                    onChange={(value) => setManualClassFilter(value)}
+                    className="w-[180px]"
+                    options={[
+                      { value: 'all', label: t(getKey('all_classes')) },
+                      ...classOptions.map((c) => ({ value: c, label: c }))
+                    ]}
+                  />
                 </div>
               </div>
 
@@ -344,7 +355,7 @@ const AssignmentsPage = () => {
             filterRender={() => (
               <div className="mb-4 flex flex-wrap gap-3 items-center">
                 <Form.Item name="className" className="m-0">
-                  <Select allowClear className="min-w-[180px]" options={[{ value: 'all', label: t(getKey('all_classes')) }, { value: 'KTPM2020', label: 'KTPM2020' }, { value: 'CNPM2020', label: 'CNPM2020' }]} />
+                  <Select allowClear className="min-w-[180px]" options={[{ value: 'all', label: t(getKey('all_classes')) }, ...classOptions.map((c) => ({ value: c, label: c }))]} />
                 </Form.Item>
                 <Form.Item name="supervisor" className="m-0">
                   <Select allowClear className="min-w-[180px]" options={[{ value: 'all', label: t(getKey('all_teachers')) }, ...teachers.map((t) => ({ value: t.name, label: t.name }))]} />

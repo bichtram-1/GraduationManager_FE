@@ -87,11 +87,12 @@ const DefaultNavigate = ({ collapsed, onToggle }: IDefaultNavigate) => {
     },
     {
       key: ROUTES.GROUPS,
-      label: 'Quản lý nhóm',
+      label: t(getKey('group_management')),
       icon: <TeamOutlined style={{ fontSize: 20 }} />,
       children: [
-        { key: ROUTES.GROUPS, label: 'Danh sách nhóm' },
-        { key: ROUTES.GROUPS_REVIEW, label: 'Duyệt nhóm đồ án' },
+        { key: ROUTES.GROUPS, label: t(getKey('group_list')) },
+        { key: ROUTES.GROUPS_REVIEW, label: t(getKey('group_review')) },
+        { key: ROUTES.GROUPS_STUDENTS, label: t(getKey('thesis_students_management')) || 'Danh sách sinh viên ĐATN' },
       ],
     },
     {
@@ -120,7 +121,7 @@ const DefaultNavigate = ({ collapsed, onToggle }: IDefaultNavigate) => {
     },
     {
       key: ROUTES.PERIODS,
-      label: 'Quản lý đợt',
+      label: t(getKey('period_management')),
       icon: <DashboardOutlined style={{ fontSize: 20 }} />,
     },
     // Courses menu removed

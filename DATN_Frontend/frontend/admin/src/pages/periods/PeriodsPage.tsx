@@ -183,6 +183,10 @@ const PeriodsPage = () => {
           updateInfo={{ type: 'modal', modalInfo: { modalContent: <PeriodForm tab={tab} />, modalProps: { centered: true, width: 820, title: t(getKey('edit_period')) }, modalFunc: updatePeriodMutation } }}
           detailInfo={{ type: 'modal', modalInfo: { modalContent: <PeriodForm tab={tab} disabled />, modalProps: { centered: true, width: 820, title: t(getKey('detail_period')), footer: null }, modalFunc: periodHooks.useFetchDetailPeriod as unknown as (id: string, enable: boolean) => import('@tanstack/react-query').UseQueryResult<IDetailPeriod, Error> } }}
           deleteInfo={{ type: 'modal', modalInfo: { modalContent: null, modalProps: {}, modalFunc: deletePeriodMutation } }}
+          formatFormValues={(values) => ({
+            ...values,
+            type: (values.type as BatchType) || tab,
+          } as ICreatePeriod)}
         />
       </Card>
     </div>

@@ -22,23 +22,13 @@ export const useLogin = () => {
   >({
     mutationFn: authApi.signIn,
     onSuccess: (data) => {
-      const responseData = data?.data || data?.results?.object || data;
-      
-      const newData = {
-        ...responseData,
-        // Normalize tên field
-        access_token: responseData?.access_token || responseData?.accessToken,
-        refresh_token: responseData?.refresh_token || responseData?.refreshToken,
-      } as UserLoginType;
+      const newData: UserLoginType = data?.results?.object;
 
-      const userClone = { 
-        ...newData?.user,
-        role: newData?.role || newData?.user?.role || 'USER'   // ← Thêm dòng này
-      };
+      const userClone = { ...newData?.user };
       setUser(userClone);
       setCookie(STORAGES.USER_LOGIN, userClone);
-      setCookie(STORAGES.ACCESS_TOKEN, newData?.access_token || newData?.access_token);
-      setCookie(STORAGES.REFRESH_TOKEN, newData?.refresh_token || newData?.refresh_token);
+      setCookie(STORAGES.ACCESS_TOKEN, newData?.accessToken);
+      // setCookie(STORAGES.REFRESH_TOKEN, newData?.refreshToken);
       navigate(ROUTES.DASHBOARD);
     },
   });

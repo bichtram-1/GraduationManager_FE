@@ -1,21 +1,22 @@
 import { BookOutlined, SearchOutlined } from '@ant-design/icons';
-import { Card, Tag, Input, Space, Button, Form, Select } from 'antd';
+import { Card, Tag, Input, Space, Button, Form, Select, Dropdown, Modal, message } from 'antd';
 import FilterTable from '../../components/shared/table/FilterTable';
 import TopicForm from './components/TopicForm';
-import type { IListTopic, ICreateTopic, IUpdateTopic } from '../../type/TopicType';
+import type { IListTopic, ICreateTopic, IUpdateTopic, TopicStatus } from '../../type/TopicType';
 import { topicHooks } from '../../hooks/useTopics';
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { useGlobalVariable } from '../../hooks/GlobalVariableProvider';
 import { useTranslation } from 'react-i18next';
 import { getKey } from '@shared/types/I18nKeyType';
 import { STATUS_CODE, cn } from '../../constants/commonConst';
 import { formatNumber } from '@shared/utils/numberUtils';
 
-const topicStatusMeta = {
-  [STATUS_CODE.PENDING]: { labelKey: 'status_pending' as const, className: '!bg-[var(--color-gold-light)] !text-[var(--color-gold-medium)]' },
-  [STATUS_CODE.APPROVED]: { labelKey: 'status_approved' as const, className: '!bg-[var(--color-green-light)] !text-[var(--color-green-medium)]' },
-  [STATUS_CODE.REJECTED]: { labelKey: 'status_rejected' as const, className: '!bg-[var(--color-red-light)] !text-[var(--color-red-medium)]' },
-} as const;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const getTopicStatusMeta = (t: any) => ({
+  [STATUS_CODE.PENDING]: { label: t(getKey('status_pending')), className: '!bg-[var(--color-gold-light)] !text-[var(--color-gold-medium)]' },
+  [STATUS_CODE.APPROVED]: { label: t(getKey('status_approved')), className: '!bg-[var(--color-green-light)] !text-[var(--color-green-medium)]' },
+  [STATUS_CODE.REJECTED]: { label: t(getKey('status_rejected')), className: '!bg-[var(--color-red-light)] !text-[var(--color-red-medium)]' },
+} as const);
 
 const TopicsPage = () => {
   const { t } = useTranslation();
@@ -31,19 +32,126 @@ const TopicsPage = () => {
   const rows = topicList?.rows ?? [];
   const isPeriodClosed = selectedPeriod?.status === STATUS_CODE.CLOSED;
 
-  const columns = [
+  const confirmStatusChange = useCallback((record: IListTopic, status: TopicStatus) => {
+    const meta = getTopicStatusMeta(t)[status];
+    const label = meta.label;
+    let rejectReasonValue = '';
+
+    const handleOk = () => {
+      if (status === STATUS_CODE.REJECTED && !rejectReasonValue.trim()) {
+        message.error(t(getKey('reject_reason_required')));
+        return Promise.reject(new Error(t(getKey('reject_reason_required'))));
+      }
+
+      return new Promise<void>((resolve, reject) => {
+        updateTopicMutation.mutate(
+          {
+            id: record.id,
+            body: {
+              status,
+              rejectReason: status === STATUS_CODE.REJECTED ? rejectReasonValue : ''
+            },
+            index: 0,
+            params: { page: 1, limit: 10, periodId: selectedPeriod?.id || '' }
+          },
+          {
+            onSuccess: () => {
+              message.success(t(getKey('update_confirmation_success'), { name: record.name, status: label.toLowerCase() }));
+              resolve();
+            },
+            onError: (error) => {
+              message.error(error.message || t(getKey('config_error_message')));
+              reject(error);
+            }
+          }
+        );
+      });
+    };
+
+    Modal.confirm({
+      centered: true,
+      title: t(getKey('change_review_status_confirm_title'), { name: record.name, status: label.toLowerCase() }),
+      content:
+        status === STATUS_CODE.REJECTED ? (
+          <div className="flex flex-col gap-2 pt-2">
+            <p className="m-0">{t(getKey('change_topic_status_rejected_content'))}</p>
+            <Input.TextArea
+              rows={3}
+              placeholder={t(getKey('please_enter_reject_reason'))}
+              onChange={(e) => {
+                rejectReasonValue = e.target.value;
+              }}
+            />
+          </div>
+        ) : status === STATUS_CODE.APPROVED ? (
+          t(getKey('change_topic_status_approved_content'))
+        ) : (
+          t(getKey('change_topic_status_pending_content'))
+        ),
+      okText: t(getKey('confirm_btn')),
+      cancelText: t(getKey('cancel_btn')),
+      okButtonProps: status === STATUS_CODE.REJECTED ? { danger: true } : undefined,
+      onOk: handleOk,
+    });
+  }, [t, updateTopicMutation, selectedPeriod?.id]);
+
+  const columns = useMemo(() => [
     { title: t(getKey('topic_code')), dataIndex: 'code', key: 'code', render: (v: string) => <span className="text-primary font-medium">{v}</span> },
     { title: t(getKey('topic_name')), dataIndex: 'name', key: 'name', ellipsis: true },
     { title: t(getKey('teacher')), dataIndex: 'teacher', key: 'teacher', width: 200, ellipsis: true, render: (v: string) => <span className="text-slate-600">{v}</span> },
     { title: t(getKey('slots')), dataIndex: 'slots', key: 'slots', width: 120, render: (v: number) => formatNumber(v) },
     {
-      title: t(getKey('group_status')), key: 'status', width: 160, render: (_: unknown, record: IListTopic) => {
-        const meta = topicStatusMeta[record.status as keyof typeof topicStatusMeta];
-        return <Tag className={cn('!m-0 !rounded-full !px-2.5 !py-[2px] !border-none', meta?.className)}>{meta ? t(getKey(meta.labelKey)) : record.status}</Tag>;
+      title: t(getKey('group_status')),
+      key: 'status',
+      width: 260,
+      render: (_: unknown, record: IListTopic) => {
+        const meta = getTopicStatusMeta(t)[record.status as keyof ReturnType<typeof getTopicStatusMeta>];
+        
+        if (isPeriodClosed) {
+          return (
+            <Tag className={cn('!m-0 !rounded-full !px-2.5 !py-[2px] !border-none', meta?.className)}>
+              {meta ? meta.label : record.status}
+            </Tag>
+          );
+        }
+
+        const menuItems = record.status === STATUS_CODE.APPROVED
+          ? [
+              { key: STATUS_CODE.PENDING, label: t(getKey('change_to_pending')) },
+              { key: STATUS_CODE.REJECTED, label: t(getKey('change_to_rejected')) },
+            ]
+          : record.status === STATUS_CODE.REJECTED
+            ? [
+                { key: STATUS_CODE.PENDING, label: t(getKey('change_to_pending')) },
+                { key: STATUS_CODE.APPROVED, label: t(getKey('change_to_approved')) },
+              ]
+            : [
+                { key: STATUS_CODE.APPROVED, label: t(getKey('change_to_approved')) },
+                { key: STATUS_CODE.REJECTED, label: t(getKey('change_to_rejected')) },
+              ];
+
+        return (
+          <Space size={8} wrap>
+            <Tag className={cn('!m-0 !rounded-full !px-2.5 !py-[2px] !border-none', meta?.className)}>
+              {meta ? meta.label : record.status}
+            </Tag>
+            <Dropdown
+              trigger={['click']}
+              menu={{
+                items: menuItems,
+                onClick: ({ key }) => confirmStatusChange(record, key as TopicStatus),
+              }}
+            >
+              <Button type="text" size="small" className="!h-8 !rounded-[8px] !px-2 !font-medium !text-[var(--color-primary)] hover:!bg-[var(--color-blue-light)]">
+                {t(getKey('change_status_btn'))}
+              </Button>
+            </Dropdown>
+          </Space>
+        );
       }
     },
     { title: t(getKey('reject_reason')), dataIndex: 'rejectReason', key: 'rejectReason', ellipsis: true, render: (v: string) => v || '—' },
-  ];
+  ], [t, isPeriodClosed, confirmStatusChange]);
 
   return (
     <div className="pb-4">

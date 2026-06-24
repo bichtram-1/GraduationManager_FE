@@ -49,6 +49,7 @@ export const userHooks = {
       mutationFn: userApi.createUser,
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: [QueryKey.users.list] });
+        queryClient.invalidateQueries({ queryKey: [QueryKey.classes.list] });
       },
     });
   },
@@ -76,6 +77,7 @@ export const userHooks = {
             return { ...old, rows };
           }
         );
+        queryClient.invalidateQueries({ queryKey: [QueryKey.classes.list] });
       },
     });
   },
@@ -91,6 +93,7 @@ export const userHooks = {
       mutationFn: userApi.deleteUser,
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: [QueryKey.users.list] });
+        queryClient.invalidateQueries({ queryKey: [QueryKey.classes.list] });
       },
     });
   },
