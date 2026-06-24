@@ -178,10 +178,10 @@ export const userApi = {
     return response.data;
   },
 
-  resetUserPassword: async ({ id }: { id: string }) => {
-    const response = await axiosInstance.post(
-      `/api/admin/sinh-vien/${id}/reset-password`
-    );
-    return response.data?.results?.object ?? response.data;
-  },
+  // resetUserPassword: async ({ id }: { id: string }) => {
+  //   const response = await axiosInstance.post(
+  //     `/api/admin/sinh-vien/${id}/reset-password`
+  //   );
+  //   return response.data?.results?.object ?? response.data;
+  // },
 };
