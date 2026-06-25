@@ -14,7 +14,7 @@ const ROLE_OPTIONS = [
 export default function LoginPage() {
   const [form] = Form.useForm()
   const searchParams = useSearchParams()
-  const [, messageContextHolder] = message.useMessage()
+  const [messageApi, messageContextHolder] = message.useMessage()
   const [role, setRole] = useState<'teacher' | 'student'>('teacher')
   const [loading, setLoading] = useState(false)
 
@@ -32,15 +32,58 @@ export default function LoginPage() {
     window.location.assign(url)
   }
 
-  const onFinish = (_values: Record<string, unknown>) => {
+  const onFinish = async (values: Record<string, unknown>) => {
     setLoading(true)
+    const email = values.email as string || ''
 
-    setTimeout(() => {
-      // For server-side cookie handling, redirect to mock-login route
-      const from = searchParams?.get('from') || undefined
-      const url = `/api/mock-login?role=${encodeURIComponent(role)}${from ? `&from=${encodeURIComponent(from)}` : ''}`
-      window.location.assign(url)
-    }, 400)
+    try {
+      // Call backend login to verify the real role of this email
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'}/api/dang-nhap-gia-lap`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      })
+
+      if (!res.ok) {
+        if (res.status === 404) {
+          messageApi.error('Tài khoản Email không tồn tại trong hệ thống!')
+        } else {
+          messageApi.error('Đăng nhập thất bại. Vui lòng thử lại!')
+        }
+        setLoading(false)
+        return
+      }
+
+      const json = await res.json()
+      if (json.success && json.data) {
+        const userRole = json.data.role // 'SINH_VIEN', 'GIANG_VIEN', 'ADMIN'
+        
+        // Check if selected tab matches real role
+        const isStudentRole = userRole === 'SINH_VIEN'
+        const isSelectedStudent = role === 'student'
+        
+        if (isSelectedStudent !== isStudentRole) {
+          const expectedRoleName = isStudentRole ? 'Sinh viên' : 'Giảng viên'
+          messageApi.error(`Tài khoản này thuộc vai trò ${expectedRoleName}. Vui lòng chọn đúng vai trò để đăng nhập!`)
+          setLoading(false)
+          return
+        }
+
+        // Role matches! Proceed with session cookie setting and redirection
+        const from = searchParams?.get('from') || undefined
+        const url = `/api/mock-login?role=${encodeURIComponent(role)}&email=${encodeURIComponent(email)}${from ? `&from=${encodeURIComponent(from)}` : ''}`
+        window.location.assign(url)
+      } else {
+        messageApi.error(json.message || 'Đăng nhập thất bại!')
+        setLoading(false)
+      }
+    } catch (err) {
+      console.error('Login error:', err)
+      messageApi.error('Không thể kết nối đến máy chủ xác thực!')
+      setLoading(false)
+    }
   }
 
   return (

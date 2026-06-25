@@ -1,9 +1,10 @@
 "use client"
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { ArrowLeft, CalendarDays, CheckCircle2, Clock3, Mail, Plus, XCircle } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { StudentPill, StudentSectionHeader } from '../_components/StudentShell'
+import { studentApi } from '@/lib/api/studentApi'
 
 type Invite = {
   id: string
@@ -11,17 +12,6 @@ type Invite = {
   from?: string
   topic?: string
 }
-
-const outgoingMock: Invite[] = [
-  { id: '20520002', status: 'pending' },
-  { id: '20520003', status: 'accepted' },
-  { id: '20520004', status: 'rejected' },
-]
-
-const incomingMock = [
-  { id: '20520007', from: 'Nguyễn Văn B', topic: 'DT001', status: 'pending' as const },
-  { id: '20520009', from: 'Lê Thị C', topic: 'DT004', status: 'pending' as const },
-]
 
 const batches = [
   { id: '2026-1', label: 'Đợt HK2/2025-2026', note: 'Chốt danh sách trước 12/06', status: 'Đang mở' },
@@ -35,31 +25,88 @@ export default function InvitePage() {
 
   const [selectedBatch, setSelectedBatch] = useState(batches[0].id)
   const [newId, setNewId] = useState('')
-  const [outgoingInvites, setOutgoingInvites] = useState<Invite[]>(outgoingMock)
-  const [incomingInvites, setIncomingInvites] = useState<Invite[]>(incomingMock)
+  const [outgoingInvites, setOutgoingInvites] = useState<Invite[]>([])
+  const [incomingInvites, setIncomingInvites] = useState<Invite[]>([])
+  const [loading, setLoading] = useState(true)
 
   const currentBatch = batches.find((batch) => batch.id === selectedBatch) ?? batches[0]
   const outgoingCount = outgoingInvites.length
   const incomingCount = incomingInvites.length
   const pendingOutgoing = useMemo(() => outgoingInvites.filter((item) => item.status === 'pending').length, [outgoingInvites])
 
-  const addInvite = () => {
+  useEffect(() => {
+    let mounted = true
+    setLoading(true)
+    async function load() {
+      try {
+        const [outgoingData, incomingData] = await Promise.all([
+          studentApi.getOutgoingInvitations(),
+          studentApi.getIncomingInvitations()
+        ])
+        if (!mounted) return
+        setOutgoingInvites(outgoingData)
+        setIncomingInvites(incomingData)
+      } catch (_err) {
+        if (!mounted) return
+        setOutgoingInvites([])
+        setIncomingInvites([])
+      } finally {
+        if (mounted) {
+          setLoading(false)
+        }
+      }
+    }
+    load()
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  const addInvite = async () => {
     const id = newId.trim()
     if (!id) return
     if (outgoingInvites.some((item) => item.id === id)) {
       setNewId('')
       return
     }
-    setOutgoingInvites((current) => [...current, { id, status: 'pending' }])
-    setNewId('')
+    try {
+      setLoading(true)
+      const res = await studentApi.sendInvitation(id, topic)
+      setOutgoingInvites((current) => [...current, res])
+      setNewId('')
+    } catch (err: any) {
+      alert(err?.response?.data?.message || 'Có lỗi xảy ra khi gửi lời mời.')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const handleAccept = (inviteId: string) => {
-    setIncomingInvites((current) => current.map((invite) => (invite.id === inviteId ? { ...invite, status: 'accepted' } : invite)))
+  const handleAccept = async (inviteId: string) => {
+    try {
+      setLoading(true)
+      await studentApi.acceptInvitation(inviteId)
+      setIncomingInvites((current) =>
+        current.map((invite) => (invite.id === inviteId ? { ...invite, status: 'accepted' } : invite))
+      )
+    } catch (err: any) {
+      alert(err?.response?.data?.message || 'Có lỗi xảy ra khi đồng ý lời mời.')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const handleReject = (inviteId: string) => {
-    setIncomingInvites((current) => current.map((invite) => (invite.id === inviteId ? { ...invite, status: 'rejected' } : invite)))
+  const handleReject = async (inviteId: string) => {
+    try {
+      setLoading(true)
+      await studentApi.rejectInvitation(inviteId)
+      setIncomingInvites((current) =>
+        current.map((invite) => (invite.id === inviteId ? { ...invite, status: 'rejected' } : invite))
+      )
+    } catch (err: any) {
+      alert(err?.response?.data?.message || 'Có lỗi xảy ra khi từ chối lời mời.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (

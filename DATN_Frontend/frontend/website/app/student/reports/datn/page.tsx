@@ -1,18 +1,13 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { CheckCircle2, FileText, GitBranch, Plus, Upload, Clock3, MessageSquareQuote, Rocket } from 'lucide-react'
 import { StudentPill, StudentSectionHeader, StudentStatCard } from '../../_components/StudentShell'
-
-const initialMilestones = [
-  { name: 'Bản thảo Chương 1', status: 'Đã duyệt', file: 'chuong1.pdf', repo: 'github.com/user/project', note: 'Phạm vi đề tài và tổng quan', updated: '05/05/2026' },
-  { name: 'Bản thảo Chương 2', status: 'Đang chấm điểm', file: 'chuong2.pdf', repo: 'github.com/user/project', note: 'Thiết kế và cơ sở lý thuyết', updated: '14/05/2026' },
-  { name: 'Báo cáo chính thức', status: 'Nháp', file: '—', repo: '—', note: 'Hoàn thiện kết luận và phụ lục', updated: '23/05/2026' },
-]
+import { studentApi, IDatnProgressReport } from '@/lib/api/studentApi'
 
 export default function StudentReportsDATNPage() {
-  const [milestones, setMilestones] = useState(initialMilestones)
-  const [selectedMilestone, setSelectedMilestone] = useState(initialMilestones[0].name)
+  const [milestones, setMilestones] = useState<IDatnProgressReport[]>([])
+  const [selectedMilestone, setSelectedMilestone] = useState<string | null>(null)
   const [submitOpen, setSubmitOpen] = useState(false)
   const [submitForm, setSubmitForm] = useState({
     name: '',
@@ -20,11 +15,39 @@ export default function StudentReportsDATNPage() {
     repo: '',
     note: '',
   })
+  const [loading, setLoading] = useState(true)
 
-  const selected = useMemo(
-    () => milestones.find((milestone) => milestone.name === selectedMilestone) ?? milestones[0],
-    [selectedMilestone, milestones]
-  )
+  useEffect(() => {
+    let mounted = true
+    setLoading(true)
+    async function load() {
+      try {
+        const data = await studentApi.getDatnReports()
+        if (!mounted) return
+        setMilestones(data)
+        if (data.length > 0) {
+          setSelectedMilestone(data[0].name)
+        }
+      } catch (_err) {
+        if (!mounted) return
+        setMilestones([])
+      } finally {
+        if (mounted) {
+          setLoading(false)
+        }
+      }
+    }
+    load()
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  const selected = useMemo(() => {
+    return milestones.find((milestone) => milestone.name === selectedMilestone) 
+      ?? milestones[0] 
+      ?? { name: 'Chưa có bản thảo', status: '—', file: '—', repo: '—', note: 'Chưa có bản thảo nào được nộp.', updated: '—' }
+  }, [selectedMilestone, milestones])
 
   const approvedCount = milestones.filter((milestone) => milestone.status === 'Đã duyệt').length
   const draftCount = milestones.filter((milestone) => milestone.status === 'Nháp').length
@@ -40,27 +63,32 @@ export default function StudentReportsDATNPage() {
     setSubmitOpen(true)
   }
 
-  const handleSubmitDraft = () => {
+  const handleSubmitDraft = async () => {
     if (!submitForm.name.trim() || !submitForm.note.trim()) {
       alert('Vui lòng nhập tên bản thảo và nội dung.')
       return
     }
 
-    const nextMilestone = {
-      name: submitForm.name.trim(),
-      status: 'Đang chấm điểm',
-      file: submitForm.file.trim() || 'draft.pdf',
-      repo: submitForm.repo.trim() || '—',
-      note: submitForm.note.trim(),
-      updated: new Date().toLocaleDateString('vi-VN'),
-    }
+    try {
+      setLoading(true)
+      const nextMilestone = await studentApi.submitDatnReport({
+        name: submitForm.name.trim(),
+        note: submitForm.note.trim(),
+        file: submitForm.file.trim() || undefined,
+        repo: submitForm.repo.trim() || undefined
+      })
 
-    setMilestones((current) => {
-      const next = [...current.filter((item) => item.name !== nextMilestone.name), nextMilestone]
-      return next
-    })
-    setSelectedMilestone(nextMilestone.name)
-    setSubmitOpen(false)
+      setMilestones((current) => {
+        const withoutMilestone = current.filter((item) => item.name !== nextMilestone.name)
+        return [...withoutMilestone, nextMilestone]
+      })
+      setSelectedMilestone(nextMilestone.name)
+      setSubmitOpen(false)
+    } catch (err: any) {
+      alert(err?.response?.data?.message || 'Có lỗi xảy ra khi gửi bản thảo.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (

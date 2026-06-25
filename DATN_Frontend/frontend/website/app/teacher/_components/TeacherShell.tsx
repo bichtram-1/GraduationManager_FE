@@ -54,11 +54,11 @@ export function TeacherShell({ children }: { children: ReactNode }) {
           </Link>
 
           {/* Global Period Selector (replacing search bar) */}
-          <div className="hidden max-w-sm flex-1 px-6 sm:flex items-center justify-center">
-            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1 rounded-[12px] shadow-sm w-full">
+          <div className="hidden max-w-sm flex-1 px-6 sm:flex items-center justify-center min-w-0" title={selectedPeriod?.name}>
+            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1 rounded-[12px] shadow-sm w-full min-w-0">
               <span className="text-xs font-semibold text-slate-500 shrink-0">Đợt hoạt động:</span>
               <Select
-                className="w-full"
+                className="w-full min-w-0"
                 placeholder="Chọn đợt hoạt động"
                 value={selectedPeriod?.id}
                 onChange={(id) => {

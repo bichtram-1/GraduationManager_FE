@@ -1,9 +1,10 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { studentApi } from '@/lib/api/studentApi'
 import {
   Award,
   BookOpen,
@@ -49,12 +50,46 @@ export function StudentShell({ children }: { children: ReactNode }) {
   const { periods, selectedPeriod, setSelectedPeriod } = usePeriod()
   const [profileOpen, setProfileOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [student, setStudent] = useState<{
+    id: number
+    studentCode: string
+    name: string
+    email: string
+    phone: string
+    className: string
+  } | null>(null)
+
+  useEffect(() => {
+    let mounted = true
+    async function loadProfile() {
+      try {
+        const data = await studentApi.getDashboard()
+        if (mounted && data?.student) {
+          setStudent(data.student)
+        }
+      } catch (err) {
+        console.error('Failed to load student profile in Shell:', err)
+      }
+    }
+    loadProfile()
+    return () => {
+      mounted = false
+    }
+  }, [])
 
   const activeKey = useMemo(() => getActiveKey(pathname), [pathname])
 
   const handleLogout = () => {
     window.location.assign('/api/logout?from=/login')
   }
+
+  // Extract student short name for avatar
+  const shortName = useMemo(() => {
+    if (!student?.name) return 'SV'
+    const parts = student.name.trim().split(/\s+/)
+    const lastWord = parts[parts.length - 1]
+    return lastWord.substring(0, 2).toUpperCase()
+  }, [student])
 
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#eff6ff_0%,#f8fafc_18%,#f8fafc_100%)] text-slate-900">
@@ -70,12 +105,11 @@ export function StudentShell({ children }: { children: ReactNode }) {
             </div>
           </Link>
 
-          {/* Global Period Selector (replacing search bar) */}
-          <div className="hidden max-w-sm flex-1 px-6 sm:flex items-center justify-center">
-            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1 rounded-[12px] shadow-sm w-full">
+          <div className="hidden max-w-sm flex-1 px-6 sm:flex items-center justify-center min-w-0" title={selectedPeriod?.name}>
+            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1 rounded-[12px] shadow-sm w-full min-w-0">
               <span className="text-xs font-semibold text-slate-500 shrink-0">Đợt hoạt động:</span>
               <Select
-                className="w-full"
+                className="w-full min-w-0"
                 placeholder="Chọn đợt hoạt động"
                 value={selectedPeriod?.id}
                 onChange={(id) => {
@@ -109,8 +143,8 @@ export function StudentShell({ children }: { children: ReactNode }) {
 
           <div className="relative flex items-center gap-3">
             <div className="hidden text-right sm:block">
-              <div className="text-sm font-medium leading-tight">Nguyễn Văn A</div>
-              <div className="text-xs text-slate-500">20520001 · KTPM2020</div>
+              <div className="text-sm font-medium leading-tight">{student?.name || 'Đang tải...'}</div>
+              <div className="text-xs text-slate-500">{student ? `${student.studentCode} · ${student.className}` : ''}</div>
             </div>
             <button
               type="button"
@@ -141,9 +175,9 @@ export function StudentShell({ children }: { children: ReactNode }) {
               <div className="absolute right-0 top-[calc(100%+12px)] w-80 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
                 <div className="bg-[linear-gradient(135deg,#1976D2_0%,#2196F3_100%)] px-5 py-4 text-white">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15 text-lg font-semibold">SV</div>
+                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15 text-lg font-semibold">{shortName}</div>
                     <div className="min-w-0">
-                      <div className="font-semibold leading-tight">Nguyễn Văn A</div>
+                      <div className="font-semibold leading-tight">{student?.name || 'Đang tải...'}</div>
                       <div className="text-xs opacity-90">Sinh viên</div>
                     </div>
                     <button onClick={() => setProfileOpen(false)} className="ml-auto rounded-full p-1 text-white/90 hover:bg-white/15" aria-label="Đóng">
@@ -154,19 +188,19 @@ export function StudentShell({ children }: { children: ReactNode }) {
                 <div className="space-y-3 px-5 py-4 text-sm">
                   <div className="flex items-center gap-3 text-slate-700">
                     <Hash className="text-slate-400" />
-                    <span>MSSV: 20520001</span>
+                    <span>MSSV: {student?.studentCode || '—'}</span>
                   </div>
                   <div className="flex items-center gap-3 text-slate-700">
                     <Users className="text-slate-400" />
-                    <span>Lớp KTPM2020</span>
+                    <span>Lớp: {student?.className || '—'}</span>
                   </div>
                   <div className="flex items-center gap-3 text-slate-700">
                     <Mail className="text-slate-400" />
-                    <span>20520001@gm.uit.edu.vn</span>
+                    <span>Email: {student?.email || '—'}</span>
                   </div>
                   <div className="flex items-center gap-3 text-slate-700">
                     <Phone className="text-slate-400" />
-                    <span>0912 345 678</span>
+                    <span>SĐT: {student?.phone || '—'}</span>
                   </div>
                 </div>
               </div>

@@ -20,10 +20,23 @@ export function GET(req: Request) {
     path: '/',
     maxAge: 0,
   })
+  res.cookies.set({
+    name: 'USER_ROLE',
+    value: '',
+    path: '/',
+    maxAge: 0,
+  })
 
   if (domain) {
     res.cookies.set({
       name: STORAGES.ACCESS_TOKEN,
+      value: '',
+      path: '/',
+      domain,
+      maxAge: 0,
+    })
+    res.cookies.set({
+      name: 'USER_ROLE',
       value: '',
       path: '/',
       domain,
