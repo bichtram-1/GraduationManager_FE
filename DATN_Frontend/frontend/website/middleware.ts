@@ -42,7 +42,8 @@ export function middleware(req: NextRequest) {
   // 3. Nếu vào trang chủ "/" và đã login -> redirect đến cổng tương ứng
   if (pathname === '/') {
     const url = req.nextUrl.clone()
-    url.pathname = token === 'mock-token-teacher' ? '/teacher' : '/student'
+    const roleCookie = req.cookies.get('USER_ROLE')?.value
+    url.pathname = (roleCookie === 'teacher' || token === 'mock-token-teacher') ? '/teacher' : '/student'
     return NextResponse.redirect(url)
   }
 
