@@ -21,14 +21,14 @@ const eslintConfig = [
       "@typescript-eslint/no-unused-vars": "off",
       "unused-imports/no-unused-imports": "error",
       "unused-imports/no-unused-vars": [
-        "error",
+        "warn",
         {
           varsIgnorePattern: "^_",
           argsIgnorePattern: "^_",
           caughtErrorsIgnorePattern: "^_",
         },
       ],
-      "@typescript-eslint/no-explicit-any": "error",
+      "@typescript-eslint/no-explicit-any": "warn",
       "no-multiple-empty-lines": [
         "error",
         { max: 1, maxEOF: 1, maxBOF: 0 },

@@ -182,9 +182,9 @@ const TopicsPage = () => {
       <div className="mb-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         {useMemo(() => [
           { label: t(getKey('total_topics')), value: rows.length, color: 'bg-primary/90' },
-          { label: t(getKey('status_pending')), value: rows.filter((r) => r.status === STATUS_CODE.PENDING).length, color: 'bg-[var(--color-gold-medium)]' },
-          { label: t(getKey('status_approved')), value: rows.filter((r) => r.status === STATUS_CODE.APPROVED).length, color: 'bg-[var(--color-green-medium)]' },
-          { label: t(getKey('status_rejected')), value: rows.filter((r) => r.status === STATUS_CODE.REJECTED).length, color: 'bg-[var(--color-red-medium)]' },
+          { label: t(getKey('status_pending')), value: rows.filter((r: IListTopic) => r.status === STATUS_CODE.PENDING).length, color: 'bg-[var(--color-gold-medium)]' },
+          { label: t(getKey('status_approved')), value: rows.filter((r: IListTopic) => r.status === STATUS_CODE.APPROVED).length, color: 'bg-[var(--color-green-medium)]' },
+          { label: t(getKey('status_rejected')), value: rows.filter((r: IListTopic) => r.status === STATUS_CODE.REJECTED).length, color: 'bg-[var(--color-red-medium)]' },
         ], [rows, t]).map((item) => (
           <Card key={item.label} className="rounded-[18px] border border-slate-100 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
             <div className="flex items-start justify-between">
@@ -211,7 +211,7 @@ const TopicsPage = () => {
             modalInfo: {
               modalContent: <TopicForm />,
               modalProps: { centered: true, width: 640, title: t(getKey('edit_topic')) },
-              modalFunc: updateTopicMutation,
+              modalFunc: updateTopicMutation as any,
             },
           }}
           deleteInfo={isPeriodClosed ? undefined : {
@@ -219,7 +219,7 @@ const TopicsPage = () => {
             modalInfo: {
               modalContent: null,
               modalProps: {},
-              modalFunc: deleteTopicMutation,
+              modalFunc: deleteTopicMutation as any,
             },
           }}
           detailInfo={{
@@ -227,7 +227,7 @@ const TopicsPage = () => {
             modalInfo: {
               modalContent: <TopicForm disabled />,
               modalProps: { centered: true, width: 640, title: t(getKey('detail_topic')), footer: null },
-              modalFunc: topicHooks.useFetchDetailTopic,
+              modalFunc: topicHooks.useFetchDetailTopic as any,
             },
           }}
           actions={{

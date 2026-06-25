@@ -12,6 +12,8 @@ export type CouncilRow = {
   member: string[];
   topicGroups: { code: string; title: string; members: number }[];
   accent: 'blue' | 'green';
+  topics?: { examiners?: string[]; externalExaminers?: string[] }[];
+  external?: { name: string }[];
 };
 
 export const councilApi = {

@@ -12,8 +12,9 @@ function getSecretKey(): string {
     // not available
   }
   // Next.js / Node (process.env) — used by website
-  if (typeof process !== 'undefined' && process.env?.VITE_COOKIE_KEY_SECRET) {
-    return process.env.VITE_COOKIE_KEY_SECRET;
+  const globalProcess = (globalThis as any).process;
+  if (globalProcess && globalProcess.env?.VITE_COOKIE_KEY_SECRET) {
+    return globalProcess.env.VITE_COOKIE_KEY_SECRET;
   }
   return 'SECRET_KEY';
 }

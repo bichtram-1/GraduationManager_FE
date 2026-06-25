@@ -1,5 +1,5 @@
 import React, { createContext, useEffect, useState } from 'react';
-import { DetailUserProps } from '../type/UserType';
+import { IDetailUser } from '../type/UserType';
 import { getCookie } from '@shared/utils/cookie';
 import { STORAGES } from '@shared/constants/storage';
 import { IListPeriod } from '../type/PeriodType';
@@ -26,8 +26,8 @@ interface GlobalVariableContextProps {
   setLocationValue: (locationValue: LocationDefaultProps) => void;
   setLocationKey: (locationKey: string) => void;
   setLoadingUpload: (loadingUpload: LoadingUploadProps) => void;
-  user: DetailUserProps | undefined;
-  setUser: (user: DetailUserProps | undefined) => void;
+  user: IDetailUser | undefined;
+  setUser: (user: IDetailUser | undefined) => void;
   selectedPeriod: IListPeriod | undefined;
   setSelectedPeriod: (period: IListPeriod | undefined) => void;
 }
@@ -50,7 +50,7 @@ export const GlobalVariableProvider: React.FC<{
     attachment: false,
     avatar: false,
   });
-  const [user, setUser] = useState<DetailUserProps>();
+  const [user, setUser] = useState<IDetailUser>();
   const [selectedPeriod, setSelectedPeriodState] = useState<IListPeriod | undefined>(() => {
     const saved = localStorage.getItem('selected_period');
     return saved ? JSON.parse(saved) : undefined;

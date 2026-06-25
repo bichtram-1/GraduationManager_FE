@@ -7,8 +7,8 @@ import { User } from 'lucide-react'
 import Image from 'next/image'
 
 const ROLE_OPTIONS = [
-  { value: 'teacher', label: 'Giảng viên', hint: 'gv@caothang.edu.vn' },
-  { value: 'student', label: 'Sinh viên', hint: 'MSSV@caothang.edu.vn' },
+  { value: 'teacher', label: 'Giảng viên', hint: 'thoa@caothang.edu.vn' },
+  { value: 'student', label: 'Sinh viên', hint: '0306231001@caothang.edu.vn' },
 ]
 
 export default function LoginPage() {
@@ -19,8 +19,8 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
 
   const SAMPLE = {
-    teacher: { email: 'giangvien@gmail.com' },
-    student: { email: 'sinhvien@gmail.com' },
+    teacher: { email: 'thoa@caothang.edu.vn' },
+    student: { email: '0306231001@caothang.edu.vn' },
   }
 
   const onGoogleSignIn = () => {

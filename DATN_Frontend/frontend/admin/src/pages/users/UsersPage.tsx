@@ -158,7 +158,8 @@ const UsersPage = () => {
       .filter((row) => (typedParams.status ? row.status === typedParams.status : true))
       .filter((row) => (typedParams.className ? row.className === typedParams.className : true));
 
-    const data = { rows: filteredRows, total: filteredRows.length };
+    const total = dataShape1?.total ?? dataShape2?.results?.objects?.total ?? filteredRows.length;
+    const data = { rows: filteredRows, total };
     return {
       ...query,
       data,

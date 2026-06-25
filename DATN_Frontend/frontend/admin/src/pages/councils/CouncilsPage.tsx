@@ -226,8 +226,8 @@ const CouncilsPage: React.FC = () => {
                 </div>
                 <div className="head-actions">
                   <div className="flex gap-2 flex-wrap justify-end">
-                    <span className="chip">{t(getKey('groups_achieved'), { count: formatNumber(c.achieved) })}</span>
-                    <span className="chip">{t(getKey('groups_rejected'), { count: formatNumber(c.rejected) })}</span>
+                    <span className="chip">{t(getKey('groups_achieved'), { count: c.achieved } as any)}</span>
+                    <span className="chip">{t(getKey('groups_rejected'), { count: c.rejected } as any)}</span>
                   </div>
                   <div className="action-row">
                     <button className="btn btns btn-icon" onClick={() => handleViewCouncil(c.id)}>
@@ -288,8 +288,8 @@ const CouncilsPage: React.FC = () => {
                                 <div className="topic-item-title">{topic.code} - {topic.title}</div>
                                 <div className="topic-item-meta">
                                   {Array.isArray((topic as any).members)
-                                    ? t(getKey('students_count_suffix'), { count: formatNumber((topic as any).members.length) })
-                                    : t(getKey('students_count_suffix'), { count: formatNumber(topic.members) })}
+                                    ? t(getKey('students_count_suffix'), { count: (topic as any).members.length } as any)
+                                    : t(getKey('students_count_suffix'), { count: topic.members } as any)}
                                 </div>
                               </div>
                               {topic.startTime && <div className="chip">{topic.startTime}</div>}
@@ -306,8 +306,8 @@ const CouncilsPage: React.FC = () => {
                             <div className="topic-item-title">{topic.code} - {topic.title}</div>
                             <div className="topic-item-meta">
                               {Array.isArray((topic as any).members)
-                                ? t(getKey('students_count_suffix'), { count: formatNumber((topic as any).members.length) })
-                                : t(getKey('students_count_suffix'), { count: formatNumber(topic.members) })}
+                                ? t(getKey('students_count_suffix'), { count: (topic as any).members.length } as any)
+                                : t(getKey('students_count_suffix'), { count: topic.members } as any)}
                             </div>
                             {Array.isArray((topic as any).members) && (topic as any).members.length > 0 && (
                               <div className="mt-2 text-[var(--color-text-secondary)] text-[13px]">{(topic as any).members.join(', ')}</div>
@@ -381,8 +381,8 @@ const CouncilsPage: React.FC = () => {
                         </div>
                         <div className="topic-item-meta">
                           {Array.isArray(topic.members)
-                            ? t(getKey('students_count_suffix'), { count: formatNumber(topic.members.length) })
-                            : t(getKey('students_count_suffix'), { count: formatNumber(topic.members) })}
+                            ? t(getKey('students_count_suffix'), { count: topic.members.length } as any)
+                            : t(getKey('students_count_suffix'), { count: topic.members } as any)}
                         </div>
                         {Array.isArray(topic.members) && topic.members.length > 0 && (
                           <div className="mt-2 text-[var(--color-text-secondary)] text-[13px]">{topic.members.join(', ')}</div>

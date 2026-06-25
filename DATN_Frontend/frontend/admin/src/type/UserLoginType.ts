@@ -1,9 +1,9 @@
-import { DetailUserProps } from './UserType';
+import { IDetailUser } from './UserType';
 
 export interface UserLoginType {
   access_token: string;
   refresh_token?: string;
-  user: DetailUserProps;
+  user: IDetailUser;
 }
 
 export interface DataLoginType {

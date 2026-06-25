@@ -98,5 +98,8 @@ export const RoleLevel = () => [
   { value: USER_ROLE.STUDENT, label: getMessage(getKey('student_role')) },
 ];
 
+export const BrandCountryKorea = () => ({ value: 'KR', label: 'Korea' });
+export const BrandCountryVietnam = () => ({ value: 'VN', label: 'Vietnam' });
+
 
 

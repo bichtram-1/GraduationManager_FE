@@ -6,6 +6,7 @@
  * TypeScript object literal rules guarantee no duplicate keys at compile time.
  */
 const ViTranslation = {
+  info: 'Thông tin',
   login: 'Đăng nhập',
   title_login: 'Nhập tài khoản đã được cấp',
   username: 'Tên người dùng',
@@ -474,6 +475,7 @@ const ViTranslation = {
   no_matching_council: 'Không có hội đồng phù hợp với bộ lọc hiện tại.',
   confirm_delete_council: 'Bạn có chắc muốn xóa {{title}}?',
   delete_council_success: 'Đã xóa hội đồng',
+  update_council_success_message: 'Cập nhật hội đồng thành công',
   status_assigned: 'Đã phân công',
   status_unassigned: 'Chưa phân công',
   please_enter_student_id: 'Vui lòng nhập MSSV',

@@ -50,7 +50,23 @@ axiosInstance.interceptors.request.use(
 );
 
 axiosInstance.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const url = response.config.url || '';
+    if (response?.data?.results && !url.includes('/teachers')) {
+      const results = response.data.results;
+      if (results.objects && Array.isArray(results.objects)) {
+        const objectsArray = results.objects;
+        const total = results.total !== undefined 
+          ? results.total 
+          : (response.data.data?.total ?? objectsArray.length);
+        results.objects = {
+          rows: objectsArray,
+          total: total
+        };
+      }
+    }
+    return response;
+  },
   (error) => {
     if (error?.response?.status === 401) {
       handleLogoutFunction();
