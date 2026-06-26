@@ -4,7 +4,7 @@ import { useMemo, useState, useEffect } from 'react'
 import { ArrowLeft, CheckCircle2, Clock3, Mail, Plus, XCircle } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { StudentPill, StudentSectionHeader } from '../_components/StudentShell'
-import { studentApi } from '@/lib/api/studentApi'
+import { studentApi, IThesisRegistration } from '@/lib/api/studentApi'
 import { usePeriod } from '@/lib/providers/PeriodProvider'
 
 type Invite = {
@@ -23,6 +23,7 @@ export default function InvitePage() {
   const [newId, setNewId] = useState('')
   const [outgoingInvites, setOutgoingInvites] = useState<Invite[]>([])
   const [incomingInvites, setIncomingInvites] = useState<Invite[]>([])
+  const [registration, setRegistration] = useState<IThesisRegistration | null>(null)
   const [loading, setLoading] = useState(true)
 
   const outgoingCount = outgoingInvites.length
@@ -34,17 +35,20 @@ export default function InvitePage() {
     setLoading(true)
     async function load() {
       try {
-        const [outgoingData, incomingData] = await Promise.all([
+        const [outgoingData, incomingData, regData] = await Promise.all([
           studentApi.getOutgoingInvitations(),
-          studentApi.getIncomingInvitations()
+          studentApi.getIncomingInvitations(),
+          studentApi.getMyThesisRegistration()
         ])
         if (!mounted) return
         setOutgoingInvites(outgoingData)
         setIncomingInvites(incomingData)
+        setRegistration(regData)
       } catch (_err) {
         if (!mounted) return
         setOutgoingInvites([])
         setIncomingInvites([])
+        setRegistration(null)
       } finally {
         if (mounted) {
           setLoading(false)
@@ -66,7 +70,8 @@ export default function InvitePage() {
     }
     try {
       setLoading(true)
-      const res = await studentApi.sendInvitation(id, topic)
+      const topicIdToSend = registration?.topicId || null
+      const res = await studentApi.sendInvitation(id, topicIdToSend)
       setOutgoingInvites((current) => [...current, res])
       setNewId('')
     } catch (err: any) {
@@ -108,7 +113,11 @@ export default function InvitePage() {
     <>
       <StudentSectionHeader
         title="Tạo nhóm ĐATN"
-        description={`Quản lý lời mời thành viên cho đề tài ${topic} theo đợt đăng ký đang chọn.`}
+        description={
+          registration?.topicTitle
+            ? `Quản lý lời mời thành viên cho đề tài "${registration.topicTitle}" theo đợt đăng ký đang chọn.`
+            : `Quản lý lời mời thành viên tạo nhóm đồ án tốt nghiệp.`
+        }
       />
 
       <div className="mb-6 rounded-[28px] border border-blue-100 bg-[linear-gradient(135deg,#eff6ff_0%,#ffffff_100%)] p-5 shadow-[0_12px_40px_rgba(15,23,42,0.05)]">

@@ -93,6 +93,7 @@ export interface IProgressReport {
   title: string;
   status: string;
   file: string;
+  fileUrl?: string;
   note: string;
   updated: string;
 }
@@ -371,19 +372,31 @@ export const studentApi = {
     return response?.data?.results?.objects || response?.data?.results?.object || [];
   },
 
-  submitTttnReport: async (data: { week: number; title: string; note: string; file?: string }): Promise<IProgressReport> => {
+  submitTttnReport: async (data: { week: number; title: string; note: string; file?: File | string }): Promise<IProgressReport> => {
     if (USE_MOCK) {
       return {
         week: data.week,
         title: data.title,
         status: 'Chờ duyệt',
-        file: data.file || `week${data.week}.pdf`,
+        file: typeof data.file === 'string' ? data.file : (data.file?.name || `week${data.week}.pdf`),
         note: data.note,
         updated: new Date().toLocaleDateString('vi-VN')
       };
     }
 
-    const response = await axiosInstance.post('/private/v1/student/reports/tttn', data);
+    const formData = new FormData()
+    formData.append('week', String(data.week))
+    formData.append('title', data.title)
+    formData.append('note', data.note)
+    if (data.file) {
+      formData.append('file', data.file)
+    }
+
+    const response = await axiosInstance.post('/private/v1/student/reports/tttn', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
     return response?.data?.results?.object || response?.data;
   },
 
