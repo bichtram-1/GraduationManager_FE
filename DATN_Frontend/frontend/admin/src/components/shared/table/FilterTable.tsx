@@ -18,6 +18,7 @@ import {
   Form,
   Modal,
   Table,
+  message,
 } from 'antd';
 import { AxiosError } from 'axios';
 import _, { debounce } from 'lodash';
@@ -100,6 +101,7 @@ export interface FilterTableProps<
   formatInitialValues?: (data: TDetail) => Record<string, unknown>;
   formatFormValues?: (values: Record<string, unknown>) => TCreate | TUpdate;
   enableSelectRow?: boolean;
+  extraHeaderActions?: ReactNode;
 }
 
 const initParams = { page: 1, limit: 10 };
@@ -137,6 +139,7 @@ const FilterTable = <
   filterRender,
   formatInitialValues,
   formatFormValues,
+  extraHeaderActions,
 }: FilterTableProps<TList, TDetail, TCreate, TUpdate>) => {
   const hasPageHeader = !!pageTitle;
 
@@ -250,6 +253,16 @@ const FilterTable = <
           onSuccess: () => {
             handleCancelModal();
           },
+          onError: (error: any) => {
+            const validationErrors = error?.response?.data?.errors;
+            if (validationErrors) {
+              const firstErrorKey = Object.keys(validationErrors)[0];
+              const firstError = validationErrors[firstErrorKey][0];
+              message.error(firstError);
+            } else {
+              message.error(error?.response?.data?.message || error?.message || 'Cập nhật thất bại!');
+            }
+          }
         }
       );
     } else if (createMutation) {
@@ -259,6 +272,16 @@ const FilterTable = <
           onSuccess: () => {
             handleCancelModal();
           },
+          onError: (error: any) => {
+            const validationErrors = error?.response?.data?.errors;
+            if (validationErrors) {
+              const firstErrorKey = Object.keys(validationErrors)[0];
+              const firstError = validationErrors[firstErrorKey][0];
+              message.error(firstError);
+            } else {
+              message.error(error?.response?.data?.message || error?.message || 'Thêm mới thất bại!');
+            }
+          }
         }
       );
     }
@@ -432,6 +455,7 @@ const FilterTable = <
                 )}
 
                 <Flex align="center" gap={12}>
+                  {extraHeaderActions}
                   {renderCreateButton()}
                   {exportInfo?.type && exportMutation && (
                     <Button
@@ -454,6 +478,7 @@ const FilterTable = <
             </div>
 
             <Table
+              rowKey={(record: any) => record.id ?? record.value ?? record.key}
               columns={initColumns}
               dataSource={data?.rows}
               loading={isLoading || isLoadingDetail}

@@ -77,13 +77,6 @@ const RealtimeListener = () => {
           const data = JSON.parse(e.data);
           console.log('Realtime score updated:', data);
           queryClientRef.current.invalidateQueries({ queryKey: ['scores'] });
-
-          notificationRef.current.success({
-            message: 'Cập nhật điểm số',
-            description: 'Điểm của sinh viên vừa được hội đồng cập nhật realtime.',
-            placement: 'bottomRight',
-            duration: 4,
-          });
         } catch (err) {
           console.error(err);
         }
@@ -96,24 +89,13 @@ const RealtimeListener = () => {
           queryClientRef.current.invalidateQueries({ queryKey: [QueryKey.topics.list] });
           queryClientRef.current.invalidateQueries({ queryKey: [QueryKey.groups.list] });
           queryClientRef.current.invalidateQueries({ queryKey: [QueryKey.classes.list] });
-
-          notificationRef.current.open({
-            message: 'Đồng bộ hệ thống',
-            description: 'Thông tin đăng ký đề tài, nhóm và lớp học vừa được cập nhật realtime.',
-            placement: 'bottomRight',
-            duration: 4,
-          });
         } catch (err) {
           console.error(err);
         }
       });
 
-      eventSource.onerror = (err) => {
-        console.error('SSE connection error:', err);
-        if (eventSource) {
-          eventSource.close();
-        }
-        setTimeout(connectSSE, 5000);
+      eventSource.onerror = () => {
+        // Silently let EventSource handle native reconnects without logging errors
       };
     };
 

@@ -3,14 +3,15 @@
 // FilterTable inject prop `detail` qua React.cloneElement khi mở modal edit/detail.
 // Khi `detail` có id → edit mode; không có → create mode.
 
-import { Button, Flex, Form, Input, Modal, Select } from 'antd';
-import { useEffect } from 'react';
+import { AutoComplete, Button, Flex, Form, Input, Modal, Select } from 'antd';
+import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getKey } from '@shared/types/I18nKeyType';
 import CustomInput from '../../../components/shared/input/CustomInput';
 import { USER_ROLE, STATUS_CODE } from '../../../constants/commonConst';
 // SearchSelect (achievements) removed — not used
 import { userHooks } from '../../../hooks/useUsers';
+import { classHooks } from '../../../hooks/useClasses';
 import { IDetailUser, UserRoleType } from 'src/type/UserType';
 
 // I prefix cho interface (convention của dự án)
@@ -30,11 +31,33 @@ const ModalCreateEditUser = ({ detail, mode = 'create', role }: IModalCreateEdit
   // form instance dùng để set/validate field password từ bên ngoài Form.Item
   const form = Form.useFormInstance();
 
+  const { data: classesData } = classHooks.useFetchListClasses();
+
+  const classOptions = useMemo(() => {
+    if (!classesData?.rows) return [];
+    return classesData.rows.map((cls: any) => ({
+      value: cls.name,
+      label: cls.name,
+    }));
+  }, [classesData]);
+
+  const specializationOptions = [
+    { value: 'Phần mềm', label: 'Phần mềm' },
+    { value: 'Phần cứng', label: 'Phần cứng' },
+  ];
+
+  const mssvValue = Form.useWatch('id', form);
+
+  useEffect(() => {
+    if (role === USER_ROLE.STUDENT && isCreateMode && mssvValue) {
+      form.setFieldValue('email', `${mssvValue}@caothang.edu.vn`);
+      form.validateFields(['email']).catch(() => {});
+    }
+  }, [mssvValue, role, isCreateMode, form]);
+
   if (!form) {
     return null;
   }
-
-
 
   useEffect(() => {
     if (!isCreateMode) return;
@@ -47,23 +70,29 @@ const ModalCreateEditUser = ({ detail, mode = 'create', role }: IModalCreateEdit
     }
   }, [form, isCreateMode, role]);
 
+  const titleText = useMemo(() => {
+    const isStudent = role === USER_ROLE.STUDENT;
+    if (isDetailMode) return isStudent ? 'Chi tiết sinh viên' : 'Chi tiết giảng viên';
+    if (isEditMode) return isStudent ? 'Chỉnh sửa sinh viên' : 'Chỉnh sửa giảng viên';
+    return isStudent ? 'Thêm sinh viên mới' : 'Thêm giảng viên mới';
+  }, [isDetailMode, isEditMode, role]);
 
+  const descText = useMemo(() => {
+    if (isDetailMode) return 'Xem thông tin chi tiết của tài khoản.';
+    if (isEditMode) return 'Vui lòng cập nhật các thông tin của tài khoản dưới đây.';
+    return 'Vui lòng điền đầy đủ các thông tin dưới đây để tạo tài khoản mới.';
+  }, [isDetailMode, isEditMode]);
 
   return (
     <>
-      {/* ===== Header: title + nút đặt lại mật khẩu (chỉ edit mode) ===== */}
+      {/* ===== Header: title ===== */}
       <Flex justify="space-between" align="flex-start" className="mb-1">
         <h2 className="text-[18px] font-semibold leading-[18px] tracking-[-0.45px] text-blackSoft">
-          {isDetailMode
-            ? 'Chi tiết người dùng'
-            : isEditMode
-              ? t(getKey('edit_user_title'))
-              : t(getKey('add_user_title'))}
+          {titleText}
         </h2>
-
       </Flex>
       <p className="mb-6 text-sm leading-5 text-grayMedium">
-        {t(getKey('add_user_desc'))}
+        {descText}
       </p>
 
       {role === USER_ROLE.STUDENT ? (
@@ -76,118 +105,101 @@ const ModalCreateEditUser = ({ detail, mode = 'create', role }: IModalCreateEdit
         </Form.Item>
       )}
 
-      {/* ===== Họ tên + Email (2 cột) ===== */}
-      <Flex gap={16}>
-        <Form.Item
-          label={t(getKey('full_name'))}
-          name="name"
-          rules={[{ required: true, message: t(getKey('user_name_required')) }]}
-          className="flex-1"
-        >
-          {/* CustomInput đã có style chuẩn của dự án — không cần thêm className */}
-          <CustomInput
-            placeholder={t(getKey('full_name'))}
-            readOnly={isDetailMode}
-          />
-        </Form.Item>
-
-        <Form.Item
-          label={t(getKey('email'))}
-          name="email"
-          rules={[
-            { required: true, message: t(getKey('user_email_required')) },
-            { type: 'email', message: t(getKey('email_invalid')) },
-          ]}
-          className="flex-1"
-        >
-          {/* Email không cho sửa khi edit — email là định danh tài khoản */}
-          <CustomInput
-            placeholder={t(getKey('email'))}
-            readOnly={isEditMode || isDetailMode}
-          />
-        </Form.Item>
-      </Flex>
-
-      <Flex gap={16}>
-        <Form.Item
-          label={role === USER_ROLE.STUDENT ? t(getKey('student_id')) : t(getKey('teacher_id'))}
-          name="id"
-          rules={[{ required: isCreateMode && role === USER_ROLE.STUDENT, message: t(getKey('please_enter_user_id')) }]}
-          className="flex-1"
-        >
-          {isCreateMode && role === USER_ROLE.TEACHER ? (
-            <CustomInput
-              placeholder="Tự động tạo bởi hệ thống"
-              disabled
-            />
-          ) : (
-            <CustomInput
-              placeholder={role === USER_ROLE.STUDENT ? t(getKey('enter_student_id')) : t(getKey('enter_teacher_id'))}
-              readOnly={!isCreateMode || isDetailMode}
-            />
-          )}
-        </Form.Item>
-
-        <Form.Item
-          label={role === USER_ROLE.STUDENT ? t(getKey('class')) : t(getKey('department'))}
-          name="className"
-          className="flex-1"
-        >
-          <CustomInput
-            placeholder={role === USER_ROLE.STUDENT ? t(getKey('example_class')) : t(getKey('example_department'))}
-            readOnly={isDetailMode}
-          />
-        </Form.Item>
-      </Flex>
-
-      <Flex gap={16}>
-        <Form.Item label={t(getKey('phone_number'))} name="phone" className="flex-1">
-          <CustomInput
-            placeholder="VD: 0901234567"
-            readOnly={isDetailMode}
-          />
-        </Form.Item>
-
-        <Form.Item label={t(getKey('status'))} name="status" className="flex-1">
-          <Select
-            disabled={isDetailMode}
-            placeholder={t(getKey('status'))}
-            options={[
-              { value: STATUS_CODE.ACTIVE, label: t(getKey('status_active')) },
-              { value: STATUS_CODE.INACTIVE, label: t(getKey('status_inactive')) },
-              { value: STATUS_CODE.DELETED, label: t(getKey('status_deleted')) },
-            ]}
-          />
-        </Form.Item>
-      </Flex>
-
-      {/* ===== Giới tính + Ngày sinh (2 cột) ===== */}
-      <Flex gap={16}>
-        <Form.Item label="Giới tính" name="gender" className="flex-1">
-          <Select
-            disabled={isDetailMode}
-            placeholder="Chọn giới tính"
-            options={[
-              { value: 'Nam', label: 'Nam' },
-              { value: 'Nu', label: 'Nữ' },
-              { value: 'Khac', label: 'Khác' },
-            ]}
-          />
-        </Form.Item>
-
-        <Form.Item label="Ngày sinh" name="dateOfBirth" className="flex-1">
-          <CustomInput
-            type="date"
-            readOnly={isDetailMode}
-            placeholder="YYYY-MM-DD"
-          />
-        </Form.Item>
-      </Flex>
-
-      {/* ===== Học vị + Chuyên môn + Vai trò chi tiết (Cho Giảng viên) ===== */}
-      {role === USER_ROLE.TEACHER && (
+      {role === USER_ROLE.TEACHER ? (
         <>
+          {/* Row 1: Họ và tên + Email */}
           <Flex gap={16}>
+            <Form.Item
+              label="Họ và tên"
+              name="name"
+              rules={[{ required: true, message: 'Vui lòng nhập họ và tên!' }]}
+              className="flex-1"
+            >
+              <CustomInput
+                placeholder="Nhập họ và tên"
+                readOnly={isDetailMode}
+              />
+            </Form.Item>
+
+            <Form.Item
+              label="Email"
+              name="email"
+              rules={[
+                { required: true, message: 'Vui lòng nhập email!' },
+                { type: 'email', message: 'Email không đúng định dạng!' },
+                {
+                  pattern: /^[a-z]+@caothang\.edu\.vn$/,
+                  message: 'Email giảng viên không hợp lệ (phải đúng định dạng tên@caothang.edu.vn)!',
+                },
+              ]}
+              className="flex-1"
+            >
+              <CustomInput
+                placeholder="Nhập email"
+                readOnly={isDetailMode}
+              />
+            </Form.Item>
+          </Flex>
+
+          {/* Row 2: Số điện thoại + Giới tính */}
+          <Flex gap={16}>
+            <Form.Item
+              label="Số điện thoại"
+              name="phone"
+              className="flex-1"
+              rules={[
+                { pattern: /^[0-9]*$/, message: 'Số điện thoại chỉ được chứa các chữ số!' },
+                { len: 10, message: 'Số điện thoại phải có đúng 10 chữ số!' }
+              ]}
+            >
+              <CustomInput
+                placeholder="Ví dụ: 0901234567"
+                readOnly={isDetailMode}
+              />
+            </Form.Item>
+
+            <Form.Item label="Giới tính" name="gender" className="flex-1">
+              <Select
+                disabled={isDetailMode}
+                placeholder="Chọn giới tính"
+                options={[
+                  { value: 'Nam', label: 'Nam' },
+                  { value: 'Nu', label: 'Nữ' },
+                  { value: 'Khac', label: 'Khác' },
+                ]}
+              />
+            </Form.Item>
+          </Flex>
+
+          {/* Row 3: Ngày sinh + Học vị */}
+          <Flex gap={16}>
+            <Form.Item
+              label="Ngày sinh"
+              name="dateOfBirth"
+              className="flex-1"
+              rules={[
+                () => ({
+                  validator(_, value) {
+                    if (value) {
+                      const selectedDate = new Date(value);
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      if (selectedDate > today) {
+                        return Promise.reject(new Error('Ngày sinh không hợp lệ!'));
+                      }
+                    }
+                    return Promise.resolve();
+                  },
+                }),
+              ]}
+            >
+              <CustomInput
+                type="date"
+                readOnly={isDetailMode}
+                placeholder="YYYY-MM-DD"
+              />
+            </Form.Item>
+
             <Form.Item label="Học vị" name="academicDegree" className="flex-1">
               <Select
                 disabled={isDetailMode}
@@ -202,27 +214,199 @@ const ModalCreateEditUser = ({ detail, mode = 'create', role }: IModalCreateEdit
                 ]}
               />
             </Form.Item>
+          </Flex>
 
-            <Form.Item label="Chuyên môn" name="specialization" className="flex-1">
+          {/* Row 4: Chuyên môn + Trạng thái hoạt động */}
+          <Flex gap={16}>
+            <Form.Item
+              label="Chuyên môn"
+              name="specialization"
+              className="flex-1"
+              rules={[{ required: true, message: 'Vui lòng chọn chuyên môn!' }]}
+            >
+              <Select
+                showSearch
+                placeholder="Chọn chuyên môn"
+                disabled={isDetailMode}
+                filterOption={(input, option) =>
+                  String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                }
+                options={specializationOptions}
+              />
+            </Form.Item>
+
+            {!isCreateMode ? (
+              <Form.Item label="Trạng thái hoạt động" name="status" className="flex-1">
+                <Select
+                  disabled={isDetailMode}
+                  placeholder="Chọn trạng thái"
+                  options={[
+                    { value: STATUS_CODE.ACTIVE, label: 'Đang hoạt động' },
+                    { value: STATUS_CODE.INACTIVE, label: 'Khóa tài khoản' },
+                    { value: STATUS_CODE.DELETED, label: 'Đã xóa' },
+                  ]}
+                />
+              </Form.Item>
+            ) : (
+              <>
+                <Form.Item name="status" hidden initialValue={STATUS_CODE.ACTIVE}>
+                  <Input />
+                </Form.Item>
+                <div className="flex-1" />
+              </>
+            )}
+          </Flex>
+        </>
+      ) : (
+        <>
+          {/* Row 1: MSSV + Họ và tên */}
+          <Flex gap={16}>
+            <Form.Item
+              label="Mã số sinh viên (MSSV)"
+              name="id"
+              rules={[
+                { required: isCreateMode, message: 'Vui lòng nhập mã số sinh viên!' },
+                { pattern: /^0[0-9]+$/, message: 'Mã số sinh viên phải là số bắt đầu bằng số 0!' },
+                { max: 10, message: 'Mã số sinh viên không được vượt quá 10 ký tự!' }
+              ]}
+              className="flex-1"
+            >
               <CustomInput
-                placeholder="Ví dụ: Phần mềm, An toàn thông tin"
+                placeholder="Nhập mã số sinh viên"
+                readOnly={!isCreateMode || isDetailMode}
+              />
+            </Form.Item>
+
+            <Form.Item
+              label="Họ và tên"
+              name="name"
+              rules={[{ required: true, message: 'Vui lòng nhập họ và tên!' }]}
+              className="flex-1"
+            >
+              <CustomInput
+                placeholder="Nhập họ và tên"
                 readOnly={isDetailMode}
               />
             </Form.Item>
           </Flex>
 
+          {/* Row 2: Email + Lớp học */}
           <Flex gap={16}>
-            <Form.Item label="Vai trò chi tiết" name="role" className="flex-1">
+            <Form.Item
+              label="Email"
+              name="email"
+              dependencies={['id']}
+              rules={[
+                { required: true, message: 'Vui lòng nhập email!' },
+                {
+                  pattern: /^0[0-9]{9}@caothang\.edu\.vn$/,
+                  message: 'Email sinh viên không hợp lệ!',
+                },
+              ]}
+              className="flex-1"
+            >
+              <CustomInput
+                placeholder="Email đăng nhập"
+                readOnly={isEditMode || isDetailMode}
+              />
+            </Form.Item>
+
+            <Form.Item
+              label="Lớp học"
+              name="className"
+              rules={[{ required: true, message: 'Vui lòng chọn lớp học!' }]}
+              className="flex-1"
+            >
+              <Select
+                showSearch
+                placeholder="Chọn lớp học"
+                disabled={isDetailMode}
+                filterOption={(input, option) =>
+                  String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                }
+                options={classOptions}
+              />
+            </Form.Item>
+          </Flex>
+
+          {/* Row 3: Số điện thoại + Giới tính */}
+          <Flex gap={16}>
+            <Form.Item
+              label="Số điện thoại"
+              name="phone"
+              className="flex-1"
+              rules={[
+                { pattern: /^[0-9]*$/, message: 'Số điện thoại chỉ được chứa các chữ số!' }
+              ]}
+            >
+              <CustomInput
+                placeholder="Ví dụ: 0901234567"
+                readOnly={isDetailMode}
+              />
+            </Form.Item>
+
+            <Form.Item label="Giới tính" name="gender" className="flex-1">
               <Select
                 disabled={isDetailMode}
-                placeholder="Chọn vai trò"
+                placeholder="Chọn giới tính"
                 options={[
-                  { value: USER_ROLE.TEACHER, label: 'Giảng viên (TEACHER)' },
-                  { value: USER_ROLE.ADMIN, label: 'Quản trị viên (ADMIN)' },
+                  { value: 'Nam', label: 'Nam' },
+                  { value: 'Nu', label: 'Nữ' },
+                  { value: 'Khac', label: 'Khác' },
                 ]}
               />
             </Form.Item>
-            <div className="flex-1" />
+          </Flex>
+
+          {/* Row 4: Ngày sinh + Trạng thái hoạt động */}
+          <Flex gap={16}>
+            <Form.Item
+              label="Ngày sinh"
+              name="dateOfBirth"
+              className="flex-1"
+              rules={[
+                () => ({
+                  validator(_, value) {
+                    if (value) {
+                      const selectedDate = new Date(value);
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      if (selectedDate > today) {
+                        return Promise.reject(new Error('Ngày sinh không hợp lệ!'));
+                      }
+                    }
+                    return Promise.resolve();
+                  },
+                }),
+              ]}
+            >
+              <CustomInput
+                type="date"
+                readOnly={isDetailMode}
+                placeholder="YYYY-MM-DD"
+              />
+            </Form.Item>
+
+            {!isCreateMode ? (
+              <Form.Item label="Trạng thái hoạt động" name="status" className="flex-1">
+                <Select
+                  disabled={isDetailMode}
+                  placeholder="Chọn trạng thái"
+                  options={[
+                    { value: STATUS_CODE.ACTIVE, label: 'Đang hoạt động' },
+                    { value: STATUS_CODE.INACTIVE, label: 'Khóa tài khoản' },
+                    { value: STATUS_CODE.DELETED, label: 'Đã xóa' },
+                  ]}
+                />
+              </Form.Item>
+            ) : (
+              <>
+                <Form.Item name="status" hidden initialValue={STATUS_CODE.ACTIVE}>
+                  <Input />
+                </Form.Item>
+                <div className="flex-1" />
+              </>
+            )}
           </Flex>
         </>
       )}
