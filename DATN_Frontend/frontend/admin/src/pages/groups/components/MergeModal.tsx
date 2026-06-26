@@ -50,7 +50,7 @@ const MergeModal: React.FC<Props> = ({ open, onCancel, onOk, mergeLeft, mergeRig
         <div>
           <div className="text-sm text-gray-600">{t(getKey('preview'))}</div>
           <div className="p-3 border rounded">
-            {mergeLeft && mergeRight ? t(getKey('members_count_label'), { count: formatNumber(groups.find((g) => g.id === mergeLeft)!.members.length + groups.find((g) => g.id === mergeRight)!.members.length) }) : t(getKey('select_groups_for_preview'))}
+            {mergeLeft && mergeRight ? (t(getKey('members_count_label'), { count: groups.find((g) => g.id === mergeLeft)!.members.length + groups.find((g) => g.id === mergeRight)!.members.length }) as string) : (t(getKey('select_groups_for_preview')) as string)}
           </div>
         </div>
       </div>

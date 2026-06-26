@@ -1,6 +1,6 @@
 import axiosInstance from '../axios/axios-config';
 
-const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK !== 'false';
+const USE_MOCK = false;
 
 export interface IListPeriod {
   id: string;

@@ -12,14 +12,18 @@ export type CouncilRow = {
   member: string[];
   topicGroups: { code: string; title: string; members: number }[];
   accent: 'blue' | 'green';
-  topics?: { examiners?: string[]; externalExaminers?: string[] }[];
+  topics?: { code?: string; title?: string; members?: number; examiners?: string[]; externalExaminers?: string[]; startTime?: string }[];
   external?: { name: string }[];
 };
 
 export const councilApi = {
   getListCouncil: async (): Promise<CouncilRow[]> => {
     const response = await axiosInstance.get('/private/v1/councils');
-    return response?.data?.results?.objects || [];
+    const objects: any = response?.data?.results?.objects;
+    if (objects && !Array.isArray(objects) && Array.isArray(objects.rows)) {
+      return objects.rows;
+    }
+    return (objects as CouncilRow[]) || [];
   },
 
   getCouncilDetail: async (id: string): Promise<CouncilRow> => {

@@ -83,12 +83,12 @@ export default function ScoringTable({
     try {
       const res = await teacherApi.saveScores(groupId, payload)
       if (res?.ok || res?.success) {
-        alert('Lưu thành công (mock)')
+        alert('Lưu thành công.')
       } else {
-        alert('Lưu thất bại (mock)')
+        alert('Lưu thất bại.')
       }
     } catch (_) {
-      alert('Lưu thất bại (mock)')
+      alert('Lưu thất bại.')
     } finally { setLoading(false) }
   }
 
