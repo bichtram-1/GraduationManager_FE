@@ -33,6 +33,7 @@ const getConfirmationStatusMeta = (t: any) => ({
 const getNoCompanyStatusMeta = (t: any) => ({
   [STATUS_CODE.NOT_REGISTERED]: { label: t(getKey('not_registered_list')), className: 'bg-[var(--color-red-light)] text-[var(--color-red-medium)]' },
   [STATUS_CODE.SEARCHING]: { label: t(getKey('searching_list')), className: 'bg-[var(--color-gold-light)] text-[var(--color-gold-medium)]' },
+  [STATUS_CODE.HAS_COMPANY]: { label: t(getKey('has_company_list')), className: 'bg-[var(--color-green-light)] text-[var(--color-green-medium)]' },
 } as const);
 
 const InternshipStudentsPage = () => {
@@ -82,6 +83,7 @@ const InternshipStudentsPage = () => {
     total: noCompanyRows.length,
     not_registered: noCompanyRows.filter((item) => item.status === STATUS_CODE.NOT_REGISTERED).length,
     searching: noCompanyRows.filter((item) => item.status === STATUS_CODE.SEARCHING).length,
+    has_company: noCompanyRows.filter((item) => item.status === STATUS_CODE.HAS_COMPANY).length,
   }), [noCompanyRows]);
 
   const useFilteredConfirmationListQuery = (params: BaseListParams) => {
@@ -107,16 +109,21 @@ const InternshipStudentsPage = () => {
 
   const useFilteredNoCompanyListQuery = (params: BaseListParams) => {
     const query = internshipHooks.useFetchListNoCompanyStudents({ periodId: selectedPeriod?.id });
-    const typedParams = params as BaseListParams & { keyword?: string; className?: string };
+    const typedParams = params as BaseListParams & { keyword?: string; className?: string; assignmentStatus?: string };
     const keyword = (typedParams.keyword ?? '').trim().toLowerCase();
     const status = noCompanyTab || 'all';
     const className = typedParams.className || 'all';
+    const assignmentStatus = typedParams.assignmentStatus || 'all';
 
     const sourceRows2 = (query.data?.rows ?? noCompanyList ?? INITIAL_NO_COMPANY_STUDENTS) as INoCompanyStudent[];
     const filteredRows = sourceRows2
       .filter((r) => (status === 'all' || status === undefined ? true : r.status === status))
       .filter((r) => (className === 'all' ? true : r.className === className))
-      .filter((r) => !keyword || [r.studentId, r.studentName, r.className, r.phone].join(' ').toLowerCase().includes(keyword));
+      .filter((r) => {
+        if (assignmentStatus === 'all') return true;
+        return r.assignmentStatus === assignmentStatus;
+      })
+      .filter((r) => !keyword || [r.studentId, r.studentName, r.className, r.phone, r.supervisor || ''].join(' ').toLowerCase().includes(keyword));
 
     return {
       ...query,
@@ -176,6 +183,7 @@ const InternshipStudentsPage = () => {
     { title: t(getKey('student_name')), dataIndex: 'studentName', key: 'studentName', ellipsis: true },
     { title: t(getKey('class_name')), dataIndex: 'className', key: 'className', width: 130 },
     { title: t(getKey('phone_number')), dataIndex: 'phone', key: 'phone', width: 140 },
+    { title: t(getKey('mentor')) || 'Giáo viên hướng dẫn', dataIndex: 'supervisor', key: 'supervisor', render: (value: string) => value ? <Tag color="blue">{value}</Tag> : <span className="text-slate-400">Chưa phân công</span> },
     { title: t(getKey('status')), dataIndex: 'status', key: 'status', width: 160, render: (status: NoCompanyStatus) => {
       const meta = getNoCompanyStatusMeta(t)[status];
       return <Tag className={cn("m-0 rounded-full px-[10px] py-0 border-none", meta.className)}>{meta.label}</Tag>;
@@ -243,6 +251,7 @@ const InternshipStudentsPage = () => {
             { key: 'all', label: `${t(getKey('all_list'))} (${formatNumber(noCompanyTabCounts.total)})`, icon: <BankOutlined /> },
             { key: 'not_registered', label: `${t(getKey('not_registered_list'))} (${formatNumber(noCompanyTabCounts.not_registered)})`, icon: <CloseCircleOutlined /> },
             { key: 'searching', label: `${t(getKey('searching_list'))} (${formatNumber(noCompanyTabCounts.searching)})`, icon: <ClockCircleOutlined /> },
+            { key: 'has_company', label: `${t(getKey('has_company_list'))} (${formatNumber(noCompanyTabCounts.has_company)})`, icon: <CheckCircleOutlined /> },
           ]}
           className="batch-tabs"
         />
@@ -293,8 +302,15 @@ const InternshipStudentsPage = () => {
                   <Form.Item name="keyword" className="xl:col-span-5 !mb-0">
                     <Input allowClear prefix={<SearchOutlined className="text-slate-400" />} placeholder={t(getKey('search_student_no_company_placeholder'))} className="!h-11 !rounded-[12px] !border-slate-300" />
                   </Form.Item>
-                  <Form.Item name="className" className="xl:col-span-4 !mb-0">
-                    <Select allowClear className="!h-11 !w-full" options={[{ value: 'all', label: t(getKey('all_classes')) }, ...classOptions.map((c) => ({ value: c, label: c }))]} />
+                  <Form.Item name="className" className="xl:col-span-3 !mb-0">
+                    <Select allowClear placeholder={t(getKey('all_classes'))} className="!h-11 !w-full" options={[{ value: 'all', label: t(getKey('all_classes')) }, ...classOptions.map((c) => ({ value: c, label: c }))]} />
+                  </Form.Item>
+                  <Form.Item name="assignmentStatus" className="xl:col-span-4 !mb-0" initialValue="all">
+                    <Select className="!h-11 !w-full" options={[
+                      { value: 'all', label: 'Tất cả trạng thái phân công' },
+                      { value: 'assigned', label: 'Đã phân công GVHD' },
+                      { value: 'unassigned', label: 'Chưa phân công GVHD' }
+                    ]} />
                   </Form.Item>
                 </div>
               </div>

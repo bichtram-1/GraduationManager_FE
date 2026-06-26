@@ -41,6 +41,7 @@ export const STATUS_CODE = {
   LOCKED: 'LOCKED',
   NOT_REGISTERED: 'not_registered',
   SEARCHING: 'searching',
+  HAS_COMPANY: 'has_company',
   ASSIGNED: 'assigned',
   UNASSIGNED: 'unassigned',
   AVAILABLE: 'available',

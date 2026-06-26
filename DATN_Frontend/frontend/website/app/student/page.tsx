@@ -1,64 +1,122 @@
+'use client'
+
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ArrowRight, CalendarDays, CheckCircle2, FileText, MapPin, Trophy, Upload, Building2, Clock3, TrendingUp } from 'lucide-react'
 import { StudentPill, StudentSectionHeader, StudentStatCard } from './_components/StudentShell'
-
-const internshipPartners = [
-  { name: 'FPT Software', field: 'Phần mềm', address: 'Quận 9, TP.HCM', slots: '15' },
-  { name: 'VNG Corp', field: 'Internet', address: 'Quận 7, TP.HCM', slots: '8' },
-  { name: 'MoMo', field: 'Fintech', address: 'Quận 3, TP.HCM', slots: '5' },
-]
-
-const pendingTasks = [
-  'Khai báo nơi thực tập trước 30/04.',
-  'Nộp nhật ký tuần 3 cho GVHD.',
-  'Cập nhật bản thảo chương 2 của ĐATN.',
-]
-
-const milestones = [
-  ['30/04', 'Hết hạn đăng ký TTTN'],
-  ['05/05', 'Nộp nhật ký tuần 3'],
-  ['20/06', 'Công bố kết quả ĐATN'],
-]
+import { studentApi, IStudentDashboardData } from '@/lib/api/studentApi'
+import { Spin } from 'antd'
 
 export default function StudentIndexPage() {
+  const [data, setData] = useState<IStudentDashboardData | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    studentApi.getDashboard()
+      .then((res) => {
+        setData(res)
+        setLoading(false)
+      })
+      .catch((err) => {
+        console.error('Failed to fetch student dashboard:', err)
+        setLoading(false)
+      })
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[400px] flex-col items-center justify-center gap-3">
+        <Spin size="large" />
+        <div className="text-sm text-slate-500">Đang tải thông tin trang chủ sinh viên...</div>
+      </div>
+    )
+  }
+
+  if (!data) {
+    return (
+      <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center text-red-600">
+        Đã xảy ra lỗi khi tải dữ liệu từ máy chủ. Vui lòng tải lại trang.
+      </div>
+    )
+  }
+
+  const { student, tttn, datn, reportsCount, expectedScore, pendingTasks, milestones, companies } = data
+
   return (
     <>
       <StudentSectionHeader
-        title="Trang chủ sinh viên"
-        description="Theo dõi thực tập, đồ án và kết quả học tập với bố cục dashboard nhiều thẻ, đồng bộ phong cách bộ design tham chiếu."
+        title={`Chào mừng, ${student.name}`}
+        description={`MSSV: ${student.studentCode} | Lớp: ${student.className} | Quản lý đợt thực tập tốt nghiệp và đồ án tốt nghiệp.`}
       />
 
       <section className="mb-6 rounded-[28px] border border-blue-100 bg-[linear-gradient(135deg,#eff6ff_0%,#ffffff_100%)] p-5 shadow-[0_12px_40px_rgba(15,23,42,0.05)]">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="max-w-3xl">
-            <StudentPill tone="blue">Tuần này đang mở</StudentPill>
-            <h2 className="mt-3 text-xl font-semibold tracking-tight text-slate-900">Một nơi để theo dõi TTTN, ĐATN và kết quả ngay trên cùng màn hình.</h2>
+            <StudentPill tone="blue">Thông tin học tập</StudentPill>
+            <h2 className="mt-3 text-xl font-semibold tracking-tight text-slate-900">
+              {tttn.hasPeriod ? `Đợt TTTN: ${tttn.periodName}` : 'Không có đợt TTTN nào'}
+              {datn.hasPeriod && ` | Đợt ĐATN: ${datn.periodName}`}
+            </h2>
             <p className="mt-2 text-sm leading-6 text-slate-600">
-              Các khối bên dưới được sắp lại theo kiểu dashboard: thông tin chính ở trước, hành động nhanh bên cạnh, và trạng thái tiến độ ở cuối.
+              {tttn.status === 'Đang thực tập' 
+                ? `Bạn đang thực tập tại ${tttn.companyName} (Người hướng dẫn: ${tttn.mentor || 'Chưa phân công'}).` 
+                : tttn.status === 'Chờ phê duyệt'
+                ? `Yêu cầu tự khai báo thực tập tại ${tttn.companyName} đang chờ duyệt.`
+                : 'Bạn chưa đăng ký nơi thực tập.'}
+              {' '}
+              {datn.status === 'Đã đăng ký'
+                ? `Đề tài đồ án: "${datn.topicTitle}" (Giảng viên hướng dẫn: ${datn.instructor}).`
+                : datn.hasPeriod
+                ? 'Bạn chưa đăng ký đề tài đồ án tốt nghiệp.'
+                : ''}
             </p>
           </div>
           <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[420px]">
             <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
               <div className="text-xs text-slate-500">TTTN</div>
-              <div className="mt-2 text-lg font-semibold text-slate-900">Sẵn sàng</div>
+              <div className="mt-2 text-lg font-semibold text-slate-900">{tttn.status}</div>
             </div>
             <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
               <div className="text-xs text-slate-500">ĐATN</div>
-              <div className="mt-2 text-lg font-semibold text-slate-900">1 đề tài</div>
+              <div className="mt-2 text-lg font-semibold text-slate-900">
+                {datn.status === 'Đã đăng ký' ? '1 đề tài' : datn.status}
+              </div>
             </div>
             <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
-              <div className="text-xs text-slate-500">Kết quả</div>
-              <div className="mt-2 text-lg font-semibold text-slate-900">8.12</div>
+              <div className="text-xs text-slate-500">Điểm dự kiến</div>
+              <div className="mt-2 text-lg font-semibold text-slate-900">
+                {expectedScore > 0 ? expectedScore : 'Chưa có'}
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StudentStatCard title="TTTN" value="Đang mở" hint="Đợt đăng ký hiện tại" accent="blue" />
-        <StudentStatCard title="ĐATN" value="1 đề tài" hint="Đề tài đã đăng ký" accent="green" />
-        <StudentStatCard title="Báo cáo" value="03" hint="Bản thảo chờ nộp" accent="orange" />
-        <StudentStatCard title="Kết quả" value="8.12" hint="Điểm tổng kết ĐATN" accent="violet" />
+        <StudentStatCard 
+          title="TTTN" 
+          value={tttn.status} 
+          hint={tttn.companyName || (tttn.hasPeriod ? "Đã mở đăng ký" : "Chưa mở")} 
+          accent="blue" 
+        />
+        <StudentStatCard 
+          title="ĐATN" 
+          value={datn.status === 'Đã đăng ký' ? '1 đề tài' : datn.status} 
+          hint={datn.topicTitle || "Đề tài tốt nghiệp"} 
+          accent="green" 
+        />
+        <StudentStatCard 
+          title="Báo cáo" 
+          value={String(reportsCount).padStart(2, '0')} 
+          hint="Báo cáo tiến độ đã nộp" 
+          accent="orange" 
+        />
+        <StudentStatCard 
+          title="Kết quả" 
+          value={expectedScore > 0 ? String(expectedScore) : 'Chưa có'} 
+          hint="Điểm tổng kết dự kiến" 
+          accent="violet" 
+        />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-3">
@@ -69,10 +127,10 @@ export default function StudentIndexPage() {
                 <div className="text-sm font-semibold text-slate-900">Công ty đối tác nổi bật</div>
                 <div className="text-xs text-slate-500">Các đơn vị đang mở slot thực tập cho sinh viên</div>
               </div>
-              <StudentPill tone="blue">{internshipPartners.length} công ty</StudentPill>
+              <StudentPill tone="blue">{companies.length} công ty</StudentPill>
             </div>
             <div className="divide-y divide-slate-100">
-              {internshipPartners.map((company) => (
+              {companies.map((company) => (
                 <div key={company.name} className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50/80">
                   <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#eff6ff] text-[#1976D2]">
                     <Building2 className="h-5 w-5" />
@@ -108,12 +166,12 @@ export default function StudentIndexPage() {
             <div className="space-y-3 p-5">
               {pendingTasks.map((task, index) => (
                 <div key={task} className="flex gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-full bg-[#eff6ff] text-[#1976D2]">
+                  <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-full bg-[#eff6ff] text-[#1976D2] font-semibold text-xs shrink-0">
                     {index + 1}
                   </div>
                   <div>
                     <div className="text-sm font-medium text-slate-900">{task}</div>
-                    <div className="mt-1 text-xs text-slate-500">Cập nhật từ TTTN, ĐATN và mục kết quả.</div>
+                    <div className="mt-1 text-xs text-slate-500">Cập nhật tự động từ đợt thực tập và đồ án của bạn.</div>
                   </div>
                 </div>
               ))}
@@ -131,13 +189,13 @@ export default function StudentIndexPage() {
               <CalendarDays className="text-[#1976D2]" />
             </div>
             <div className="mt-4 space-y-3">
-              {milestones.map(([date, title]) => (
-                <div key={title} className="rounded-2xl bg-slate-50 p-4">
+              {milestones.map((milestone) => (
+                <div key={milestone.title} className="rounded-2xl bg-slate-50 p-4">
                   <div className="flex items-center justify-between text-xs text-slate-500">
-                    <span>{date}</span>
+                    <span>{milestone.date}</span>
                     <span><CheckCircle2 className="h-4 w-4 text-emerald-500" /></span>
                   </div>
-                  <div className="mt-2 text-sm font-medium text-slate-900">{title}</div>
+                  <div className="mt-2 text-sm font-medium text-slate-900">{milestone.title}</div>
                 </div>
               ))}
             </div>
@@ -155,17 +213,19 @@ export default function StudentIndexPage() {
           </section>
 
           <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
-            <div className="text-sm font-semibold text-slate-900">Tình trạng tuần này</div>
+            <div className="text-sm font-semibold text-slate-900">Tình trạng học tập</div>
             <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
               <div className="rounded-2xl bg-slate-50 p-4">
-                <div className="flex items-center gap-2 text-xs text-slate-500"><Clock3 className="h-4 w-4 text-[#1976D2]" /> Báo cáo</div>
-                <div className="mt-2 text-2xl font-semibold text-slate-900">03</div>
-                <div className="text-xs text-slate-500">bản nháp cần hoàn thành</div>
+                <div className="flex items-center gap-2 text-xs text-slate-500"><Clock3 className="h-4 w-4 text-[#1976D2]" /> Báo cáo đã nộp</div>
+                <div className="mt-2 text-2xl font-semibold text-slate-900">{reportsCount}</div>
+                <div className="text-xs text-slate-500">báo cáo tiến độ</div>
               </div>
               <div className="rounded-2xl bg-slate-50 p-4">
-                <div className="flex items-center gap-2 text-xs text-slate-500"><TrendingUp className="h-4 w-4 text-[#1976D2]" /> Điểm dự kiến</div>
-                <div className="mt-2 text-2xl font-semibold text-slate-900">8.2</div>
-                <div className="text-xs text-slate-500">TTTN + ĐATN</div>
+                <div className="flex items-center gap-2 text-xs text-slate-500"><TrendingUp className="h-4 w-4 text-[#1976D2]" /> Điểm trung bình</div>
+                <div className="mt-2 text-2xl font-semibold text-slate-900">
+                  {expectedScore > 0 ? expectedScore : 'Chưa có'}
+                </div>
+                <div className="text-xs text-slate-500">dựa trên kết quả hiện tại</div>
               </div>
             </div>
           </section>

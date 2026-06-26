@@ -27,6 +27,7 @@ const Councils = lazy(() => import('./pages/councils/CouncilsPage'));
 const CouncilsCreate = lazy(() => import('./pages/councils/components/CreateCouncilPage'));
 const GroupsAdmin = lazy(() => import('./pages/groups/GroupsAdminPage'));
 const ReviewGroupsAdmin = lazy(() => import('./pages/groups/ReviewGroupsPage'));
+const ThesisStudents = lazy(() => import('./pages/groups/ThesisStudentsPage'));
 const InternshipStudents = lazy(() => import('./pages/internship-students/InternshipStudentsPage'));
 const Periods = lazy(() => import('./pages/periods/PeriodsPage'));
 const StudentScores = lazy(() => import('./pages/student-scores/StudentScoresPage'));
@@ -82,6 +83,7 @@ function App() {
                 <Route path={ROUTES.COUNCILS_CREATE} element={<CouncilsCreate />} />
                 <Route path={ROUTES.GROUPS} element={<GroupsAdmin />} />
                 <Route path={ROUTES.GROUPS_REVIEW} element={<ReviewGroupsAdmin />} />
+                <Route path={ROUTES.GROUPS_STUDENTS} element={<ThesisStudents />} />
                 <Route path={ROUTES.CLASSES} element={<ClassesAdmin />} />
                 <Route path={ROUTES.ASSIGNMENTS} element={<Assignments />} />
                 <Route path={ROUTES.STUDENT_SCORES} element={<StudentScores />} />

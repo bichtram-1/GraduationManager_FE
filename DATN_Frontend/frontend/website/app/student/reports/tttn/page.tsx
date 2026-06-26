@@ -1,37 +1,60 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { CalendarDays, CheckCircle2, FileText, Plus, Upload, Clock3, MessageSquareQuote } from 'lucide-react'
 import { StudentPill, StudentSectionHeader, StudentStatCard } from '../../_components/StudentShell'
-
-const initialReports = [
-  { week: 1, title: 'Làm quen môi trường công ty', status: 'Đã duyệt', file: 'week1.pdf', note: 'Giới thiệu cấu trúc phòng ban', updated: '12/05/2026' },
-  { week: 2, title: 'Nghiên cứu công nghệ', status: 'Đã duyệt', file: 'week2.pdf', note: 'Khảo sát stack nội bộ', updated: '19/05/2026' },
-  { week: 3, title: 'Phát triển tính năng A', status: 'Nháp', file: '—', note: 'Đang viết dàn ý báo cáo', updated: '23/05/2026' },
-]
+import { studentApi, IProgressReport } from '@/lib/api/studentApi'
 
 export default function StudentReportsTTTNPage() {
-  const [reports, setReports] = useState(initialReports)
-  const [selectedWeek, setSelectedWeek] = useState(initialReports[0].week)
+  const [reports, setReports] = useState<IProgressReport[]>([])
+  const [selectedWeek, setSelectedWeek] = useState<number | null>(null)
   const [submitOpen, setSubmitOpen] = useState(false)
   const [submitForm, setSubmitForm] = useState({
-    week: String(initialReports.length + 1),
+    week: '1',
     title: '',
     note: '',
     file: '',
   })
+  const [loading, setLoading] = useState(true)
 
-  const selectedReport = useMemo(
-    () => reports.find((report) => report.week === selectedWeek) ?? reports[0],
-    [selectedWeek, reports]
-  )
+  useEffect(() => {
+    let mounted = true
+    setLoading(true)
+    async function load() {
+      try {
+        const data = await studentApi.getTttnReports()
+        if (!mounted) return
+        setReports(data)
+        if (data.length > 0) {
+          setSelectedWeek(data[0].week)
+        }
+      } catch (_err) {
+        if (!mounted) return
+        setReports([])
+      } finally {
+        if (mounted) {
+          setLoading(false)
+        }
+      }
+    }
+    load()
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  const selectedReport = useMemo(() => {
+    return reports.find((report) => report.week === selectedWeek) 
+      ?? reports[0] 
+      ?? { week: 1, title: 'Không có dữ liệu', status: '—', file: '—', note: 'Chưa nộp nhật ký nào.', updated: '—' }
+  }, [selectedWeek, reports])
 
   const approvedCount = reports.filter((report) => report.status === 'Đã duyệt').length
   const draftCount = reports.filter((report) => report.status === 'Nháp').length
   const pendingCount = reports.filter((report) => report.status === 'Chờ duyệt').length
 
   const openSubmitModal = () => {
-    const nextWeek = Math.max(...reports.map((report) => report.week)) + 1
+    const nextWeek = reports.length > 0 ? Math.max(...reports.map((report) => report.week)) + 1 : 1
     setSubmitForm({
       week: String(nextWeek),
       title: '',
@@ -41,7 +64,7 @@ export default function StudentReportsTTTNPage() {
     setSubmitOpen(true)
   }
 
-  const handleSubmitReport = () => {
+  const handleSubmitReport = async () => {
     const nextWeek = Number(submitForm.week)
 
     if (!Number.isFinite(nextWeek) || nextWeek <= 0) {
@@ -54,21 +77,26 @@ export default function StudentReportsTTTNPage() {
       return
     }
 
-    const nextReport = {
-      week: nextWeek,
-      title: submitForm.title.trim(),
-      status: 'Chờ duyệt',
-      file: submitForm.file.trim() || `week${nextWeek}.pdf`,
-      note: submitForm.note.trim(),
-      updated: new Date().toLocaleDateString('vi-VN'),
-    }
+    try {
+      setLoading(true)
+      const nextReport = await studentApi.submitTttnReport({
+        week: nextWeek,
+        title: submitForm.title.trim(),
+        note: submitForm.note.trim(),
+        file: submitForm.file.trim() || undefined
+      })
 
-    setReports((current) => {
-      const withoutWeek = current.filter((report) => report.week !== nextReport.week)
-      return [...withoutWeek, nextReport].sort((left, right) => left.week - right.week)
-    })
-    setSelectedWeek(nextReport.week)
-    setSubmitOpen(false)
+      setReports((current) => {
+        const withoutWeek = current.filter((report) => report.week !== nextReport.week)
+        return [...withoutWeek, nextReport].sort((left, right) => left.week - right.week)
+      })
+      setSelectedWeek(nextReport.week)
+      setSubmitOpen(false)
+    } catch (err: any) {
+      alert(err?.response?.data?.message || 'Có lỗi xảy ra khi nộp báo cáo.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (

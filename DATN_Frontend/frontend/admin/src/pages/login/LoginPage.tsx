@@ -5,7 +5,7 @@ import { useLogin } from '../../hooks/useAuth';
 import { getKey } from '@shared/types/I18nKeyType';
 import { DataLoginType } from '../../type/UserLoginType';
 import { cn, USER_ROLE } from '../../constants/commonConst';
-import { LockOutlined, UserOutlined } from '@ant-design/icons';
+import { UserOutlined } from '@ant-design/icons';
 import { formatNumber } from '@shared/utils/numberUtils';
 
 const ROLE_OPTIONS = [
@@ -62,26 +62,6 @@ const LoginPage = () => {
             size="large"
             type="email"
             prefix={<UserOutlined className={cn('text-slate-400')} />}
-            className={cn('!h-11 !rounded-xl !border-slate-300')}
-          />
-        </Form.Item>
-
-        <Form.Item
-          label={<span className={cn('text-sm font-medium text-slate-700')}>{t(getKey('password'))}</span>}
-          name="password"
-          required
-          rules={[
-            {
-              required: true,
-              whitespace: true,
-              message: t(getKey('password_required')),
-            },
-          ]}
-        >
-          <Input.Password
-            placeholder="••••••••"
-            size="large"
-            prefix={<LockOutlined className={cn('text-slate-400')} />}
             className={cn('!h-11 !rounded-xl !border-slate-300')}
           />
         </Form.Item>

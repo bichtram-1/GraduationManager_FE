@@ -21,7 +21,7 @@ const LanguageSelect = ({
   const storedLang = getCookie(STORAGES.LANGUAGE) ?? 'en';
   const [language, setLanguage] = useState<LANGUAGESUPPORT>(storedLang);
   const { i18n } = useTranslation();
-  const isSupportedLanguage = import.meta.env.VITE_SUPPORT_LANGUAGE;
+  const isSupportedLanguage = (import.meta as any).env?.VITE_SUPPORT_LANGUAGE;
 
   const handleChange = (language: LANGUAGESUPPORT) => {
     setLanguage(language);

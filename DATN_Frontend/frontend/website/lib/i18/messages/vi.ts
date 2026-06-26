@@ -11,7 +11,7 @@ const ViMessages = {
     welcomeTitle: 'Chào mừng trở lại, {name}!',
     welcomeSubtitle: 'Đây là bảng điều khiển của bạn.',
     statsTitle: 'Thống kê khóa học',
-    statsSubtitle: 'Theo dõi tiến độ học tập của bạn.',
+    statsSubtitle: 'Theo dõi tiến độ đề tài của bạn.',
     activateTitle: 'Kích hoạt tài khoản',
     activateSubtitle: 'Nhập mã để mở khóa toàn bộ nội dung.',
     activateDescription: 'Bạn cần nhập mã kích hoạt để tiếp tục.',

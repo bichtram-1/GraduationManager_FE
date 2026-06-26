@@ -9,6 +9,9 @@ interface IBasePeriod {
   regDeadline: string;
   studentListUrl?: string;
   studentListFileName?: string;
+  classIds?: string[];
+  externalStudentIds?: string[];
+  externalStudents?: any[];
   numberDN?: number;
   numberSV?: number;
   numberTopics?: number;

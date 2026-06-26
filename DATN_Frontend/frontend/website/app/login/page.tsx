@@ -3,7 +3,7 @@
 import { Button, Checkbox, Form, Input, message } from 'antd'
 import { useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { LockKeyhole, User } from 'lucide-react'
+import { User } from 'lucide-react'
 import Image from 'next/image'
 
 const ROLE_OPTIONS = [
@@ -17,11 +17,10 @@ export default function LoginPage() {
   const [messageApi, messageContextHolder] = message.useMessage()
   const [role, setRole] = useState<'teacher' | 'student'>('teacher')
   const [loading, setLoading] = useState(false)
-  const DEFAULT_PASSWORD = '123456'
 
   const SAMPLE = {
-    teacher: { email: 'giangvien@gmail.com', password: DEFAULT_PASSWORD },
-    student: { email: 'sinhvien@gmail.com', password: DEFAULT_PASSWORD },
+    teacher: { email: 'giangvien@gmail.com' },
+    student: { email: 'sinhvien@gmail.com' },
   }
 
   const onGoogleSignIn = () => {
@@ -33,30 +32,58 @@ export default function LoginPage() {
     window.location.assign(url)
   }
 
-  const onFinish = (values: Record<string, unknown>) => {
+  const onFinish = async (values: Record<string, unknown>) => {
     setLoading(true)
+    const email = values.email as string || ''
 
-    setTimeout(() => {
-      const password = typeof values.password === 'string' ? values.password : ''
+    try {
+      // Call backend login to verify the real role of this email
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'}/api/dang-nhap-gia-lap`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      })
 
-      // Accept any email if password matches DEFAULT_PASSWORD, otherwise fail.
-      const ok = password === DEFAULT_PASSWORD
-
-      if (!ok) {
-        // set inline form error and show message
-        form.setFields([
-          { name: 'password', errors: ['Mật khẩu không đúng. Mật khẩu mặc định: 123456.'] },
-        ])
-        messageApi.error('Đăng nhập thất bại — kiểm tra mật khẩu. Gợi ý: mật khẩu mặc định là 123456.')
+      if (!res.ok) {
+        if (res.status === 404) {
+          messageApi.error('Tài khoản Email không tồn tại trong hệ thống!')
+        } else {
+          messageApi.error('Đăng nhập thất bại. Vui lòng thử lại!')
+        }
         setLoading(false)
         return
       }
 
-      // For server-side cookie handling, redirect to mock-login route
-      const from = searchParams?.get('from') || undefined
-      const url = `/api/mock-login?role=${encodeURIComponent(role)}${from ? `&from=${encodeURIComponent(from)}` : ''}`
-      window.location.assign(url)
-    }, 400)
+      const json = await res.json()
+      if (json.success && json.data) {
+        const userRole = json.data.role // 'SINH_VIEN', 'GIANG_VIEN', 'ADMIN'
+        
+        // Check if selected tab matches real role
+        const isStudentRole = userRole === 'SINH_VIEN'
+        const isSelectedStudent = role === 'student'
+        
+        if (isSelectedStudent !== isStudentRole) {
+          const expectedRoleName = isStudentRole ? 'Sinh viên' : 'Giảng viên'
+          messageApi.error(`Tài khoản này thuộc vai trò ${expectedRoleName}. Vui lòng chọn đúng vai trò để đăng nhập!`)
+          setLoading(false)
+          return
+        }
+
+        // Role matches! Proceed with session cookie setting and redirection
+        const from = searchParams?.get('from') || undefined
+        const url = `/api/mock-login?role=${encodeURIComponent(role)}&email=${encodeURIComponent(email)}${from ? `&from=${encodeURIComponent(from)}` : ''}`
+        window.location.assign(url)
+      } else {
+        messageApi.error(json.message || 'Đăng nhập thất bại!')
+        setLoading(false)
+      }
+    } catch (err) {
+      console.error('Login error:', err)
+      messageApi.error('Không thể kết nối đến máy chủ xác thực!')
+      setLoading(false)
+    }
   }
 
   return (
@@ -78,7 +105,7 @@ export default function LoginPage() {
                 const v = item.value as 'teacher' | 'student'
                 setRole(v)
                 // autofill sample email/password for convenience
-                form.setFieldsValue({ email: SAMPLE[v].email, password: SAMPLE[v].password })
+                form.setFieldsValue({ email: SAMPLE[v].email })
               }}
               className={`rounded-xl px-3 py-2 text-sm font-medium transition ${role === item.value ? 'bg-[#1976d2] text-white' : 'text-slate-600 hover:text-slate-900'}`}>
               {item.label}
@@ -89,10 +116,6 @@ export default function LoginPage() {
         <Form form={form} layout="vertical" onFinish={onFinish} disabled={loading}>
           <Form.Item name="email" label="Email / MSSV" rules={[{ required: true, message: 'Nhập email hoặc MSSV' }]}>
             <Input size="large" prefix={<User className="h-4 w-4 text-slate-400" />} placeholder={ROLE_OPTIONS.find(r => r.value === role)?.hint} />
-          </Form.Item>
-
-          <Form.Item name="password" label="Mật khẩu" rules={[{ required: true, message: 'Nhập mật khẩu' }]}>
-            <Input.Password size="large" prefix={<LockKeyhole className="h-4 w-4 text-slate-400" />} placeholder="••••••••" />
           </Form.Item>
 
           <div className="mb-4 flex items-center justify-between text-sm">

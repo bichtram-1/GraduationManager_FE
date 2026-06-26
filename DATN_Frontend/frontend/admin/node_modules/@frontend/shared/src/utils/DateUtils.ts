@@ -13,7 +13,7 @@ export const datePickerToString = (date?: Dayjs | null): string | undefined => {
   return date.format(DATE_FORMAT);
 };
 
-export const prepareFormDataForSubmission = (formData: unknown) => {
+export const prepareFormDataForSubmission = (formData: any) => {
   const prepared = { ...formData };
 
   if (prepared.startDate && dayjs.isDayjs(prepared.startDate)) {
@@ -27,7 +27,7 @@ export const prepareFormDataForSubmission = (formData: unknown) => {
   return prepared;
 };
 
-export const prepareDetailDataForForm = (detail: unknown) => {
+export const prepareDetailDataForForm = (detail: any) => {
   if (!detail) return detail;
 
   const prepared = { ...detail };

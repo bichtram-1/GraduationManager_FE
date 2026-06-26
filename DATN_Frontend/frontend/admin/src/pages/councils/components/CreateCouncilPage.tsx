@@ -4,23 +4,11 @@ import { ArrowLeftOutlined, MenuOutlined } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { cn, STATUS_CODE } from '../../../constants/commonConst';
 import { useTranslation } from 'react-i18next';
+import { groupHooks } from '../../../hooks/useGroups';
+import { assignmentHooks } from '../../../hooks/useAssignments';
+import { councilHooks } from '../../../hooks/useCouncils';
 import { getKey } from '@shared/types/I18nKeyType';
 import { formatNumber } from '@shared/utils/numberUtils';
-
-const TEACHERS = [
-  { id: 'GV01', name: 'TS. Nguyễn Văn X' },
-  { id: 'GV02', name: 'TS. Trần Văn Y' },
-  { id: 'GV03', name: 'ThS. Lê Thị Z' },
-  { id: 'GV04', name: 'TS. Phạm Văn K' },
-  { id: 'GV05', name: 'PGS. Đặng Thị M' },
-  { id: 'GV06', name: 'TS. Lê Văn N' },
-  { id: 'GV07', name: 'TS. Hoàng Minh P' },
-  { id: 'GV08', name: 'ThS. Trần Hà Q' },
-  { id: 'GV09', name: 'TS. Vũ Quốc R' },
-  { id: 'GV10', name: 'PGS. Nguyễn Thị S' },
-  { id: 'GV11', name: 'TS. Lưu Gia T' },
-  { id: 'GV12', name: 'ThS. Nguyễn Bảo U' },
-];
 
 type AdvisorTopic = {
   id: string;
@@ -56,55 +44,6 @@ type CommitteeForm = {
 
 type WorkflowTab = 'pick' | 'sort';
 
-const ADVISOR_BUCKETS: AdvisorBucket[] = [
-  {
-    advisorId: 'GV01',
-    advisorName: 'TS. Nguyễn Văn X',
-    topics: [
-      { id: 'T01', topicCode: 'G01', topicName: 'Hệ thống IoT giám sát nông nghiệp', members: ['20520001 - Nguyễn A', '20520002 - Trần B'], advisorId: 'GV01', minutes: 40, assignedCouncilId: 'HD01' },
-      { id: 'T02', topicCode: 'G02', topicName: 'Ứng dụng AI nhận diện hình ảnh', members: ['20520003 - Phạm D'], advisorId: 'GV01', minutes: 35 },
-      { id: 'T03', topicCode: 'G03', topicName: 'Nền tảng e-commerce', members: ['20520004 - Lê C', '20520005 - Hoàng E'], advisorId: 'GV01', minutes: 45, assignedCouncilId: 'HD02' },
-      { id: 'T04', topicCode: 'G04', topicName: 'Hệ thống quản lý ký túc xá', members: ['20520006 - Mai H'], advisorId: 'GV01', minutes: 30, assignedCouncilId: 'HD03' },
-    ],
-  },
-  {
-    advisorId: 'GV02',
-    advisorName: 'TS. Trần Văn Y',
-    topics: [
-      { id: 'T05', topicCode: 'G05', topicName: 'Ứng dụng học tập có gamification', members: ['20520007 - Bùi I'], advisorId: 'GV02', minutes: 40 },
-      { id: 'T06', topicCode: 'G06', topicName: 'Nền tảng đặt lịch phòng lab', members: ['20520008 - Đinh J', '20520009 - Hà K'], advisorId: 'GV02', minutes: 35, assignedCouncilId: 'HD02' },
-      { id: 'T07', topicCode: 'G07', topicName: 'Dashboard phân tích dữ liệu sinh viên', members: ['20520010 - Lâm L'], advisorId: 'GV02', minutes: 45, assignedCouncilId: 'HD04' },
-    ],
-  },
-  {
-    advisorId: 'GV03',
-    advisorName: 'ThS. Lê Thị Z',
-    topics: [
-      { id: 'T08', topicCode: 'G08', topicName: 'Chatbot tư vấn tuyển sinh', members: ['20520011 - Ngọc M'], advisorId: 'GV03', minutes: 35 },
-      { id: 'T09', topicCode: 'G09', topicName: 'Ứng dụng quản lý điểm danh', members: ['20520012 - Phúc N'], advisorId: 'GV03', minutes: 30 },
-      { id: 'T10', topicCode: 'G10', topicName: 'Cổng thông tin thực tập doanh nghiệp', members: ['20520013 - Quang P'], advisorId: 'GV03', minutes: 40 },
-    ],
-  },
-  {
-    advisorId: 'GV04',
-    advisorName: 'TS. Phạm Văn K',
-    topics: [
-      { id: 'T11', topicCode: 'G11', topicName: 'Hệ thống quản lý phòng khám', members: ['20520014 - Thảo Q'], advisorId: 'GV04', minutes: 45, assignedCouncilId: 'HD05' },
-      { id: 'T12', topicCode: 'G12', topicName: 'App hỗ trợ học tiếng Anh', members: ['20520015 - Uyên R', '20520016 - Vy S'], advisorId: 'GV04', minutes: 35, assignedCouncilId: 'HD05' },
-      { id: 'T13', topicCode: 'G13', topicName: 'Tối ưu hóa lịch học tự động', members: ['20520017 - Xuân T'], advisorId: 'GV04', minutes: 40, assignedCouncilId: 'HD06' },
-    ],
-  },
-  {
-    advisorId: 'GV05',
-    advisorName: 'PGS. Đặng Thị M',
-    topics: [
-      { id: 'T14', topicCode: 'G14', topicName: 'Nền tảng báo cáo học phần', members: ['20520018 - Vy U'], advisorId: 'GV05', minutes: 30 },
-      { id: 'T15', topicCode: 'G15', topicName: 'Ứng dụng quản lý hội đồng', members: ['20520019 - Sơn V', '20520020 - Trúc W'], advisorId: 'GV05', minutes: 40 },
-      { id: 'T16', topicCode: 'G16', topicName: 'Hệ thống học nhóm trực tuyến', members: ['20520021 - Yến X'], advisorId: 'GV05', minutes: 35 },
-    ],
-  },
-];
-
 const CreateCouncilPage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -124,36 +63,67 @@ const CreateCouncilPage = () => {
   const [saved, setSaved] = useState(false);
   const [workflowTab, setWorkflowTab] = useState<WorkflowTab>('pick');
 
-  const availableAdvisorBuckets = useMemo(
-    () =>
-      ADVISOR_BUCKETS
-        .map((bucket) => ({
-          ...bucket,
-          topics: bucket.topics.filter((topic) => !topic.assignedCouncilId),
-        }))
-        .filter((bucket) => bucket.topics.length > 0),
-    [],
-  );
+  const { data: groupList } = groupHooks.useFetchListGroups();
+  const { data: teacherList = [] } = assignmentHooks.useFetchTeachers();
+  const createCouncilMutation = councilHooks.useCreateCouncil();
+  const updateCouncilMutation = councilHooks.useUpdateCouncil();
+
+  const [advisorBuckets, setAdvisorBuckets] = useState<AdvisorBucket[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const isPrefilledRef = useRef(false);
+
+  useEffect(() => {
+    if (groupList?.rows) {
+      const bucketsMap: Record<string, SelectedTopic[]> = {};
+      groupList.rows.forEach((g: any) => {
+        const supervisor = g.supervisor || 'Chưa phân công';
+        if (!bucketsMap[supervisor]) {
+          bucketsMap[supervisor] = [];
+        }
+        bucketsMap[supervisor].push({
+          id: g.id,
+          topicCode: g.code,
+          topicName: g.title,
+          members: g.members.map((m: any) => `${m.code} - ${m.name}`),
+          advisorId: findTeacherIdByName(supervisor),
+          minutes: 40,
+        });
+      });
+
+      const buckets = Object.keys(bucketsMap).map((name) => ({
+        advisorId: findTeacherIdByName(name),
+        advisorName: name,
+        topics: bucketsMap[name],
+      }));
+      setAdvisorBuckets(buckets);
+    }
+  }, [groupList, teacherList]);
 
   const availableAdvisorOptions = useMemo(
     () =>
-      availableAdvisorBuckets.map((bucket) => ({
-        value: bucket.advisorId,
-        label: bucket.advisorName,
+      teacherList.map((t: any) => ({
+        value: t.id,
+        label: t.name,
       })),
-    [availableAdvisorBuckets],
+    [teacherList],
   );
-  const availableAdvisorIds = useMemo(() => new Set(availableAdvisorBuckets.map((bucket) => bucket.advisorId)), [availableAdvisorBuckets]);
+
+  const availableAdvisorIds = useMemo(() => new Set(teacherList.map((t: any) => t.id)), [teacherList]);
   const memberIds = form.members;
 
-  const teacherNameById = (id: string) => TEACHERS.find((teacher) => teacher.id === id)?.name ?? id;
+  const teacherNameById = (id: string) => {
+    const found = teacherList.find((teacher: any) => teacher.id === id || teacher.name === id);
+    return found ? found.name : id;
+  };
 
-  const findTeacherIdByName = (name: string) => TEACHERS.find((t) => t.name === name)?.id;
+  const findTeacherIdByName = (name: string) => {
+    const found = teacherList.find((t: any) => t.name === name);
+    return found ? found.id : name;
+  };
 
   const updateMembers = (nextMemberIds: string[]) => {
-    const sanitized = nextMemberIds.filter((id) => availableAdvisorIds.has(id));
-    setForm((current) => ({ ...current, members: sanitized }));
-    setSelectedTopics((current) => current.filter((topic) => sanitized.includes(topic.advisorId)));
+    setForm((current) => ({ ...current, members: nextMemberIds }));
+    setSelectedTopics((current) => current.filter((topic) => nextMemberIds.includes(topic.advisorId) || nextMemberIds.includes(findTeacherIdByName(topic.advisorId))));
   };
 
   const toggleTopic = (topic: AdvisorTopic, enabled: boolean) => {
@@ -183,6 +153,18 @@ const CreateCouncilPage = () => {
 
   const updateStartTimeForTopic = (topicId: string, startTime: string | null) => {
     setSelectedTopics((current) => current.map((topic) => (topic.id === topicId ? { ...topic, startTime } : topic)));
+  };
+
+  const updateTopicMinutes = (topicId: string, minutes: number) => {
+    setAdvisorBuckets((current) =>
+      current.map((bucket) => ({
+        ...bucket,
+        topics: bucket.topics.map((topic) => (topic.id === topicId ? { ...topic, minutes } : topic)),
+      }))
+    );
+    setSelectedTopics((current) =>
+      current.map((topic) => (topic.id === topicId ? { ...topic, minutes } : topic))
+    );
   };
 
   const moveSelectedTopic = (sourceId: string, targetId: string) => {
@@ -251,50 +233,106 @@ const CreateCouncilPage = () => {
       }
     }
 
-    setSaved(true);
-    message.success(t(getKey('create_council_success'), { count: formatNumber(selectedTopics.length) }));
-    navigate('/councils');
+    const payload = {
+      title: form.name,
+      room: form.room,
+      date: form.date,
+      time: form.time,
+      members: form.members,
+      topics: selectedTopics.map(st => ({
+        id: st.id,
+        nhom_id: st.id,
+        reviewerId: st.reviewerId,
+        examinerIds: st.examinerIds || [],
+        externalExaminers: st.externalExaminers || [],
+        startTime: st.startTime,
+        minutes: st.minutes
+      }))
+    };
+
+    if (editingId) {
+      updateCouncilMutation.mutate({ id: editingId, body: payload }, {
+        onSuccess: () => {
+          setSaved(true);
+          message.success(t(getKey('update_council_success_message')));
+          navigate('/councils');
+        },
+        onError: (err: any) => {
+          message.error(err.message || t(getKey('config_error_message')));
+        }
+      });
+    } else {
+      createCouncilMutation.mutate(payload, {
+        onSuccess: () => {
+          setSaved(true);
+          message.success(t(getKey('create_council_success'), { count: formatNumber(selectedTopics.length) }));
+          navigate('/councils');
+        },
+        onError: (err: any) => {
+          message.error(err.message || t(getKey('config_error_message')));
+        }
+      });
+    }
   };
 
   const selectedCountByAdvisor = (advisorId: string) => selectedTopics.filter((topic) => topic.advisorId === advisorId).length;
-  const visibleAdvisorBuckets = availableAdvisorBuckets.filter((bucket) => memberIds.includes(bucket.advisorId));
+  const visibleAdvisorBuckets = advisorBuckets.filter((bucket) => memberIds.includes(bucket.advisorId));
   const committeeSummary = t(getKey('members_count_label'), { count: formatNumber(memberIds.length) });
 
   const openSortTab = () => {
     if (selectedTopics.length > 0) setWorkflowTab('sort');
   };
 
-  // If navigated here for editing, prefill form and selected topics
+  // If navigated here for editing, prefill form
   useEffect(() => {
     const state: any = (location && (location as any).state) || null;
     const council = state?.council;
     if (!council) return;
 
-    // map council to form
+    setEditingId(council.id);
+
     setForm((current) => ({
       ...current,
       name: council.title || current.name,
       batch: council.batch || current.batch,
       room: council.room || current.room,
-      // try to map chair/reviewer/member names to teacher ids
-      members: (council.member || []).map((nm: string) => findTeacherIdByName(nm)).filter(Boolean) as string[],
-      date: '',
-      time: '',
+      members: (council.member || []).concat(council.chair || []).concat(council.reviewer || []).map((nm: string) => findTeacherIdByName(nm)).filter(Boolean) as string[],
+      date: (() => {
+        const parts = council.dateTime ? council.dateTime.split(' · ') : [];
+        if (parts.length > 0) {
+          const dParts = parts[0].split('/');
+          if (dParts.length === 3) {
+            return `${dParts[2]}-${dParts[1]}-${dParts[0]}`;
+          }
+        }
+        return '';
+      })(),
+      time: (() => {
+        const parts = council.dateTime ? council.dateTime.split(' · ') : [];
+        return parts.length > 1 ? parts[1] : '';
+      })(),
     }));
+  }, [location, teacherList]);
 
-    // build selectedTopics from council.topics if available
+  // Prefill selectedTopics once advisorBuckets and council are loaded
+  useEffect(() => {
+    const state: any = (location && (location as any).state) || null;
+    const council = state?.council;
+    if (!council || advisorBuckets.length === 0 || isPrefilledRef.current) return;
+
     const topicsFromCouncil: SelectedTopic[] = [];
     const councilTopics = council.topics || council.topicGroups || [];
+    
     councilTopics.forEach((t: any) => {
-      // find advisor bucket/topic by code
-      const found = ADVISOR_BUCKETS.flatMap((b) => b.topics).find((pt) => pt.topicCode === t.code);
+      const found = advisorBuckets.flatMap((b) => b.topics).find((pt) => pt.topicCode === t.code);
       if (found) {
         const sel: SelectedTopic = {
           ...found,
-          reviewerId: null,
-          examinerIds: (t.examiners || []).map((n: string) => findTeacherIdByName(n)).filter(Boolean) as string[],
-          externalExaminers: (t.externalExaminers || []).map((n: string) => findTeacherIdByName(n) || n),
+          reviewerId: t.reviewerId || (t.reviewer ? findTeacherIdByName(t.reviewer) : null),
+          examinerIds: t.examinerIds || (t.examiners || []).map((n: string) => findTeacherIdByName(n)).filter(Boolean) as string[],
+          externalExaminers: t.externalExaminers || [],
           startTime: t.startTime || null,
+          minutes: t.minutes || found.minutes,
         };
         topicsFromCouncil.push(sel);
       }
@@ -303,10 +341,10 @@ const CreateCouncilPage = () => {
     if (topicsFromCouncil.length > 0) {
       setSelectedTopics(topicsFromCouncil);
       setWorkflowTab('sort');
-      // scroll to section 2 after a tick
+      isPrefilledRef.current = true;
       setTimeout(() => section2Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
     }
-  }, [location]);
+  }, [location, advisorBuckets]);
 
   const scrollToSection2 = () => {
     openSortTab();
@@ -479,7 +517,16 @@ const CreateCouncilPage = () => {
                                     <td className="px-4 py-3 align-top font-medium text-[var(--color-blue-md)]">{topic.topicCode}</td>
                                     <td className="px-4 py-3 align-top font-medium text-gray-900">{topic.topicName}</td>
                                     <td className="px-4 py-3 align-top text-xs text-gray-600">{topic.members.join(', ')}</td>
-                                    <td className="px-4 py-3 align-top text-gray-600">{t(getKey('minutes_suffix'), { count: formatNumber(topic.minutes) })}</td>
+                                    <td className="px-4 py-3 align-top">
+                                      <Input
+                                        type="number"
+                                        value={topic.minutes}
+                                        onChange={(e) => updateTopicMinutes(topic.id, parseInt(e.target.value) || 0)}
+                                        min={0}
+                                        className="w-24"
+                                        suffix="p"
+                                      />
+                                    </td>
                                   </tr>
                                 );
                               })}
@@ -564,13 +611,21 @@ const CreateCouncilPage = () => {
                             value={topic.externalExaminers || []}
                             onChange={(value) => updateExternalExaminersForTopic(topic.id, value ?? [])}
                             placeholder={t(getKey('select_external_placeholder'))}
-                            options={TEACHERS.filter((t) => !memberIds.includes(t.id)).map((t) => ({ value: t.id, label: t.name }))}
+                            options={teacherList.filter((t: any) => !memberIds.includes(t.id)).map((t: any) => ({ value: t.id, label: t.name }))}
                             className="w-full min-w-[220px]"
                             allowClear
                           />
                         </td>
                         <td className="px-4 py-3 align-top">
-                          <Input type="time" value={topic.startTime || ''} onChange={(e) => updateStartTimeForTopic(topic.id, e.target.value || null)} />
+                          <Input
+                            type="datetime-local"
+                            value={topic.startTime || ''}
+                            onChange={(e) => updateStartTimeForTopic(topic.id, e.target.value || null)}
+                            className="w-full min-w-[200px]"
+                          />
+                          <div className="text-xs text-gray-500 mt-1">
+                            (Dự kiến: {topic.minutes}p)
+                          </div>
                         </td>
                       </tr>
                     ))}

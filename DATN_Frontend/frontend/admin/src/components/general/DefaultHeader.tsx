@@ -1,7 +1,7 @@
 import { Flex, Typography, Select, Tag, Badge } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { matchPath, useLocation } from 'react-router-dom';
-import { DYNAMIC_ROUTES, HEADER_TITLES } from '../../constants/routers';
+import { DYNAMIC_ROUTES, HEADER_TITLES, ROUTES } from '../../constants/routers';
 import { useGlobalVariable } from '../../hooks/GlobalVariableProvider';
 import { getKey } from '@shared/types/I18nKeyType';
 import {
@@ -75,42 +75,44 @@ const DefaultHeader = () => {
 
         <Flex align="center" gap={20}>
           {/* Global Period Selector */}
-          <div className="flex items-center gap-2 bg-[#f8fafc] border border-slate-200 px-3 py-1 rounded-[12px] shadow-sm">
-            <span className="text-xs font-semibold text-slate-500">Đợt hoạt động:</span>
-            <Select
-              className="w-[240px]"
-              placeholder="Chọn đợt hoạt động"
-              value={selectedPeriod?.id}
-              onChange={handlePeriodChange}
-              bordered={false}
-              classNames={{ popup: { root: 'rounded-xl shadow-lg' } }}
-            >
-              {tttnPeriods.length > 0 && (
-                <Select.OptGroup label="Đợt Thực tập tốt nghiệp (TTTN)">
-                  {tttnPeriods.map(p => (
-                    <Select.Option key={p.id} value={p.id}>
-                      <span className="font-medium text-slate-700">{p.name}</span>
-                    </Select.Option>
-                  ))}
-                </Select.OptGroup>
-              )}
-              {datnPeriods.length > 0 && (
-                <Select.OptGroup label="Đợt Đồ án tốt nghiệp (ĐATN)">
-                  {datnPeriods.map(p => (
-                    <Select.Option key={p.id} value={p.id}>
-                      <span className="font-medium text-slate-700">{p.name}</span>
-                    </Select.Option>
-                  ))}
-                </Select.OptGroup>
-              )}
-            </Select>
+          {pathname.pathname !== ROUTES.USERS && (
+            <div className="flex items-center gap-2 bg-[#f8fafc] border border-slate-200 px-3 py-1 rounded-[12px] shadow-sm">
+              <span className="text-xs font-semibold text-slate-500">Đợt hoạt động:</span>
+              <Select
+                className="w-[240px]"
+                placeholder="Chọn đợt hoạt động"
+                value={selectedPeriod?.id}
+                onChange={handlePeriodChange}
+                bordered={false}
+                classNames={{ popup: { root: 'rounded-xl shadow-lg' } }}
+              >
+                {tttnPeriods.length > 0 && (
+                  <Select.OptGroup label="Đợt Thực tập tốt nghiệp (TTTN)">
+                    {tttnPeriods.map(p => (
+                      <Select.Option key={p.id} value={p.id}>
+                        <span className="font-medium text-slate-700">{p.name}</span>
+                      </Select.Option>
+                    ))}
+                  </Select.OptGroup>
+                )}
+                {datnPeriods.length > 0 && (
+                  <Select.OptGroup label="Đợt Đồ án tốt nghiệp (ĐATN)">
+                    {datnPeriods.map(p => (
+                      <Select.Option key={p.id} value={p.id}>
+                        <span className="font-medium text-slate-700">{p.name}</span>
+                      </Select.Option>
+                    ))}
+                  </Select.OptGroup>
+                )}
+              </Select>
 
-            {selectedPeriod && (
-              <Tag color={statusBadgeColor[selectedPeriod.status]} className="m-0 border-none rounded-full px-2.5">
-                {statusText[selectedPeriod.status]}
-              </Tag>
-            )}
-          </div>
+              {selectedPeriod && (
+                <Tag color={statusBadgeColor[selectedPeriod.status]} className="m-0 border-none rounded-full px-2.5">
+                  {statusText[selectedPeriod.status]}
+                </Tag>
+              )}
+            </div>
+          )}
 
           <Flex vertical align="start" className="max-w-[150px] text-base">
             <p className="font-bold mb-0">{roleUser?.label || NotAvailable}</p>

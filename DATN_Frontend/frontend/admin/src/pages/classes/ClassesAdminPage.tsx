@@ -12,8 +12,9 @@ import { STATUS_CODE } from '../../constants/commonConst';
 
 const ClassesAdminPage = () => {
   const { t } = useTranslation();
-  const { useFetchListClasses, useUpdateClass, useDeleteClass } = classHooks;
+  const { useFetchListClasses, useUpdateClass, useDeleteClass, useCreateClass } = classHooks;
   const { data: classList } = useFetchListClasses();
+  const create = useCreateClass();
   const update = useUpdateClass();
   const del = useDeleteClass();
 
@@ -66,6 +67,7 @@ const ClassesAdminPage = () => {
           title={t(getKey('class_list'))}
           pageTitle={t(getKey('class_management'))}
           pageSubtitle={t(getKey('class_management_desc'))}
+          createButtonLabel={t(getKey('create_class')) || 'Thêm lớp học'}
           columns={columns}
           useQueryHook={useFilteredClassesQuery}
           filterRender={() => (
@@ -84,6 +86,7 @@ const ClassesAdminPage = () => {
               </Form.Item>
             </div>
           )}
+          createInfo={{ type: 'modal', modalInfo: { modalContent: <ClassForm />, modalProps: { centered: true, width: 720, title: t(getKey('create_class')) || 'Thêm lớp học mới' }, modalFunc: create as any } }}
           updateInfo={{ type: 'modal', modalInfo: { modalContent: <ClassForm />, modalProps: { centered: true, width: 720, title: t(getKey('edit_class')) }, modalFunc: update as any } }}
           detailInfo={{ type: 'modal', modalInfo: { modalContent: <ClassForm disabled />, modalProps: { centered: true, width: 720, title: t(getKey('detail_class')), footer: null }, modalFunc: classHooks.useFetchDetailClass as any } }}
           deleteInfo={{ type: 'modal', modalInfo: { modalContent: null, modalProps: {}, modalFunc: del as any } }}

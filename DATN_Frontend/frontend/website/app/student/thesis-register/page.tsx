@@ -2,51 +2,42 @@
 
 import { usePeriod } from '@/lib/providers/PeriodProvider'
 import { topicApi } from '@/lib/api/topicApi'
+import { studentApi, IThesisRegistration } from '@/lib/api/studentApi'
 import Link from 'next/link'
 import { CalendarDays, CheckCircle2, Clock3, Users } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { StudentPill, StudentSectionHeader } from '../_components/StudentShell'
 
-type Topic = { id: string; title: string; module: string; published: boolean }
+type Topic = { id: string; title: string; module: string; published: boolean; slots?: string }
 
-type Registration = {
-  topicId: string
-  topicTitle: string
-  groupName: string
-  batch: string
-  submittedAt: string
-  status: 'pending' | 'accepted' | 'rejected'
-  note: string
-}
-
-const initialRegistration: Registration = {
-  topicId: 'DT001',
-  topicTitle: 'Hệ thống IoT giám sát nông nghiệp',
-  groupName: 'Nhóm Alpha',
-  batch: 'Đợt HK2/2025-2026',
-  submittedAt: '23/05/2026 09:20',
-  status: 'pending',
-  note: 'Đã nộp hồ sơ và đang chờ giảng viên duyệt.',
-}
+type Registration = IThesisRegistration;
 
 export default function ThesisRegisterPage() {
   const { selectedPeriod } = usePeriod()
   const [topics, setTopics] = useState<Topic[]>([])
   const [loading, setLoading] = useState(true)
-  const [registration, setRegistration] = useState<Registration | null>(initialRegistration)
+  const [registration, setRegistration] = useState<Registration | null>(null)
 
   useEffect(() => {
     let mounted = true
     setLoading(true)
     async function load() {
       try {
-        const data = await topicApi.getTopics({ periodId: selectedPeriod?.id })
+        const [topicsData, regData] = await Promise.all([
+          topicApi.getTopics({ periodId: selectedPeriod?.id }),
+          studentApi.getMyThesisRegistration()
+        ])
         if (!mounted) return
-        setTopics(data)
+        setTopics(topicsData)
+        setRegistration(regData)
       } catch (_err) {
+        if (!mounted) return
         setTopics([])
+        setRegistration(null)
       } finally {
-        setLoading(false)
+        if (mounted) {
+          setLoading(false)
+        }
       }
     }
     load()
@@ -55,21 +46,37 @@ export default function ThesisRegisterPage() {
     }
   }, [selectedPeriod?.id])
 
-  const handleRegister = (id: string) => {
-    const selectedTopic = topics.find((topic) => topic.id === id)
-    setRegistration({
-      topicId: id,
-      topicTitle: selectedTopic?.title ?? 'Đề tài đang chọn',
-      groupName: 'Nhóm đang tạo',
-      batch: 'Đợt HK2/2025-2026',
-      submittedAt: new Date().toLocaleString('vi-VN'),
-      status: 'pending',
-      note: 'Đề tài vừa được gửi. Hệ thống sẽ hiển thị trạng thái duyệt của giảng viên ngay tại đây.',
-    })
+  const handleRegister = async (id: string) => {
+    try {
+      setLoading(true)
+      const res = await studentApi.registerThesis(Number(id))
+      setRegistration(res)
+      // refresh topics to update slot status if needed
+      const topicsData = await topicApi.getTopics({ periodId: selectedPeriod?.id })
+      setTopics(topicsData)
+    } catch (err: any) {
+      alert(err?.response?.data?.message || 'Có lỗi xảy ra khi đăng ký đề tài.')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const handleCancel = (id: string) => {
-    setRegistration((current) => (current?.topicId === id ? null : current))
+  const handleCancel = async (id: string) => {
+    if (!confirm('Bạn có chắc chắn muốn hủy đăng ký đề tài này không? Nhóm của bạn sẽ bị giải tán.')) {
+      return
+    }
+    try {
+      setLoading(true)
+      await studentApi.cancelThesisRegistration()
+      setRegistration(null)
+      // refresh topics to update slot status if needed
+      const topicsData = await topicApi.getTopics({ periodId: selectedPeriod?.id })
+      setTopics(topicsData)
+    } catch (err: any) {
+      alert(err?.response?.data?.message || 'Có lỗi xảy ra khi hủy đăng ký.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const registrationTone = !registration ? 'slate' : registration.status === 'accepted' ? 'green' : registration.status === 'rejected' ? 'red' : 'orange'
@@ -143,8 +150,8 @@ export default function ThesisRegisterPage() {
           <div className="grid gap-4 md:grid-cols-2">
             {topics.map((t) => {
               const teacher = t.module ? `GV: ${t.module}` : 'GV: TS. Nguyễn Văn X'
-              const maxSlots = 4
-              const used = 0
+              const slotsStr = t.slots || '0/4'
+              const [used, maxSlots] = slotsStr.split('/').map(Number)
               const hasSlot = used < maxSlots && t.published
               const isCurrentTopic = registration?.topicId === t.id
               return (
@@ -153,7 +160,7 @@ export default function ThesisRegisterPage() {
                     <div>
                       <a className="text-[#2196F3] font-medium text-sm">{t.id}</a>
                       <h3 className="mt-2 text-lg font-semibold text-slate-900">{t.title}</h3>
-                      <div className="mt-2 text-xs text-slate-500">{teacher} • Số thành viên tối đa: {maxSlots}</div>
+                      <div className="mt-2 text-xs text-slate-500">{teacher} • Số thành viên: {used}/{maxSlots}</div>
                       {isCurrentTopic && registration && (
                         <div className="mt-3 flex flex-wrap items-center gap-2">
                           <StudentPill tone={registrationTone}>{registration.status === 'accepted' ? 'Nhóm đã duyệt' : registration.status === 'rejected' ? 'Nhóm bị từ chối' : 'Nhóm đang chờ duyệt'}</StudentPill>

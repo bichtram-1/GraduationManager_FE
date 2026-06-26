@@ -11,6 +11,15 @@ export const topicApi = {
     }
 
     const response = await axiosInstance.get('/private/v1/topics', { params });
-    return response?.data?.results?.objects || response?.data?.results?.object || response?.data;
+    const resData = response?.data?.results?.objects || response?.data?.results?.object || response?.data;
+    const rawList = (resData && typeof resData === 'object' && 'rows' in resData) ? resData.rows : (Array.isArray(resData) ? resData : []);
+    
+    return rawList.map((t: { id?: string | number; name?: string; title?: string; teacher?: string; module?: string; status?: string; published?: boolean; slots?: string }) => ({
+      id: String(t.id ?? ''),
+      title: t.name || t.title || '',
+      module: t.teacher || t.module || '',
+      published: t.status === 'approved' || t.published || false,
+      slots: t.slots || '0/4'
+    }));
   }
 };

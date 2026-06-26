@@ -79,5 +79,20 @@ export const setCookie = (key: string, value: object | string | number) => {
 
 export const clearCookie = (key: string) => {
   if (!isClient) return;
-  document.cookie = `${key}="";Max-Age=0;path=/;`;
+  // Clear without domain
+  document.cookie = `${encodeURIComponent(key)}=; Max-Age=-99999999; path=/;`;
+  
+  // Clear with current domain
+  const hostname = window.location.hostname;
+  document.cookie = `${encodeURIComponent(key)}=; Max-Age=-99999999; path=/; domain=${hostname};`;
+  
+  // Clear with dot domain
+  document.cookie = `${encodeURIComponent(key)}=; Max-Age=-99999999; path=/; domain=.${hostname};`;
+  
+  // If it is on a subdomain, try to clear on parent domain too
+  const domainParts = hostname.split('.');
+  if (domainParts.length > 2) {
+    const parentDomain = domainParts.slice(-2).join('.');
+    document.cookie = `${encodeURIComponent(key)}=; Max-Age=-99999999; path=/; domain=.${parentDomain};`;
+  }
 };

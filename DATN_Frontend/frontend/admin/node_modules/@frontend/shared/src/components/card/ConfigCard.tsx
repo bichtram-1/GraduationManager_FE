@@ -12,7 +12,7 @@ interface ConfigItem {
   icon?: ReactNode;
   title: string;
   subTitle?: string;
-  customContent?: unknown;
+  customContent?: ReactNode;
   initialValues?: Record<string, unknown>;
   formItem: ReactNode;
   onSave: (values: unknown) => void;
