@@ -67,16 +67,11 @@ export const userHooks = {
       { id: string; body: IUpdateUser; index: number; params: BaseListParams }
     >({
       mutationFn: userApi.updateUser,
-      onSuccess: (updated, { index, params }) => {
-        queryClient.setQueryData<ListResponseTypeObject<IListUser>>(
-          [QueryKey.users.list, params],
-          (old) => {
-            if (!old?.rows?.[index]) return old;
-            const rows = [...old.rows];
-            rows[index] = { ...rows[index], ...updated } as IListUser;
-            return { ...old, rows };
-          }
-        );
+      onSuccess: (updated, { id }) => {
+        queryClient.invalidateQueries({ queryKey: [QueryKey.users.list] });
+        if (id) {
+          queryClient.invalidateQueries({ queryKey: [QueryKey.users.detail, id] });
+        }
         queryClient.invalidateQueries({ queryKey: [QueryKey.classes.list] });
       },
     });

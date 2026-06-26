@@ -18,17 +18,17 @@ export const topicApi = {
     return response?.data?.results?.object;
   },
 
-  createTopic: async ({ body, params }: { body: ICreateTopic; params: BaseListParams & { periodId?: string } }) => {
+  createTopic: async ({ body, params }: { body: ICreateTopic; params: ITopicListParams }) => {
     const response = await axiosInstance.post('/private/v1/topics', body, { params });
     return response?.data?.results?.object;
   },
 
-  updateTopic: async ({ id, body }: { id: string; body: IUpdateTopic; index: number; params: BaseListParams }) => {
+  updateTopic: async ({ id, body }: { id: string; body: IUpdateTopic; index: number; params: ITopicListParams }) => {
     const response = await axiosInstance.patch(`/private/v1/topics/${id}`, body);
     return response?.data?.results?.object;
   },
 
-  deleteTopic: async ({ id }: { id: string; params: BaseListParams }) => {
+  deleteTopic: async ({ id }: { id: string; params: ITopicListParams }) => {
     const response = await axiosInstance.delete(`/private/v1/topics/${id}`);
     return response?.data;
   },

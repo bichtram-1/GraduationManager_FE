@@ -6,8 +6,8 @@ export interface IUserMinimal {
 }
 
 export interface ISignInResult {
-  accessToken: string;
-  refreshToken: string;
+  access_token: string;
+  refresh_token: string;
   user?: IUserMinimal;
 }
 

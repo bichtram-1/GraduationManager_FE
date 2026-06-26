@@ -9,7 +9,7 @@ import { UserOutlined } from '@ant-design/icons';
 import { formatNumber } from '@shared/utils/numberUtils';
 
 const ROLE_OPTIONS = [
-  { value: USER_ROLE.ADMIN, hint: 'admin@caothang.edu.vn' },
+  { value: USER_ROLE.ADMIN, hint: 'tvai@caothang.edu.vn' },
 ] as const;
 
 const LoginPage = () => {

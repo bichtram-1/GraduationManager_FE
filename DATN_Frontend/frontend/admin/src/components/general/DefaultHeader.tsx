@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { matchPath, useLocation } from 'react-router-dom';
 import { DYNAMIC_ROUTES, HEADER_TITLES, ROUTES } from '../../constants/routers';
 import { useGlobalVariable } from '../../hooks/GlobalVariableProvider';
-import { getKey } from '@shared/types/I18nKeyType';
+import { getKey, I18nKey } from '@shared/types/I18nKeyType';
 import {
   findOptionObject,
   NotAvailable,

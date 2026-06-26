@@ -27,7 +27,7 @@ export const useLogin = () => {
       const userClone = { ...newData?.user };
       setUser(userClone);
       setCookie(STORAGES.USER_LOGIN, userClone);
-      setCookie(STORAGES.ACCESS_TOKEN, newData?.accessToken);
+      setCookie(STORAGES.ACCESS_TOKEN, newData?.access_token);
       // setCookie(STORAGES.REFRESH_TOKEN, newData?.refreshToken);
       navigate(ROUTES.DASHBOARD);
     },

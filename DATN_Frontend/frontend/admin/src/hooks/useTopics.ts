@@ -23,7 +23,7 @@ export const topicHooks = {
 
   useCreateTopic: () => {
     const queryClient = useQueryClient();
-    return useMutation<IDetailTopic, AxiosError, { body: ICreateTopic; params: BaseListParams }>({
+    return useMutation<IDetailTopic, AxiosError, { body: ICreateTopic; params: ITopicListParams }>({
       mutationFn: topicApi.createTopic,
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: [QueryKey.topics.list] });
@@ -33,7 +33,7 @@ export const topicHooks = {
 
   useUpdateTopic: () => {
     const queryClient = useQueryClient();
-    return useMutation<IDetailTopic, AxiosError, { id: string; body: IUpdateTopic; index: number; params: BaseListParams }>({
+    return useMutation<IDetailTopic, AxiosError, { id: string; body: IUpdateTopic; index: number; params: ITopicListParams }>({
       mutationFn: topicApi.updateTopic,
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: [QueryKey.topics.list] });
@@ -43,7 +43,7 @@ export const topicHooks = {
 
   useDeleteTopic: () => {
     const queryClient = useQueryClient();
-    return useMutation<unknown, AxiosError, { id: string; params: BaseListParams }>({
+    return useMutation<unknown, AxiosError, { id: string; params: ITopicListParams }>({
       mutationFn: topicApi.deleteTopic,
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: [QueryKey.topics.list] });

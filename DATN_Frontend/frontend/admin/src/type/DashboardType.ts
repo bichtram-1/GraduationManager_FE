@@ -24,6 +24,8 @@ export interface IRecentActivity {
   userName: string;
   courseName: string;
   date: string;
+  status?: string;
+  statusColor?: string;
 }
 
 export interface IDashboardData {

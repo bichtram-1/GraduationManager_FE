@@ -19,8 +19,8 @@ export const authApi = {
       return {
         results: {
           object: {
-            accessToken: backendData.access_token,
-            refreshToken: backendData.refresh_token,
+            access_token: backendData.access_token,
+            refresh_token: backendData.refresh_token,
             user: {
               id: String(backendData.user?.giang_vien_id || backendData.user?.sinh_vien_id || 'u-unknown'),
               full_name: backendData.user?.ho_ten || 'Người dùng',

@@ -56,7 +56,7 @@ const AssignmentsPage = () => {
   );
 
   const filteredTeachers = useMemo(
-    () => teachers.filter((teacher) => {
+    () => teachers.filter((teacher: any) => {
       const normalizedKeyword = teacherQuery.trim().toLowerCase();
       const byKeyword =
         !normalizedKeyword ||
@@ -123,10 +123,10 @@ const AssignmentsPage = () => {
     const studentIds = Object.keys(selectedStudents).filter((k) => selectedStudents[k]);
     if (studentIds.length === 0) return message.warning(t(getKey('please_select_student')));
     if (!selectedTeacher) return message.warning(t(getKey('please_select_teacher')));
-    const teacher = teachers.find((teacherItem) => teacherItem.id === selectedTeacher)!;
+    const teacher = teachers.find((teacherItem: any) => teacherItem.id === selectedTeacher)!;
     Modal.confirm({
       title: t(getKey('confirm_assignment_title')),
-      content: t(getKey('confirm_assignment_content'), { count: formatNumber(studentIds.length), teacher: teacher.name }),
+      content: t(getKey('confirm_assignment_content'), { count: studentIds.length, teacher: teacher.name } as any),
       okText: t(getKey('confirm_btn')),
       cancelText: t(getKey('cancel_btn')),
       onOk: () => {
@@ -141,7 +141,7 @@ const AssignmentsPage = () => {
             })
           )
         ).then(() => {
-          message.success(t(getKey('assign_teacher_success_msg'), { teacher: teacher.name, count: formatNumber(studentIds.length) }));
+          message.success(t(getKey('assign_teacher_success_msg'), { teacher: teacher.name, count: studentIds.length } as any));
         });
         setSelectedStudents({});
         setSelectedTeacher(null);
@@ -213,7 +213,7 @@ const AssignmentsPage = () => {
                   <div className="text-xs text-slate-500">{t(getKey('step1_sub_desc'))}</div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Tag className="rounded-full m-0">{t(getKey('selected_count_label'), { count: formatNumber(Object.values(selectedStudents).filter(Boolean).length) })}</Tag>
+                  <Tag className="rounded-full m-0">{t(getKey('selected_count_label'), { count: Object.values(selectedStudents).filter(Boolean).length } as any)}</Tag>
                   <Select
                     value={manualClassFilter}
                     onChange={(value) => setManualClassFilter(value)}
@@ -251,7 +251,7 @@ const AssignmentsPage = () => {
                 </table>
               </div>
 
-              <div className="border-t border-slate-100 bg-slate-50 px-5 py-3 text-xs text-slate-600">{t(getKey('showing_students_count'), { count: formatNumber(filtered.length) })}</div>
+              <div className="border-t border-slate-100 bg-slate-50 px-5 py-3 text-xs text-slate-600">{t(getKey('showing_students_count'), { count: filtered.length } as any)}</div>
             </Card>
           </div>
 
@@ -286,7 +286,7 @@ const AssignmentsPage = () => {
 
               <Radio.Group value={selectedTeacher} onChange={(e) => setSelectedTeacher(e.target.value)} className="w-full">
                 <div className="space-y-3">
-                  {filteredTeachers.map((teacher) => (
+                  {filteredTeachers.map((teacher: any) => (
                     <div key={teacher.id} className="flex items-center justify-between gap-3 border border-slate-100 p-3 rounded-md">
                       <div className="flex min-w-0 flex-1 items-start gap-3">
                         <Radio value={teacher.id} />
@@ -358,7 +358,7 @@ const AssignmentsPage = () => {
                   <Select allowClear className="min-w-[180px]" options={[{ value: 'all', label: t(getKey('all_classes')) }, ...classOptions.map((c) => ({ value: c, label: c }))]} />
                 </Form.Item>
                 <Form.Item name="supervisor" className="m-0">
-                  <Select allowClear className="min-w-[180px]" options={[{ value: 'all', label: t(getKey('all_teachers')) }, ...teachers.map((t) => ({ value: t.name, label: t.name }))]} />
+                  <Select allowClear className="min-w-[180px]" options={[{ value: 'all', label: t(getKey('all_teachers')) }, ...teachers.map((teacherObj: any) => ({ value: teacherObj.name, label: teacherObj.name }))]} />
                 </Form.Item>
                 <Form.Item name="keyword" className="m-0">
                   <Input allowClear placeholder={t(getKey('search_student_placeholder'))} className="min-w-[200px]" />

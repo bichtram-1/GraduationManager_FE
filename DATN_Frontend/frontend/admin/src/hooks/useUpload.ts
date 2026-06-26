@@ -11,7 +11,7 @@ export const useUpload = () => {
   const { loadingUpload, setLoadingUpload } = useGlobalVariable();
 
   return useMutation<
-    void,
+    any,
     Error,
     {
       params: UploadProps;
@@ -20,21 +20,19 @@ export const useUpload = () => {
       index?: number;
     }
   >({
-    mutationFn: ({ params }: { params: UploadProps }) =>
-      uploadApi.upload(params),
-    onMutate: async ({ key }: { key: string }) => {
+    mutationFn: (variables) =>
+      uploadApi.upload(variables.params),
+    onMutate: async (variables) => {
+      const { key } = variables;
       if (loadingUpload) {
         setLoadingUpload({ ...loadingUpload, [key]: true });
       }
     },
     onSuccess: (
-      res: unknown,
-      {
-        key,
-        type,
-        index,
-      }: { key: string; type: 'add' | 'replace'; index?: number }
+      res: any,
+      variables
     ) => {
+      const { key, type, index } = variables;
       queryClient.setQueryData(
         [key],
         (_oldData: FileUploadData[] | undefined) => {
@@ -52,13 +50,14 @@ export const useUpload = () => {
       if (loadingUpload) {
         setLoadingUpload({ ...loadingUpload, [key]: false });
       }
-      notification.success(configSuccess);
+      notification.success(configSuccess());
     },
-    onError: (_, { key }: { key: string }) => {
+    onError: (_, variables) => {
+      const { key } = variables;
       if (loadingUpload) {
         setLoadingUpload({ ...loadingUpload, [key]: false });
       }
-      return notification.error(configErr);
+      notification.error(configErr());
     },
   });
 };

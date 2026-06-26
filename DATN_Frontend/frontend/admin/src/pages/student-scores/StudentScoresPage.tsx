@@ -82,6 +82,8 @@ const StudentScoresPage: React.FC = () => {
 
   // Fetch score data from API
   const { data: scoresData, isLoading } = scoreHooks.useFetchListScores({
+    page: 1,
+    limit: 1000,
     periodId: selectedPeriod?.id || '',
     mode,
     keyword,
@@ -172,7 +174,7 @@ const StudentScoresPage: React.FC = () => {
     { title: t(getKey('action')), key: 'actions', fixed: 'right', width: 160, render: (_,_r) => (<Space><Button type="link" onClick={() => openEditModal(_r as ScoreRow)}>{t(getKey('edit_score'))}</Button><Button type="link" onClick={() => openDetailModal(_r as ScoreRow)}>{t(getKey('detail'))}</Button></Space>) },
   ];
 
-  const columns = mode === 'internship' ? internshipColumns : projectColumns;
+  const columns = (mode === 'internship' ? internshipColumns : projectColumns) as any;
 
   const renderScoreModalContent = () => {
     if (!editingRecord) return null;
