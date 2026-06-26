@@ -65,25 +65,25 @@ const InternshipStudentsPage = () => {
 
   const summary = useMemo(() => ({
     confirmations: confirmationRows.length,
-    pending: confirmationRows.filter((item) => item.status === STATUS_CODE.PENDING).length,
-    approved: confirmationRows.filter((item) => item.status === STATUS_CODE.APPROVED).length,
+    pending: confirmationRows.filter((item: any) => item.status === STATUS_CODE.PENDING).length,
+    approved: confirmationRows.filter((item: any) => item.status === STATUS_CODE.APPROVED).length,
     noCompany: noCompanyRows.length,
   }), [confirmationRows, noCompanyRows]);
 
-  const classOptions = useMemo(() => Array.from(new Set(noCompanyRows.map((item) => item.className))), [noCompanyRows]);
+  const classOptions = useMemo(() => Array.from(new Set(noCompanyRows.map((item: any) => item.className))), [noCompanyRows]);
 
   const confirmationTabCounts = useMemo(() => ({
     total: confirmationRows.length,
-    pending: confirmationRows.filter((item) => item.status === STATUS_CODE.PENDING).length,
-    approved: confirmationRows.filter((item) => item.status === STATUS_CODE.APPROVED).length,
-    rejected: confirmationRows.filter((item) => item.status === STATUS_CODE.REJECTED).length,
+    pending: confirmationRows.filter((item: any) => item.status === STATUS_CODE.PENDING).length,
+    approved: confirmationRows.filter((item: any) => item.status === STATUS_CODE.APPROVED).length,
+    rejected: confirmationRows.filter((item: any) => item.status === STATUS_CODE.REJECTED).length,
   }), [confirmationRows]);
 
   const noCompanyTabCounts = useMemo(() => ({
     total: noCompanyRows.length,
-    not_registered: noCompanyRows.filter((item) => item.status === STATUS_CODE.NOT_REGISTERED).length,
-    searching: noCompanyRows.filter((item) => item.status === STATUS_CODE.SEARCHING).length,
-    has_company: noCompanyRows.filter((item) => item.status === STATUS_CODE.HAS_COMPANY).length,
+    not_registered: noCompanyRows.filter((item: any) => item.status === STATUS_CODE.NOT_REGISTERED).length,
+    searching: noCompanyRows.filter((item: any) => item.status === STATUS_CODE.SEARCHING).length,
+    has_company: noCompanyRows.filter((item: any) => item.status === STATUS_CODE.HAS_COMPANY).length,
   }), [noCompanyRows]);
 
   const useFilteredConfirmationListQuery = (params: BaseListParams) => {

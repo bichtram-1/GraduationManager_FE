@@ -1,5 +1,10 @@
+'use client'
+
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { TeacherSectionHeader } from '../_components/TeacherShell'
+import { usePeriod } from '@/lib/providers/PeriodProvider'
+import { teacherApi } from '@/lib/api/teacherApi'
 
 type Council = {
   id: string
@@ -11,40 +16,91 @@ type Council = {
   avgScore: number
 }
 
-const mockCouncils: Council[] = [
-  { id: 'c-1', name: 'Hội đồng A', period: 'Kỳ 1 - 2026', chair: 'PGS. A', secretary: 'TS. B', studentsCount: 18, avgScore: 7.8 },
-  { id: 'c-2', name: 'Hội đồng B', period: 'Kỳ 1 - 2026', chair: 'TS. C', secretary: 'ThS. D', studentsCount: 22, avgScore: 8.1 },
-  { id: 'c-3', name: 'Hội đồng C', period: 'Kỳ 2 - 2026', chair: 'TS. E', secretary: 'ThS. F', studentsCount: 12, avgScore: 7.2 },
-]
-
 export default function CouncilsPage() {
-  return (
-    <div className="p-6">
-      <TeacherSectionHeader title="Danh sách Hội đồng" description="Quản lý và xem điểm theo từng hội đồng" />
-      <div className="grid gap-4 md:grid-cols-2">
-        {mockCouncils.map((c) => (
-          <div key={c.id} className="border rounded-lg p-4 shadow-sm">
-            <div className="flex justify-between items-start">
-              <div>
-                <h2 className="text-lg font-medium">{c.name}</h2>
-                <p className="text-sm text-gray-600">{c.period}</p>
-                <p className="text-sm">Trưởng: {c.chair} • Thư ký: {c.secretary}</p>
-              </div>
-              <div className="text-right">
-                <div className="text-xs text-gray-500">SV</div>
-                <div className="text-xl font-semibold">{c.studentsCount}</div>
-              </div>
-            </div>
+  const { selectedPeriod } = usePeriod()
+  const [councils, setCouncils] = useState<Council[]>([])
+  const [loading, setLoading] = useState(false)
 
-            <div className="mt-4 flex items-center justify-between">
-              <div className="text-sm text-gray-700">Trung bình: <strong>{c.avgScore.toFixed(2)}</strong></div>
-              <Link href={`/teacher/councils/${c.id}/grades`} className="text-sm text-white bg-blue-600 px-3 py-1 rounded">
-                Xem điểm
-              </Link>
+  useEffect(() => {
+    let mounted = true
+    setLoading(true)
+    teacherApi.getGradingData({ periodId: selectedPeriod?.id })
+      .then((data) => {
+        if (!mounted) return
+        if (data?.councilGroups) {
+          const list = data.councilGroups.map((c: any) => {
+            const chair = c.members?.find((m: any) => m.role.includes('Chủ tịch'))?.name || c.members?.[0]?.name || 'Chưa phân công'
+            const secretary = c.members?.find((m: any) => m.role.includes('Thư ký') || m.role.includes('thư ký'))?.name || c.members?.[1]?.name || '—'
+            const studentsCount = c.groups?.reduce((acc: number, g: any) => acc + (g.students?.length || 0), 0) || 0
+
+            return {
+              id: c.code,
+              name: c.name,
+              period: selectedPeriod?.name || 'Học kỳ hiện tại',
+              chair,
+              secretary,
+              studentsCount,
+              avgScore: 8.0
+            }
+          })
+          setCouncils(list)
+        } else {
+          setCouncils([])
+        }
+      })
+      .catch(() => {
+        if (mounted) setCouncils([])
+      })
+      .finally(() => {
+        if (mounted) setLoading(false)
+      })
+    return () => {
+      mounted = false
+    }
+  }, [selectedPeriod?.id])
+
+  return (
+    <div className="p-0">
+      <TeacherSectionHeader
+        title="Danh sách Hội đồng"
+        description="Quản lý và xem điểm theo từng hội đồng chấm đồ án tốt nghiệp kết nối thực tế tới Back-End."
+      />
+      
+      {loading ? (
+        <div className="py-8 text-center text-slate-500">Đang tải danh sách hội đồng...</div>
+      ) : councils.length > 0 ? (
+        <div className="grid gap-6 md:grid-cols-2">
+          {councils.map((c) => (
+            <div key={c.id} className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.05)] transition hover:shadow-lg">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h2 className="text-lg font-semibold text-slate-900">{c.name}</h2>
+                  <p className="text-sm text-slate-500 mt-1">{c.period}</p>
+                  <div className="mt-3 space-y-1 text-sm text-slate-600">
+                    <p>Trưởng hội đồng: <strong className="text-slate-800">{c.chair}</strong></p>
+                    <p>Thư ký: <strong className="text-slate-800">{c.secretary}</strong></p>
+                  </div>
+                </div>
+                <div className="text-right rounded-2xl bg-blue-50 px-3 py-2">
+                  <div className="text-xs font-medium text-blue-600">Số sinh viên</div>
+                  <div className="text-xl font-bold text-blue-700">{c.studentsCount}</div>
+                </div>
+              </div>
+
+              <div className="mt-6 flex items-center justify-between border-t border-slate-100 pt-4">
+                <div className="text-xs text-slate-500">Mã hội đồng: <span className="font-semibold text-slate-700">{c.id}</span></div>
+                <Link href={`/teacher/councils/${c.id}/grades`} className="inline-flex items-center justify-center rounded-2xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-blue-200 transition hover:bg-blue-700 hover:shadow-lg">
+                  Xem bảng điểm
+                </Link>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-[24px] border border-slate-200 bg-white p-8 text-center text-slate-500">
+          Không tìm thấy hội đồng nào của bạn trong đợt này.
+        </div>
+      )}
     </div>
   )
 }

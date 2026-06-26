@@ -20,9 +20,9 @@ const ClassesAdminPage = () => {
 
   const allRows = classList?.rows ?? [];
 
-  const levels = useMemo(() => Array.from(new Set(allRows.map((c) => c.level).filter(Boolean))), [allRows]);
-  const courses = useMemo(() => Array.from(new Set(allRows.map((c) => c.course).filter(Boolean))), [allRows]);
-  const majors = useMemo(() => Array.from(new Set(allRows.map((c) => c.major).filter(Boolean))), [allRows]);
+  const levels = useMemo(() => Array.from(new Set(allRows.map((c: any) => c.level).filter(Boolean))), [allRows]);
+  const courses = useMemo(() => Array.from(new Set(allRows.map((c: any) => c.course).filter(Boolean))), [allRows]);
+  const majors = useMemo(() => Array.from(new Set(allRows.map((c: any) => c.major).filter(Boolean))), [allRows]);
 
   const useFilteredClassesQuery = (params: BaseListParams) => {
     const query = useFetchListClasses();

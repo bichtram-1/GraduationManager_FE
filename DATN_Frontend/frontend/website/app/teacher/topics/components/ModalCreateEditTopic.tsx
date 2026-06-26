@@ -13,6 +13,7 @@ type ModalCreateEditTopicProps = {
   onChangeSlots: (value: string) => void
   onClose: () => void
   onSave: () => void
+  onImportFile?: (file: File) => void
 }
 
 export default function ModalCreateEditTopic(props: ModalCreateEditTopicProps) {
@@ -28,6 +29,7 @@ export default function ModalCreateEditTopic(props: ModalCreateEditTopicProps) {
     onChangeSlots,
     onClose,
     onSave,
+    onImportFile,
   } = props
 
   return (
@@ -43,7 +45,17 @@ export default function ModalCreateEditTopic(props: ModalCreateEditTopicProps) {
             Import file đề tài
           </span>
           <span className="text-xs text-slate-500">.xlsx, .xls</span>
-          <input type="file" accept=".xlsx,.xls" className="hidden" />
+          <input
+            type="file"
+            accept=".xlsx,.xls"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0]
+              if (file && onImportFile) {
+                onImportFile(file)
+              }
+            }}
+          />
         </label>
 
         <TeacherField label="Tên đề tài" required>

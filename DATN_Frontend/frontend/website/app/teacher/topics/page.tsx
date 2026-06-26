@@ -1,10 +1,12 @@
 "use client"
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { BarChart3, CheckCircle, Edit2, Eye, Plus, ShieldCheck, Trash2, Users } from 'lucide-react'
 import { TeacherPill, TeacherSectionHeader } from '../_components/TeacherShell'
 import { TeacherButton, TeacherCard, TeacherToolbar } from '../_components/TeacherUI'
 import ModalCreateEditTopic from './components/ModalCreateEditTopic'
+import { usePeriod } from '@/lib/providers/PeriodProvider'
+import { topicApi } from '@/lib/api/topicApi'
 
 const TOPICS = [
   {
@@ -50,6 +52,7 @@ const TOPICS = [
 ] as const
 
 type Topic = {
+  id?: string
   code: string
   name: string
   slots: string
@@ -98,9 +101,10 @@ async function mockDeleteTopic(current: Topic[], code: string): Promise<Topic[]>
 }
 
 export default function Page() {
-  const [topicList, setTopicList] = useState<Topic[]>(TOPICS as unknown as Topic[])
+  const { selectedPeriod } = usePeriod()
+  const [topicList, setTopicList] = useState<Topic[]>([])
   const [openCreate, setOpenCreate] = useState(false)
-  const [selectedTopic, setSelectedTopic] = useState<Topic | null>(TOPICS[0] as Topic)
+  const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null)
   const [editingCode, setEditingCode] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [deletingCode, setDeletingCode] = useState<string | null>(null)
@@ -109,6 +113,34 @@ export default function Page() {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [slots, setSlots] = useState('4')
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    let mounted = true
+    setLoading(true)
+    topicApi.getTeacherTopics({ periodId: selectedPeriod?.id })
+      .then((data) => {
+        if (!mounted) return
+        setTopicList(data)
+        if (data.length > 0) {
+          setSelectedTopic((curr) => {
+            if (curr && data.some((t: any) => t.id === curr.id)) {
+              return data.find((t: any) => t.id === curr.id) || data[0];
+            }
+            return data[0];
+          })
+        } else {
+          setSelectedTopic(null)
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (mounted) setLoading(false)
+      })
+    return () => {
+      mounted = false
+    }
+  }, [selectedPeriod?.id])
 
   const filtered = useMemo(
     () =>
@@ -156,13 +188,48 @@ export default function Page() {
     if (!ok) return
 
     setDeletingCode(topic.code)
-    const nextList = await mockDeleteTopic(topicList, topic.code)
-    setTopicList(nextList)
-    setSelectedTopic((currentSelected) => {
-      if (!currentSelected || currentSelected.code !== topic.code) return currentSelected
-      return nextList[0] ?? null
-    })
-    setDeletingCode(null)
+    try {
+      if (topic.id) {
+        await topicApi.deleteTopic(topic.id);
+      }
+      const data = await topicApi.getTeacherTopics({ periodId: selectedPeriod?.id });
+      setTopicList(data);
+      if (data.length > 0) {
+        setSelectedTopic(data[0]);
+      } else {
+        setSelectedTopic(null);
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Không thể xóa đề tài!');
+    } finally {
+      setDeletingCode(null)
+    }
+  }
+
+  const handleImportFile = async (file: File) => {
+    const ok = window.confirm(`Bạn có chắc muốn import đề tài từ file ${file.name}?`)
+    if (!ok) return
+    setSubmitting(true)
+    try {
+      const res = await topicApi.importTopics(file, selectedPeriod?.id)
+      if (res?.success) {
+        alert(res.message || 'Import đề tài thành công!')
+        const data = await topicApi.getTeacherTopics({ periodId: selectedPeriod?.id })
+        setTopicList(data)
+        if (data.length > 0) {
+          setSelectedTopic(data[0])
+        }
+        setOpenCreate(false)
+      } else {
+        alert(res?.message || 'Import đề tài thất bại!')
+      }
+    } catch (e: any) {
+      console.error(e)
+      alert(e?.response?.data?.message || 'Có lỗi xảy ra khi import file!')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const handleSave = async () => {
@@ -176,38 +243,47 @@ export default function Page() {
 
     setSubmitting(true)
 
-    if (editingCode) {
-      const nextList = await mockUpdateTopic(topicList, {
-        code: editingCode,
-        name: trimmedName,
-        summary: trimmedSummary,
-        maxSlots,
-      })
-
-      setTopicList(nextList)
-      setSelectedTopic((current) => {
-        if (!current || current.code !== editingCode) return current
-        return nextList.find((topic) => topic.code === editingCode) ?? current
-      })
-    } else {
-      const newCode = `DA${String(topicList.length + 1).padStart(3, '0')}`
-      const newTopic: Topic = {
-        code: newCode,
-        name: trimmedName,
-        slots: `0/${maxSlots}`,
-        status: 'Chờ duyệt',
-        note: 'Mới tạo từ giao diện giảng viên',
-        semester: 'HK2/2025-2026',
-        summary: trimmedSummary,
-        progress: 0,
+    try {
+      if (editingCode) {
+        const targetTopic = topicList.find(t => t.code === editingCode);
+        if (targetTopic?.id) {
+          await topicApi.updateTopic(targetTopic.id, {
+            name: trimmedName,
+            description: trimmedSummary,
+            slots: String(maxSlots),
+            teacher: 'TS. Nguyễn Văn X',
+          });
+        }
+      } else {
+        await topicApi.createTopic({
+          name: trimmedName,
+          description: trimmedSummary,
+          slots: String(maxSlots),
+          teacher: 'TS. Nguyễn Văn X',
+          periodId: selectedPeriod?.id
+        });
       }
-      setTopicList((current) => [newTopic, ...current])
-      setSelectedTopic(newTopic)
-    }
 
-    setSubmitting(false)
-    setOpenCreate(false)
-    resetForm()
+      const data = await topicApi.getTeacherTopics({ periodId: selectedPeriod?.id });
+      setTopicList(data);
+      if (data.length > 0) {
+        setSelectedTopic((curr) => {
+          if (editingCode && data.some((t: any) => t.code === editingCode)) {
+            return data.find((t: any) => t.code === editingCode) || data[0];
+          }
+          return data[0];
+        })
+      } else {
+        setSelectedTopic(null);
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Không thể lưu đề tài!');
+    } finally {
+      setSubmitting(false)
+      setOpenCreate(false)
+      resetForm()
+    }
   }
 
   return (
@@ -375,6 +451,7 @@ export default function Page() {
           resetForm()
         }}
         onSave={handleSave}
+        onImportFile={handleImportFile}
       />
     </>
   )
