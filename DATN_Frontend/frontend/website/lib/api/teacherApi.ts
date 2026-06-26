@@ -1,8 +1,24 @@
 import axiosInstance from '../axios/axios-config';
 
-const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK !== 'false'; // default to true if not specified as 'false'
+const USE_MOCK = false;
 
 export const teacherApi = {
+  getDashboardData: async (params?: { periodId?: string }) => {
+    if (USE_MOCK) {
+      return null;
+    }
+    const response = await axiosInstance.get('/private/v1/teacher/dashboard', { params });
+    return response?.data;
+  },
+
+  getStudents: async (params?: { periodId?: string }) => {
+    if (USE_MOCK) {
+      return null;
+    }
+    const response = await axiosInstance.get('/private/v1/teacher/students', { params });
+    return response?.data;
+  },
+
   getGradingData: async (params?: { periodId?: string }) => {
     if (USE_MOCK) {
       const res = await fetch('/api/mock/teacher/grading');
@@ -32,6 +48,22 @@ export const teacherApi = {
       return await res.json();
     }
     const response = await axiosInstance.post(`/private/v1/teacher/scores`, { group: groupId, rows: payload });
+    return response?.data;
+  },
+
+  saveTttnScores: async (params: { periodId?: string; scores: Array<{ id: string; score: string }> }) => {
+    if (USE_MOCK) {
+      return { success: true };
+    }
+    const response = await axiosInstance.post(`/private/v1/teacher/tttn-scores`, params);
+    return response?.data;
+  },
+
+  saveReportComment: async (payload: { studentId: string; periodId?: string; comment: string; evaluation?: 'DAT' | 'CHUA_DAT'; type: 'TTTN' | 'DATN' }) => {
+    if (USE_MOCK) {
+      return { success: true };
+    }
+    const response = await axiosInstance.post(`/private/v1/teacher/report-comment`, payload);
     return response?.data;
   },
 
@@ -79,5 +111,28 @@ export const teacherApi = {
     }
     const response = await axiosInstance.patch(`/private/v1/teacher/review-groups/${groupId}`, { action });
     return response?.data?.results?.object || response?.data;
+  },
+
+  getProfile: async () => {
+    if (USE_MOCK) {
+      return null;
+    }
+    const response = await axiosInstance.get('/private/v1/teacher/profile');
+    return response?.data;
+  },
+
+  importTopics: async (file: File, periodId?: string) => {
+    if (USE_MOCK) {
+      return { success: true, message: 'Mock import successful' };
+    }
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await axiosInstance.post('/private/v1/teacher/topics/import', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      params: { periodId }
+    });
+    return response?.data;
   },
 };

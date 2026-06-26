@@ -1,54 +1,154 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { BarChart3, BookOpen, Eye, GitBranch, Mail, MapPin, Phone, Search, ShieldCheck, Star, Users, Clock3 } from 'lucide-react'
 import { TeacherPill, TeacherSectionHeader } from '../_components/TeacherShell'
 import { TeacherButton, TeacherCard } from '../_components/TeacherUI'
+import { usePeriod } from '@/lib/providers/PeriodProvider'
+import { teacherApi } from '@/lib/api/teacherApi'
 
-const TTTN = [
+const MOCK_TTTN = [
   { id: '20520001', name: 'Nguyễn Văn A', company: 'FPT Software', mentor: 'TS. Nguyễn Văn X', phone: '0901 234 567', email: 'xnv@fpt.com', report: 'Tuần 3', status: 'Đã nộp', date: '15/05/2026' },
   { id: '20520002', name: 'Trần Thị B', company: 'VNG Corp', mentor: 'ThS. Lê Thị Y', phone: '0909 111 222', email: 'ylt@vng.com', report: 'Tuần 2', status: 'Trễ hạn', date: '08/05/2026' },
   { id: '20520003', name: 'Phạm Văn C', company: 'TMA Solutions', mentor: 'TS. Trần Văn Z', phone: '0933 444 555', email: 'ztv@tma.com', report: 'Tuần 3', status: 'Đã nộp', date: '16/05/2026' },
 ]
 
-const DATN = [
+const MOCK_DATN = [
   { group: 'G01', topic: 'Hệ thống quản lý thư viện điện tử', members: 2, latest: 'Bản thảo Chương 2', status: 'Đã nộp', date: '12/05/2026', github: 'github.com/user/library-system' },
   { group: 'G02', topic: 'Ứng dụng AI nhận diện hình ảnh', members: 3, latest: 'Bản thảo Chương 1', status: 'Đang chấm điểm', date: '10/05/2026', github: 'github.com/user/ai-image-recognition' },
   { group: 'G05', topic: 'Hệ thống bán hàng trực tuyến', members: 2, latest: 'Bản thảo Chương 3', status: 'Đã nộp', date: '15/05/2026', github: 'github.com/user/ecommerce-system' },
 ]
 
 export default function TeacherStudentsPage() {
+  const { selectedPeriod } = usePeriod()
   const [segment, setSegment] = useState<'TTTN' | 'ĐATN'>('TTTN')
   const [query, setQuery] = useState('')
-  const [selectedTTTN, setSelectedTTTN] = useState(TTTN[0])
-  const [selectedDATN, setSelectedDATN] = useState(DATN[0])
+  const [tttnList, setTttnList] = useState<any[]>([])
+  const [datnList, setDatnList] = useState<any[]>([])
+  const [selectedTTTN, setSelectedTTTN] = useState<any>(null)
+  const [selectedDATN, setSelectedDATN] = useState<any>(null)
   const [comments, setComments] = useState<Record<string, string>>({})
   const [commentModal, setCommentModal] = useState<{ open: boolean; id?: string; text: string }>({ open: false, id: undefined, text: '' })
   const [reportModal, setReportModal] = useState<{ open: boolean; id?: string; type?: 'TTTN' | 'DATN' }>({ open: false, id: undefined, type: undefined })
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    let mounted = true
+    setLoading(true)
+    teacherApi.getStudents({ periodId: selectedPeriod?.id })
+      .then((res) => {
+        if (!mounted) return
+        if (res?.success) {
+          const tttn = res.tttn || []
+          const datn = res.datn || []
+          setTttnList(tttn)
+          setDatnList(datn)
+
+          // Load comments from backend
+          const initialComments: Record<string, string> = {}
+          tttn.forEach((item: any) => {
+            if (item.comment) initialComments[item.id] = item.comment
+          })
+          datn.forEach((item: any) => {
+            if (item.comment) initialComments[item.group] = item.comment
+          })
+          setComments(initialComments)
+
+          if (tttn.length > 0) setSelectedTTTN(tttn[0])
+          else setSelectedTTTN(null)
+          if (datn.length > 0) setSelectedDATN(datn[0])
+          else setSelectedDATN(null)
+        } else {
+          setTttnList(MOCK_TTTN)
+          setDatnList(MOCK_DATN)
+          setSelectedTTTN(MOCK_TTTN[0])
+          setSelectedDATN(MOCK_DATN[0])
+        }
+      })
+      .catch(() => {
+        if (mounted) {
+          setTttnList(MOCK_TTTN)
+          setDatnList(MOCK_DATN)
+          setSelectedTTTN(MOCK_TTTN[0])
+          setSelectedDATN(MOCK_DATN[0])
+        }
+      })
+      .finally(() => {
+        if (mounted) setLoading(false)
+      })
+    return () => {
+      mounted = false
+    }
+  }, [selectedPeriod?.id])
+
+  const handleSaveReportComment = async () => {
+    if (!reportModal.id || !reportModal.type) return
+    const text = comments[reportModal.id] ?? ''
+    try {
+      const res = await teacherApi.saveReportComment({
+        studentId: reportModal.id,
+        periodId: selectedPeriod?.id,
+        comment: text,
+        type: reportModal.type
+      })
+      if (res?.success) {
+        alert('Lưu nhận xét thành công!')
+        setReportModal({ open: false, id: undefined, type: undefined })
+      } else {
+        alert('Lưu nhận xét thất bại!')
+      }
+    } catch (e) {
+      console.error(e)
+      alert('Lưu nhận xét thất bại!')
+    }
+  }
+
+  const handleSaveCommentFromModal = async () => {
+    if (!commentModal.id) return
+    const type = commentModal.id.startsWith('G') ? 'DATN' : 'TTTN'
+    try {
+      const res = await teacherApi.saveReportComment({
+        studentId: commentModal.id,
+        periodId: selectedPeriod?.id,
+        comment: commentModal.text,
+        type
+      })
+      if (res?.success) {
+        setComments((c) => ({ ...c, [commentModal.id!]: commentModal.text }))
+        setCommentModal({ open: false, id: undefined, text: '' })
+        alert('Lưu nhận xét thành công!')
+      } else {
+        alert('Lưu nhận xét thất bại!')
+      }
+    } catch (e) {
+      console.error(e)
+      alert('Lưu nhận xét thất bại!')
+    }
+  }
 
   const commentTargetLabel = useMemo(() => {
     if (!commentModal.id) return ''
-    const student = TTTN.find((s) => s.id === commentModal.id)
+    const student = tttnList.find((s) => s.id === commentModal.id)
     if (student) return `${student.name} · ${student.id}`
-    const group = DATN.find((g) => g.group === commentModal.id)
+    const group = datnList.find((g) => g.group === commentModal.id)
     if (group) return `${group.topic} · ${group.group}`
     return commentModal.id
-  }, [commentModal.id])
+  }, [commentModal.id, tttnList, datnList])
 
   const filteredTTTN = useMemo(
-    () => TTTN.filter((row) => [row.id, row.name, row.company, row.mentor].some((value) => value.toLowerCase().includes(query.toLowerCase()))),
-    [query]
+    () => tttnList.filter((row) => [row.id, row.name, row.company, row.mentor].some((value) => (value || '').toLowerCase().includes(query.toLowerCase()))),
+    [query, tttnList]
   )
 
   const filteredDATN = useMemo(
-    () => DATN.filter((row) => [row.group, row.topic, row.latest, row.status].some((value) => value.toLowerCase().includes(query.toLowerCase()))),
-    [query]
+    () => datnList.filter((row) => [row.group, row.topic, row.latest, row.status].some((value) => (value || '').toLowerCase().includes(query.toLowerCase()))),
+    [query, datnList]
   )
 
   const summary = [
-    { title: 'Sinh viên thực tập', value: TTTN.length.toString(), hint: 'Đang theo dõi báo cáo tuần' },
-    { title: 'Nhóm đồ án', value: DATN.length.toString(), hint: 'Đã gắn với đề tài và repo' },
-    { title: 'Trễ hạn', value: TTTN.filter((i) => i.status === 'Trễ hạn').length.toString(), hint: 'Cần gửi nhắc nộp bài' },
+    { title: 'Sinh viên thực tập', value: tttnList.length.toString(), hint: 'Đang theo dõi báo cáo tuần' },
+    { title: 'Nhóm đồ án', value: datnList.length.toString(), hint: 'Đã gắn với đề tài và repo' },
+    { title: 'Trễ hạn', value: tttnList.filter((i) => i.status === 'Trễ hạn').length.toString(), hint: 'Cần gửi nhắc nộp bài' },
   ]
 
   return (
@@ -58,8 +158,8 @@ export default function TeacherStudentsPage() {
         description="Theo dõi sinh viên thực tập và nhóm đồ án với giao diện phân cấp rõ ràng."
         actions={(
           <>
-            <TeacherPill tone="blue">TTTN: {TTTN.length}</TeacherPill>
-            <TeacherPill tone="green">ĐATN: {DATN.length}</TeacherPill>
+            <TeacherPill tone="blue">TTTN: {tttnList.length}</TeacherPill>
+            <TeacherPill tone="green">ĐATN: {datnList.length}</TeacherPill>
           </>
         )}
       />
@@ -82,7 +182,7 @@ export default function TeacherStudentsPage() {
             </div>
             <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
               <div className="text-xs text-slate-500">Tương tác</div>
-              <div className="mt-2 text-lg font-semibold text-slate-900">Xem nhanh</div>
+              <div className="mt-2 text-lg font-semibold text-slate-900">{loading ? 'Đang tải...' : 'Xem nhanh'}</div>
             </div>
           </div>
         </div>
@@ -141,7 +241,7 @@ export default function TeacherStudentsPage() {
               </thead>
               <tbody>
                 {filteredTTTN.map((student) => (
-                  <tr key={student.id} className={`border-t border-slate-100 transition hover:bg-slate-50/80 ${selectedTTTN.id === student.id ? 'bg-blue-50/50' : ''}`}>
+                  <tr key={student.id} className={`border-t border-slate-100 transition hover:bg-slate-50/80 ${selectedTTTN?.id === student.id ? 'bg-blue-50/50' : ''}`}>
                     <td className="px-5 py-4 font-medium text-[#1976D2]">{student.id}</td>
                     <td className="px-5 py-4 text-slate-900">{student.name}</td>
                     <td className="px-5 py-4 text-slate-600">{student.company}</td>
@@ -179,14 +279,14 @@ export default function TeacherStudentsPage() {
             <div className="text-sm font-semibold text-slate-900">Xem nhanh sinh viên</div>
             <div className="rounded-3xl bg-[linear-gradient(135deg,#eff6ff_0%,#ffffff_100%)] p-4">
               <div className="text-xs text-slate-500">Đang chọn</div>
-              <div className="mt-1 text-lg font-semibold text-slate-900">{selectedTTTN.name}</div>
-              <div className="mt-1 text-sm text-slate-600">{selectedTTTN.company}</div>
+              <div className="mt-1 text-lg font-semibold text-slate-900">{selectedTTTN?.name || '—'}</div>
+              <div className="mt-1 text-sm text-slate-600">{selectedTTTN?.company || '—'}</div>
               <div className="mt-4 space-y-2 text-sm text-slate-600">
-                <div className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-[#1976D2]" /> {selectedTTTN.report} · {selectedTTTN.status}</div>
-                <div className="flex items-center gap-2"><Phone className="h-4 w-4 text-[#1976D2]" /> {selectedTTTN.phone}</div>
-                <div className="flex items-center gap-2"><Mail className="h-4 w-4 text-[#1976D2]" /> {selectedTTTN.email}</div>
-                <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-[#1976D2]" /> Mentor: {selectedTTTN.mentor}</div>
-                <div className="flex items-center gap-2"><Clock3 className="h-4 w-4 text-[#1976D2]" /> Cập nhật: {selectedTTTN.date}</div>
+                <div className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-[#1976D2]" /> {selectedTTTN?.report || '—'} · {selectedTTTN?.status || '—'}</div>
+                <div className="flex items-center gap-2"><Phone className="h-4 w-4 text-[#1976D2]" /> {selectedTTTN?.phone || '—'}</div>
+                <div className="flex items-center gap-2"><Mail className="h-4 w-4 text-[#1976D2]" /> {selectedTTTN?.email || '—'}</div>
+                <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-[#1976D2]" /> Mentor: {selectedTTTN?.mentor || '—'}</div>
+                <div className="flex items-center gap-2"><Clock3 className="h-4 w-4 text-[#1976D2]" /> Cập nhật: {selectedTTTN?.date || '—'}</div>
               </div>
             </div>
             <div className="space-y-3 text-sm text-slate-600">
@@ -194,13 +294,12 @@ export default function TeacherStudentsPage() {
               <div className="rounded-2xl bg-slate-50 p-4">Nhận xét 2 báo cáo đã nộp vào cuối tuần.</div>
               <div className="rounded-2xl bg-slate-50 p-4">Xem nhanh file báo cáo mới nhất để nhận xét.</div>
             </div>
-            {comments[selectedTTTN.id] && (
+            {selectedTTTN && comments[selectedTTTN.id] && (
               <div className="mt-3 rounded-2xl bg-white/85 p-4 text-sm text-slate-700">
                 <div className="text-sm font-medium text-slate-900">Nhận xét đã lưu</div>
                 <div className="mt-2 text-sm text-slate-600">{comments[selectedTTTN.id]}</div>
               </div>
             )}
-            {/* Hành động gợi ý removed */}
           </TeacherCard>
         </div>
       ) : (
@@ -228,7 +327,7 @@ export default function TeacherStudentsPage() {
               </thead>
               <tbody>
                 {filteredDATN.map((group) => (
-                  <tr key={group.group} className={`border-t border-slate-100 transition hover:bg-slate-50/80 ${selectedDATN.group === group.group ? 'bg-blue-50/50' : ''}`}>
+                  <tr key={group.group} className={`border-t border-slate-100 transition hover:bg-slate-50/80 ${selectedDATN?.group === group.group ? 'bg-blue-50/50' : ''}`}>
                     <td className="px-5 py-4 font-medium text-[#1976D2]">{group.group}</td>
                     <td className="px-5 py-4 text-slate-900">{group.topic}</td>
                     <td className="px-5 py-4 text-slate-600">{group.members}</td>
@@ -254,13 +353,13 @@ export default function TeacherStudentsPage() {
             <div className="text-sm font-semibold text-slate-900">Xem nhanh nhóm</div>
             <div className="rounded-3xl bg-white/80 p-4">
               <div className="text-xs text-slate-500">Đang chọn</div>
-              <div className="mt-1 text-lg font-semibold text-slate-900">{selectedDATN.group}</div>
-              <div className="mt-1 text-sm text-slate-600">{selectedDATN.topic}</div>
+              <div className="mt-1 text-lg font-semibold text-slate-900">{selectedDATN?.group || '—'}</div>
+              <div className="mt-1 text-sm text-slate-600">{selectedDATN?.topic || '—'}</div>
               <div className="mt-4 space-y-2 text-sm text-slate-600">
-                <div className="flex items-center gap-2"><Users className="h-4 w-4 text-[#1976D2]" /> {selectedDATN.members} thành viên</div>
-                <div className="flex items-center gap-2"><BookOpen className="h-4 w-4 text-[#1976D2]" /> {selectedDATN.latest}</div>
-                <div className="flex items-center gap-2"><GitBranch className="h-4 w-4 text-[#1976D2]" /> {selectedDATN.github}</div>
-                <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-[#1976D2]" /> Cập nhật: {selectedDATN.date}</div>
+                <div className="flex items-center gap-2"><Users className="h-4 w-4 text-[#1976D2]" /> {selectedDATN?.members || 0} thành viên</div>
+                <div className="flex items-center gap-2"><BookOpen className="h-4 w-4 text-[#1976D2]" /> {selectedDATN?.latest || '—'}</div>
+                <div className="flex items-center gap-2"><GitBranch className="h-4 w-4 text-[#1976D2]" /> {selectedDATN?.github || '—'}</div>
+                <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-[#1976D2]" /> Cập nhật: {selectedDATN?.date || '—'}</div>
               </div>
             </div>
             <div className="space-y-3 text-sm text-slate-600">
@@ -268,13 +367,12 @@ export default function TeacherStudentsPage() {
               <div className="rounded-2xl bg-white/80 p-4">Lọc nhóm theo hội đồng hoặc buổi chấm sắp tới.</div>
               <div className="rounded-2xl bg-white/80 p-4">Mở chi tiết nhóm để xem sinh viên và ghi chú.</div>
             </div>
-            {comments[selectedDATN.group] && (
+            {selectedDATN && comments[selectedDATN.group] && (
               <div className="mt-3 rounded-2xl bg-white/85 p-4 text-sm text-slate-700">
                 <div className="text-sm font-medium text-slate-900">Nhận xét đã lưu</div>
                 <div className="mt-2 text-sm text-slate-600">{comments[selectedDATN.group]}</div>
               </div>
             )}
-            {/* Hành động gợi ý removed */}
           </TeacherCard>
         </div>
       )}
@@ -285,7 +383,7 @@ export default function TeacherStudentsPage() {
           <div className="absolute inset-0 bg-black/40" onClick={() => setReportModal({ open: false, id: undefined, type: undefined })} />
           <div className="relative z-50 w-full max-w-2xl rounded-3xl bg-white p-6 shadow-lg">
             <div className="flex items-start justify-between">
-              <h3 className="text-lg font-semibold">{reportModal.type === 'TTTN' ? 'Xem báo cáo' : 'Xem báo cáo'}{reportModal.id ? ` - ${reportModal.type === 'TTTN' ? (TTTN.find(s => s.id === reportModal.id)?.name ?? reportModal.id) : reportModal.id}` : ''}</h3>
+              <h3 className="text-lg font-semibold">{reportModal.type === 'TTTN' ? 'Xem báo cáo' : 'Xem báo cáo'}{reportModal.id ? ` - ${reportModal.type === 'TTTN' ? (tttnList.find(s => s.id === reportModal.id)?.name ?? reportModal.id) : reportModal.id}` : ''}</h3>
               <button className="text-slate-500" onClick={() => setReportModal({ open: false, id: undefined, type: undefined })}>✕</button>
             </div>
 
@@ -293,10 +391,10 @@ export default function TeacherStudentsPage() {
               <div className="rounded-md border border-slate-100 bg-slate-50 p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="text-sm font-medium text-slate-900">{reportModal.type === 'TTTN' ? (TTTN.find(s => s.id === reportModal.id)?.report ?? 'Báo cáo') : (DATN.find(g => g.group === reportModal.id)?.latest ?? 'Báo cáo nhóm')}</div>
-                    <div className="mt-1 text-xs text-slate-500">{reportModal.type === 'TTTN' ? `Ngày nộp: ${TTTN.find(s => s.id === reportModal.id)?.date ?? ''}` : `Đề tài: ${DATN.find(g => g.group === reportModal.id)?.topic ?? ''} · Ngày nộp: ${DATN.find(g => g.group === reportModal.id)?.date ?? ''}`}</div>
+                    <div className="text-sm font-medium text-slate-900">{reportModal.type === 'TTTN' ? (tttnList.find(s => s.id === reportModal.id)?.report ?? 'Báo cáo') : (datnList.find(g => g.group === reportModal.id)?.latest ?? 'Báo cáo nhóm')}</div>
+                    <div className="mt-1 text-xs text-slate-500">{reportModal.type === 'TTTN' ? `Ngày nộp: ${tttnList.find(s => s.id === reportModal.id)?.date ?? ''}` : `Đề tài: ${datnList.find(g => g.group === reportModal.id)?.topic ?? ''} · Ngày nộp: ${datnList.find(g => g.group === reportModal.id)?.date ?? ''}`}</div>
                   </div>
-                  <div className="text-sm text-slate-500">{reportModal.type === 'TTTN' ? (TTTN.find(s => s.id === reportModal.id)?.status ?? '') : (DATN.find(g => g.group === reportModal.id)?.status ?? '')}</div>
+                  <div className="text-sm text-slate-500">{reportModal.type === 'TTTN' ? (tttnList.find(s => s.id === reportModal.id)?.status ?? '') : (datnList.find(g => g.group === reportModal.id)?.status ?? '')}</div>
                 </div>
               </div>
 
@@ -305,7 +403,7 @@ export default function TeacherStudentsPage() {
                   <div className="text-sm font-medium text-slate-900">GitHub Repository</div>
                   <div className="mt-2 rounded-md border border-slate-100 bg-white p-3 text-sm text-slate-700">
                     {(() => {
-                      const repo = DATN.find(g => g.group === reportModal.id)?.github
+                      const repo = datnList.find(g => g.group === reportModal.id)?.github
                       const href = repo ? (repo.startsWith('http') ? repo : `https://${repo}`) : '#'
                       return (<a href={href} target="_blank" rel="noreferrer" className="text-blue-600 underline">{repo}</a>)
                     })()}
@@ -317,7 +415,7 @@ export default function TeacherStudentsPage() {
                 <div className="text-sm font-medium text-slate-900">File báo cáo</div>
                 <div className="mt-2 rounded-md border border-slate-100 bg-white p-3 text-sm text-slate-700">
                   {(() => {
-                    const seed = reportModal.type === 'TTTN' ? (TTTN.find(s => s.id === reportModal.id)?.report ?? 'report') : (DATN.find(g => g.group === reportModal.id)?.latest ?? 'report')
+                    const seed = reportModal.type === 'TTTN' ? (tttnList.find(s => s.id === reportModal.id)?.report ?? 'report') : (datnList.find(g => g.group === reportModal.id)?.latest ?? 'report')
                     const fileName = `${seed.replace(/\s+/g, '_').toLowerCase()}.pdf`
                     return (<a href="#" className="text-blue-600 underline">{fileName}</a>)
                   })()}
@@ -327,7 +425,7 @@ export default function TeacherStudentsPage() {
               <div>
                 <div className="text-sm font-medium text-slate-900">Nội dung báo cáo</div>
                 <div className="mt-2 rounded-md border border-slate-100 bg-white p-4 text-sm text-slate-700">
-                  <p className="font-medium">{reportModal.type === 'TTTN' ? (TTTN.find(s => s.id === reportModal.id)?.report ?? '') : (DATN.find(g => g.group === reportModal.id)?.latest ?? '')}</p>
+                  <p className="font-medium">{reportModal.type === 'TTTN' ? (tttnList.find(s => s.id === reportModal.id)?.report ?? '') : (datnList.find(g => g.group === reportModal.id)?.latest ?? '')}</p>
                   <div className="mt-2 text-sm text-slate-600">Bản tóm tắt công việc đã thực hiện, các mục tiêu hoàn thành và kết quả đạt được. Đây là nội dung ví dụ — bạn có thể thay bằng nội dung thực tế lấy từ backend.</div>
                 </div>
               </div>
@@ -339,7 +437,7 @@ export default function TeacherStudentsPage() {
 
               <div className="flex justify-end gap-3">
                 <button className="rounded-md px-4 py-2 text-sm" onClick={() => setReportModal({ open: false, id: undefined, type: undefined })}>Đóng</button>
-                <button className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white" onClick={() => setReportModal({ open: false, id: undefined, type: undefined })}>Lưu nhận xét</button>
+                <button className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white" onClick={handleSaveReportComment}>Lưu nhận xét</button>
               </div>
             </div>
           </div>
@@ -356,7 +454,7 @@ export default function TeacherStudentsPage() {
             <textarea autoFocus value={commentModal.text} onChange={(e) => setCommentModal((s) => ({ ...s, text: e.target.value }))} className="mt-4 h-32 w-full rounded-md border border-slate-200 p-3 text-sm outline-none" />
             <div className="mt-4 flex justify-end gap-2">
               <button type="button" className="rounded-md px-4 py-2 text-sm" onClick={() => setCommentModal({ open: false, id: undefined, text: '' })}>Hủy</button>
-              <button type="button" className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white" onClick={() => { if (commentModal.id) setComments((c) => ({ ...c, [commentModal.id!]: commentModal.text })); setCommentModal({ open: false, id: undefined, text: '' }) }}>Lưu</button>
+              <button type="button" className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white" onClick={handleSaveCommentFromModal}>Lưu</button>
             </div>
           </div>
         </div>

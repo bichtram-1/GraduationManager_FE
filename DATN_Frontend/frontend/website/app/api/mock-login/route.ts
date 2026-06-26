@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { STORAGES } from '@/lib/constants/storage'
 
-const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK !== 'false';
+const USE_MOCK = false;
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
 
 export async function GET(req: Request) {

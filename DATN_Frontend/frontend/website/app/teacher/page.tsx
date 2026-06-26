@@ -1,16 +1,15 @@
+'use client'
+
+import { useState, useEffect } from 'react'
 import { CalendarDays, CheckCircle2, Clock3, Trophy, TrendingUp, Users } from 'lucide-react'
 import { TeacherPill, TeacherSectionHeader, TeacherStatCard } from './_components/TeacherShell'
-
-const topics = [
-  { code: 'DA001', name: 'Hệ thống IoT giám sát nông nghiệp', slot: '3/4', status: 'Đã duyệt', students: 2, note: 'Đã có 2 nhóm đăng ký' },
-  { code: 'DA007', name: 'Blockchain cho quản lý chuỗi cung ứng', slot: '0/3', status: 'Chờ duyệt', students: 0, note: 'Chờ phê duyệt từ Khoa' },
-  { code: 'DA012', name: 'Ứng dụng ML dự đoán giá chứng khoán', slot: '0/4', status: 'Chờ duyệt', students: 0, note: 'Mới tạo trong tuần' },
-]
+import { usePeriod } from '@/lib/providers/PeriodProvider'
+import { teacherApi } from '@/lib/api/teacherApi'
 
 const reminders = [
-  'Duyệt 2 đề tài mới gửi lên trong tuần này.',
-  'Xác nhận lịch phản biện cho hội đồng ĐATN ngày 20/06.',
-  'Kiểm tra 3 báo cáo tuần của SV TTTN trước 17:00.',
+  'Duyệt đề tài mới gửi lên trong tuần này.',
+  'Xác nhận lịch phản biện cho hội đồng ĐATN.',
+  'Kiểm tra báo cáo tuần của SV TTTN.',
 ]
 
 const weeklyTimeline = [
@@ -20,18 +19,60 @@ const weeklyTimeline = [
 ]
 
 export default function TeacherIndexPage() {
+  const { selectedPeriod } = usePeriod()
+  const [stats, setStats] = useState({ topics: 0, tttn: 0, datn: 0, councils: 0 })
+  const [topics, setTopics] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    let mounted = true
+    setLoading(true)
+    teacherApi.getDashboardData({ periodId: selectedPeriod?.id })
+      .then((res) => {
+        if (!mounted) return
+        if (res?.success) {
+          setStats(res.stats)
+          setTopics(res.topics || [])
+        } else {
+          // fallback mock values if backend is empty
+          setStats({ topics: 3, tttn: 4, datn: 2, councils: 1 })
+          setTopics([
+            { code: 'DA001', name: 'Hệ thống IoT giám sát nông nghiệp', slot: '3/4', status: 'Đã duyệt', students: 2, note: 'Đã có 2 nhóm đăng ký' },
+            { code: 'DA007', name: 'Blockchain cho quản lý chuỗi cung ứng', slot: '0/3', status: 'Chờ duyệt', students: 0, note: 'Chờ phê duyệt từ Khoa' },
+            { code: 'DA012', name: 'Ứng dụng ML dự đoán giá chứng khoán', slot: '0/4', status: 'Chờ duyệt', students: 0, note: 'Mới tạo trong tuần' },
+          ])
+        }
+      })
+      .catch(() => {
+        if (mounted) {
+          setStats({ topics: 3, tttn: 4, datn: 2, councils: 1 })
+          setTopics([
+            { code: 'DA001', name: 'Hệ thống IoT giám sát nông nghiệp', slot: '3/4', status: 'Đã duyệt', students: 2, note: 'Đã có 2 nhóm đăng ký' },
+            { code: 'DA007', name: 'Blockchain cho quản lý chuỗi cung ứng', slot: '0/3', status: 'Chờ duyệt', students: 0, note: 'Chờ phê duyệt từ Khoa' },
+            { code: 'DA012', name: 'Ứng dụng ML dự đoán giá chứng khoán', slot: '0/4', status: 'Chờ duyệt', students: 0, note: 'Mới tạo trong tuần' },
+          ])
+        }
+      })
+      .finally(() => {
+        if (mounted) setLoading(false)
+      })
+    return () => {
+      mounted = false
+    }
+  }, [selectedPeriod?.id])
+
   return (
     <>
       <TeacherSectionHeader
         title="Trang chủ giảng viên"
-        description="Quản lý đề tài, sinh viên hướng dẫn và hoạt động chấm điểm theo bố cục dashboard nhiều lớp, đậm chất bộ UI tham chiếu."
+        description="Quản lý đề tài, sinh viên hướng dẫn và hoạt động chấm điểm dựa trên kết nối thực tế tới Back-End."
       />
 
       <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <TeacherStatCard title="Đề tài" value="12" hint="4 đề tài chờ duyệt" accent="blue" />
-        <TeacherStatCard title="TTTN" value="18" hint="6 sinh viên đang hướng dẫn" accent="green" />
-        <TeacherStatCard title="ĐATN" value="9" hint="3 nhóm chờ phản biện" accent="orange" />
-        <TeacherStatCard title="Hội đồng" value="2" hint="Lịch chấm sắp diễn ra" accent="violet" />
+        <TeacherStatCard title="Đề tài" value={String(stats.topics)} hint="Đề tài đã đề xuất" accent="blue" />
+        <TeacherStatCard title="TTTN" value={String(stats.tttn)} hint="Sinh viên đang hướng dẫn" accent="green" />
+        <TeacherStatCard title="ĐATN" value={String(stats.datn)} hint="Nhóm chấm phản biện" accent="orange" />
+        <TeacherStatCard title="Hội đồng" value={String(stats.councils)} hint="Lịch chấm hội đồng" accent="violet" />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-3">
@@ -42,7 +83,7 @@ export default function TeacherIndexPage() {
                 <div className="text-sm font-semibold text-slate-900">Đề tài đang phụ trách</div>
                 <div className="text-xs text-slate-500">Danh sách đề tài hiện đang hướng dẫn và trạng thái duyệt</div>
               </div>
-              <TeacherPill tone="blue">Bộ lọc theo học kỳ</TeacherPill>
+              <TeacherPill tone="blue">{selectedPeriod?.name || 'Học kỳ hiện tại'}</TeacherPill>
             </div>
             <table className="w-full text-sm">
               <thead className="bg-slate-50 text-slate-600">
@@ -55,20 +96,26 @@ export default function TeacherIndexPage() {
                 </tr>
               </thead>
               <tbody>
-                {topics.map((topic) => (
-                  <tr key={topic.code} className="border-t border-slate-100 transition hover:bg-slate-50/80">
-                    <td className="px-5 py-4 font-medium text-[#1976D2]">{topic.code}</td>
-                    <td className="px-5 py-4 text-slate-900">
-                      <div className="font-medium">{topic.name}</div>
-                      <div className="mt-1 text-xs text-slate-500">{topic.note}</div>
-                    </td>
-                    <td className="px-5 py-4 text-slate-600">{topic.slot}</td>
-                    <td className="px-5 py-4 text-slate-600">{topic.students}</td>
-                    <td className="px-5 py-4">
-                      <TeacherPill tone={topic.status === 'Đã duyệt' ? 'green' : 'orange'}>{topic.status}</TeacherPill>
-                    </td>
+                {topics.length > 0 ? (
+                  topics.map((topic) => (
+                    <tr key={topic.code} className="border-t border-slate-100 transition hover:bg-slate-50/80">
+                      <td className="px-5 py-4 font-medium text-[#1976D2]">{topic.code}</td>
+                      <td className="px-5 py-4 text-slate-900">
+                        <div className="font-medium">{topic.name}</div>
+                        {topic.note && <div className="mt-1 text-xs text-slate-500">{topic.note}</div>}
+                      </td>
+                      <td className="px-5 py-4 text-slate-600">{topic.slot}</td>
+                      <td className="px-5 py-4 text-slate-600">{topic.students}</td>
+                      <td className="px-5 py-4">
+                        <TeacherPill tone={topic.status === 'Đã duyệt' ? 'green' : topic.status === 'Từ chối' ? 'red' : 'orange'}>{topic.status}</TeacherPill>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="px-5 py-8 text-center text-slate-500">Không có đề tài nào phụ trách trong đợt này.</td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </section>
@@ -122,9 +169,9 @@ export default function TeacherIndexPage() {
           <section className="rounded-[28px] border border-slate-200 bg-[linear-gradient(135deg,#eff6ff_0%,#ffffff_100%)] p-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
             <div className="text-sm font-semibold text-slate-900">Tổng quan nhanh</div>
             <div className="mt-4 space-y-3 text-sm text-slate-600">
-              <div className="flex items-center gap-2"><CheckCircle2 className="text-emerald-500" /> 4 đề tài sẵn sàng công bố</div>
-              <div className="flex items-center gap-2"><Users className="text-blue-500" /> 18 sinh viên đang theo dõi</div>
-              <div className="flex items-center gap-2"><Trophy className="text-orange-500" /> 9 nhóm ĐATN chờ chấm</div>
+              <div className="flex items-center gap-2"><CheckCircle2 className="text-emerald-500" /> {stats.topics} đề tài sẵn sàng công bố</div>
+              <div className="flex items-center gap-2"><Users className="text-blue-500" /> {stats.tttn} sinh viên đang theo dõi</div>
+              <div className="flex items-center gap-2"><Trophy className="text-orange-500" /> {stats.datn} nhóm ĐATN phản biện</div>
             </div>
           </section>
 

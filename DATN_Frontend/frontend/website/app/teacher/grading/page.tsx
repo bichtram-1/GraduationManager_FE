@@ -31,8 +31,8 @@ const defaultCouncilGroups = [
       { id: 'T003', name: 'ThS. Lê Văn GV', role: 'Thư ký' },
     ],
     groups: [
-      { groupCode: 'G01', topic: 'Hệ thống IoT', students: [{ id: '20520010', name: 'Lê A' }, { id: '20520011', name: 'Trần B' }] },
-      { groupCode: 'G02', topic: 'Blockchain chuỗi cung ứng', students: [{ id: '20520012', name: 'Nguyễn C' }] },
+      { id: '1', groupCode: 'G01', topic: 'Hệ thống IoT', students: [{ id: '20520010', name: 'Lê A' }, { id: '20520011', name: 'Trần B' }] },
+      { id: '2', groupCode: 'G02', topic: 'Blockchain chuỗi cung ứng', students: [{ id: '20520012', name: 'Nguyễn C' }] },
     ],
   },
   {
@@ -48,7 +48,7 @@ const defaultCouncilGroups = [
       { id: 'T005', name: 'ThS. Hoàng GV', role: 'Ủy viên' },
     ],
     groups: [
-      { groupCode: 'G03', topic: 'Ứng dụng ML', students: [{ id: '20520020', name: 'Hồ D' }, { id: '20520021', name: 'Phan E' }] },
+      { id: '3', groupCode: 'G03', topic: 'Ứng dụng ML', students: [{ id: '20520020', name: 'Hồ D' }, { id: '20520021', name: 'Phan E' }] },
     ],
   },
 ]
@@ -63,8 +63,8 @@ export default function TeacherGradingPage() {
   const [mode, setMode] = useState<'tttn' | 'council'>('tttn')
   const [tttnScores, setTttnScores] = useState(defaultTttnRows)
   const [toast, setToast] = useState<string | null>(null)
-  const [selectedCouncil, setSelectedCouncil] = useState(defaultCouncilGroups[0])
-  const [selectedGroup, setSelectedGroup] = useState<null | { groupCode: string; topic: string; students: { id: string; name: string }[] }>(null)
+  const [selectedCouncil, setSelectedCouncil] = useState<typeof defaultCouncilGroups[0] | null>(defaultCouncilGroups[0])
+  const [selectedGroup, setSelectedGroup] = useState<null | { id?: string; groupCode: string; topic: string; students: { id: string; name: string }[] }>(null)
   const [selectedTttnId, setSelectedTttnId] = useState(defaultTttnRows[0].id)
   const [councilList, setCouncilList] = useState(defaultCouncilGroups)
   const [scoreList, setScoreList] = useState(defaultScoreRows)
@@ -85,13 +85,25 @@ export default function TeacherGradingPage() {
         if (!mounted) return
         console.log('grading data:', data)
         if (data) {
-          setTttnScores(data.tttnRows ?? defaultTttnRows)
-          setCouncilList(data.councilGroups ?? defaultCouncilGroups)
-          setScoreList(data.scoreRows ?? defaultScoreRows)
-          if (data.councilGroups && data.councilGroups.length > 0) {
-            setSelectedCouncil(data.councilGroups[0])
+          const newTttnRows = data.tttnRows ?? defaultTttnRows
+          setTttnScores(newTttnRows)
+          if (newTttnRows.length > 0) {
+            setSelectedTttnId(newTttnRows[0].id)
+          } else {
+            setSelectedTttnId('')
+          }
+
+          const newCouncilList = data.councilGroups ?? defaultCouncilGroups
+          setCouncilList(newCouncilList)
+          if (newCouncilList.length > 0) {
+            setSelectedCouncil(newCouncilList[0])
+            setSelectedGroup(null)
+          } else {
+            setSelectedCouncil(null)
             setSelectedGroup(null)
           }
+
+          setScoreList(data.scoreRows ?? defaultScoreRows)
         }
       })
       .catch(() => {})
@@ -106,6 +118,32 @@ export default function TeacherGradingPage() {
   const updateTttn = (index: number, value: string) => {
     if (value !== '' && !/^\d*\.?\d*$/.test(value)) return
     setTttnScores((current) => current.map((row, rowIndex) => (rowIndex === index ? { ...row, score: value } : row)))
+  }
+
+  const [savingTttn, setSavingTttn] = useState(false)
+
+  const handleSaveTttn = async () => {
+    setSavingTttn(true)
+    try {
+      const payload = tttnScores.map(row => ({
+        id: row.id,
+        score: row.score
+      }))
+      const res = await teacherApi.saveTttnScores({
+        periodId: selectedPeriod?.id,
+        scores: payload
+      })
+      if (res?.success) {
+        notify('Đã lưu điểm thực tập tốt nghiệp thành công!')
+      } else {
+        alert('Lưu điểm thất bại!')
+      }
+    } catch (e) {
+      console.error(e)
+      alert('Lưu điểm thất bại!')
+    } finally {
+      setSavingTttn(false)
+    }
   }
 
   const anyValid = tttnScores.some((row) => row.score !== '' && !Number.isNaN(Number.parseFloat(row.score)))
@@ -165,13 +203,13 @@ export default function TeacherGradingPage() {
         </TeacherCard>
         <TeacherCard className="p-5">
           <div className="text-xs text-slate-500">Phiên hội đồng</div>
-          <div className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">{selectedCouncil.code}</div>
-          <div className="mt-2 text-sm text-slate-500">{selectedCouncil.room}</div>
+          <div className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">{selectedCouncil?.code || '—'}</div>
+          <div className="mt-2 text-sm text-slate-500">{selectedCouncil?.room || '—'}</div>
         </TeacherCard>
         <TeacherCard className="p-5">
           <div className="text-xs text-slate-500">Sinh viên đang xem</div>
-          <div className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">{selectedTttn.id}</div>
-          <div className="mt-2 text-sm text-slate-500">{selectedTttn.name}</div>
+          <div className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">{selectedTttn?.id || '—'}</div>
+          <div className="mt-2 text-sm text-slate-500">{selectedTttn?.name || '—'}</div>
         </TeacherCard>
         <TeacherCard className="p-5">
           <div className="text-xs text-slate-500">Trạng thái lưu</div>
@@ -244,8 +282,8 @@ export default function TeacherGradingPage() {
             </table>
             <div className="flex items-center justify-between border-t border-slate-200 px-5 py-4">
               <div className="text-xs text-slate-500">Điểm chỉ được lưu khi hợp lệ từ 0 đến 10.</div>
-              <TeacherButton variant="primary" disabled={!anyValid} onClick={() => notify('Đã lưu điểm TTTN')}>
-                <span className="inline-flex items-center gap-2"><Save className="h-4 w-4" /> Lưu điểm</span>
+              <TeacherButton variant="primary" disabled={!anyValid || savingTttn} onClick={handleSaveTttn}>
+                <span className="inline-flex items-center gap-2"><Save className="h-4 w-4" /> {savingTttn ? 'Đang lưu...' : 'Lưu điểm'}</span>
               </TeacherButton>
             </div>
           </TeacherCard>
@@ -289,7 +327,7 @@ export default function TeacherGradingPage() {
             <div className="text-sm font-semibold text-slate-900">Hội đồng ĐATN</div>
             <div className="mt-4 space-y-3">
               {councilList.map((council) => {
-                const active = selectedCouncil.code === council.code
+                const active = selectedCouncil?.code === council.code
                 return (
                   <button
                     key={council.code}
@@ -354,7 +392,7 @@ export default function TeacherGradingPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {(selectedCouncil.groups || []).map((g) => {
+                    {(selectedCouncil?.groups || []).map((g) => {
                       const membersStr = (g.students || []).map((s) => `${s.id} - ${s.name}`).join(', ')
                       const hasScore = (g.students || []).some((s) => !!(scoreList.find((r) => r.id === s.id)?.member))
                       return (
@@ -369,7 +407,7 @@ export default function TeacherGradingPage() {
                             <div className="text-xs text-slate-500"></div>
                           </td>
                           <td className="px-5 py-4 text-slate-700 max-w-[320px] truncate">{membersStr}</td>
-                          <td className="px-5 py-4 text-slate-700">{selectedCouncil.members?.[0]?.name ?? '—'}</td>
+                          <td className="px-5 py-4 text-slate-700">{selectedCouncil?.members?.[0]?.name ?? '—'}</td>
                           <td className="px-5 py-4">
                             {hasScore ? <span className="inline-flex items-center gap-2 rounded-md bg-emerald-50 px-2 py-1 text-emerald-700 text-xs">Đã chấm</span> : <span className="inline-flex items-center gap-2 rounded-md bg-amber-50 px-2 py-1 text-amber-700 text-xs">Chưa chấm</span>}
                           </td>
@@ -415,9 +453,9 @@ export default function TeacherGradingPage() {
               </div>
             </div>
             <ScoringTable
-              groupId={`${selectedCouncil.code}-${selectedGroup.groupCode}`}
+              groupId={selectedGroup.id || selectedGroup.groupCode}
               students={(selectedGroup.students || []).map((s) => ({ id: s.id, name: s.name }))}
-              canEditReport={selectedCouncil.members?.some((m) => m.role.toLowerCase().includes('hướng dẫn') || m.role.toLowerCase().includes('phản biện')) || selectedCouncil.role === 'GVPB'}
+              canEditReport={selectedCouncil?.members?.some((m) => m.role.toLowerCase().includes('hướng dẫn') || m.role.toLowerCase().includes('phản biện')) || selectedCouncil?.role === 'GVPB'}
             />
           </div>
         </div>
