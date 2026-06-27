@@ -12,7 +12,9 @@ export function GET(req: Request) {
   const redirectTo = getSafeRedirect(url)
   const res = NextResponse.redirect(new URL(redirectTo, req.url))
   const hostHeader = req.headers.get('host') || undefined
-  const domain = hostHeader ? hostHeader.split(':')[0] : undefined
+  const host = hostHeader ? hostHeader.split(':')[0] : undefined
+  const isIPOrLocalhost = host === 'localhost' || host === '127.0.0.1' || /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host || '')
+  const domain = (host && !isIPOrLocalhost) ? host : undefined
 
   res.cookies.set({
     name: STORAGES.ACCESS_TOKEN,
@@ -21,7 +23,7 @@ export function GET(req: Request) {
     maxAge: 0,
   })
   res.cookies.set({
-    name: 'USER_ROLE',
+    name: 'WEBSITE_USER_ROLE',
     value: '',
     path: '/',
     maxAge: 0,
@@ -36,7 +38,7 @@ export function GET(req: Request) {
       maxAge: 0,
     })
     res.cookies.set({
-      name: 'USER_ROLE',
+      name: 'WEBSITE_USER_ROLE',
       value: '',
       path: '/',
       domain,

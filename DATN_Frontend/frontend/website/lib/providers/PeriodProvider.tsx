@@ -28,6 +28,13 @@ export const PeriodProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
 
     async function load() {
+      if (typeof window !== 'undefined') {
+        const path = window.location.pathname
+        if (path.startsWith('/login') || path.startsWith('/signup')) {
+          if (mounted) setLoading(false)
+          return
+        }
+      }
       try {
         const data = await periodApi.getListPeriod()
         if (!mounted) return
