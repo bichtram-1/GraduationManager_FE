@@ -22,7 +22,7 @@ import {
 
 export const userHooks = {
   /** Lấy danh sách user (phân trang, filter) — dùng cho table */
-  useFetchListUsers: (params: BaseListParams) => {
+  useFetchListUsers: (params: any) => {
     return useQuery({
       queryKey: [QueryKey.users.list, params],
       queryFn: () => userApi.getListUser(params),

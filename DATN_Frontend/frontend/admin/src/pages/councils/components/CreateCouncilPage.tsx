@@ -265,7 +265,7 @@ const CreateCouncilPage = () => {
       createCouncilMutation.mutate(payload, {
         onSuccess: () => {
           setSaved(true);
-          message.success(t(getKey('create_council_success'), { count: selectedTopics.length } as any));
+          message.success(t(getKey('create_council_success'), { count: selectedTopics.length } as any) as string);
           navigate('/councils');
         },
         onError: (err: any) => {
@@ -277,7 +277,7 @@ const CreateCouncilPage = () => {
 
   const selectedCountByAdvisor = (advisorId: string) => selectedTopics.filter((topic) => topic.advisorId === advisorId).length;
   const visibleAdvisorBuckets = advisorBuckets.filter((bucket) => memberIds.includes(bucket.advisorId));
-  const committeeSummary = t(getKey('members_count_label'), { count: memberIds.length } as any);
+  const committeeSummary = t(getKey('members_count_label'), { count: memberIds.length } as any) as string;
 
   const openSortTab = () => {
     if (selectedTopics.length > 0) setWorkflowTab('sort');
@@ -447,7 +447,7 @@ const CreateCouncilPage = () => {
                 <div className="font-medium">{t(getKey('step2_title'))}</div>
                 <div className="mt-1 text-xs text-gray-500">{t(getKey('step2_desc'))}</div>
               </div>
-              <div className="rounded-full bg-gray-100 px-3 py-1 text-[11px] text-gray-600">{t(getKey('selected_topics_count'), { count: selectedTopics.length } as any)}</div>
+              <div className="rounded-full bg-gray-100 px-3 py-1 text-[11px] text-gray-600">{(t(getKey('selected_topics_count'), { count: selectedTopics.length } as any) as string)}</div>
             </div>
 
             <div className="flex gap-2 border-b border-gray-200 px-5 pt-4">
@@ -483,7 +483,7 @@ const CreateCouncilPage = () => {
                           <div>
                             <div className="text-sm font-medium">{t(getKey('advisor_short'))}: {bucket.advisorName}</div>
                             <div className="mt-1 text-xs text-gray-500">
-                              {t(getKey('topics_selected_count'), { total: bucket.topics.length, count: selectedInBucket } as any)}
+                              {(t(getKey('topics_selected_count'), { total: bucket.topics.length, count: selectedInBucket } as any) as string)}
                             </div>
                           </div>
                           <div className="rounded-full bg-white px-3 py-1 text-[11px] text-gray-600">{t(getKey('status_active'))}</div>

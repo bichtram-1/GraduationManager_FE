@@ -68,7 +68,7 @@ const LoginPage = () => {
 
         {loginFailedCount > 0 && (
           <Typography.Text className={cn('mb-4 mt-[-12px] block text-btnDelete')}>
-            {t(getKey('login_failed_attempts'), { count: formatNumber(loginFailedCount) })}
+            {t(getKey('login_failed_attempts'), { count: loginFailedCount }) as string}
           </Typography.Text>
         )}
 

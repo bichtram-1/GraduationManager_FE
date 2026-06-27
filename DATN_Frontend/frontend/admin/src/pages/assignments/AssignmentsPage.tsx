@@ -126,7 +126,7 @@ const AssignmentsPage = () => {
     const teacher = teachers.find((teacherItem: any) => teacherItem.id === selectedTeacher)!;
     Modal.confirm({
       title: t(getKey('confirm_assignment_title')),
-      content: t(getKey('confirm_assignment_content'), { count: studentIds.length, teacher: teacher.name } as any),
+      content: (t(getKey('confirm_assignment_content'), { count: studentIds.length, teacher: teacher.name } as any) as string),
       okText: t(getKey('confirm_btn')),
       cancelText: t(getKey('cancel_btn')),
       onOk: () => {
@@ -141,7 +141,7 @@ const AssignmentsPage = () => {
             })
           )
         ).then(() => {
-          message.success(t(getKey('assign_teacher_success_msg'), { teacher: teacher.name, count: studentIds.length } as any));
+          message.success(t(getKey('assign_teacher_success_msg'), { teacher: teacher.name, count: studentIds.length } as any) as string);
         });
         setSelectedStudents({});
         setSelectedTeacher(null);
@@ -213,7 +213,7 @@ const AssignmentsPage = () => {
                   <div className="text-xs text-slate-500">{t(getKey('step1_sub_desc'))}</div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Tag className="rounded-full m-0">{t(getKey('selected_count_label'), { count: Object.values(selectedStudents).filter(Boolean).length } as any)}</Tag>
+                  <Tag className="rounded-full m-0">{(t(getKey('selected_count_label'), { count: Object.values(selectedStudents).filter(Boolean).length } as any) as string)}</Tag>
                   <Select
                     value={manualClassFilter}
                     onChange={(value) => setManualClassFilter(value)}
@@ -251,7 +251,7 @@ const AssignmentsPage = () => {
                 </table>
               </div>
 
-              <div className="border-t border-slate-100 bg-slate-50 px-5 py-3 text-xs text-slate-600">{t(getKey('showing_students_count'), { count: filtered.length } as any)}</div>
+              <div className="border-t border-slate-100 bg-slate-50 px-5 py-3 text-xs text-slate-600">{(t(getKey('showing_students_count'), { count: filtered.length } as any) as string)}</div>
             </Card>
           </div>
 

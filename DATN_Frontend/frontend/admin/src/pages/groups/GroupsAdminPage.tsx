@@ -98,7 +98,7 @@ const GroupsAdminPage: React.FC = () => {
     if (totalMembers > left.maxMembers) return message.error(t(getKey('merge_max_members_error')));
     Modal.confirm({
       title: t(getKey('merge_groups_confirm_title')),
-      content: t(getKey('merge_groups_confirm_content'), { left: left.code, right: right.code, count: formatNumber(totalMembers) }),
+      content: (t(getKey('merge_groups_confirm_content'), { left: left.code, right: right.code, count: totalMembers }) as string),
       okText: t(getKey('confirm_btn')),
       cancelText: t(getKey('cancel_btn')),
       async onOk() {

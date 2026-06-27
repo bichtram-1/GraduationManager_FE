@@ -1,12 +1,13 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { BookOpen, Building2, CalendarDays, ClipboardCheck, GraduationCap, Home, LogOut, Menu, Trophy, Users } from 'lucide-react'
 import { Select } from 'antd'
 import { usePeriod } from '@/lib/providers/PeriodProvider'
+import { teacherApi } from '@/lib/api/teacherApi'
 
 const NAV_ITEMS = [
   { key: 'home', href: '/teacher', label: 'Trang chủ', icon: Home },
@@ -32,8 +33,41 @@ export function TeacherShell({ children }: { children: ReactNode }) {
   const pathname = usePathname()
   const { periods, selectedPeriod, setSelectedPeriod } = usePeriod()
   const [profileOpen, setProfileOpen] = useState(false)
+  const [teacher, setTeacher] = useState<{
+    id: number
+    name: string
+    email: string
+    phone: string
+    degree: string
+    specialty: string
+  } | null>(null)
+
+  useEffect(() => {
+    let mounted = true
+    async function loadProfile() {
+      try {
+        const data = await teacherApi.getProfile()
+        if (mounted && data?.teacher) {
+          setTeacher(data.teacher)
+        }
+      } catch (err) {
+        console.error('Failed to load teacher profile:', err)
+      }
+    }
+    loadProfile()
+    return () => {
+      mounted = false
+    }
+  }, [])
 
   const activeKey = useMemo(() => getActiveKey(pathname), [pathname])
+
+  const shortName = useMemo(() => {
+    if (!teacher?.name) return 'GV'
+    const parts = teacher.name.trim().split(/\s+/)
+    const lastWord = parts[parts.length - 1]
+    return lastWord.substring(0, 2).toUpperCase()
+  }, [teacher])
 
   const handleLogout = () => {
     window.location.assign('/api/logout?from=/login')
@@ -92,8 +126,8 @@ export function TeacherShell({ children }: { children: ReactNode }) {
 
           <div className="relative flex items-center gap-3">
             <div className="hidden text-right sm:block">
-              <div className="text-sm font-medium leading-tight">TS. Nguyễn Văn X</div>
-              <div className="text-xs text-slate-500">teacher@uit.edu.vn</div>
+              <div className="text-sm font-medium leading-tight">{teacher ? `${teacher.degree}. ${teacher.name}` : 'Đang tải...'}</div>
+              <div className="text-xs text-slate-500">{teacher?.email || ''}</div>
             </div>
             <button
               type="button"
@@ -116,25 +150,25 @@ export function TeacherShell({ children }: { children: ReactNode }) {
               <div className="absolute right-0 top-[calc(100%+12px)] w-80 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
                 <div className="bg-[linear-gradient(135deg,#1976D2_0%,#2196F3_100%)] px-5 py-4 text-white">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15 text-lg font-semibold">GV</div>
+                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15 text-lg font-semibold">{shortName}</div>
                     <div className="min-w-0">
-                      <div className="font-semibold leading-tight">TS. Nguyễn Văn X</div>
-                      <div className="text-xs opacity-90">Giảng viên hướng dẫn</div>
+                      <div className="font-semibold leading-tight">{teacher ? `${teacher.degree}. ${teacher.name}` : 'Đang tải...'}</div>
+                      <div className="text-xs opacity-90">Giảng viên</div>
                     </div>
                   </div>
                 </div>
                 <div className="space-y-3 px-5 py-4 text-sm">
                   <div className="flex items-center gap-3 text-slate-700">
                     <CalendarDays className="text-slate-400" />
-                    <span>Lịch hướng dẫn: Thứ 2, Thứ 4, Thứ 6</span>
+                    <span>SĐT: {teacher?.phone || '—'}</span>
                   </div>
                   <div className="flex items-center gap-3 text-slate-700">
                     <BookOpen className="text-slate-400" />
-                    <span>Khoa Công nghệ thông tin</span>
+                    <span>{teacher?.specialty || 'Khoa Công nghệ thông tin'}</span>
                   </div>
                   <div className="flex items-center gap-3 text-slate-700">
                     <Building2 className="text-slate-400" />
-                    <span>Phụ trách TTTN & ĐATN</span>
+                    <span>Mã GV: {teacher?.id || '—'}</span>
                   </div>
                 </div>
               </div>
