@@ -39,6 +39,7 @@ const DefaultHeader = () => {
     if (allPeriods.length === 0) return;
 
     const isInternshipPage = pathname.pathname.startsWith('/internship-students');
+    const isThesisPage = pathname.pathname.startsWith('/groups');
 
     if (isInternshipPage) {
       // For internship pages, we MUST select a TTTN period
@@ -48,6 +49,16 @@ const DefaultHeader = () => {
         if (!isCurrentTttn) {
           const activeTttn = tttnPeriods.find(p => p.status === 'open' || p.status === 'published') || tttnPeriods[0];
           setSelectedPeriod(activeTttn);
+        }
+      }
+    } else if (isThesisPage) {
+      // For thesis (DATN) pages, we MUST select a DATN period
+      const datnPeriods = allPeriods.filter(p => p.type === 'datn');
+      if (datnPeriods.length > 0) {
+        const isCurrentDatn = selectedPeriod && selectedPeriod.type === 'datn';
+        if (!isCurrentDatn) {
+          const activeDatn = datnPeriods.find(p => p.status === 'open' || p.status === 'published') || datnPeriods[0];
+          setSelectedPeriod(activeDatn);
         }
       }
     } else {
@@ -103,7 +114,7 @@ const DefaultHeader = () => {
                 bordered={false}
                 classNames={{ popup: { root: 'rounded-xl shadow-lg' } }}
               >
-                {tttnPeriods.length > 0 && (
+                {tttnPeriods.length > 0 && !pathname.pathname.startsWith('/groups') && (
                   <Select.OptGroup label="Đợt Thực tập tốt nghiệp (TTTN)">
                     {tttnPeriods.map(p => (
                       <Select.Option key={p.id} value={p.id}>
