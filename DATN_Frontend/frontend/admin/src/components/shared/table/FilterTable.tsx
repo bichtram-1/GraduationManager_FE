@@ -152,9 +152,18 @@ const FilterTable = <
 
   useEffect(() => {
     if (!paramVariables) return;
-    // update internal params when parent provides new paramVariables (e.g., tab change)
-    if (!_.isEqual(paramVariables, internalParams)) {
-      setInternalParams(paramVariables as BaseListParams);
+    // merge new parent paramVariables with current filter form values to preserve inputs
+    const formValues = form.getFieldsValue();
+    const mergedParams = { ...internalParams, ...paramVariables };
+    
+    Object.keys(formValues).forEach(key => {
+      if (formValues[key] !== undefined && formValues[key] !== null) {
+        mergedParams[key] = formValues[key];
+      }
+    });
+
+    if (!_.isEqual(mergedParams, internalParams)) {
+      setInternalParams(mergedParams as BaseListParams);
     }
   }, [paramVariables]);
 

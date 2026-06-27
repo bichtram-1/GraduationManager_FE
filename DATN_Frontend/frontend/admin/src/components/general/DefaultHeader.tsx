@@ -36,11 +36,28 @@ const DefaultHeader = () => {
   const allPeriods = periodsData?.rows ?? [];
 
   useEffect(() => {
-    if (!selectedPeriod && allPeriods.length > 0) {
-      const activePeriod = allPeriods.find(p => p.status === 'open' || p.status === 'published') || allPeriods[0];
-      setSelectedPeriod(activePeriod);
+    if (allPeriods.length === 0) return;
+
+    const isInternshipPage = pathname.pathname.startsWith('/internship-students');
+
+    if (isInternshipPage) {
+      // For internship pages, we MUST select a TTTN period
+      const tttnPeriods = allPeriods.filter(p => p.type === 'tttn');
+      if (tttnPeriods.length > 0) {
+        const isCurrentTttn = selectedPeriod && selectedPeriod.type === 'tttn';
+        if (!isCurrentTttn) {
+          const activeTttn = tttnPeriods.find(p => p.status === 'open' || p.status === 'published') || tttnPeriods[0];
+          setSelectedPeriod(activeTttn);
+        }
+      }
+    } else {
+      // General pages: select any active period if none selected
+      if (!selectedPeriod) {
+        const activePeriod = allPeriods.find(p => p.status === 'open' || p.status === 'published') || allPeriods[0];
+        setSelectedPeriod(activePeriod);
+      }
     }
-  }, [allPeriods, selectedPeriod, setSelectedPeriod]);
+  }, [allPeriods, selectedPeriod, setSelectedPeriod, pathname.pathname]);
 
   const tttnPeriods = allPeriods.filter(p => p.type === 'tttn');
   const datnPeriods = allPeriods.filter(p => p.type === 'datn');
@@ -95,7 +112,7 @@ const DefaultHeader = () => {
                     ))}
                   </Select.OptGroup>
                 )}
-                {datnPeriods.length > 0 && (
+                {datnPeriods.length > 0 && !pathname.pathname.startsWith('/internship-students') && (
                   <Select.OptGroup label="Đợt Đồ án tốt nghiệp (ĐATN)">
                     {datnPeriods.map(p => (
                       <Select.Option key={p.id} value={p.id}>
