@@ -6,7 +6,7 @@ import type { BaseListParams } from '@shared/types/GeneralType';
 import type { ICreateClass, IDetailClass, IUpdateClass } from '../type/ClassType';
 
 export const classHooks = {
-  useFetchListClasses: () => useQuery({ queryKey: [QueryKey.classes.list], queryFn: () => classApi.getListClass() }),
+  useFetchListClasses: (params?: { periodId?: string }) => useQuery({ queryKey: [QueryKey.classes.list, params], queryFn: () => classApi.getListClass(params) }),
 
   useFetchDetailClass: (id: string, enabled: boolean = true) => useQuery({ queryKey: [QueryKey.classes.detail, id], enabled: !!id && enabled, queryFn: () => classApi.getClassDetail(id) }),
 

@@ -5,8 +5,10 @@ import {
   PlusOutlined,
   ReadOutlined,
   TeamOutlined,
+  UserAddOutlined,
+  SearchOutlined,
 } from '@ant-design/icons';
-import { Button, Card, Form, Input, Modal, Select, Space, Table, Tag, Tabs } from 'antd';
+import { Button, Card, Form, Input, Modal, Select, Space, Table, Tag, Tabs, message } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { getKey } from '@shared/types/I18nKeyType';
 import type { ColumnsType } from 'antd/es/table';
@@ -14,6 +16,7 @@ import { useMemo, useState } from 'react';
 import FilterTable from '../../components/shared/table/FilterTable';
 import PeriodForm from './components/PeriodForm';
 import { periodHooks } from '../../hooks/usePeriods';
+import { userHooks } from '../../hooks/useUsers';
 import type { BatchStatus, BatchType, ICreatePeriod, IUpdatePeriod, IListPeriod, IDetailPeriod } from '../../type/PeriodType';
 import type { BaseListParams } from '@shared/types/GeneralType';
 import { STATUS_CODE, cn } from '../../constants/commonConst';
@@ -37,6 +40,67 @@ const PeriodsPage = () => {
   const createPeriodMutation = periodHooks.useCreatePeriod();
   const updatePeriodMutation = periodHooks.useUpdatePeriod();
   const deletePeriodMutation = periodHooks.useDeletePeriod();
+
+  const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
+  const [addStudentForm] = Form.useForm();
+  const [studentSearchKeyword, setStudentSearchKeyword] = useState('');
+
+  const { data: searchStudentsData, isLoading: isSearchStudentsLoading } = userHooks.useFetchListUsers({
+    role: 'student',
+    keyword: studentSearchKeyword,
+    page: 1,
+    limit: 15,
+  });
+
+  const searchStudentsList = useMemo(() => {
+    if (!searchStudentsData) return [];
+    if (Array.isArray(searchStudentsData)) return searchStudentsData;
+    if (Array.isArray((searchStudentsData as any).rows)) return (searchStudentsData as any).rows;
+    return [];
+  }, [searchStudentsData]);
+
+  const searchStudentOptions = useMemo(() => {
+    return searchStudentsList.map((sv: any) => ({
+      value: sv.id,
+      label: `${sv.id} - ${sv.name} (${sv.className || 'Không lớp'})`,
+    }));
+  }, [searchStudentsList]);
+
+  const { data: allPeriodsData } = periodHooks.useFetchListPeriods({
+    page: 1,
+    limit: 100,
+  });
+
+  const periodOptions = useMemo(() => {
+    if (!allPeriodsData || !allPeriodsData.rows) return [];
+    return allPeriodsData.rows.map((p: any) => ({
+      value: p.id,
+      label: `${p.name} (${p.type === 'tttn' ? 'TTTN' : 'ĐATN'})`,
+    }));
+  }, [allPeriodsData]);
+
+  const addStudentMutation = periodHooks.useAddStudentToPeriods();
+
+  const handleAddStudentSubmit = async (values: any) => {
+    addStudentMutation.mutate(
+      {
+        studentId: values.studentId,
+        periodIds: values.periodIds,
+        reason: values.reason,
+      },
+      {
+        onSuccess: () => {
+          message.success('Thêm sinh viên vào các đợt thành công!');
+          setIsAddStudentModalOpen(false);
+          addStudentForm.resetFields();
+          setStudentSearchKeyword('');
+        },
+        onError: (err: any) => {
+          message.error(err?.response?.data?.message || 'Có lỗi xảy ra khi thêm sinh viên!');
+        },
+      }
+    );
+  };
 
   const handleTabChange = (key: string) => {
     const nextTab = key as BatchType;
@@ -75,35 +139,6 @@ const PeriodsPage = () => {
         key: 'regDeadline',
         render: (value: string) => <span className="text-slate-600">{value}</span>,
       },
-      ...(tab === 'tttn'
-        ? [
-            {
-              title: t(getKey('companies_count')),
-              dataIndex: 'numberDN',
-              key: 'numberDN',
-              render: (value?: number) => <span>{value !== undefined ? formatNumber(value) : '-'}</span>,
-            },
-            {
-              title: t(getKey('students_count_short')),
-              dataIndex: 'numberSV',
-              key: 'numberSV',
-              render: (value?: number) => <span>{value !== undefined ? formatNumber(value) : '-'}</span>,
-            },
-          ]
-        : [
-            {
-              title: t(getKey('topics_count')),
-              dataIndex: 'numberTopics',
-              key: 'numberTopics',
-              render: (value?: number) => <span>{value !== undefined ? formatNumber(value) : '-'}</span>,
-            },
-            {
-              title: t(getKey('councils_count')),
-              dataIndex: 'numberCouncils',
-              key: 'numberCouncils',
-              render: (value?: number) => <span>{value !== undefined ? formatNumber(value) : '-'}</span>,
-            },
-          ]),
       {
         title: t(getKey('group_status')),
         dataIndex: 'status',
@@ -118,7 +153,7 @@ const PeriodsPage = () => {
         },
       },
     ],
-    [tab, t],
+    [t],
   );
 
   return (
@@ -137,6 +172,16 @@ const PeriodsPage = () => {
               {t(getKey('period_management_desc'))}
             </p>
           </div>
+          <Button
+            type="default"
+            icon={<UserAddOutlined className="text-primary" />}
+            onClick={() => setIsAddStudentModalOpen(true)}
+            className="!h-10 !rounded-[8px] !border-primary !text-primary !px-5 !flex !items-center !gap-2 !font-medium hover:!bg-primary/5 hover:!border-primary/80"
+          >
+            <span className="text-primary text-base font-medium text-center w-full">
+              Thêm sinh viên tự do / rớt
+            </span>
+          </Button>
         </div>
       </div>
 
@@ -148,7 +193,7 @@ const PeriodsPage = () => {
         <FilterTable<IListPeriod, IDetailPeriod, ICreatePeriod, IUpdatePeriod>
           title={t(getKey('period_list'))}
           pageTitle={t(getKey('period_management'))}
-          createButtonLabel={t(getKey('create_period'))}
+          createButtonLabel={tab === 'tttn' ? 'Tạo đợt TTTN mới' : 'Tạo đợt ĐATN mới'}
           columns={columns}
           useQueryHook={periodHooks.useFetchListPeriods}
           paramVariables={listParams}
@@ -179,7 +224,7 @@ const PeriodsPage = () => {
               </Form.Item>
             </div>
           )}
-          createInfo={{ type: 'modal', modalInfo: { modalContent: <PeriodForm tab={tab} allowStudentListUpload />, modalProps: { centered: true, width: 820, title: t(getKey('create_period')) }, modalFunc: createPeriodMutation } }}
+          createInfo={{ type: 'modal', modalInfo: { modalContent: <PeriodForm tab={tab} allowStudentListUpload />, modalProps: { centered: true, width: 820, title: tab === 'tttn' ? 'Tạo đợt TTTN mới' : 'Tạo đợt ĐATN mới' }, modalFunc: createPeriodMutation } }}
           updateInfo={{ type: 'modal', modalInfo: { modalContent: <PeriodForm tab={tab} />, modalProps: { centered: true, width: 820, title: t(getKey('edit_period')) }, modalFunc: updatePeriodMutation } }}
           detailInfo={{ type: 'modal', modalInfo: { modalContent: <PeriodForm tab={tab} disabled />, modalProps: { centered: true, width: 820, title: t(getKey('detail_period')), footer: null }, modalFunc: periodHooks.useFetchDetailPeriod as unknown as (id: string, enable: boolean) => import('@tanstack/react-query').UseQueryResult<IDetailPeriod, Error> } }}
           deleteInfo={{ type: 'modal', modalInfo: { modalContent: null, modalProps: {}, modalFunc: deletePeriodMutation as any } }}
@@ -189,6 +234,76 @@ const PeriodsPage = () => {
           } as ICreatePeriod)}
         />
       </Card>
+
+      <Modal
+        title={
+          <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+            <UserAddOutlined className="text-primary text-xl" />
+            <span className="text-lg font-bold text-slate-800">Thêm sinh viên tự do / rớt vào các đợt</span>
+          </div>
+        }
+        open={isAddStudentModalOpen}
+        onCancel={() => {
+          setIsAddStudentModalOpen(false);
+          addStudentForm.resetFields();
+          setStudentSearchKeyword('');
+        }}
+        onOk={() => addStudentForm.submit()}
+        confirmLoading={addStudentMutation.isPending}
+        centered
+        width={550}
+        okText="Thêm vào các đợt"
+        cancelText="Hủy"
+        okButtonProps={{ className: '!h-10 !px-5 !rounded-lg !bg-primary' }}
+        cancelButtonProps={{ className: '!h-10 !px-5 !rounded-lg' }}
+      >
+        <Form
+          form={addStudentForm}
+          layout="vertical"
+          onFinish={handleAddStudentSubmit}
+          initialValues={{ reason: 'Rớt đợt trước' }}
+          className="pt-4"
+        >
+          <Form.Item
+            name="studentId"
+            label="Chọn sinh viên"
+            rules={[{ required: true, message: 'Vui lòng chọn một sinh viên!' }]}
+          >
+            <Select
+              showSearch
+              placeholder="Tìm kiếm sinh viên theo tên hoặc MSSV..."
+              defaultActiveFirstOption={false}
+              suffixIcon={<SearchOutlined />}
+              filterOption={false}
+              onSearch={(val) => setStudentSearchKeyword(val)}
+              notFoundContent={isSearchStudentsLoading ? 'Đang tìm...' : 'Không tìm thấy sinh viên'}
+              options={searchStudentOptions}
+              className="w-full"
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="periodIds"
+            label="Chọn đợt đăng ký"
+            rules={[{ required: true, message: 'Vui lòng chọn ít nhất một đợt đăng ký!' }]}
+          >
+            <Select
+              mode="multiple"
+              placeholder="Chọn các đợt để thêm sinh viên này vào..."
+              optionFilterProp="label"
+              options={periodOptions}
+              className="w-full"
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="reason"
+            label="Lý do"
+          >
+            <Input placeholder="VD: Rớt đợt trước" />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 };

@@ -100,6 +100,7 @@ export interface FilterTableProps<
   formatInitialValues?: (data: TDetail) => Record<string, unknown>;
   formatFormValues?: (values: Record<string, unknown>) => TCreate | TUpdate;
   enableSelectRow?: boolean;
+  extraActions?: ReactNode;
 }
 
 const initParams = { page: 1, limit: 10 };
@@ -137,6 +138,7 @@ const FilterTable = <
   filterRender,
   formatInitialValues,
   formatFormValues,
+  extraActions,
 }: FilterTableProps<TList, TDetail, TCreate, TUpdate>) => {
   const hasPageHeader = !!pageTitle;
 
@@ -432,6 +434,7 @@ const FilterTable = <
                 )}
 
                 <Flex align="center" gap={12}>
+                  {extraActions}
                   {renderCreateButton()}
                   {exportInfo?.type && exportMutation && (
                     <Button

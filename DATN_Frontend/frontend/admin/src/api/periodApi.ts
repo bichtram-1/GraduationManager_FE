@@ -32,4 +32,9 @@ export const periodApi = {
     const response = await axiosInstance.delete(`/private/v1/periods/${id}`);
     return response?.data;
   },
+
+  addStudentToPeriods: async (body: { studentId: string; periodIds: string[]; reason?: string }) => {
+    const response = await axiosInstance.post('/private/v1/periods/add-student', body);
+    return response?.data;
+  },
 };

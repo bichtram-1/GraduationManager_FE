@@ -75,7 +75,10 @@ const DefaultHeader = () => {
 
         <Flex align="center" gap={20}>
           {/* Global Period Selector */}
-          {pathname.pathname !== ROUTES.USERS && (
+          {pathname.pathname !== ROUTES.USERS &&
+            pathname.pathname !== ROUTES.PERIODS &&
+            pathname.pathname !== ROUTES.CLASSES &&
+            pathname.pathname !== ROUTES.COMPANIES && (
             <div className="flex items-center gap-2 bg-[#f8fafc] border border-slate-200 px-3 py-1 rounded-[12px] shadow-sm">
               <span className="text-xs font-semibold text-slate-500">Đợt hoạt động:</span>
               <Select

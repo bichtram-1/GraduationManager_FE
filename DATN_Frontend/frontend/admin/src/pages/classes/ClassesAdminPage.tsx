@@ -4,6 +4,8 @@ import { SearchOutlined } from '@ant-design/icons';
 import FilterTable from '../../components/shared/table/FilterTable';
 import ClassForm from './components/ClassForm';
 import { classHooks } from '../../hooks/useClasses';
+import { periodHooks } from '../../hooks/usePeriods';
+import { useGlobalVariable } from '../../hooks/GlobalVariableProvider';
 import type { IListClass, ICreateClass, IUpdateClass, IDetailClass } from '../../type/ClassType';
 import { useTranslation } from 'react-i18next';
 import { getKey } from '@shared/types/I18nKeyType';
@@ -12,8 +14,11 @@ import { STATUS_CODE } from '../../constants/commonConst';
 
 const ClassesAdminPage = () => {
   const { t } = useTranslation();
+  const { selectedPeriod } = useGlobalVariable();
   const { useFetchListClasses, useUpdateClass, useDeleteClass, useCreateClass } = classHooks;
   const { data: classList } = useFetchListClasses();
+  const { data: periodsData } = periodHooks.useFetchListPeriods({ page: 1, limit: 100 });
+  const allPeriods = periodsData?.rows ?? [];
   const create = useCreateClass();
   const update = useUpdateClass();
   const del = useDeleteClass();
@@ -25,8 +30,13 @@ const ClassesAdminPage = () => {
   const majors = useMemo(() => Array.from(new Set(allRows.map((c: any) => c.major).filter(Boolean))), [allRows]);
 
   const useFilteredClassesQuery = (params: BaseListParams) => {
-    const query = useFetchListClasses();
-    const typedParams = params as BaseListParams & { keyword?: string; level?: string; course?: string; major?: string };
+    const typedParams = params as BaseListParams & { keyword?: string; level?: string; course?: string; major?: string; periodId?: string };
+    
+    // Pass periodId to backend hook if it is specified and not 'all'
+    const query = useFetchListClasses(
+      typedParams.periodId && typedParams.periodId !== 'all' ? { periodId: typedParams.periodId } : undefined
+    );
+    
     const keyword = (typedParams.keyword ?? '').trim().toLowerCase();
     const level = typedParams.level;
     const course = typedParams.course;
@@ -60,6 +70,12 @@ const ClassesAdminPage = () => {
     { title: t(getKey('supervisor_teacher')), dataIndex: 'supervisor', key: 'supervisor', ellipsis: true },
   ];
 
+  const filterTableParams = useMemo(() => ({
+    page: 1,
+    limit: 10,
+    periodId: selectedPeriod?.id || 'all'
+  }), [selectedPeriod?.id]);
+
   return (
     <div>
       <Card className="overflow-hidden rounded-[18px] border border-slate-100 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
@@ -70,12 +86,16 @@ const ClassesAdminPage = () => {
           createButtonLabel={t(getKey('create_class')) || 'Thêm lớp học'}
           columns={columns}
           useQueryHook={useFilteredClassesQuery}
+          paramVariables={filterTableParams}
           filterRender={() => (
             <div className="grid grid-cols-1 gap-3 xl:grid-cols-12 mb-4">
-              <Form.Item name="keyword" className="xl:col-span-5 !mb-0">
+              <Form.Item name="keyword" className="xl:col-span-3 !mb-0">
                 <Input allowClear prefix={<SearchOutlined className="text-slate-400" />} placeholder={t(getKey('search_class_placeholder'))} className="!h-11 !rounded-[12px] !border-slate-300" />
               </Form.Item>
-              <Form.Item name="level" className="xl:col-span-3 !mb-0">
+              <Form.Item name="periodId" className="xl:col-span-3 !mb-0">
+                <Select allowClear placeholder="Chọn đợt học" className="!h-11 w-full" options={[{ value: 'all', label: 'Tất cả đợt học' }, ...allPeriods.map((p) => ({ value: p.id, label: p.name }))]} />
+              </Form.Item>
+              <Form.Item name="level" className="xl:col-span-2 !mb-0">
                 <Select allowClear placeholder={t(getKey('education_level'))} className="!h-11 w-full" options={[{ value: 'all', label: t(getKey('all_levels')) }, ...levels.map((l) => ({ value: l, label: l }))]} />
               </Form.Item>
               <Form.Item name="course" className="xl:col-span-2 !mb-0">
