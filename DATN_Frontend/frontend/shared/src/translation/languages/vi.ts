@@ -77,7 +77,7 @@ const ViTranslation = {
   detail_topic: 'Chi tiết đề tài',
   search_topics_placeholder: 'Tìm theo mã, tên, giảng viên...',
   topic_code: 'Mã',
-  slots: 'Slots',
+  slots: 'Số lượng',
   reject_reason: 'Lý do từ chối',
   student_scores_title: 'Quản lý điểm sinh viên',
   student_scores_desc: 'Theo dõi và cập nhật điểm thực tập, đồ án theo từng đợt',

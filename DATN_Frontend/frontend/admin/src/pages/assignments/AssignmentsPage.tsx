@@ -5,6 +5,7 @@ import AssignmentModal from './components/AssignmentModal';
 import AssignmentForm from './components/AssignmentForm';
 import FilterTable from '../../components/shared/table/FilterTable';
 import { assignmentHooks } from '../../hooks/useAssignments';
+import { useGlobalVariable } from '../../hooks/GlobalVariableProvider';
 import { useTranslation } from 'react-i18next';
 import { cn, STATUS_CODE } from '../../constants/commonConst';
 import { getKey } from '@shared/types/I18nKeyType';
@@ -30,7 +31,21 @@ const AssignmentsPage = () => {
   const [selectedAssignment, setSelectedAssignment] = useState<AssignmentRow | null>(null);
   const [manualClassFilter, setManualClassFilter] = useState('all');
   const [form] = Form.useForm();
-  const { data: assignmentList } = assignmentHooks.useFetchListAssignments({ page: 1, limit: 1000 });
+  const { selectedPeriod } = useGlobalVariable();
+
+  const assignmentListParams = useMemo(() => ({
+    page: 1,
+    limit: 1000,
+    periodId: selectedPeriod?.id || '',
+  }), [selectedPeriod?.id]);
+
+  const filterTableParams = useMemo(() => ({
+    page: 1,
+    limit: 10,
+    periodId: selectedPeriod?.id || '',
+  }), [selectedPeriod?.id]);
+
+  const { data: assignmentList } = assignmentHooks.useFetchListAssignments(assignmentListParams);
   const { data: teachers = [] } = assignmentHooks.useFetchTeachers();
   const createAssignmentMutation = assignmentHooks.useCreateAssignment();
   const updateAssignmentMutation = assignmentHooks.useUpdateAssignment();
@@ -92,13 +107,13 @@ const AssignmentsPage = () => {
           id: selectedAssignment.studentId,
           body: values,
           index: 0,
-          params: { page: 1, limit: 1000 },
+          params: { page: 1, limit: 1000, periodId: selectedPeriod?.id || '' },
         });
         message.success(t(getKey('update_assignment_success')));
       } else {
         await createAssignmentMutation.mutateAsync({
           body: values,
-          params: { page: 1, limit: 1000 },
+          params: { page: 1, limit: 1000, periodId: selectedPeriod?.id || '' },
         });
         message.success(t(getKey('create_assignment_success')));
       }
@@ -137,7 +152,7 @@ const AssignmentsPage = () => {
               id: studentId,
               body: { supervisor: teacher.name, status: STATUS_CODE.ASSIGNED, assignedAt: now },
               index: 0,
-              params: { page: 1, limit: 1000 },
+              params: { page: 1, limit: 1000, periodId: selectedPeriod?.id || '' },
             })
           )
         ).then(() => {
@@ -163,7 +178,7 @@ const AssignmentsPage = () => {
             id: studentId,
             body: { supervisor: null, status: STATUS_CODE.UNASSIGNED, assignedAt: null },
             index: 0,
-            params: { page: 1, limit: 1000 },
+            params: { page: 1, limit: 1000, periodId: selectedPeriod?.id || '' },
           },
           {
             onSuccess: () => message.success(t(getKey('unassign_success_msg'))),
@@ -351,7 +366,7 @@ const AssignmentsPage = () => {
                 data,
               } as import('@tanstack/react-query').UseQueryResult<import('../../type/AssignmentType').IListAssignment extends infer T ? import('@shared/types/GeneralType').ListResponseTypeObject<T> : never, Error>;
             }}
-            paramVariables={{ page: 1, limit: 10 }}
+            paramVariables={filterTableParams}
             filterRender={() => (
               <div className="mb-4 flex flex-wrap gap-3 items-center">
                 <Form.Item name="className" className="m-0">

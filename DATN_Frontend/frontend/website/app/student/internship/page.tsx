@@ -25,6 +25,38 @@ export default function StudentInternshipPage() {
     duration: '',
     confirmPaper: false,
   })
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [suggestions, setSuggestions] = useState<ICompany[]>([])
+
+  const handleCompanyNameChange = (value: string) => {
+    setDeclareForm((current) => ({ ...current, companyName: value }));
+    if (value.trim()) {
+      const filtered = companies.filter((c) =>
+        c.name.toLowerCase().includes(value.toLowerCase())
+      );
+      setSuggestions(filtered);
+      setShowSuggestions(filtered.length > 0);
+    } else {
+      setSuggestions([]);
+      setShowSuggestions(false);
+    }
+  };
+
+  const handleSelectSuggestion = (c: ICompany) => {
+    setDeclareForm({
+      companyName: c.name,
+      field: c.field || '',
+      address: c.address || '',
+      internshipAddress: c.address || '',
+      mentor: c.mentor || '',
+      phone: c.phone || '',
+      email: c.email || '',
+      slots: String(c.slots || ''),
+      duration: c.duration || '8 tuần',
+      confirmPaper: declareForm.confirmPaper,
+    });
+    setShowSuggestions(false);
+  };
 
   const loadData = async () => {
     try {
@@ -270,16 +302,41 @@ export default function StudentInternshipPage() {
 
             <div className="max-h-[70vh] overflow-y-auto p-5">
               <div className="grid gap-4 md:grid-cols-2">
-                <label className="block">
+                <div className="relative block">
                   <div className="text-sm font-medium text-slate-700">Tên công ty <span className="text-red-500">*</span></div>
-                  <input 
-                    value={declareForm.companyName} 
-                    onChange={(event) => setDeclareForm((current) => ({ ...current, companyName: event.target.value }))} 
-                    className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white" 
-                    placeholder="Nhập tên đầy đủ của công ty" 
+                  <input
+                    type="text"
+                    value={declareForm.companyName}
+                    onChange={(event) => handleCompanyNameChange(event.target.value)}
+                    onFocus={() => {
+                      if (declareForm.companyName.trim()) {
+                        const filtered = companies.filter((c) =>
+                          c.name.toLowerCase().includes(declareForm.companyName.toLowerCase())
+                        );
+                        setSuggestions(filtered);
+                        setShowSuggestions(filtered.length > 0);
+                      }
+                    }}
+                    onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                    className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white"
+                    placeholder="Nhập tên đầy đủ của công ty"
                     disabled={submitting}
                   />
-                </label>
+                  {showSuggestions && (
+                    <div className="absolute left-0 right-0 z-50 mt-1 max-h-60 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
+                      {suggestions.map((c) => (
+                        <div
+                          key={c.code}
+                          onClick={() => handleSelectSuggestion(c)}
+                          className="cursor-pointer rounded-xl px-4 py-2.5 text-left hover:bg-slate-50 transition"
+                        >
+                          <div className="text-xs font-semibold text-slate-900">{c.name}</div>
+                          <div className="text-[10px] text-slate-500">{c.field} • {c.address}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <label className="block">
                   <div className="text-sm font-medium text-slate-700">Lĩnh vực</div>
                   <input 

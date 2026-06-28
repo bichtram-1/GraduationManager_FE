@@ -282,31 +282,7 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled, allowStudentListUpload }) 
         </Form.Item>
       </div>
 
-      {(tab === 'tttn') ? (
-        <div className="mt-4 space-y-4 rounded-md border border-blue-200 bg-blue-50/40 p-4">
-          <div className="text-sm font-medium text-gray-700">{t(getKey('tttn_config_title'))}</div>
-          <div className="grid grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-2">
-            <Form.Item name="numberDN" label={t(getKey('companies_number_label'))}>
-              <InputNumber disabled={disabled} className="!w-full" min={0} />
-            </Form.Item>
-            <Form.Item name="numberSV" label={t(getKey('students_number_label'))}>
-              <InputNumber disabled={disabled} className="!w-full" min={0} />
-            </Form.Item>
-          </div>
-        </div>
-      ) : (
-        <div className="mt-4 space-y-4 rounded-md border border-green-200 bg-green-50/40 p-4">
-          <div className="text-sm font-medium text-gray-700">{t(getKey('datn_config_title'))}</div>
-          <div className="grid grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-2">
-            <Form.Item name="numberTopics" label={t(getKey('topics_number_label'))}>
-              <InputNumber disabled={disabled} className="!w-full" min={0} />
-            </Form.Item>
-            <Form.Item name="numberCouncils" label={t(getKey('councils_number_label'))}>
-              <InputNumber disabled={disabled} className="!w-full" min={0} />
-            </Form.Item>
-          </div>
-        </div>
-      )}
+
     </>
   );
 };
