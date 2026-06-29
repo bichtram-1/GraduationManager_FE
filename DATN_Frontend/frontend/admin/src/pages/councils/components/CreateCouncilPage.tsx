@@ -7,6 +7,8 @@ import { useTranslation } from 'react-i18next';
 import { groupHooks } from '../../../hooks/useGroups';
 import { assignmentHooks } from '../../../hooks/useAssignments';
 import { councilHooks } from '../../../hooks/useCouncils';
+import { periodHooks } from '../../../hooks/usePeriods';
+import { useGlobalVariable } from '../../../hooks/GlobalVariableProvider';
 import { getKey } from '@shared/types/I18nKeyType';
 import { formatNumber } from '@shared/utils/numberUtils';
 
@@ -49,14 +51,27 @@ const CreateCouncilPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const section2Ref = useRef<HTMLDivElement | null>(null);
+  const { selectedPeriod } = useGlobalVariable();
+  const { data: periodList } = periodHooks.useFetchListPeriods({ page: 1, limit: 100 });
+  const datnPeriods = useMemo(() => {
+    const raw = (periodList?.rows ?? []) as any[];
+    return raw.filter((p: any) => p.type === 'DATN' || p.loai_dot === 'DATN');
+  }, [periodList]);
+
   const [form, setForm] = useState<CommitteeForm>({
     name: '',
-    batch: 'Đợt ĐATN Học kỳ 2 - 2026',
+    batch: selectedPeriod?.name || '',
     room: '',
     date: '',
     time: '',
     members: [],
   });
+
+  useEffect(() => {
+    if (datnPeriods.length > 0 && !form.batch) {
+      setForm((current) => ({ ...current, batch: datnPeriods[0].name ?? datnPeriods[0].ten_dot }));
+    }
+  }, [datnPeriods]);
   const [selectedTopics, setSelectedTopics] = useState<SelectedTopic[]>([]);
   const [draggingTopicId, setDraggingTopicId] = useState<string | null>(null);
   const [dragOverTopicId, setDragOverTopicId] = useState<string | null>(null);
@@ -76,6 +91,11 @@ const CreateCouncilPage = () => {
     if (groupList?.rows) {
       const bucketsMap: Record<string, SelectedTopic[]> = {};
       groupList.rows.forEach((g: any) => {
+        // Chỉ lấy các nhóm đủ điều kiện ra hội đồng: cả kết quả hướng dẫn và kết quả phản biện đều "DAT"
+        if (g.ket_qua_huong_dan !== 'DAT' || g.ket_qua_phan_bien !== 'DAT') {
+          return;
+        }
+
         const supervisor = g.supervisor || 'Chưa phân công';
         if (!bucketsMap[supervisor]) {
           bucketsMap[supervisor] = [];
@@ -103,7 +123,7 @@ const CreateCouncilPage = () => {
     () =>
       teacherList.map((t: any) => ({
         value: t.id,
-        label: t.name,
+        label: `${t.name} - Chuyên môn: ${t.major || 'Chưa rõ'}`,
       })),
     [teacherList],
   );
@@ -367,7 +387,7 @@ const CreateCouncilPage = () => {
         <Card className="overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-gray-50 px-5 py-4">
             <div>
-              <div className="text-sm font-semibold text-[var(--color-primary)]">BƯỚC 1</div>
+              <div className="text-sm font-semibold text-[var(--color-primary)]">PHẦN 1</div>
               <div className="font-medium">{t(getKey('step1_title'))}</div>
             </div>
             <div className="rounded-full bg-white px-3 py-1 text-[11px] text-gray-600 shadow-sm">{t(getKey('step1_desc'))}</div>
@@ -380,8 +400,17 @@ const CreateCouncilPage = () => {
 
               <div>
                 <div className="mb-1 text-xs text-gray-600">{t(getKey('select_period'))}</div>
-                <Select value={form.batch} onChange={(value) => setForm({ ...form, batch: value })} className="w-full">
-                  <Select.Option value="Đợt ĐATN Học kỳ 2 - 2026">Đợt ĐATN Học kỳ 2 - 2026</Select.Option>
+                <Select 
+                  value={form.batch} 
+                  onChange={(value) => setForm({ ...form, batch: value })} 
+                  className="w-full"
+                  placeholder="Chọn đợt hoạt động..."
+                >
+                  {datnPeriods.map((p: any) => (
+                    <Select.Option key={p.id} value={p.name ?? p.ten_dot}>
+                      {p.name ?? p.ten_dot}
+                    </Select.Option>
+                  ))}
                 </Select>
               </div>
 
@@ -443,7 +472,7 @@ const CreateCouncilPage = () => {
           <Card className="overflow-hidden">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-gray-50 px-5 py-4">
               <div>
-                <div className="text-sm font-semibold text-[var(--color-primary)]">BƯỚC 2</div>
+                <div className="text-sm font-semibold text-[var(--color-primary)]">PHẦN 2</div>
                 <div className="font-medium">{t(getKey('step2_title'))}</div>
                 <div className="mt-1 text-xs text-gray-500">{t(getKey('step2_desc'))}</div>
               </div>
@@ -494,14 +523,14 @@ const CreateCouncilPage = () => {
                             <thead className="bg-white text-gray-500">
                               <tr>
                                 <th className="w-14 px-4 py-3 text-left">{t(getKey('select_column'))}</th>
-                                <th className="w-24 px-4 py-3 text-left">{t(getKey('group_code'))}</th>
+                                <th className="w-24 px-4 py-3 text-left">STT</th>
                                 <th className="px-4 py-3 text-left">{t(getKey('topic_name'))}</th>
-                                <th className="px-4 py-3 text-left">{t(getKey('student_name'))}</th>
+                                <th className="px-4 py-3 text-left">Thành viên</th>
                                 <th className="w-28 px-4 py-3 text-left">{t(getKey('duration_column'))}</th>
                               </tr>
                             </thead>
                             <tbody>
-                              {bucket.topics.map((topic) => {
+                              {bucket.topics.map((topic, idx) => {
                                 const checked = selectedTopics.some((item) => item.id === topic.id);
 
                                 return (
@@ -514,9 +543,15 @@ const CreateCouncilPage = () => {
                                         className="h-4 w-4 accent-[var(--color-primary)]"
                                       />
                                     </td>
-                                    <td className="px-4 py-3 align-top font-medium text-[var(--color-blue-md)]">{topic.topicCode}</td>
+                                    <td className="px-4 py-3 align-top font-medium text-gray-700">{formatNumber(idx + 1)}</td>
                                     <td className="px-4 py-3 align-top font-medium text-gray-900">{topic.topicName}</td>
-                                    <td className="px-4 py-3 align-top text-xs text-gray-600">{topic.members.join(', ')}</td>
+                                    <td className="px-4 py-3 align-top text-xs text-gray-600">
+                                      <div className="flex flex-col gap-0.5">
+                                        {topic.members.map((m: string) => (
+                                          <div key={m}>{m}</div>
+                                        ))}
+                                      </div>
+                                    </td>
                                     <td className="px-4 py-3 align-top">
                                       <Input
                                         type="number"
@@ -547,7 +582,6 @@ const CreateCouncilPage = () => {
                     <tr>
                       <th className="w-12 px-4 py-3 text-left"></th>
                       <th className="w-20 px-4 py-3 text-left">{t(getKey('stt'))}</th>
-                      <th className="w-28 px-4 py-3 text-left">{t(getKey('group_code'))}</th>
                       <th className="px-4 py-3 text-left">{t(getKey('topic_name'))}</th>
                       <th className="px-4 py-3 text-left">{t(getKey('advisor_short'))}</th>
                       <th className="px-4 py-3 text-left">{t(getKey('reviewer_short'))}</th>
@@ -577,7 +611,6 @@ const CreateCouncilPage = () => {
                           <MenuOutlined />
                         </td>
                         <td className="px-4 py-3 align-top font-medium text-gray-700">{formatNumber(index + 1)}</td>
-                        <td className="px-4 py-3 align-top font-medium text-[var(--color-blue-md)]">{topic.topicCode}</td>
                         <td className="px-4 py-3 align-top font-medium text-gray-900">{topic.topicName}</td>
                         <td className="px-4 py-3 align-top text-gray-600">{teacherNameById(topic.advisorId)}</td>
                         <td className="px-4 py-3 align-top">
@@ -611,7 +644,7 @@ const CreateCouncilPage = () => {
                             value={topic.externalExaminers || []}
                             onChange={(value) => updateExternalExaminersForTopic(topic.id, value ?? [])}
                             placeholder={t(getKey('select_external_placeholder'))}
-                            options={teacherList.filter((t: any) => !memberIds.includes(t.id)).map((t: any) => ({ value: t.id, label: t.name }))}
+                            options={teacherList.filter((t: any) => !memberIds.includes(t.id)).map((t: any) => ({ value: t.id, label: `${t.name} - Chuyên môn: ${t.major || 'Chưa rõ'}` }))}
                             className="w-full min-w-[220px]"
                             allowClear
                           />
