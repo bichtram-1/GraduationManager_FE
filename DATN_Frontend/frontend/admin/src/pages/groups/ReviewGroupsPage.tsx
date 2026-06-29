@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { getKey, I18nKey } from '@shared/types/I18nKeyType';
 import { STATUS_CODE, cn } from '../../constants/commonConst';
 import { formatNumber } from '@shared/utils/numberUtils';
+import { useGlobalVariable } from '../../hooks/GlobalVariableProvider';
 
 const { Search } = Input;
 
@@ -17,11 +18,17 @@ const STATUS_META: Record<string, { labelKey: keyof I18nKey; color: string }> = 
 
 const ReviewGroupsPage: React.FC = () => {
   const { t } = useTranslation();
+  const { selectedPeriod } = useGlobalVariable();
   const { data: q } = groupHooks.useFetchListGroups();
   const updateGroup = groupHooks.useUpdateGroup();
   const approveGroup = groupHooks.useApproveGroup();
   const rejectGroup = groupHooks.useRejectGroup();
-  const groups = (q?.rows ?? []) as any[];
+  
+  const rawGroups = (q?.rows ?? []) as any[];
+  const groups = useMemo(() => {
+    if (!selectedPeriod) return rawGroups;
+    return rawGroups.filter((g) => g.registrationBatch === selectedPeriod.name);
+  }, [rawGroups, selectedPeriod]);
 
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | string>('all');
