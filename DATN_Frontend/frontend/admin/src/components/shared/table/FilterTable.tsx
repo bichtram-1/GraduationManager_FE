@@ -75,6 +75,7 @@ export interface FilterTableProps<
   TUpdate = Partial<TDetail>,
 > {
   title?: string;
+  showSizeChanger?: boolean;
   pageTitle?: string;
   pageSubtitle?: string;
   createButtonLabel?: string;
@@ -140,6 +141,7 @@ const FilterTable = <
   formatInitialValues,
   formatFormValues,
   extraHeaderActions,
+  showSizeChanger,
 }: FilterTableProps<TList, TDetail, TCreate, TUpdate>) => {
   const hasPageHeader = !!pageTitle;
 
@@ -497,6 +499,7 @@ const FilterTable = <
                 pageSize: internalParams?.limit,
                 position: ['bottomCenter'],
                 showQuickJumper: false,
+                showSizeChanger: showSizeChanger,
                 showTotal(total, range) {
                   return <span className="pl-2">{`${t('showing')} ${range[0]} ${t('to')} ${range[1]} ${t('of')} ${total} ${t('entries')}`}</span>;
                 },

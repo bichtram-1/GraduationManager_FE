@@ -41,7 +41,7 @@ const getStatusMeta = (t: any) => ({
   [STATUS_CODE.APPROVED_UP]: { label: t(getKey('status_approved_group')), color: 'green' },
   [STATUS_CODE.WARNING]: { label: t(getKey('status_warning_group')), color: 'orange' },
   [STATUS_CODE.MISSING]: { label: t(getKey('status_missing_members')), color: 'blue' },
-  [STATUS_CODE.LOCKED]: { label: t(getKey('status_locked')), color: 'red' },
+  [STATUS_CODE.LOCKED]: { label: t('status_rejected') || 'Từ chối', color: 'red' },
   [STATUS_CODE.DISSOLVED]: { label: t(getKey('status_dissolved')), color: 'default' },
 } as const);
 

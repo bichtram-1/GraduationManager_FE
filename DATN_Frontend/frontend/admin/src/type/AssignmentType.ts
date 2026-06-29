@@ -8,6 +8,12 @@ interface IBaseAssignment {
   supervisor?: string | null;
   assignedAt?: string | null;
   status: AssignmentStatus;
+  groupId?: string | null;
+  groupCode?: string | null;
+  groupStatus?: 'no_group' | 'ineligible_member' | 'no_topic' | 'topic_rejected' | 'topic_pending' | 'valid' | null;
+  hasIneligibleMember?: boolean;
+  hasTopic?: boolean;
+  topicStatus?: 'approved' | 'no_registration' | 'all_rejected' | 'pending_registration' | null;
 }
 
 export type IListAssignment = IBaseAssignment & {

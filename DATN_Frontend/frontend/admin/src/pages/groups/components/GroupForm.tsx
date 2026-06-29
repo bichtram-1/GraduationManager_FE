@@ -179,9 +179,13 @@ const GroupForm: React.FC<Props> = ({ detail, readOnly }) => {
         <Input />
       </Form.Item>
 
-      <Form.Item name="status" label={t(getKey('status'))}>
-        <Select options={statusOptions} />
-      </Form.Item>
+      {detail?.status && (
+        <Form.Item label={t(getKey('status'))}>
+          <Tag color={statusOptions.find((o) => o.value === detail.status)?.color || 'default'} className="!px-2.5 !py-0.5 !text-xs !font-medium">
+            {statusOptions.find((o) => o.value === detail.status)?.label || detail.status}
+          </Tag>
+        </Form.Item>
+      )}
 
       <div className="mt-5">
         <Form.List name="members">
