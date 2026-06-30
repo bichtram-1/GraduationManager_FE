@@ -35,11 +35,11 @@ const DefaultHeader = () => {
   const { data: periodsData } = periodHooks.useFetchListPeriods({ page: 1, limit: 100 });
   const allPeriods = periodsData?.rows ?? [];
 
+  const isInternshipPage = pathname.pathname.startsWith('/internship-students') || pathname.pathname.startsWith('/assignments');
+  const isThesisPage = pathname.pathname.startsWith('/groups') || pathname.pathname.startsWith('/councils');
+
   useEffect(() => {
     if (allPeriods.length === 0) return;
-
-    const isInternshipPage = pathname.pathname.startsWith('/internship-students');
-    const isThesisPage = pathname.pathname.startsWith('/groups') || pathname.pathname.startsWith('/councils');
 
     if (isInternshipPage) {
       // For internship pages, we MUST select a TTTN period
@@ -118,7 +118,7 @@ const DefaultHeader = () => {
                 variant="borderless"
                 classNames={{ popup: { root: 'rounded-xl shadow-lg' } }}
               >
-                {tttnPeriods.length > 0 && !pathname.pathname.startsWith('/groups') && !pathname.pathname.startsWith('/councils') && (
+                {tttnPeriods.length > 0 && !isThesisPage && (
                   <Select.OptGroup label="Đợt Thực tập tốt nghiệp (TTTN)">
                     {tttnPeriods.map(p => (
                       <Select.Option key={p.id} value={p.id}>
@@ -127,7 +127,7 @@ const DefaultHeader = () => {
                     ))}
                   </Select.OptGroup>
                 )}
-                {datnPeriods.length > 0 && !pathname.pathname.startsWith('/internship-students') && (
+                {datnPeriods.length > 0 && !isInternshipPage && (
                   <Select.OptGroup label="Đợt Đồ án tốt nghiệp (ĐATN)">
                     {datnPeriods.map(p => (
                       <Select.Option key={p.id} value={p.id}>
