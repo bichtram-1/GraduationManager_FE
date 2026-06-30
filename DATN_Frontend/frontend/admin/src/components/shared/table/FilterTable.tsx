@@ -218,7 +218,12 @@ const FilterTable = <
     });
   };
 
-  const showDeleteConfirm = (id: string) => {
+  const showDeleteConfirm = (id: string, record: any) => {
+    let name = '';
+    if (record) {
+      name = record.title || record.code || record.name || '';
+    }
+
     confirm({
       centered: true,
       title: null,
@@ -229,7 +234,13 @@ const FilterTable = <
           <div className="mt-3 font-bold text-xl">
             {t('delete_title')}
           </div>
-          <div className="text-sm">{t('delete_content')}</div>
+          <div className="text-sm mt-2">
+            {name ? (
+              <span>Bạn có chắc chắn muốn xóa <strong>"{name}"</strong>? Hành động này không thể hoàn tác.</span>
+            ) : (
+              t('delete_content')
+            )}
+          </div>
         </div>
       ),
       okText: t('delete'),
@@ -379,7 +390,7 @@ const FilterTable = <
                         if (disabled) return;
                         const recordWithId = record as RecordWithId;
                         const recordId = recordWithId?.id || recordWithId?.value || '';
-                        showDeleteConfirm(recordId);
+                        showDeleteConfirm(recordId, record);
                       }}
                       className={`flex items-center rounded-full
                        justify-center pointer-events-auto ${classCssAciton} ${

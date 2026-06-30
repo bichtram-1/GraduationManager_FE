@@ -39,7 +39,7 @@ const DefaultHeader = () => {
     if (allPeriods.length === 0) return;
 
     const isInternshipPage = pathname.pathname.startsWith('/internship-students');
-    const isThesisPage = pathname.pathname.startsWith('/groups');
+    const isThesisPage = pathname.pathname.startsWith('/groups') || pathname.pathname.startsWith('/councils');
 
     if (isInternshipPage) {
       // For internship pages, we MUST select a TTTN period
@@ -103,7 +103,7 @@ const DefaultHeader = () => {
 
         <Flex align="center" gap={20}>
           {/* Global Period Selector */}
-          {pathname.pathname !== ROUTES.USERS && (
+          {pathname.pathname !== ROUTES.USERS && pathname.pathname !== '/councils/create' && (
             <div className="flex items-center gap-2 bg-[#f8fafc] border border-slate-200 px-3 py-1 rounded-[12px] shadow-sm">
               <span className="text-xs font-semibold text-slate-500">Đợt hoạt động:</span>
               <Select
@@ -111,10 +111,10 @@ const DefaultHeader = () => {
                 placeholder="Chọn đợt hoạt động"
                 value={selectedPeriod?.id}
                 onChange={handlePeriodChange}
-                bordered={false}
+                variant="borderless"
                 classNames={{ popup: { root: 'rounded-xl shadow-lg' } }}
               >
-                {tttnPeriods.length > 0 && !pathname.pathname.startsWith('/groups') && (
+                {tttnPeriods.length > 0 && !pathname.pathname.startsWith('/groups') && !pathname.pathname.startsWith('/councils') && (
                   <Select.OptGroup label="Đợt Thực tập tốt nghiệp (TTTN)">
                     {tttnPeriods.map(p => (
                       <Select.Option key={p.id} value={p.id}>
