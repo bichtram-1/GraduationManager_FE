@@ -15,7 +15,6 @@ import StudentForm from './components/StudentForm';
 import type { BaseListParams, ListResponseTypeObject } from '@shared/types/GeneralType';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { formatNumber } from '@shared/utils/numberUtils';
-import { companyHooks } from '../../hooks/useCompanies';
 
 import { useGlobalVariable } from '../../hooks/GlobalVariableProvider';
 
