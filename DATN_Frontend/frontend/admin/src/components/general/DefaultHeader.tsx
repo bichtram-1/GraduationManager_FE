@@ -35,8 +35,18 @@ const DefaultHeader = () => {
   const { data: periodsData } = periodHooks.useFetchListPeriods({ page: 1, limit: 100 });
   const allPeriods = periodsData?.rows ?? [];
 
-  const isInternshipPage = pathname.pathname.startsWith('/internship-students') || pathname.pathname.startsWith('/assignments');
-  const isThesisPage = pathname.pathname.startsWith('/groups') || pathname.pathname.startsWith('/councils');
+  const searchParams = new URLSearchParams(pathname.search);
+  const scoreMode = searchParams.get('mode') || 'internship';
+
+  const isInternshipPage =
+    pathname.pathname.startsWith('/internship-students') ||
+    pathname.pathname.startsWith('/assignments') ||
+    (pathname.pathname === '/student-scores' && scoreMode === 'internship');
+
+  const isThesisPage =
+    pathname.pathname.startsWith('/groups') ||
+    pathname.pathname.startsWith('/councils') ||
+    (pathname.pathname === '/student-scores' && scoreMode === 'project');
 
   useEffect(() => {
     if (allPeriods.length === 0) return;
@@ -68,7 +78,7 @@ const DefaultHeader = () => {
         setSelectedPeriod(activePeriod);
       }
     }
-  }, [allPeriods, selectedPeriod, setSelectedPeriod, pathname.pathname]);
+  }, [allPeriods, selectedPeriod, setSelectedPeriod, pathname.pathname, pathname.search]);
 
   const tttnPeriods = allPeriods.filter(p => p.type === 'tttn');
   const datnPeriods = allPeriods.filter(p => p.type === 'datn');

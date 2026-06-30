@@ -23,6 +23,7 @@ import { STATUS_CODE, cn } from '../../constants/commonConst';
 import { formatNumber } from '@shared/utils/numberUtils';
 import { useGlobalVariable } from '../../hooks/GlobalVariableProvider';
 import { scoreHooks } from '../../hooks/useScores';
+import { useSearchParams } from 'react-router-dom';
 
 type ScoreMode = 'internship' | 'project';
 type ScoreStatus = 'draft' | 'reviewing' | 'finalized';
@@ -68,7 +69,11 @@ const scoreBand = (score: number) => {
 const StudentScoresPage: React.FC = () => {
   const { t } = useTranslation();
   const { selectedPeriod } = useGlobalVariable();
-  const [mode, setMode] = useState<ScoreMode>('internship');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const mode = (searchParams.get('mode') as ScoreMode) || 'internship';
+  const setMode = (newMode: ScoreMode) => {
+    setSearchParams({ mode: newMode });
+  };
   const [editOpen, setEditOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<ScoreRow | null>(null);
