@@ -60,6 +60,16 @@ export function TeacherShell({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  useEffect(() => {
+    if (pathname.startsWith('/teacher/topics')) {
+      const datnPeriods = periods.filter(p => p.type === 'datn');
+      if (datnPeriods.length > 0 && (!selectedPeriod || selectedPeriod.type !== 'datn')) {
+        const activePeriod = datnPeriods.find(p => p.status === 'open' || p.status === 'published') || datnPeriods[0];
+        setSelectedPeriod(activePeriod);
+      }
+    }
+  }, [pathname, periods, selectedPeriod, setSelectedPeriod]);
+
   const activeKey = useMemo(() => getActiveKey(pathname), [pathname])
 
   const shortName = useMemo(() => {
@@ -102,7 +112,7 @@ export function TeacherShell({ children }: { children: ReactNode }) {
                 variant="borderless"
                 classNames={{ popup: { root: 'rounded-xl shadow-lg' } }}
               >
-                {periods.filter(p => p.type === 'tttn').length > 0 && (
+                {periods.filter(p => p.type === 'tttn').length > 0 && !pathname.startsWith('/teacher/topics') && (
                   <Select.OptGroup label="Đợt Thực tập tốt nghiệp (TTTN)">
                     {periods.filter(p => p.type === 'tttn').map(p => (
                       <Select.Option key={p.id} value={p.id}>

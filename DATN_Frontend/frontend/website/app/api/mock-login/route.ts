@@ -48,7 +48,37 @@ export async function GET(req: Request) {
     }
   }
 
-  const res = NextResponse.redirect(new URL(redirectTo, req.url))
+  // Create HTML response for safe client-side redirection to write cookies first
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Chuyển hướng...</title>
+        <meta http-equiv="refresh" content="0;url=${redirectTo}" />
+        <script>
+          window.location.href = ${JSON.stringify(redirectTo)};
+        </script>
+      </head>
+      <body style="font-family: system-ui, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #f8fafc; color: #64748b;">
+        <div style="text-align: center;">
+          <div style="border: 3px solid #e2e8f0; border-top: 3px solid #3b82f6; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; margin: 0 auto 16px;"></div>
+          <p style="margin: 0; font-size: 14px; font-weight: 500;">Đang chuyển hướng vào hệ thống...</p>
+        </div>
+        <style>
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        </style>
+      </body>
+    </html>
+  `;
+  const res = new NextResponse(html, {
+    status: 200,
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8',
+    },
+  })
   
   const hostHeader = req.headers.get('host') || undefined
   const host = hostHeader ? hostHeader.split(':')[0] : undefined

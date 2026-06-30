@@ -18,7 +18,7 @@ export const topicApi = {
       id: String(t.id ?? ''),
       title: t.name || t.title || '',
       module: t.teacher || t.module || '',
-      published: t.status === 'approved' || t.published || false,
+      published: t.status === 'approved' || t.status === 'pending' || t.published || false,
       slots: t.slots || '0/4'
     }));
   },
@@ -58,11 +58,13 @@ export const topicApi = {
         semester: 'HK2/2025-2026',
         summary: t.description || '',
         progress: progress,
+        direction: t.direction || '',
+        fileUrl: t.fileUrl || '',
       };
     });
   },
 
-  createTopic: async (payload: { name: string; teacher: string; slots: string; description: string; periodId?: string }) => {
+  createTopic: async (payload: { name: string; teacher: string; slots: string; description: string; direction?: string; fileUrl?: string; periodId?: string }) => {
     if (USE_MOCK) {
       return { success: true };
     }
@@ -72,7 +74,7 @@ export const topicApi = {
     return response?.data;
   },
 
-  updateTopic: async (id: string, payload: { name?: string; teacher?: string; slots?: string; description?: string }) => {
+  updateTopic: async (id: string, payload: { name?: string; teacher?: string; slots?: string; description?: string; direction?: string; fileUrl?: string }) => {
     if (USE_MOCK) {
       return { success: true };
     }
@@ -99,6 +101,17 @@ export const topicApi = {
         'Content-Type': 'multipart/form-data',
       },
       params: { periodId }
+    });
+    return response?.data;
+  },
+
+  uploadFile: async (file: File): Promise<{ cloudFrontUrl: string }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await axiosInstance.post('/private/v1/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
     });
     return response?.data;
   }
