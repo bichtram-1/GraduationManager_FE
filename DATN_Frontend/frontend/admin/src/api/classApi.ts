@@ -3,8 +3,8 @@ import type { ICreateClass, IDetailClass, IListClass, IUpdateClass } from '../ty
 import axiosInstance from './axiosInstance';
 
 export const classApi = {
-  getListClass: async () => {
-    const response = await axiosInstance.get('/private/v1/classes');
+  getListClass: async (params?: { periodId?: string }) => {
+    const response = await axiosInstance.get('/private/v1/classes', { params });
     return response?.data?.results?.objects;
   },
 

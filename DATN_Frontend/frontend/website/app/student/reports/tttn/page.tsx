@@ -9,11 +9,16 @@ export default function StudentReportsTTTNPage() {
   const [reports, setReports] = useState<IProgressReport[]>([])
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null)
   const [submitOpen, setSubmitOpen] = useState(false)
-  const [submitForm, setSubmitForm] = useState({
+  const [submitForm, setSubmitForm] = useState<{
+    week: string
+    title: string
+    note: string
+    file: File | null
+  }>({
     week: '1',
     title: '',
     note: '',
-    file: '',
+    file: null,
   })
   const [loading, setLoading] = useState(true)
 
@@ -59,7 +64,7 @@ export default function StudentReportsTTTNPage() {
       week: String(nextWeek),
       title: '',
       note: '',
-      file: '',
+      file: null,
     })
     setSubmitOpen(true)
   }
@@ -83,7 +88,7 @@ export default function StudentReportsTTTNPage() {
         week: nextWeek,
         title: submitForm.title.trim(),
         note: submitForm.note.trim(),
-        file: submitForm.file.trim() || undefined
+        file: submitForm.file ?? undefined
       })
 
       setReports((current) => {
@@ -199,10 +204,17 @@ export default function StudentReportsTTTNPage() {
                       </div>
                     </td>
                     <td className="px-5 py-4 text-[#1976D2]">
-                      <span className="inline-flex items-center gap-1">
-                        <FileText className="h-4 w-4" />
-                        {report.file}
-                      </span>
+                      {report.fileUrl ? (
+                        <a href={report.fileUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:underline">
+                          <FileText className="h-4 w-4" />
+                          {report.file}
+                        </a>
+                      ) : (
+                        <span className="inline-flex items-center gap-1">
+                          <FileText className="h-4 w-4" />
+                          {report.file}
+                        </span>
+                      )}
                     </td>
                     <td className="px-5 py-4">
                       <StudentPill tone={report.status === 'Đã duyệt' ? 'green' : report.status === 'Chờ duyệt' ? 'orange' : 'slate'}>{report.status}</StudentPill>
@@ -232,7 +244,17 @@ export default function StudentReportsTTTNPage() {
               <div className="mt-1 text-lg font-semibold text-slate-900">Tuần {selectedReport.week}</div>
               <div className="mt-1 text-sm text-slate-600">{selectedReport.title}</div>
               <div className="mt-4 space-y-2 text-sm text-slate-600">
-                <div className="flex items-center gap-2"><FileText className="h-4 w-4 text-[#1976D2]" /> File: {selectedReport.file}</div>
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-[#1976D2]" />
+                  <span>File: </span>
+                  {selectedReport.fileUrl ? (
+                    <a href={selectedReport.fileUrl} target="_blank" rel="noopener noreferrer" className="text-[#1976D2] hover:underline font-semibold">
+                      {selectedReport.file}
+                    </a>
+                  ) : (
+                    <span>{selectedReport.file}</span>
+                  )}
+                </div>
                 <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[#1976D2]" /> {selectedReport.status}</div>
                 <div className="flex items-center gap-2"><Clock3 className="h-4 w-4 text-[#1976D2]" /> Cập nhật: {selectedReport.updated}</div>
               </div>
@@ -329,7 +351,7 @@ export default function StudentReportsTTTNPage() {
                       <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center">
                         <Upload className="h-8 w-8 text-slate-400 mb-2" />
                         <p className="text-sm text-slate-500 font-medium">
-                          {submitForm.file ? `Đã chọn: ${submitForm.file}` : 'Kéo thả hoặc nhấp để chọn file nhật ký'}
+                          {submitForm.file ? `Đã chọn: ${submitForm.file.name}` : 'Kéo thả hoặc nhấp để chọn file nhật ký'}
                         </p>
                         <p className="text-xs text-slate-400 mt-1">Hỗ trợ PDF, Word, ZIP (tối đa 20MB)</p>
                       </div>
@@ -339,7 +361,7 @@ export default function StudentReportsTTTNPage() {
                         onChange={(e) => {
                           const file = e.target.files?.[0]
                           if (file) {
-                            setSubmitForm((current) => ({ ...current, file: file.name }))
+                            setSubmitForm((current) => ({ ...current, file: file }))
                           }
                         }}
                       />

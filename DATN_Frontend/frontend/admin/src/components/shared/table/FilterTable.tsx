@@ -103,6 +103,7 @@ export interface FilterTableProps<
   formatFormValues?: (values: Record<string, unknown>) => TCreate | TUpdate;
   enableSelectRow?: boolean;
   extraHeaderActions?: ReactNode;
+  extraActions?: ReactNode;
 }
 
 const initParams = { page: 1, limit: 10 };
@@ -141,6 +142,7 @@ const FilterTable = <
   formatInitialValues,
   formatFormValues,
   extraHeaderActions,
+  extraActions,
   showSizeChanger,
 }: FilterTableProps<TList, TDetail, TCreate, TUpdate>) => {
   const hasPageHeader = !!pageTitle;
@@ -478,6 +480,7 @@ const FilterTable = <
 
                 <Flex align="center" gap={12}>
                   {extraHeaderActions}
+                  {extraActions}
                   {renderCreateButton()}
                   {exportInfo?.type && exportMutation && (
                     <Button

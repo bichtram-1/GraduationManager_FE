@@ -50,4 +50,14 @@ export const periodHooks = {
       },
     });
   },
+
+  useAddStudentToPeriods: () => {
+    const queryClient = useQueryClient();
+    return useMutation<unknown, AxiosError, { studentId: string; periodIds: string[]; reason?: string }>({
+      mutationFn: periodApi.addStudentToPeriods,
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: [QueryKey.periods.list] });
+      },
+    });
+  },
 };

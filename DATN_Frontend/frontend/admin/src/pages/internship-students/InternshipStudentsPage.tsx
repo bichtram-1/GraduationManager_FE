@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { cn, STATUS_CODE } from '../../constants/commonConst';
 import { getKey } from '@shared/types/I18nKeyType';
 import { internshipHooks } from '../../hooks/useInternships';
+import { companyHooks } from '../../hooks/useCompanies';
 import type { ConfirmationStatus, IConfirmationRequest, INoCompanyStudent, NoCompanyStatus, ICreateConfirmationRequest, IUpdateConfirmationRequest, ICreateNoCompanyStudent, IUpdateNoCompanyStudent } from '../../type/InternshipType';
 import FilterTable from '../../components/shared/table/FilterTable';
 import ConfirmationForm from './components/ConfirmationForm';
@@ -49,6 +50,9 @@ const InternshipStudentsPage = () => {
 
   const { data: confirmationList } = internshipHooks.useFetchListConfirmationRequests({ periodId: selectedPeriod?.id });
   const { data: noCompanyList } = internshipHooks.useFetchListNoCompanyStudents({ periodId: selectedPeriod?.id });
+  const { data: companiesData } = companyHooks.useFetchListCompanies();
+
+  const companiesList = useMemo(() => (companiesData?.rows ?? []) as any[], [companiesData]);
 
   const updateConfirmationMutation = internshipHooks.useUpdateConfirmationRequest();
   const deleteConfirmationMutation = internshipHooks.useDeleteConfirmationRequest();
@@ -97,7 +101,7 @@ const InternshipStudentsPage = () => {
     const query = internshipHooks.useFetchListConfirmationRequests({ periodId: selectedPeriod?.id });
     const typedParams = params as BaseListParams & { keyword?: string; companyName?: string; className?: string };
     const keyword = (typedParams.keyword ?? '').trim().toLowerCase();
-    const companyName = (typedParams.companyName ?? '').trim().toLowerCase();
+    const companyName = typedParams.companyName || 'all';
     const className = typedParams.className || 'all';
     const status = confirmationTab || 'all';
 
@@ -105,8 +109,8 @@ const InternshipStudentsPage = () => {
     const filteredRows = sourceRows
       .filter((r) => (status === 'all' ? true : r.status === status))
       .filter((r) => (className === 'all' ? true : r.className === className))
-      .filter((r) => !companyName || r.companyName.toLowerCase().includes(companyName))
-      .filter((r) => !keyword || [r.studentId, r.studentName, r.companyName, r.taxId].join(' ').toLowerCase().includes(keyword));
+      .filter((r) => (companyName === 'all' || !companyName ? true : r.companyName.toLowerCase() === companyName.toLowerCase()))
+      .filter((r) => !keyword || [r.studentId, r.studentName, r.className, r.companyName, r.taxId].join(' ').toLowerCase().includes(keyword));
 
     return {
       ...query,
@@ -322,8 +326,18 @@ const InternshipStudentsPage = () => {
                   <Form.Item name="keyword" className="xl:col-span-5 !mb-0">
                     <Input allowClear prefix={<SearchOutlined className="text-slate-400" />} placeholder={t(getKey('search_student_company_placeholder'))} className="!h-11 !rounded-[12px] !border-slate-300" />
                   </Form.Item>
-                  <Form.Item name="companyName" className="xl:col-span-4 !mb-0">
-                    <Input allowClear prefix={<SearchOutlined className="text-slate-400" />} placeholder={t(getKey('filter_company_name_placeholder'))} className="!h-11 !rounded-[12px] !border-slate-300" />
+                  <Form.Item name="companyName" className="xl:col-span-4 !mb-0" initialValue="all">
+                    <Select
+                      allowClear
+                      showSearch
+                      placeholder={t(getKey('filter_company_name_placeholder'))}
+                      className="!h-11 w-full"
+                      options={[
+                        { value: 'all', label: 'Tất cả công ty' },
+                        ...companiesList.map((c) => ({ value: c.name, label: c.name }))
+                      ]}
+                      optionFilterProp="label"
+                    />
                   </Form.Item>
                   <Form.Item name="className" className="xl:col-span-3 !mb-0">
                     <Select allowClear placeholder={t(getKey('all_classes'))} className="!h-11 !w-full" options={[{ value: 'all', label: t(getKey('all_classes')) }, ...classOptions.map((c) => ({ value: c, label: c }))]} />
