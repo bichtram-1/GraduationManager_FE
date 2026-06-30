@@ -158,7 +158,7 @@ const FilterTable = <
     if (!paramVariables) return;
     // merge new parent paramVariables with current filter form values to preserve inputs
     const formValues = form.getFieldsValue();
-    const mergedParams = { ...internalParams, ...paramVariables };
+    const mergedParams: Record<string, any> = { ...internalParams, ...paramVariables };
     
     Object.keys(formValues).forEach(key => {
       if (formValues[key] !== undefined && formValues[key] !== null) {

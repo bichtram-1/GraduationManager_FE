@@ -370,7 +370,9 @@ const GroupsAdminPage: React.FC = () => {
           group={addModalGroup}
           onCancel={() => setAddModalGroup(null)}
           sampleStudents={sampleStudents}
-          onAdd={addMemberToGroup}
+          groups={groups}
+          currentGroupMembers={addModalGroup.members}
+          onAdd={(student) => addMemberToGroup(addModalGroup.id, student)}
         />
       )}
 

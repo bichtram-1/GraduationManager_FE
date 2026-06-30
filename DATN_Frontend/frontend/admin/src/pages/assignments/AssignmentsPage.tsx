@@ -384,6 +384,7 @@ const AssignmentsPage = () => {
                 </div>
               </div>
             )}
+            actions={{ isEdit: true, isDetail: true }}
             updateInfo={{ type: 'modal', modalInfo: { modalContent: <AssignmentForm />, modalProps: { centered: true, width: 760, title: t(getKey('edit_assignment_title')) }, modalFunc: updateAssignmentMutation } }}
             detailInfo={{ type: 'modal', modalInfo: { modalContent: <AssignmentForm disabled />, modalProps: { centered: true, width: 760, title: t(getKey('detail_assignment_title')), footer: null }, modalFunc: assignmentHooks.useFetchDetailAssignment } }}
             formatInitialValues={(d: any) => d || {}}

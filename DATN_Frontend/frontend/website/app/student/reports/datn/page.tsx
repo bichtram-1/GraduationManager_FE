@@ -12,7 +12,6 @@ export default function StudentReportsDATNPage() {
   const [submitForm, setSubmitForm] = useState({
     name: '',
     file: '',
-    repo: '',
     note: '',
   })
   const [loading, setLoading] = useState(true)
@@ -57,7 +56,6 @@ export default function StudentReportsDATNPage() {
     setSubmitForm({
       name: '',
       file: '',
-      repo: '',
       note: '',
     })
     setSubmitOpen(true)
@@ -74,8 +72,7 @@ export default function StudentReportsDATNPage() {
       const nextMilestone = await studentApi.submitDatnReport({
         name: submitForm.name.trim(),
         note: submitForm.note.trim(),
-        file: submitForm.file.trim() || undefined,
-        repo: submitForm.repo.trim() || undefined
+        file: submitForm.file.trim() || undefined
       })
 
       setMilestones((current) => {
@@ -122,14 +119,10 @@ export default function StudentReportsDATNPage() {
           </div>
           <div className="mt-3 text-lg font-semibold text-slate-900">Theo dõi tiến độ từng mốc</div>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-            Mỗi bản thảo có file, kho mã nguồn, nhận xét và thời điểm cập nhật để bạn nắm nhanh trạng thái đồ án.
+            Mỗi bản thảo có file, nhận xét và thời điểm cập nhật để bạn nắm nhanh trạng thái đồ án.
           </p>
         </div>
-        <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
-          <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
-            <div className="text-xs text-slate-500">Kho nguồn</div>
-            <div className="mt-2 text-sm font-semibold text-slate-900">GitHub / private repo</div>
-          </div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
           <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
             <div className="text-xs text-slate-500">Lần cập nhật</div>
             <div className="mt-2 text-sm font-semibold text-slate-900">{selected.updated}</div>
@@ -173,7 +166,6 @@ export default function StudentReportsDATNPage() {
               <tr>
                 <th className="px-5 py-3 text-left">Giai đoạn</th>
                 <th className="px-5 py-3 text-left">File</th>
-                <th className="px-5 py-3 text-left">Kho mã nguồn</th>
                 <th className="px-5 py-3 text-left">Trạng thái</th>
                 <th className="px-5 py-3 text-right">Hành động</th>
               </tr>
@@ -193,12 +185,6 @@ export default function StudentReportsDATNPage() {
                       <span className="inline-flex items-center gap-1">
                         <FileText className="h-4 w-4" />
                         {milestone.file}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4 text-slate-500">
-                      <span className="inline-flex items-center gap-1">
-                        <GitBranch className="h-4 w-4" />
-                        {milestone.repo}
                       </span>
                     </td>
                     <td className="px-5 py-4">
@@ -232,14 +218,13 @@ export default function StudentReportsDATNPage() {
               <div className="mt-1 text-sm text-slate-600">{selected.note}</div>
               <div className="mt-4 space-y-2 text-sm text-slate-600">
                 <div className="flex items-center gap-2"><FileText className="h-4 w-4 text-[#1976D2]" /> File: {selected.file}</div>
-                <div className="flex items-center gap-2"><GitBranch className="h-4 w-4 text-[#1976D2]" /> Repo: {selected.repo}</div>
                 <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[#1976D2]" /> {selected.status}</div>
                 <div className="flex items-center gap-2"><Clock3 className="h-4 w-4 text-[#1976D2]" /> Cập nhật: {selected.updated}</div>
               </div>
             </div>
             <div className="mt-4 space-y-3 text-sm text-slate-600">
-              <div className="rounded-2xl bg-white/80 p-4">Giữ repo cập nhật sớm để giảng viên có thể xem lịch sử thay đổi.</div>
-              <div className="rounded-2xl bg-white/80 p-4">Bản chính thức nên đính kèm cả file thuyết minh và link nguồn.</div>
+              <div className="rounded-2xl bg-white/80 p-4">Nộp file bản thảo sớm để giảng viên có thể xem lịch sử và chấm điểm.</div>
+              <div className="rounded-2xl bg-white/80 p-4">Bản chính thức nên đính kèm đầy đủ tài liệu thuyết minh.</div>
             </div>
           </section>
 
@@ -278,7 +263,7 @@ export default function StudentReportsDATNPage() {
             <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-5 py-4">
               <div>
                 <div className="text-sm font-semibold text-slate-900">Nộp bản thảo ĐATN</div>
-                <div className="text-xs text-slate-500">Nhập giai đoạn, file, repo và nội dung bản thảo</div>
+                <div className="text-xs text-slate-500">Nhập giai đoạn, file và nội dung bản thảo</div>
               </div>
               <button
                 type="button"
@@ -325,15 +310,6 @@ export default function StudentReportsDATNPage() {
                     </label>
                   </div>
                 </div>
-                <label className="block md:col-span-2">
-                  <div className="text-sm font-medium text-slate-700">Kho mã nguồn / link repo</div>
-                  <input
-                    value={submitForm.repo}
-                    onChange={(event) => setSubmitForm((current) => ({ ...current, repo: event.target.value }))}
-                    className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white"
-                    placeholder="github.com/user/project"
-                  />
-                </label>
                 <label className="block md:col-span-2">
                   <div className="text-sm font-medium text-slate-700">Nội dung bản thảo</div>
                   <textarea

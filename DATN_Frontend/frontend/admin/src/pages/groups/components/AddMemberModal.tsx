@@ -37,7 +37,7 @@ const AddMemberModal: React.FC<Props> = ({ open, onCancel, group, sampleStudents
     setSearchVal(code);
 
     // Search in the list of students in the current period
-    const student = sampleStudents.find((s) => s.code.toLowerCase() === code.toLowerCase());
+    const student = sampleStudents.find((s) => s.code?.toLowerCase() === code.toLowerCase());
     if (student) {
       setFoundStudent(student);
       setSearchStatus('found');
