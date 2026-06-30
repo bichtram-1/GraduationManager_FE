@@ -155,15 +155,13 @@ const TopicsPage = () => {
 
   return (
     <div className="pb-4">
-      <div className="mb-5 rounded-[22px] border border-slate-100 bg-white px-6 py-5 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
-        <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-          <BookOutlined /> {t(getKey('topic_category'))}
-        </div>
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="!m-0 !text-[34px] !font-bold !leading-[40px] !text-navyDark">{t(getKey('topic_management'))}</h1>
-            <p className="mt-2 mb-0 text-[18px] leading-[26px] text-grayDark">{t(getKey('topic_management_desc'))}</p>
+      <div className="mb-5 flex items-center justify-start rounded-[22px] border border-slate-100 bg-white px-6 py-5 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
+        <div>
+          <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-[var(--color-blue-md)]/10 px-3 py-1 text-xs font-medium text-[var(--color-blue-login-mid)]">
+            <BookOutlined /> {t(getKey('topic_category'))}
           </div>
+          <h1 className="!m-0 !text-[34px] !font-bold !leading-[40px] !text-navyDark">{t(getKey('topic_management'))}</h1>
+          <p className="mt-2 mb-0 text-[18px] leading-[26px] text-grayDark">{t(getKey('topic_management_desc'))}</p>
         </div>
       </div>
 
@@ -179,25 +177,27 @@ const TopicsPage = () => {
         </div>
       )}
 
-      <div className="mb-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {useMemo(() => [
-          { label: t(getKey('total_topics')), value: rows.length, color: 'bg-primary/90' },
-          { label: t(getKey('status_pending')), value: rows.filter((r: IListTopic) => r.status === STATUS_CODE.PENDING).length, color: 'bg-[var(--color-gold-medium)]' },
-          { label: t(getKey('status_approved')), value: rows.filter((r: IListTopic) => r.status === STATUS_CODE.APPROVED).length, color: 'bg-[var(--color-green-medium)]' },
-          { label: t(getKey('status_rejected')), value: rows.filter((r: IListTopic) => r.status === STATUS_CODE.REJECTED).length, color: 'bg-[var(--color-red-medium)]' },
-        ], [rows, t]).map((item) => (
-          <Card key={item.label} className="rounded-[18px] border border-slate-100 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
-            <div className="flex items-start justify-between">
-              <div>
-                <div className="text-sm text-slate-500">{item.label}</div>
-                <div className="mt-2 text-3xl font-bold text-navyDark">{formatNumber(item.value)}</div>
-              </div>
-              <div className={cn('flex h-11 w-11 items-center justify-center rounded-xl text-white', item.color)}>
-                <BookOutlined />
-              </div>
-            </div>
-          </Card>
-        ))}
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {/* Total Topics Card */}
+        <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_8px_20px_rgba(15,23,42,0.04)]">
+          <div className="text-sm text-slate-500">{t(getKey('total_topics'))}</div>
+          <div className="mt-1 text-[32px] font-bold leading-[38px] text-slate-900">{formatNumber(rows.length)}</div>
+        </div>
+        {/* Pending Card */}
+        <div className="rounded-2xl border border-amber-100 bg-amber-50/50 p-5 shadow-[0_8px_20px_rgba(15,23,42,0.04)]">
+          <div className="text-sm text-amber-700">{t(getKey('status_pending'))}</div>
+          <div className="mt-1 text-[32px] font-bold leading-[38px] text-amber-700">{formatNumber(rows.filter((r: IListTopic) => r.status === STATUS_CODE.PENDING).length)}</div>
+        </div>
+        {/* Approved Card */}
+        <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-5 shadow-[0_8px_20px_rgba(15,23,42,0.04)]">
+          <div className="text-sm text-emerald-700">{t(getKey('status_approved'))}</div>
+          <div className="mt-1 text-[32px] font-bold leading-[38px] text-emerald-700">{formatNumber(rows.filter((r: IListTopic) => r.status === STATUS_CODE.APPROVED).length)}</div>
+        </div>
+        {/* Rejected Card */}
+        <div className="rounded-2xl border border-rose-100 bg-rose-50/50 p-5 shadow-[0_8px_20px_rgba(15,23,42,0.04)]">
+          <div className="text-sm text-rose-700">{t(getKey('status_rejected'))}</div>
+          <div className="mt-1 text-[32px] font-bold leading-[38px] text-rose-700">{formatNumber(rows.filter((r: IListTopic) => r.status === STATUS_CODE.REJECTED).length)}</div>
+        </div>
       </div>
 
       <Card className="overflow-hidden rounded-[18px] border border-slate-100 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">

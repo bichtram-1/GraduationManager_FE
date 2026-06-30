@@ -91,6 +91,16 @@ axiosInstance.interceptors.request.use(async (config) => {
 //     }
 //     return Promise.reject(error);
 //   },
-// );
+axiosInstance.interceptors.response.use(
+  (response) => response,
+  async function (error) {
+    if (error?.response?.status === 401) {
+      if (typeof window !== 'undefined') {
+        window.location.href = '/api/logout?from=/login';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 export default axiosInstance;

@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
-import { Form, Input, InputNumber, Select, Button, Modal } from 'antd';
+import React, { useState, useMemo } from 'react';
+import { Form, Input, InputNumber, Select, Button, Modal, Table, Tag, Tooltip } from 'antd';
 import { ExclamationCircleOutlined } from '@ant-design/icons';
 import type { IDetailGroup, IGroupMember } from '../../../type/GroupType';
-import AddMemberModal from './AddMemberModal';
 import { useTranslation } from 'react-i18next';
 import { getKey } from '@shared/types/I18nKeyType';
 import { STATUS_CODE } from '../../../constants/commonConst';
+import AddMemberModal from './AddMemberModal';
+import { useGlobalVariable } from '../../../hooks/GlobalVariableProvider';
+import { assignmentHooks } from '../../../hooks/useAssignments';
+import { groupHooks } from '../../../hooks/useGroups';
 
 interface Props {
   detail?: IDetailGroup;
@@ -13,97 +16,282 @@ interface Props {
   readOnly?: boolean;
 }
 
-const GroupForm: React.FC<Props> = ({ detail, sampleStudents, readOnly }) => {
+const GroupForm: React.FC<Props> = ({ detail, readOnly }) => {
   const { t } = useTranslation();
+  const { selectedPeriod } = useGlobalVariable();
   const [adding, setAdding] = useState(false);
   const formInstance = Form.useFormInstance();
 
+  // Load all groups in the period
+  const { data: groupList } = groupHooks.useFetchListGroups();
+  const allGroupsList = useMemo(() => {
+    const rawRows = (groupList?.rows ?? []) as IDetailGroup[];
+    if (!selectedPeriod) return rawRows;
+    return rawRows.filter((g) => g.registrationBatch === selectedPeriod.name);
+  }, [groupList, selectedPeriod]);
+
+  // Load all students of the current period from database
+  const { data: assignmentList } = assignmentHooks.useFetchListAssignments({
+    page: 1,
+    limit: 1000,
+    periodId: selectedPeriod?.id ?? 'none'
+  });
+
+  const dbStudents = useMemo(() => {
+    const rows = (assignmentList?.rows ?? []) as any[];
+    return rows.map((r) => {
+      // Mock eligibility for specific student codes for demo
+      const ineligibleCodes = ['0306231007', '0306231033', 'SV003', 'SV004'];
+      const isEligible = !ineligibleCodes.includes(r.studentId);
+      return {
+        id: r.studentId, // Use MSSV as ID
+        name: r.name,
+        code: r.studentId,
+        class: r.className,
+        eligible: isEligible,
+        reason: isEligible ? '' : 'Chưa đủ điều kiện làm đồ án'
+      };
+    });
+  }, [assignmentList]);
+
   const statusOptions = [
-    { value: STATUS_CODE.PENDING_UP, label: t(getKey('status_pending')) },
-    { value: STATUS_CODE.APPROVED_UP, label: t(getKey('status_approved')) },
-    { value: STATUS_CODE.WARNING, label: t(getKey('status_warning')) },
-    { value: STATUS_CODE.MISSING, label: t(getKey('status_missing')) },
-    { value: STATUS_CODE.LOCKED, label: t(getKey('status_locked')) },
-    { value: STATUS_CODE.DISSOLVED, label: t(getKey('status_dissolved')) },
+    { value: STATUS_CODE.PENDING_UP, label: t(getKey('status_pending')), color: 'default' },
+    { value: STATUS_CODE.APPROVED_UP, label: t(getKey('status_approved')), color: 'green' },
+    { value: STATUS_CODE.WARNING, label: t(getKey('status_warning')), color: 'orange' },
+    { value: STATUS_CODE.MISSING, label: t(getKey('status_missing')), color: 'blue' },
+    { value: STATUS_CODE.LOCKED, label: t(getKey('status_locked')), color: 'red' },
+    { value: STATUS_CODE.DISSOLVED, label: t(getKey('status_dissolved')), color: 'default' },
   ];
 
-  const onAdd = (_groupId: string, student: IGroupMember) => {
-    const members = formInstance.getFieldValue('members') || detail?.members || [];
-    const exists = (members || []).some((m: IGroupMember) => m.id === student.id);
-    if (exists) return Modal.info({ title: t(getKey('already_exists')), content: t(getKey('member_already_in_group')) });
+  const onAdd = (student: IGroupMember) => {
+    const members = formInstance.getFieldValue('members') || [];
     const newMembers = [...members, student];
     formInstance.setFieldsValue({ members: newMembers });
     setAdding(false);
   };
 
-  const onRemove = (memberId: string) => {
-    const members = formInstance.getFieldValue('members') || detail?.members || [];
+  const onRemove = (confirmCallback: () => void) => {
     Modal.confirm({
       title: t(getKey('confirm_remove_member')),
       icon: <ExclamationCircleOutlined />,
       content: t(getKey('confirm_remove_member_desc')),
       async onOk() {
-        const newMembers = (members || []).filter((m: IGroupMember) => m.id !== memberId);
-        formInstance.setFieldsValue({ members: newMembers });
+        confirmCallback();
       },
     });
   };
 
+  if (readOnly) {
+    const statusMeta = statusOptions.find((o) => o.value === detail?.status);
+    return (
+      <div className="space-y-8">
+        {/* Basic text layout for general info details */}
+        <div className="space-y-5 pb-6 border-b border-slate-100">
+          <div>
+            <span className="font-semibold text-slate-500">Tên đề tài:</span>{' '}
+            <span className={`font-bold ${detail?.title ? 'text-slate-900' : 'text-slate-400 italic font-normal'}`}>
+              {detail?.title || '— Chưa có đề tài'}
+            </span>
+          </div>
+          <div>
+            <span className="font-semibold text-slate-500">Giảng viên hướng dẫn:</span>{' '}
+            <span className="font-semibold text-slate-700">{detail?.supervisor || '—'}</span>
+          </div>
+          <div>
+            <span className="font-semibold text-slate-500">Số lượng thành viên:</span>{' '}
+            <span className="font-semibold text-slate-700">{detail?.maxMembers || 2}</span>
+          </div>
+          <div>
+            <span className="font-semibold text-slate-500">Đợt đăng ký:</span>{' '}
+            <span className="font-semibold text-slate-700">{detail?.registrationBatch || '—'}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="font-semibold text-slate-500">Trạng thái:</span>{' '}
+            {detail?.status ? (
+              <Tag color={statusMeta?.color || 'default'} className="!px-2.5 !py-0.5 !text-xs !font-medium">
+                {statusMeta?.label || detail.status}
+              </Tag>
+            ) : '—'}
+          </div>
+        </div>
+
+        {/* Members List Table */}
+        <div>
+          <div className="text-sm font-bold text-slate-900 mb-3">Thành viên nhóm</div>
+          <Table
+            dataSource={detail?.members || []}
+            columns={[
+              {
+                title: 'MSSV',
+                dataIndex: 'code',
+                key: 'code',
+                width: 140,
+                render: (code: string) => <span className="font-medium text-slate-600">{code}</span>,
+              },
+              {
+                title: 'Họ tên',
+                dataIndex: 'name',
+                key: 'name',
+                render: (name: string, m: IGroupMember) => (
+                  <span className={`font-semibold ${m.eligible !== false ? 'text-slate-900' : 'text-red-700'}`}>
+                    {name} {m.eligible !== false ? '' : (
+                      <Tooltip title={m.reason || 'Chưa đủ điều kiện làm đồ án'}>
+                        <span className="text-red-500 ml-1 cursor-help">⚠</span>
+                      </Tooltip>
+                    )}
+                  </span>
+                ),
+              },
+              {
+                title: 'Lớp',
+                dataIndex: 'class',
+                key: 'class',
+                width: 140,
+                render: (cls: string) => <span className="text-slate-600">{cls || '—'}</span>,
+              },
+            ]}
+            pagination={false}
+            size="small"
+            rowKey="id"
+            bordered
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // Edit / Update mode
   return (
     <>
-      <Form.Item name="code" label={t(getKey('group_code'))} rules={[{ required: true }]}>
-        <Input disabled={readOnly} />
+      <Form.Item name="title" label={t(getKey('topic_name'))} rules={[{ required: true, message: 'Vui lòng nhập tên đề tài' }]}>
+        <Input />
       </Form.Item>
 
-      <Form.Item name="title" label={t(getKey('topic_name'))} rules={[{ required: true }]}>
-        <Input disabled={readOnly} />
+      <Form.Item name="supervisor" label="Giảng viên hướng dẫn" rules={[{ required: true, message: 'Vui lòng nhập giảng viên hướng dẫn' }]}>
+        <Input />
       </Form.Item>
 
-      <Form.Item name="supervisor" label={t(getKey('supervisor_teacher'))} rules={[{ required: true }]}>
-        <Input disabled={readOnly} />
-      </Form.Item>
-
-      <Form.Item name="maxMembers" label={t(getKey('max_members_count'))} rules={[{ required: true }]}>
-        <InputNumber disabled={readOnly} min={1} className="w-full" />
+      <Form.Item name="maxMembers" label="Số lượng thành viên" rules={[{ required: true }]}>
+        <InputNumber min={1} className="w-full" />
       </Form.Item>
 
       <Form.Item name="registrationBatch" label={t(getKey('registration_period'))}>
-        <Input disabled={readOnly} />
+        <Input />
       </Form.Item>
 
-      <Form.Item name="status" label={t(getKey('status'))}>
-        <Select disabled={readOnly} options={statusOptions} />
-      </Form.Item>
+      {detail?.status && (
+        <Form.Item label={t(getKey('status'))}>
+          <Tag color={statusOptions.find((o) => o.value === detail.status)?.color || 'default'} className="!px-2.5 !py-0.5 !text-xs !font-medium">
+            {statusOptions.find((o) => o.value === detail.status)?.label || detail.status}
+          </Tag>
+        </Form.Item>
+      )}
 
-      <div>
-        <div className="mb-2 flex items-center justify-between">
-          <div className="text-sm font-medium">{t(getKey('members'))}</div>
-          {!readOnly && <Button size="small" onClick={() => setAdding(true)}>{t(getKey('add_member'))}</Button>}
-        </div>
+      <div className="mt-5">
+        <Form.List name="members">
+          {(fields, { add, remove }) => {
+            const columns = [
+              {
+                title: 'MSSV',
+                key: 'code',
+                width: 150,
+                render: (_: any, field: any) => {
+                  const code = formInstance.getFieldValue(['members', field.name, 'code']);
+                  return (
+                    <div>
+                      <span className="font-semibold text-slate-600">{code}</span>
+                      <Form.Item name={[field.name, 'code']} noStyle>
+                        <Input style={{ display: 'none' }} />
+                      </Form.Item>
+                      <Form.Item name={[field.name, 'id']} noStyle>
+                        <Input style={{ display: 'none' }} />
+                      </Form.Item>
+                    </div>
+                  );
+                }
+              },
+              {
+                title: 'Họ tên',
+                key: 'name',
+                render: (_: any, field: any) => {
+                  const name = formInstance.getFieldValue(['members', field.name, 'name']);
+                  return (
+                    <div>
+                      <span className="font-semibold text-slate-900">{name}</span>
+                      <Form.Item name={[field.name, 'name']} noStyle>
+                        <Input style={{ display: 'none' }} />
+                      </Form.Item>
+                    </div>
+                  );
+                }
+              },
+              {
+                title: 'Lớp',
+                key: 'class',
+                width: 150,
+                render: (_: any, field: any) => {
+                  const cls = formInstance.getFieldValue(['members', field.name, 'class']);
+                  return (
+                    <div>
+                      <span className="text-slate-600">{cls || '—'}</span>
+                      <Form.Item name={[field.name, 'class']} noStyle>
+                        <Input style={{ display: 'none' }} />
+                      </Form.Item>
+                    </div>
+                  );
+                }
+              },
+              {
+                title: 'Hành động',
+                key: 'action',
+                width: 100,
+                render: (_: any, field: any) => (
+                  <Button
+                    type="link"
+                    danger
+                    onClick={() => {
+                      onRemove(() => remove(field.name));
+                    }}
+                  >
+                    Xóa
+                  </Button>
+                ),
+              },
+            ];
 
-        <Form.List name="members" initialValue={detail?.members || []}>
-          {(fields, { add, remove }) => (
-            <div>
-              {fields.map((field) => (
-                <div key={field.key} className="flex items-center gap-2 mb-2">
-                  <Form.Item noStyle shouldUpdate>
-                    <Form.Item name={[field.name, 'code']} label={undefined} rules={[{ required: true }]}>
-                      <Input disabled={readOnly} placeholder={t(getKey('student_id_short'))} className="w-[120px]" />
-                    </Form.Item>
-                  </Form.Item>
-                  <Form.Item name={[field.name, 'name']} label={undefined} rules={[{ required: true }]} className="flex-1">
-                    <Input disabled={readOnly} placeholder={t(getKey('enter_student_name'))} />
-                  </Form.Item>
-                  {!readOnly && <Button type="text" danger size="small" onClick={() => { onRemove(formInstance.getFieldValue(['members', field.name, 'id'])); remove(field.name); }}>{t(getKey('delete'))}</Button>}
+            return (
+              <div>
+                <div className="mb-3 flex items-center justify-between">
+                  <div className="text-sm font-semibold text-slate-800">Thành viên nhóm</div>
+                  <Button type="dashed" size="small" onClick={() => setAdding(true)}>
+                    Thêm thành viên
+                  </Button>
                 </div>
-              ))}
-            </div>
-          )}
+                <Table
+                  dataSource={fields}
+                  columns={columns}
+                  pagination={false}
+                  size="small"
+                  rowKey="key"
+                  bordered
+                />
+              </div>
+            );
+          }}
         </Form.List>
-
       </div>
 
-      {!readOnly && <AddMemberModal open={adding} onCancel={() => setAdding(false)} group={detail ?? null} sampleStudents={sampleStudents ?? []} onAdd={onAdd} />}
+      {!readOnly && (
+        <AddMemberModal
+          open={adding}
+          onCancel={() => setAdding(false)}
+          group={detail ?? null}
+          sampleStudents={dbStudents}
+          groups={allGroupsList}
+          currentGroupMembers={formInstance.getFieldValue('members') || []}
+          onAdd={onAdd}
+        />
+      )}
     </>
   );
 };

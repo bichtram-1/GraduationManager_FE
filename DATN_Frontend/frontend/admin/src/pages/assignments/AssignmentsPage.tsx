@@ -107,13 +107,13 @@ const AssignmentsPage = () => {
           id: selectedAssignment.studentId,
           body: values,
           index: 0,
-          params: { page: 1, limit: 1000, periodId: selectedPeriod?.id || '' },
+          params: { page: 1, limit: 1000, periodId: selectedPeriod?.id || '' } as any,
         });
         message.success(t(getKey('update_assignment_success')));
       } else {
         await createAssignmentMutation.mutateAsync({
           body: values,
-          params: { page: 1, limit: 1000, periodId: selectedPeriod?.id || '' },
+          params: { page: 1, limit: 1000, periodId: selectedPeriod?.id || '' } as any,
         });
         message.success(t(getKey('create_assignment_success')));
       }
@@ -152,7 +152,7 @@ const AssignmentsPage = () => {
               id: studentId,
               body: { supervisor: teacher.name, status: STATUS_CODE.ASSIGNED, assignedAt: now },
               index: 0,
-              params: { page: 1, limit: 1000, periodId: selectedPeriod?.id || '' },
+              params: { page: 1, limit: 1000, periodId: selectedPeriod?.id || '' } as any,
             })
           )
         ).then(() => {
@@ -178,7 +178,7 @@ const AssignmentsPage = () => {
             id: studentId,
             body: { supervisor: null, status: STATUS_CODE.UNASSIGNED, assignedAt: null },
             index: 0,
-            params: { page: 1, limit: 1000, periodId: selectedPeriod?.id || '' },
+            params: { page: 1, limit: 1000, periodId: selectedPeriod?.id || '' } as any,
           },
           {
             onSuccess: () => message.success(t(getKey('unassign_success_msg'))),

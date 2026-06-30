@@ -86,7 +86,7 @@ const DefaultNavigate = ({ collapsed, onToggle }: IDefaultNavigate) => {
       icon: <BookOutlined style={{ fontSize: 20 }} />,
     },
     {
-      key: ROUTES.GROUPS,
+      key: 'group_management_parent',
       label: t(getKey('group_management')),
       icon: <TeamOutlined style={{ fontSize: 20 }} />,
       children: [

@@ -51,7 +51,9 @@ export async function GET(req: Request) {
   const res = NextResponse.redirect(new URL(redirectTo, req.url))
   
   const hostHeader = req.headers.get('host') || undefined
-  const domain = hostHeader ? hostHeader.split(':')[0] : undefined
+  const host = hostHeader ? hostHeader.split(':')[0] : undefined
+  const isIPOrLocalhost = host === 'localhost' || host === '127.0.0.1' || /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host || '')
+  const domain = (host && !isIPOrLocalhost) ? host : undefined
   
   // Set ACCESS_TOKEN cookie
   const cookieOpts = {
@@ -59,17 +61,19 @@ export async function GET(req: Request) {
     value: token,
     path: '/',
     maxAge: 60 * 60 * 8, // 8 hours
+    httpOnly: false,
     ...(domain ? { domain } : {}),
   }
   res.cookies.set(cookieOpts)
 
-  // Set USER_ROLE cookie
+  // Set WEBSITE_USER_ROLE cookie
   const roleCookieVal = token === 'mock-token-teacher' ? 'teacher' : (token === 'mock-token-student' ? 'student' : resolvedRole)
   const roleCookieOpts = {
-    name: 'USER_ROLE',
+    name: 'WEBSITE_USER_ROLE',
     value: roleCookieVal,
     path: '/',
     maxAge: 60 * 60 * 8,
+    httpOnly: false,
     ...(domain ? { domain } : {}),
   }
   res.cookies.set(roleCookieOpts)

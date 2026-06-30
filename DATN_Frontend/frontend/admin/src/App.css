@@ -214,3 +214,20 @@
 .filter-table-card .filter-table-header .ant-input::placeholder {
   color: #98a0ab !important;
 }
+
+/* Fix blurriness of disabled Inputs and Selects in modals (Details view) */
+.ant-input-disabled,
+.ant-input[disabled],
+.ant-select-disabled,
+.ant-select-disabled .ant-select-selection-item,
+.ant-select-disabled .ant-select-selection-placeholder {
+  color: #1e293b !important;
+  -webkit-text-fill-color: #1e293b !important;
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+  cursor: default !important;
+}
+.ant-select-disabled .ant-select-selector {
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+}

@@ -23,7 +23,7 @@ interface IUserListParams extends BaseListParams {
 export const userApi = {
   getListUser: async (params: IUserListParams) => {
     const response = await axiosInstance.get<ListResponseType<IListUser>>(
-      '/api/admin/sinh-vien',
+      '/api/admin/users',
       { params }
     );
     return response?.data?.results?.objects;
@@ -31,7 +31,7 @@ export const userApi = {
 
   getUserDetail: async (id: string) => {
     const response = await axiosInstance.get<DetailResponseType<IDetailUser>>(
-      `/api/admin/sinh-vien/${id}`
+      `/api/admin/users/${id}`
     );
     return response?.data?.results?.object;
   },
@@ -42,7 +42,7 @@ export const userApi = {
     body: ICreateUser;
     params: BaseListParams;
   }) => {
-    const response = await axiosInstance.post('/api/admin/sinh-vien', body);
+    const response = await axiosInstance.post('/api/admin/users', body);
     return response.data?.results?.object;
   },
 
@@ -55,19 +55,40 @@ export const userApi = {
     index: number;
     params: BaseListParams;
   }) => {
-    const response = await axiosInstance.patch(`/api/admin/sinh-vien/${id}`, body);
+    const response = await axiosInstance.patch(`/api/admin/users/${id}`, body);
     return response.data?.results?.object;
   },
 
   deleteUser: async ({ id }: { id: string; params: BaseListParams }) => {
-    const response = await axiosInstance.delete(`/api/admin/sinh-vien/${id}`);
+    const response = await axiosInstance.delete(`/api/admin/users/${id}`);
     return response.data;
   },
 
   resetUserPassword: async ({ id }: { id: string }) => {
     const response = await axiosInstance.post(
-      `/api/admin/sinh-vien/${id}/reset-password`
+      `/api/admin/users/${id}/reset-password`
     );
     return response.data?.results?.object ?? response.data;
+  },
+
+  getSpecializations: async () => {
+    const response = await axiosInstance.get<{ code: number; results: { objects: string[] } }>(
+      '/api/admin/users/specializations'
+    );
+    return response.data?.results?.objects ?? [];
+  },
+
+  importStudents: async (formData: FormData) => {
+    const response = await axiosInstance.post<{
+      success: boolean;
+      message: string;
+      imported_count?: number;
+      errors?: string[];
+    }>('/api/admin/users/import-students', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
   },
 };
