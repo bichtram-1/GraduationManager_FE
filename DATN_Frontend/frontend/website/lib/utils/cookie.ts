@@ -34,5 +34,25 @@ export const getCookie = (name: string) => {
     .find((row) => row.startsWith(`${name}=`))
     ?.split('=')[1];
 
-  return cookieValue ? decodeURIComponent(cookieValue) : '';
+  if (!cookieValue) return '';
+
+  const decoded = decodeURIComponent(cookieValue);
+  
+  // Try decrypting first
+  const decryptedData = decrypted(decoded);
+  if (decryptedData !== '') {
+    return decryptedData;
+  }
+
+  // If decryption fails, check if it's a JSON string, else return as raw string
+  try {
+    if ((decoded.startsWith('{') && decoded.endsWith('}')) || 
+        (decoded.startsWith('[') && decoded.endsWith(']')) || 
+        (decoded.startsWith('"') && decoded.endsWith('"'))) {
+      return JSON.parse(decoded);
+    }
+    return decoded;
+  } catch {
+    return decoded;
+  }
 };

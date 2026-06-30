@@ -12,6 +12,7 @@ export type CouncilRow = {
   member: string[];
   topicGroups: { code: string; title: string; members: number }[];
   accent: 'blue' | 'green';
+  status?: string;
   topics?: { code?: string; title?: string; members?: number; examiners?: string[]; externalExaminers?: string[]; startTime?: string }[];
   external?: { name: string }[];
 };
@@ -36,7 +37,7 @@ export const councilApi = {
     return response?.data?.results?.object;
   },
 
-  updateCouncil: async ({ id, body }: { id: string; body: { title?: string; room?: string; date?: string; time?: string; members?: string[]; topics?: any[] } }) => {
+  updateCouncil: async ({ id, body }: { id: string; body: { title?: string; room?: string; date?: string; time?: string; members?: string[]; topics?: any[]; status?: string } }) => {
     const response = await axiosInstance.patch(`/private/v1/councils/${id}`, body);
     return response?.data?.results?.object;
   },

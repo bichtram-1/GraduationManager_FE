@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getKey } from '@shared/types/I18nKeyType';
-import { Button, Modal, Tooltip, Tag, Input, Select, Space, message, Form } from 'antd';
-import { SwapOutlined, SearchOutlined } from '@ant-design/icons';
+import { Button, Modal, Tooltip, Tag, Input, Select, Space, message, Form, Card } from 'antd';
+import { SwapOutlined, SearchOutlined, TeamOutlined, CheckCircleOutlined, ExclamationCircleOutlined, UserOutlined } from '@ant-design/icons';
 import AddMemberModal from './components/AddMemberModal';
 import MergeModal from './components/MergeModal';
 import FilterTable from '../../components/shared/table/FilterTable';
@@ -14,6 +14,7 @@ import type { UseQueryResult, UseMutationResult } from '@tanstack/react-query';
 import { AxiosError } from 'axios';
 import { STATUS_CODE } from '../../constants/commonConst';
 import { formatNumber } from '@shared/utils/numberUtils';
+import { useGlobalVariable } from '../../hooks/GlobalVariableProvider';
 
 type Student = IGroupMember & { eligible?: boolean; reason?: string };
 type Group = IListGroup & {
@@ -40,12 +41,13 @@ const getStatusMeta = (t: any) => ({
   [STATUS_CODE.APPROVED_UP]: { label: t(getKey('status_approved_group')), color: 'green' },
   [STATUS_CODE.WARNING]: { label: t(getKey('status_warning_group')), color: 'orange' },
   [STATUS_CODE.MISSING]: { label: t(getKey('status_missing_members')), color: 'blue' },
-  [STATUS_CODE.LOCKED]: { label: t(getKey('status_locked')), color: 'red' },
+  [STATUS_CODE.LOCKED]: { label: t('status_rejected') || 'Từ chối', color: 'red' },
   [STATUS_CODE.DISSOLVED]: { label: t(getKey('status_dissolved')), color: 'default' },
 } as const);
 
 const GroupsAdminPage: React.FC = () => {
   const { t } = useTranslation();
+  const { selectedPeriod } = useGlobalVariable();
   const [addModalGroup, setAddModalGroup] = useState<IListGroup | null>(null);
   const [mergeMode, setMergeMode] = useState(false);
   const [mergeLeft, setMergeLeft] = useState<string | null>(null);
@@ -54,7 +56,12 @@ const GroupsAdminPage: React.FC = () => {
   const updateGroupMutation = groupHooks.useUpdateGroup();
   const deleteGroupMutation = groupHooks.useDeleteGroup();
   
-  const groups = (groupList?.rows as Group[] | undefined) ?? [];
+  const rawGroups = (groupList?.rows as Group[] | undefined) ?? [];
+  const groups = useMemo(() => {
+    if (!selectedPeriod) return rawGroups;
+    return rawGroups.filter((g) => g.registrationBatch === selectedPeriod.name);
+  }, [rawGroups, selectedPeriod]);
+
   const supervisors = useMemo(() => Array.from(new Set(groups.map((g) => g.supervisor))), [groups]);
 
   const total = groups.length;
@@ -102,15 +109,32 @@ const GroupsAdminPage: React.FC = () => {
       okText: t(getKey('confirm_btn')),
       cancelText: t(getKey('cancel_btn')),
       async onOk() {
+        // Cập nhật thêm thành viên vào Nhóm chính (Nhóm đích - left)
         await updateGroupMutation.mutateAsync({
           id: left.id,
           body: { members: [...left.members, ...membersToMove] },
           index: 0,
           params: { page: 1, limit: 10 },
         });
+
+        // Kiểm tra số thành viên còn lại ở Nhóm phụ (Nhóm cũ - right)
         const remaining = right.members.filter((m) => !membersToMove.some((mm) => mm.id === m.id));
-        const rightBody: any = remaining.length ? { members: remaining } : { status: STATUS_CODE.DISSOLVED };
-        await updateGroupMutation.mutateAsync({ id: right.id, body: rightBody, index: 0, params: { page: 1, limit: 10 } });
+        if (remaining.length > 0) {
+          // Nếu nhóm cũ vẫn còn thành viên lẻ khác, cập nhật lại danh sách thành viên còn lại
+          await updateGroupMutation.mutateAsync({
+            id: right.id,
+            body: { members: remaining },
+            index: 0,
+            params: { page: 1, limit: 10 },
+          });
+        } else {
+          // Nếu nhóm cũ không còn thành viên nào, tiến hành XÓA MỀM nhóm cũ ra khỏi hệ thống
+          await deleteGroupMutation.mutateAsync({
+            id: right.id,
+            params: { page: 1, limit: 10 },
+          });
+        }
+
         setMergeMode(false);
         setMergeLeft(null);
         setMergeRight(null);
@@ -121,27 +145,30 @@ const GroupsAdminPage: React.FC = () => {
 
   const columns = [
     {
-      title: t(getKey('group_code')),
-      dataIndex: 'code',
-      key: 'code',
-      width: 120,
-      render: (code: string) => <span className="font-semibold text-primary">{code}</span>,
+      title: 'STT',
+      key: 'stt',
+      width: 60,
+      render: (_: unknown, __: unknown, index: number) => <span className="font-semibold text-slate-500">{index + 1}</span>,
     },
     { title: t(getKey('topic_name')), dataIndex: 'title', key: 'title', ellipsis: true, render: (tText: string) => <div className="font-semibold text-slate-900">{tText}</div> },
-    { title: t(getKey('teacher')), dataIndex: 'supervisor', key: 'supervisor', ellipsis: true, render: (s: string) => <span className="font-medium text-slate-700">{s}</span> },
+    { title: 'GVHD', dataIndex: 'supervisor', key: 'supervisor', ellipsis: true, render: (s: string) => <span className="font-medium text-slate-700">{s}</span> },
     {
       title: t(getKey('members')),
       key: 'members',
       render: (_: unknown, record: IListGroup) => (
-        <Space>
+        <div className="flex flex-col gap-1">
           {(record.members || []).map((m) => (
-            <Tooltip key={m.id} title={m.eligible !== false ? m.name : `${m.name} — ${m.reason}`}>
-              <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${m.eligible !== false ? 'bg-slate-100 text-slate-700' : 'bg-red-100 text-red-700'}`}>
-                {m.name.split(' ').slice(-1)}{m.eligible !== false ? '' : ' ⚠'}
-              </span>
+            <Tooltip key={m.id} title={m.eligible !== false ? `${m.name} (${m.code || ''})` : `${m.name} (${m.code || ''}) — ${m.reason}`}>
+              <div className="text-xs">
+                <span className={`inline-block px-2.5 py-1 rounded text-xs font-medium ${m.eligible !== false ? 'bg-slate-100 text-slate-700' : 'bg-red-100 text-red-700'}`}>
+                  <span className="font-semibold">{m.name}</span>
+                  {m.class ? <span className="text-slate-500 ml-1.5">— Lớp: {m.class}</span> : ''}
+                  {m.eligible !== false ? '' : ' ⚠'}
+                </span>
+              </div>
             </Tooltip>
           ))}
-        </Space>
+        </div>
       ),
     },
     {
@@ -152,67 +179,106 @@ const GroupsAdminPage: React.FC = () => {
         return <Tag color={meta?.color || 'default'} className="!px-2 !py-[2px] !text-xs !font-medium">{meta?.label || r.status}</Tag>;
       },
     },
-    { title: t(getKey('members')), key: 'count', render: (_: unknown, r: IListGroup) => `${formatNumber(r.members.length)}/${formatNumber(r.maxMembers)}` },
   ];
 
   const statusMetaObj = getStatusMeta(t);
 
   return (
     <div className="pb-4">
-      <div className="mb-5 rounded-[22px] border border-slate-100 bg-white px-6 py-5 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
-        <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-[var(--color-blue-light)] px-3 py-1 text-xs font-medium text-[var(--color-primary)]">
-          {t(getKey('group_management'))}
-        </div>
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <h1 className="m-0 text-[34px] font-bold leading-[40px] text-slate-900">{t(getKey('group_management'))}</h1>
-            <p className="mt-2 mb-0 text-[17px] leading-[26px] text-slate-600">{t(getKey('group_management_desc'))}</p>
+      <div className="mb-5 flex items-center justify-start rounded-[22px] border border-slate-100 bg-white px-6 py-5 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
+        <div>
+          <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-[var(--color-blue-md)]/10 px-3 py-1 text-xs font-medium text-[var(--color-blue-login-mid)]">
+            <TeamOutlined />
+            {t(getKey('group_management'))}
           </div>
-          <div />
+          <h1 className="m-0 text-[34px] font-bold leading-[40px] text-navyDark">{t(getKey('group_management'))}</h1>
+          <p className="mt-2 mb-0 text-[18px] leading-[26px] text-grayDark">{t(getKey('group_management_desc'))}</p>
         </div>
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_8px_20px_rgba(15,23,42,0.04)]">
-          <div className="text-sm text-slate-500">{t(getKey('total_groups'))}</div>
-          <div className="mt-1 text-[32px] font-bold leading-[38px] text-slate-900">{formatNumber(total)}</div>
+        {/* Total Groups */}
+        <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_8px_20px_rgba(15,23,42,0.04)] flex justify-between items-start">
+          <div>
+            <div className="text-sm text-slate-500">{t(getKey('total_groups'))}</div>
+            <div className="mt-1 text-[32px] font-bold leading-[38px] text-slate-900">{formatNumber(total)}</div>
+          </div>
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+            <TeamOutlined style={{ fontSize: 20 }} />
+          </div>
         </div>
-        <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-5 shadow-[0_8px_20px_rgba(15,23,42,0.04)]">
-          <div className="text-sm text-emerald-700">{t(getKey('eligible'))}</div>
-          <div className="mt-1 text-[32px] font-bold leading-[38px] text-emerald-700">{formatNumber(enough)}</div>
+
+        {/* Eligible */}
+        <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-5 shadow-[0_8px_20px_rgba(15,23,42,0.04)] flex justify-between items-start">
+          <div>
+            <div className="text-sm text-emerald-700">{t(getKey('eligible'))}</div>
+            <div className="mt-1 text-[32px] font-bold leading-[38px] text-emerald-700">{formatNumber(enough)}</div>
+          </div>
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
+            <CheckCircleOutlined style={{ fontSize: 20 }} />
+          </div>
         </div>
-        <div className="rounded-2xl border border-amber-100 bg-amber-50/50 p-5 shadow-[0_8px_20px_rgba(15,23,42,0.04)]">
-          <div className="text-sm text-amber-700">{t(getKey('warning'))}</div>
-          <div className="mt-1 text-[32px] font-bold leading-[38px] text-amber-700">{formatNumber(withWarnings)}</div>
+
+        {/* Warning */}
+        <div className="rounded-2xl border border-amber-100 bg-amber-50/50 p-5 shadow-[0_8px_20px_rgba(15,23,42,0.04)] flex justify-between items-start">
+          <div>
+            <div className="text-sm text-amber-700">{t(getKey('warning'))}</div>
+            <div className="mt-1 text-[32px] font-bold leading-[38px] text-amber-700">{formatNumber(withWarnings)}</div>
+          </div>
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
+            <ExclamationCircleOutlined style={{ fontSize: 20 }} />
+          </div>
         </div>
-        <div className="rounded-2xl border border-sky-100 bg-sky-50/50 p-5 shadow-[0_8px_20px_rgba(15,23,42,0.04)]">
-          <div className="text-sm text-sky-700">{t(getKey('missing_members'))}</div>
-          <div className="mt-1 text-[32px] font-bold leading-[38px] text-sky-700">{formatNumber(missing)}</div>
+
+        {/* Missing */}
+        <div className="rounded-2xl border border-sky-100 bg-sky-50/50 p-5 shadow-[0_8px_20px_rgba(15,23,42,0.04)] flex justify-between items-start">
+          <div>
+            <div className="text-sm text-sky-700">{t(getKey('missing_members'))}</div>
+            <div className="mt-1 text-[32px] font-bold leading-[38px] text-sky-700">{formatNumber(missing)}</div>
+          </div>
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-sky-100 text-sky-600">
+            <UserOutlined style={{ fontSize: 20 }} />
+          </div>
         </div>
       </div>
 
-      <FilterTable<IListGroup, IDetailGroup, ICreateGroup, IUpdateGroup>
-        title={t(getKey('group_list'))}
-        createButtonLabel={undefined}
-        columns={columns}
+      <Card className="overflow-hidden rounded-[18px] border border-slate-100 bg-white shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
+        <FilterTable<IListGroup, IDetailGroup, ICreateGroup, IUpdateGroup>
+          title={t(getKey('group_list'))}
+          createButtonLabel={undefined}
+          columns={columns}
         useQueryHook={(params: BaseListParams) => {
-          const typedParams = params as BaseListParams & { keyword?: string; status?: string; supervisor?: string };
+          const typedParams = params as BaseListParams & { keyword?: string; status?: string; supervisor?: string; topicDirection?: string };
           const query = groupHooks.useFetchListGroups();
           const normalizedKeyword = (typedParams.keyword ?? '').trim().toLowerCase();
           const status = typedParams.status;
           const supervisor = typedParams.supervisor;
+          const topicDirection = typedParams.topicDirection;
 
           const allRows = (query.data?.rows ?? groups) as IListGroup[];
           const filteredRows = allRows.filter((g) => {
+            // Lọc theo đợt hoạt động được chọn ở header
+            if (selectedPeriod && g.registrationBatch !== selectedPeriod.name) {
+              return false;
+            }
+
             if (normalizedKeyword) {
-              const inGroup = [g.code, g.title, g.supervisor, g.registrationBatch].join(' ').toLowerCase().includes(normalizedKeyword);
+              const inGroup = (g.title || '').toLowerCase().includes(normalizedKeyword);
               const inMembers = g.members.some((m) => `${m.name} ${m.code || ''}`.toLowerCase().includes(normalizedKeyword));
               if (!inGroup && !inMembers) return false;
             }
             if (status && g.status !== status) return false;
 
             if (supervisor && g.supervisor !== supervisor) return false;
+            if (topicDirection && g.topicDirection !== topicDirection) return false;
             return true;
+          });
+
+          // Sắp xếp các nhóm cùng đề tài nằm cạnh nhau để dễ kiểm soát
+          filteredRows.sort((a, b) => {
+            const titleA = a.title || '';
+            const titleB = b.title || '';
+            return titleA.localeCompare(titleB, 'vi');
           });
 
           const data = { rows: filteredRows, total: filteredRows.length };
@@ -223,27 +289,38 @@ const GroupsAdminPage: React.FC = () => {
         }}
         filterRender={() => (
           <div className="grid grid-cols-1 gap-3 xl:grid-cols-12">
-            <Form.Item name="keyword" className={"xl:col-span-6 !mb-0"}>
+            <Form.Item name="keyword" className={"xl:col-span-4 !mb-0"}>
               <Input
                 allowClear
                 prefix={<SearchOutlined className={"text-slate-400"} />}
-                placeholder={t(getKey('search_groups_placeholder_full'))}
+                placeholder="Tìm kiếm theo tên đề tài, tên hoặc MSSV thành viên..."
                 className={"!h-11 !rounded-[12px] !border-slate-300"}
               />
             </Form.Item>
-            <Form.Item name="status" className={"xl:col-span-3 !mb-0"}>
+            <Form.Item name="status" className={"xl:col-span-2 !mb-0"}>
               <Select allowClear placeholder={t(getKey('status'))} className={"!h-11 !w-full"} options={Object.keys(statusMetaObj).map((k) => ({ value: k, label: statusMetaObj[k as Group['status']].label }))} />
             </Form.Item>
             <Form.Item name="supervisor" className={"xl:col-span-3 !mb-0"}>
               <Select allowClear placeholder={t(getKey('teacher'))} className={"!h-11 !w-full"} options={supervisors.map((s) => ({ value: s, label: s }))} />
+            </Form.Item>
+            <Form.Item name="topicDirection" className={"xl:col-span-3 !mb-0"}>
+              <Select
+                allowClear
+                placeholder="Hướng đề tài"
+                className={"!h-11 !w-full"}
+                options={[
+                  { value: 'PHAN_MEM', label: 'Phần mềm' },
+                  { value: 'MANG_MAY_TINH', label: 'Mạng máy tính' },
+                ]}
+              />
             </Form.Item>
           </div>
         )}
         updateInfo={{
           type: 'modal',
           modalInfo: {
-            modalContent: <GroupForm sampleStudents={sampleStudents} />,
-            modalProps: { centered: true, width: 720, title: t(getKey('group_management')) },
+            modalContent: <GroupForm />,
+            modalProps: { centered: true, width: 720, title: 'Chỉnh sửa nhóm Đồ Án Tốt Nghiệp' },
             modalFunc: updateGroupMutation,
           }
         }}
@@ -251,7 +328,7 @@ const GroupsAdminPage: React.FC = () => {
           type: 'modal',
           modalInfo: {
             modalContent: <GroupForm readOnly />,
-            modalProps: { centered: true, width: 720, title: t(getKey('group_management')), footer: null },
+            modalProps: { centered: true, width: 720, title: 'Chi tiết nhóm', footer: null },
             modalFunc: groupHooks.useFetchDetailGroup as unknown as (id: string, enable: boolean) => UseQueryResult<IDetailGroup, Error>,
           }
         }}
@@ -264,11 +341,20 @@ const GroupsAdminPage: React.FC = () => {
           isDelete: true,
           customAction: (record) => {
             const r = record as Group;
+            const isMergeable = r.status === STATUS_CODE.MISSING || r.status === STATUS_CODE.WARNING;
             return (
               <div className="pointer-events-auto">
                 <Space>
-                  <Tooltip title={t(getKey('group_review'))}>
-                    <Button type="text" size="small" onClick={() => { setMergeMode(true); setMergeLeft(r.id); }} icon={<SwapOutlined />} />
+                  <Tooltip title="Ghép nhóm">
+                    <span>
+                      <Button
+                        type="text"
+                        size="small"
+                        onClick={() => { setMergeMode(true); setMergeLeft(r.id); }}
+                        icon={<SwapOutlined />}
+                        disabled={!isMergeable}
+                      />
+                    </span>
                   </Tooltip>
                 </Space>
               </div>
@@ -276,6 +362,7 @@ const GroupsAdminPage: React.FC = () => {
           },
         }}
       />
+      </Card>
 
       {addModalGroup && (
         <AddMemberModal
@@ -283,7 +370,9 @@ const GroupsAdminPage: React.FC = () => {
           group={addModalGroup}
           onCancel={() => setAddModalGroup(null)}
           sampleStudents={sampleStudents}
-          onAdd={addMemberToGroup}
+          groups={groups}
+          currentGroupMembers={addModalGroup.members}
+          onAdd={(student) => addMemberToGroup(addModalGroup.id, student)}
         />
       )}
 

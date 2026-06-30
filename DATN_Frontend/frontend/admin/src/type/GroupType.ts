@@ -4,6 +4,7 @@ export interface IGroupMember {
   id: string;
   name: string;
   code?: string;
+  class?: string;
   eligible?: boolean;
   reason?: string;
 }
@@ -16,6 +17,7 @@ interface IBaseGroup {
   maxMembers: number;
   status: GroupStatus;
   registrationBatch: string;
+  topicDirection?: string;
 }
 
 export interface IListGroup extends IBaseGroup {

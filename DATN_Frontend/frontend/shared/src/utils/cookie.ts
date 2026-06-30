@@ -55,7 +55,22 @@ export const getCookie = (key: string) => {
   const oldValue = getCookieWithKey(key);
   if (oldValue) {
     const decryptedData = decrypted(oldValue);
-    return decryptedData;
+    if (decryptedData !== '') {
+      return decryptedData;
+    }
+    
+    // Fallback if decryption fails (e.g. it was saved as raw text by website/nextjs)
+    try {
+      const decoded = decodeURIComponent(oldValue);
+      if ((decoded.startsWith('{') && decoded.endsWith('}')) || 
+          (decoded.startsWith('[') && decoded.endsWith(']')) || 
+          (decoded.startsWith('"') && decoded.endsWith('"'))) {
+        return JSON.parse(decoded);
+      }
+      return decoded;
+    } catch {
+      return oldValue;
+    }
   }
   return undefined;
 };

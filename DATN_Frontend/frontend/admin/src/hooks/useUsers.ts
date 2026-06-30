@@ -103,4 +103,31 @@ export const userHooks = {
       mutationFn: userApi.resetUserPassword,
     });
   },
+
+  useFetchSpecializations: () => {
+    return useQuery({
+      queryKey: [QueryKey.users.list, 'specializations'],
+      queryFn: () => userApi.getSpecializations(),
+    });
+  },
+
+  useImportStudents: () => {
+    const queryClient = useQueryClient();
+    return useMutation<
+      {
+        success: boolean;
+        message: string;
+        imported_count?: number;
+        errors?: string[];
+      },
+      AxiosError,
+      FormData
+    >({
+      mutationFn: userApi.importStudents,
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: [QueryKey.users.list] });
+        queryClient.invalidateQueries({ queryKey: [QueryKey.classes.list] });
+      },
+    });
+  },
 };

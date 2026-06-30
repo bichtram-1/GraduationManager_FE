@@ -18,6 +18,7 @@ import {
   Form,
   Modal,
   Table,
+  message,
 } from 'antd';
 import { AxiosError } from 'axios';
 import _, { debounce } from 'lodash';
@@ -74,6 +75,7 @@ export interface FilterTableProps<
   TUpdate = Partial<TDetail>,
 > {
   title?: string;
+  showSizeChanger?: boolean;
   pageTitle?: string;
   pageSubtitle?: string;
   createButtonLabel?: string;
@@ -100,6 +102,7 @@ export interface FilterTableProps<
   formatInitialValues?: (data: TDetail) => Record<string, unknown>;
   formatFormValues?: (values: Record<string, unknown>) => TCreate | TUpdate;
   enableSelectRow?: boolean;
+  extraHeaderActions?: ReactNode;
   extraActions?: ReactNode;
 }
 
@@ -138,7 +141,9 @@ const FilterTable = <
   filterRender,
   formatInitialValues,
   formatFormValues,
+  extraHeaderActions,
   extraActions,
+  showSizeChanger,
 }: FilterTableProps<TList, TDetail, TCreate, TUpdate>) => {
   const hasPageHeader = !!pageTitle;
 
@@ -151,9 +156,18 @@ const FilterTable = <
 
   useEffect(() => {
     if (!paramVariables) return;
-    // update internal params when parent provides new paramVariables (e.g., tab change)
-    if (!_.isEqual(paramVariables, internalParams)) {
-      setInternalParams(paramVariables as BaseListParams);
+    // merge new parent paramVariables with current filter form values to preserve inputs
+    const formValues = form.getFieldsValue();
+    const mergedParams: Record<string, any> = { ...internalParams, ...paramVariables };
+    
+    Object.keys(formValues).forEach(key => {
+      if (formValues[key] !== undefined && formValues[key] !== null) {
+        mergedParams[key] = formValues[key];
+      }
+    });
+
+    if (!_.isEqual(mergedParams, internalParams)) {
+      setInternalParams(mergedParams as BaseListParams);
     }
   }, [paramVariables]);
 
@@ -206,7 +220,12 @@ const FilterTable = <
     });
   };
 
-  const showDeleteConfirm = (id: string) => {
+  const showDeleteConfirm = (id: string, record: any) => {
+    let name = '';
+    if (record) {
+      name = record.title || record.code || record.name || '';
+    }
+
     confirm({
       centered: true,
       title: null,
@@ -217,7 +236,13 @@ const FilterTable = <
           <div className="mt-3 font-bold text-xl">
             {t('delete_title')}
           </div>
-          <div className="text-sm">{t('delete_content')}</div>
+          <div className="text-sm mt-2">
+            {name ? (
+              <span>Bạn có chắc chắn muốn xóa <strong>"{name}"</strong>? Hành động này không thể hoàn tác.</span>
+            ) : (
+              t('delete_content')
+            )}
+          </div>
         </div>
       ),
       okText: t('delete'),
@@ -252,6 +277,16 @@ const FilterTable = <
           onSuccess: () => {
             handleCancelModal();
           },
+          onError: (error: any) => {
+            const validationErrors = error?.response?.data?.errors;
+            if (validationErrors) {
+              const firstErrorKey = Object.keys(validationErrors)[0];
+              const firstError = validationErrors[firstErrorKey][0];
+              message.error(firstError);
+            } else {
+              message.error(error?.response?.data?.message || error?.message || 'Cập nhật thất bại!');
+            }
+          }
         }
       );
     } else if (createMutation) {
@@ -261,6 +296,16 @@ const FilterTable = <
           onSuccess: () => {
             handleCancelModal();
           },
+          onError: (error: any) => {
+            const validationErrors = error?.response?.data?.errors;
+            if (validationErrors) {
+              const firstErrorKey = Object.keys(validationErrors)[0];
+              const firstError = validationErrors[firstErrorKey][0];
+              message.error(firstError);
+            } else {
+              message.error(error?.response?.data?.message || error?.message || 'Thêm mới thất bại!');
+            }
+          }
         }
       );
     }
@@ -347,7 +392,7 @@ const FilterTable = <
                         if (disabled) return;
                         const recordWithId = record as RecordWithId;
                         const recordId = recordWithId?.id || recordWithId?.value || '';
-                        showDeleteConfirm(recordId);
+                        showDeleteConfirm(recordId, record);
                       }}
                       className={`flex items-center rounded-full
                        justify-center pointer-events-auto ${classCssAciton} ${
@@ -434,6 +479,7 @@ const FilterTable = <
                 )}
 
                 <Flex align="center" gap={12}>
+                  {extraHeaderActions}
                   {extraActions}
                   {renderCreateButton()}
                   {exportInfo?.type && exportMutation && (
@@ -457,6 +503,7 @@ const FilterTable = <
             </div>
 
             <Table
+              rowKey={(record: any) => record.id ?? record.value ?? record.key}
               columns={initColumns}
               dataSource={data?.rows}
               loading={isLoading || isLoadingDetail}
@@ -466,6 +513,7 @@ const FilterTable = <
                 pageSize: internalParams?.limit,
                 position: ['bottomCenter'],
                 showQuickJumper: false,
+                showSizeChanger: showSizeChanger,
                 showTotal(total, range) {
                   return <span className="pl-2">{`${t('showing')} ${range[0]} ${t('to')} ${range[1]} ${t('of')} ${total} ${t('entries')}`}</span>;
                 },

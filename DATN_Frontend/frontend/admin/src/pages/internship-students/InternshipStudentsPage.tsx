@@ -74,7 +74,13 @@ const InternshipStudentsPage = () => {
     noCompany: noCompanyRows.length,
   }), [confirmationRows, noCompanyRows]);
 
-  const classOptions = useMemo(() => Array.from(new Set(noCompanyRows.map((item: any) => item.className))), [noCompanyRows]);
+  const classOptions = useMemo(() => {
+    const classes = [
+      ...noCompanyRows.map((item: any) => item.className),
+      ...confirmationRows.map((item: any) => item.className)
+    ];
+    return Array.from(new Set(classes)).filter(Boolean);
+  }, [noCompanyRows, confirmationRows]);
 
   const confirmationTabCounts = useMemo(() => ({
     total: confirmationRows.length,
@@ -92,14 +98,16 @@ const InternshipStudentsPage = () => {
 
   const useFilteredConfirmationListQuery = (params: BaseListParams) => {
     const query = internshipHooks.useFetchListConfirmationRequests({ periodId: selectedPeriod?.id });
-    const typedParams = params as BaseListParams & { keyword?: string; companyName?: string };
+    const typedParams = params as BaseListParams & { keyword?: string; companyName?: string; className?: string };
     const keyword = (typedParams.keyword ?? '').trim().toLowerCase();
     const companyName = typedParams.companyName || 'all';
+    const className = typedParams.className || 'all';
     const status = confirmationTab || 'all';
 
     const sourceRows = (query.data?.rows ?? confirmationList ?? INITIAL_CONFIRMATIONS) as IConfirmationRequest[];
     const filteredRows = sourceRows
       .filter((r) => (status === 'all' ? true : r.status === status))
+      .filter((r) => (className === 'all' ? true : r.className === className))
       .filter((r) => (companyName === 'all' || !companyName ? true : r.companyName.toLowerCase() === companyName.toLowerCase()))
       .filter((r) => !keyword || [r.studentId, r.studentName, r.className, r.companyName, r.taxId].join(' ').toLowerCase().includes(keyword));
 
@@ -127,7 +135,7 @@ const InternshipStudentsPage = () => {
         if (assignmentStatus === 'all') return true;
         return r.assignmentStatus === assignmentStatus;
       })
-      .filter((r) => !keyword || [r.studentId, r.studentName, r.className, r.phone, r.supervisor || ''].join(' ').toLowerCase().includes(keyword));
+      .filter((r) => !keyword || [r.studentId, r.studentName, r.phone, r.supervisor || ''].join(' ').toLowerCase().includes(keyword));
 
     return {
       ...query,
@@ -137,12 +145,50 @@ const InternshipStudentsPage = () => {
     } as UseQueryResult<ListResponseTypeObject<INoCompanyStudent>, Error>;
   };
 
+  const createCompanyMutation = companyHooks.useCreateCompany();
+
   const handleConfirmationAction = (row: IConfirmationRequest, status: ConfirmationStatus) => {
     const meta = getConfirmationStatusMeta(t)[status];
     const targetLabel = meta.label.toLowerCase();
     updateConfirmationMutation.mutate(
       { id: row.id, body: { status }, index: 0, params: { page: 1, limit: 10 } },
-      { onSuccess: () => message.success(t(getKey('update_confirmation_success'), { name: row.studentName, status: targetLabel })) }
+      {
+        onSuccess: () => {
+          message.success(t(getKey('update_confirmation_success'), { name: row.studentName, status: targetLabel }));
+          
+          if (status === STATUS_CODE.APPROVED) {
+            createCompanyMutation.mutate(
+              {
+                body: {
+                  name: row.companyName,
+                  taxId: row.taxId,
+                  field: 'Tự liên hệ',
+                  contact: row.mentor || 'Chưa cập nhật',
+                  phone: '',
+                  email: '',
+                  status: 'active',
+                  reviewStatus: 'approved',
+                },
+                params: { page: 1, limit: 10 },
+              },
+              {
+                onSuccess: () => {
+                  message.success(`Đã tự động thêm công ty "${row.companyName}" vào danh sách đối tác!`);
+                },
+                onError: (err: any) => {
+                  console.error('Failed to auto-create company:', err);
+                  const msg = err?.response?.data?.message || '';
+                  if (msg.includes('tồn tại') || msg.includes('exist')) {
+                    message.info(`Công ty "${row.companyName}" đã có sẵn trong danh sách.`);
+                  } else {
+                    message.warning(`Không thể tự động thêm công ty vào danh sách (Lỗi: ${msg || err.message}).`);
+                  }
+                },
+              }
+            );
+          }
+        },
+      }
     );
   };
 
@@ -174,7 +220,7 @@ const InternshipStudentsPage = () => {
         <Button type="text" size="small" className="!px-2" title={t(getKey('approve_cert'))} onClick={() => handleConfirmationAction(record, STATUS_CODE.APPROVED)} disabled={record.status === STATUS_CODE.APPROVED}>
           <CheckCircleOutlined className="text-[var(--color-green-medium)]" />
         </Button>
-        <Button type="text" size="small" danger className="!px-2" title={t(getKey('reject_cert'))} onClick={() => handleConfirmationAction(record, STATUS_CODE.REJECTED)} disabled={record.status === STATUS_CODE.REJECTED}>
+        <Button type="text" size="small" danger className="!px-2" title={t(getKey('reject_cert'))} onClick={() => handleConfirmationAction(record, STATUS_CODE.REJECTED)} disabled={record.status === STATUS_CODE.APPROVED || record.status === STATUS_CODE.REJECTED}>
           <CloseCircleOutlined />
         </Button>
       </Space>
@@ -276,10 +322,10 @@ const InternshipStudentsPage = () => {
             filterRender={() => (
               <div className="mb-4">
                 <div className="mb-3 grid grid-cols-1 gap-3 xl:grid-cols-12">
-                  <Form.Item name="keyword" className="xl:col-span-6 !mb-0">
+                  <Form.Item name="keyword" className="xl:col-span-5 !mb-0">
                     <Input allowClear prefix={<SearchOutlined className="text-slate-400" />} placeholder={t(getKey('search_student_company_placeholder'))} className="!h-11 !rounded-[12px] !border-slate-300" />
                   </Form.Item>
-                  <Form.Item name="companyName" className="xl:col-span-6 !mb-0" initialValue="all">
+                  <Form.Item name="companyName" className="xl:col-span-4 !mb-0" initialValue="all">
                     <Select
                       allowClear
                       showSearch
@@ -291,6 +337,9 @@ const InternshipStudentsPage = () => {
                       ]}
                       optionFilterProp="label"
                     />
+                  </Form.Item>
+                  <Form.Item name="className" className="xl:col-span-3 !mb-0">
+                    <Select allowClear placeholder={t(getKey('all_classes'))} className="!h-11 !w-full" options={[{ value: 'all', label: t(getKey('all_classes')) }, ...classOptions.map((c) => ({ value: c, label: c }))]} />
                   </Form.Item>
                 </div>
               </div>

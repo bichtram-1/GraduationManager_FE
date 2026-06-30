@@ -30,7 +30,7 @@ export const councilHooks = {
 
   useUpdateCouncil: () => {
     const queryClient = useQueryClient();
-    return useMutation<CouncilRow, AxiosError, { id: string; body: { title?: string; room?: string; date?: string; time?: string; members?: string[]; topics?: any[] } }>({
+    return useMutation<CouncilRow, AxiosError, { id: string; body: { title?: string; room?: string; date?: string; time?: string; members?: string[]; topics?: any[]; status?: string } }>({
       mutationFn: councilApi.updateCouncil,
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['councilsList'] });
