@@ -112,7 +112,7 @@ export function TeacherShell({ children }: { children: ReactNode }) {
                 variant="borderless"
                 classNames={{ popup: { root: 'rounded-xl shadow-lg' } }}
               >
-                {periods.filter(p => p.type === 'tttn').length > 0 && !pathname.startsWith('/teacher/topics') && (
+                {periods.filter(p => p.type === 'tttn').length > 0 && !pathname.startsWith('/teacher/topics') && !pathname.startsWith('/teacher/groups') && (
                   <Select.OptGroup label="Đợt Thực tập tốt nghiệp (TTTN)">
                     {periods.filter(p => p.type === 'tttn').map(p => (
                       <Select.Option key={p.id} value={p.id}>
