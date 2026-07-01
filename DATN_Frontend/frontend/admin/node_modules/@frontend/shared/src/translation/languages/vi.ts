@@ -575,7 +575,7 @@ const ViTranslation = {
   total_students_label: 'Tổng sinh viên',
   please_enter_topic_name: 'Vui lòng nhập tên đề tài',
   please_enter_teacher: 'Vui lòng nhập giảng viên',
-  please_enter_slots: 'Vui lòng nhập slot',
+  please_enter_slots: 'Vui lòng nhập số lượng',
   please_enter_reject_reason: 'Nhập lý do từ chối (nếu có)',
   reject_reason_required: 'Lý do từ chối là bắt buộc khi chuyển trạng thái đề tài sang Từ chối!',
   status_approved_topic: 'Đã duyệt',
