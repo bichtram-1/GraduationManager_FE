@@ -189,7 +189,7 @@ export const studentApi = {
     }
 
     const response = await axiosInstance.get('/private/v1/student/dashboard');
-    return response?.data?.results?.object || response?.data;
+    return response?.data?.results?.hasOwnProperty('object') ? response.data.results.object : response?.data;
   },
 
   getCompanies: async (): Promise<ICompany[]> => {
@@ -238,7 +238,7 @@ export const studentApi = {
     }
 
     const response = await axiosInstance.get('/private/v1/student/companies');
-    return response?.data?.results?.objects || response?.data;
+    return response?.data?.results?.objects || [];
   },
 
   declareInternship: async (data: IInternshipDeclareInput): Promise<IInternshipDeclareResult> => {
@@ -252,7 +252,7 @@ export const studentApi = {
     }
 
     const response = await axiosInstance.post('/private/v1/student/internships/declare', data);
-    return response?.data?.results?.object || response?.data;
+    return response?.data?.results?.hasOwnProperty('object') ? response.data.results.object : response?.data;
   },
 
   getMyInternshipRequest: async (): Promise<unknown> => {
@@ -261,7 +261,7 @@ export const studentApi = {
     }
 
     const response = await axiosInstance.get('/private/v1/student/internships/my-request');
-    return response?.data?.results?.object || response?.data;
+    return response?.data?.results?.hasOwnProperty('object') ? response.data.results.object : response?.data;
   },
 
   getMyThesisRegistration: async (): Promise<IThesisRegistration | null> => {
@@ -295,7 +295,7 @@ export const studentApi = {
     }
 
     const response = await axiosInstance.post('/private/v1/student/thesis/register', { topicId });
-    return response?.data?.results?.object || response?.data;
+    return response?.data?.results?.hasOwnProperty('object') ? response.data.results.object : response?.data;
   },
 
   cancelThesisRegistration: async (): Promise<unknown> => {
@@ -326,7 +326,7 @@ export const studentApi = {
     }
 
     const response = await axiosInstance.post('/private/v1/student/thesis/invitations/send', { studentCode, topicId });
-    return response?.data?.results?.object || response?.data;
+    return response?.data?.results?.hasOwnProperty('object') ? response.data.results.object : response?.data;
   },
 
   getIncomingInvitations: async (): Promise<IGroupInviteIncoming[]> => {
@@ -397,7 +397,7 @@ export const studentApi = {
         'Content-Type': 'multipart/form-data',
       },
     })
-    return response?.data?.results?.object || response?.data;
+    return response?.data?.results?.hasOwnProperty('object') ? response.data.results.object : response?.data;
   },
 
   getDatnReports: async (): Promise<IDatnProgressReport[]> => {
@@ -426,7 +426,7 @@ export const studentApi = {
     }
 
     const response = await axiosInstance.post('/private/v1/student/reports/datn', data);
-    return response?.data?.results?.object || response?.data;
+    return response?.data?.results?.hasOwnProperty('object') ? response.data.results.object : response?.data;
   },
 
   getStudentResults: async (): Promise<IStudentResults> => {
@@ -461,6 +461,6 @@ export const studentApi = {
     }
 
     const response = await axiosInstance.get('/private/v1/student/results');
-    return response?.data?.results?.object || response?.data;
+    return response?.data?.results?.hasOwnProperty('object') ? response.data.results.object : response?.data;
   }
 };
