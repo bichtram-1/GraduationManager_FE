@@ -53,30 +53,32 @@ export async function GET(req: Request) {
   const isIPOrLocalhost = host === 'localhost' || host === '127.0.0.1' || /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host || '')
   const domain = (host && !isIPOrLocalhost) ? host : undefined
 
-  const res = NextResponse.redirect(new URL(redirectTo, req.url))
-  
-  // Set ACCESS_TOKEN cookie
-  const cookieOpts = {
+  const response = NextResponse.redirect(new URL(redirectTo, req.url))
+
+  // Set ACCESS_TOKEN cookie directly on NextResponse to ensure it is sent during redirect
+  response.cookies.set({
     name: STORAGES.ACCESS_TOKEN,
     value: token,
     path: '/',
     maxAge: 60 * 60 * 8, // 8 hours
     httpOnly: false,
     ...(domain ? { domain } : {}),
-  }
-  res.cookies.set(cookieOpts)
+  })
 
-  // Set WEBSITE_USER_ROLE cookie
+  // Set WEBSITE_USER_ROLE cookie directly on NextResponse
   const roleCookieVal = token === 'mock-token-teacher' ? 'teacher' : (token === 'mock-token-student' ? 'student' : resolvedRole)
-  const roleCookieOpts = {
+  response.cookies.set({
     name: 'WEBSITE_USER_ROLE',
     value: roleCookieVal,
     path: '/',
     maxAge: 60 * 60 * 8,
     httpOnly: false,
     ...(domain ? { domain } : {}),
-  }
-  res.cookies.set(roleCookieOpts)
+  })
 
-  return res
+  // Prevent caching of the redirect response
+  response.headers.set('Cache-Control', 'no-store, max-age=0, must-revalidate')
+
+  return response
 }
+

@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState, useEffect } from 'react'
-import { ArrowLeft, BarChart3, CheckCircle, Edit2, Eye, Plus, ShieldCheck, Trash2, Users } from 'lucide-react'
+import { Edit2, Eye, Plus, Trash2 } from 'lucide-react'
 import { TeacherPill, TeacherSectionHeader } from '../_components/TeacherShell'
 import { TeacherButton, TeacherCard, TeacherToolbar, TeacherModal } from '../_components/TeacherUI'
 import ModalCreateEditTopic from './components/ModalCreateEditTopic'
@@ -320,8 +320,6 @@ export default function Page() {
     }
   }
 
-
-
   return (
     <>
       <TeacherSectionHeader
@@ -465,7 +463,7 @@ export default function Page() {
         }
       >
         <div className="mt-2 text-sm text-slate-600 leading-relaxed">
-          Bạn có chắc chắn muốn xóa đề tài <span className="font-semibold text-slate-900">"{deletingTopic?.name}"</span>? Hành động này không thể hoàn tác.
+          Bạn có chắc chắn muốn xóa đề tài <span className="font-semibold text-slate-900">&quot;{deletingTopic?.name}&quot;</span>? Hành động này không thể hoàn tác.
         </div>
       </TeacherModal>
     </>
