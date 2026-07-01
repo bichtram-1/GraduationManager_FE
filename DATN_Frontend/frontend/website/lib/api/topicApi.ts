@@ -18,7 +18,7 @@ export const topicApi = {
       id: String(t.id ?? ''),
       title: t.name || t.title || '',
       module: t.teacher || t.module || '',
-      published: t.status === 'approved' || t.status === 'pending' || t.published || false,
+      published: t.status === 'approved',
       slots: t.slots || '0/4'
     }));
   },

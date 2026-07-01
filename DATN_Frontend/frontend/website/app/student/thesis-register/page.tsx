@@ -144,11 +144,11 @@ export default function ThesisRegisterPage() {
       <section className="rounded-[12px] p-1">
         {loading ? (
           <div className="p-8 text-center text-sm text-slate-500">Đang tải danh sách đề tài…</div>
-        ) : topics.length === 0 ? (
+        ) : topics.filter((t) => t.published).length === 0 ? (
           <div className="p-8 text-center text-sm text-slate-500">Không có đề tài nào.</div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
-            {topics.map((t) => {
+            {topics.filter((t) => t.published).map((t) => {
               const teacher = t.module ? `GV: ${t.module}` : 'GV: TS. Nguyễn Văn X'
               const slotsStr = t.slots || '0/4'
               const [used, maxSlots] = slotsStr.split('/').map(Number)
