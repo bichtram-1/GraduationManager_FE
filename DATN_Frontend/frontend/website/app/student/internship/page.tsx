@@ -164,14 +164,16 @@ export default function StudentInternshipPage() {
         actions={
           <>
             <StudentPill tone="green">Đang mở đăng ký</StudentPill>
-            <button
-              type="button"
-              onClick={() => setDeclareOpen(true)}
-              className="inline-flex items-center gap-2 rounded-2xl bg-[#2196F3] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-blue-200 transition hover:bg-[#1976D2]"
-            >
-              <Plus className="h-4 w-4" />
-              Khai báo
-            </button>
+            {myRequest?.status !== 'approved' && (
+              <button
+                type="button"
+                onClick={() => setDeclareOpen(true)}
+                className="inline-flex items-center gap-2 rounded-2xl bg-[#2196F3] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-blue-200 transition hover:bg-[#1976D2]"
+              >
+                <Plus className="h-4 w-4" />
+                Khai báo
+              </button>
+            )}
           </>
         }
       />
