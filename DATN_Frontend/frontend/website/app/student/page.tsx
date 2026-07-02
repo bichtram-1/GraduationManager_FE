@@ -12,15 +12,37 @@ export default function StudentIndexPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    studentApi.getDashboard()
-      .then((res) => {
-        setData(res)
-        setLoading(false)
-      })
-      .catch((err) => {
-        console.error('Failed to fetch student dashboard:', err)
-        setLoading(false)
-      })
+    let mounted = true
+    setLoading(true)
+    const load = () => {
+      studentApi.getDashboard()
+        .then((res) => {
+          if (mounted) {
+            setData(res)
+            setLoading(false)
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to fetch student dashboard:', err)
+          if (mounted) {
+            setLoading(false)
+          }
+        })
+    }
+
+    load()
+
+    const handleSync = () => {
+      load()
+    }
+    window.addEventListener('realtime-group-updated', handleSync)
+    window.addEventListener('realtime-topic-updated', handleSync)
+
+    return () => {
+      mounted = false
+      window.removeEventListener('realtime-group-updated', handleSync)
+      window.removeEventListener('realtime-topic-updated', handleSync)
+    }
   }, [])
 
   if (loading) {

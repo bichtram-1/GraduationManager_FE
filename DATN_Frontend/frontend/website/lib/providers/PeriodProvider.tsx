@@ -65,6 +65,83 @@ export const PeriodProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, [])
 
+  useEffect(() => {
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+    let lastEventId = '';
+    let eventSource: EventSource | null = null;
+
+    const connectSSE = () => {
+      const url = `${backendUrl}/v1/realtime/stream` + (lastEventId ? `?last_event_id=${lastEventId}` : '');
+      eventSource = new EventSource(url);
+
+      eventSource.addEventListener('connected', (e: MessageEvent) => {
+        try {
+          const res = JSON.parse(e.data);
+          console.log('Realtime SSE connected:', res);
+        } catch (err) {
+          console.error(err);
+        }
+      });
+
+      eventSource.addEventListener('notification', (e: MessageEvent) => {
+        try {
+          const data = JSON.parse(e.data);
+          console.log('Realtime notification:', data);
+          
+          if (data.type === 'topic_proposed' || data.type === 'topic_updated' || data.type === 'topic_deleted') {
+            window.dispatchEvent(new CustomEvent('realtime-topic-updated'));
+          } else if (
+            data.type === 'group_status_updated' || 
+            data.type === 'student_registered_topic' || 
+            data.type === 'student_cancelled_registration' || 
+            data.type === 'group_member_joined'
+          ) {
+            window.dispatchEvent(new CustomEvent('realtime-group-updated'));
+            window.dispatchEvent(new CustomEvent('realtime-topic-updated'));
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      });
+
+      eventSource.addEventListener('slot_updated', (e: MessageEvent) => {
+        try {
+          const data = JSON.parse(e.data);
+          console.log('Realtime slot/group updated:', data);
+          
+          if (data.type === 'topic_updated' || data.type === 'topic_deleted' || data.type === 'topic_proposed') {
+            window.dispatchEvent(new CustomEvent('realtime-topic-updated'));
+          }
+          if (
+            data.type?.startsWith('group_') || 
+            data.type === 'student_registered_topic' || 
+            data.type === 'student_cancelled_registration' || 
+            data.type === 'group_member_joined' || 
+            data.type === 'topic_updated' || 
+            data.type === 'topic_deleted'
+          ) {
+            window.dispatchEvent(new CustomEvent('realtime-group-updated'));
+            window.dispatchEvent(new CustomEvent('realtime-topic-updated'));
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      });
+
+      eventSource.onerror = () => {
+        // Silently let EventSource handle native reconnects
+      };
+    };
+
+    connectSSE();
+
+    return () => {
+      if (eventSource) {
+        eventSource.close();
+      }
+    };
+  }, []);
+
   const setSelectedPeriod = (period: IListPeriod | undefined) => {
     setSelectedPeriodState(period)
     if (period) {

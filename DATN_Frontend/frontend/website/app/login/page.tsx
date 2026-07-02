@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { User } from 'lucide-react'
 import Image from 'next/image'
+import { STORAGES } from '@/lib/constants/storage'
 
 const ROLE_OPTIONS = [
   { value: 'teacher', label: 'Giảng viên', hint: 'thoa@caothang.edu.vn' },
@@ -23,11 +24,27 @@ export default function LoginPage() {
     student: { email: '0306231001@caothang.edu.vn' },
   }
 
+  const clearSessionCookies = () => {
+    if (typeof window === 'undefined') return
+    const domains = ['', 'localhost', '.localhost', '127.0.0.1', window.location.hostname]
+    const cookiesToClear = [STORAGES.ACCESS_TOKEN, 'WEBSITE_USER_ROLE']
+    cookiesToClear.forEach((name) => {
+      domains.forEach((dom) => {
+        const domainPart = dom ? `; domain=${dom}` : ''
+        document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT${domainPart}`
+      })
+    })
+  }
+
   const onGoogleSignIn = () => {
     // Redirect to server mock-login which sets cookie and redirects
     setLoading(true)
     const from = searchParams?.get('from') || undefined
     const url = `/api/mock-login?role=${encodeURIComponent(role)}${from ? `&from=${encodeURIComponent(from)}` : ''}`
+    
+    // Clear cookies first to avoid cross-tab/stale cookie conflicts on redirect
+    clearSessionCookies()
+
     // Use full navigation so server can set cookie via Set-Cookie header
     window.location.assign(url)
   }
@@ -74,6 +91,10 @@ export default function LoginPage() {
         // Role matches! Proceed with session cookie setting and redirection
         const from = searchParams?.get('from') || undefined
         const url = `/api/mock-login?role=${encodeURIComponent(role)}&email=${encodeURIComponent(email)}${from ? `&from=${encodeURIComponent(from)}` : ''}`
+        
+        // Clear cookies first to avoid cross-tab/stale cookie conflicts on redirect
+        clearSessionCookies()
+
         window.location.assign(url)
       } else {
         messageApi.error(json.message || 'Đăng nhập thất bại!')

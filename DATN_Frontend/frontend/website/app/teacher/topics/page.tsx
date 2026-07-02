@@ -1,10 +1,11 @@
 "use client"
 
 import { useMemo, useState, useEffect } from 'react'
-import { BarChart3, CheckCircle, Edit2, Eye, Plus, ShieldCheck, Trash2, Users } from 'lucide-react'
+import { Edit2, Eye, Plus, Trash2 } from 'lucide-react'
 import { TeacherPill, TeacherSectionHeader } from '../_components/TeacherShell'
-import { TeacherButton, TeacherCard, TeacherToolbar } from '../_components/TeacherUI'
+import { TeacherButton, TeacherCard, TeacherToolbar, TeacherModal } from '../_components/TeacherUI'
 import ModalCreateEditTopic from './components/ModalCreateEditTopic'
+import ModalDetailTopic from './components/ModalDetailTopic'
 import { usePeriod } from '@/lib/providers/PeriodProvider'
 import { topicApi } from '@/lib/api/topicApi'
 
@@ -61,6 +62,8 @@ type Topic = {
   semester: string
   summary: string
   progress: number
+  direction?: string
+  fileUrl?: string
 }
 
 type SaveTopicPayload = {
@@ -105,6 +108,8 @@ export default function Page() {
   const [topicList, setTopicList] = useState<Topic[]>([])
   const [openCreate, setOpenCreate] = useState(false)
   const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null)
+  const [viewingTopic, setViewingTopic] = useState<Topic | null>(null)
+  const [deletingTopic, setDeletingTopic] = useState<Topic | null>(null)
   const [editingCode, setEditingCode] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [deletingCode, setDeletingCode] = useState<string | null>(null)
@@ -112,42 +117,68 @@ export default function Page() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'Đã duyệt' | 'Chờ duyệt' | 'Từ chối'>('all')
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
-  const [slots, setSlots] = useState('4')
+  const [slots, setSlots] = useState('2')
+  const [direction, setDirection] = useState('Phát triển phần mềm')
+  const [fileUrl, setFileUrl] = useState('')
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     let mounted = true
-    setLoading(true)
-    topicApi.getTeacherTopics({ periodId: selectedPeriod?.id })
-      .then((data) => {
-        if (!mounted) return
-        setTopicList(data)
-        if (data.length > 0) {
+    
+    const fetchTopics = async (showLoading = false) => {
+      if (showLoading) setLoading(true)
+      try {
+        const data = await topicApi.getTeacherTopics({ periodId: selectedPeriod?.id });
+        if (mounted) {
+          setTopicList(data);
+          
           setSelectedTopic((curr) => {
             if (curr && data.some((t: any) => t.id === curr.id)) {
               return data.find((t: any) => t.id === curr.id) || data[0];
             }
-            return data[0];
-          })
-        } else {
-          setSelectedTopic(null)
+            return data.length > 0 ? data[0] : null;
+          });
+
+          setViewingTopic((curr) => {
+            if (curr) {
+              const updated = data.find((t: any) => t.id === curr.id);
+              return updated || null;
+            }
+            return null;
+          });
         }
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (mounted) setLoading(false)
-      })
+      } catch (e) {
+        console.error(e);
+      } finally {
+        if (mounted && showLoading) setLoading(false)
+      }
+    };
+
+    fetchTopics(true);
+
+    const handleSync = () => {
+      fetchTopics(false);
+    }
+    window.addEventListener('realtime-topic-updated', handleSync)
+
+    const intervalId = setInterval(() => {
+      fetchTopics(false);
+    }, 5000);
+
     return () => {
-      mounted = false
+      mounted = false;
+      clearInterval(intervalId);
+      window.removeEventListener('realtime-topic-updated', handleSync)
     }
   }, [selectedPeriod?.id])
 
   const filtered = useMemo(
     () =>
       topicList.filter((topic) => {
-        const q = query.toLowerCase()
+        const nameQ = query.trim().toLowerCase()
+        const nameMatch = !nameQ || topic.name.toLowerCase().includes(nameQ)
         const statusMatch = statusFilter === 'all' || topic.status === statusFilter
-        return statusMatch && (!q || [topic.code, topic.name, topic.status].some((value) => value.toLowerCase().includes(q)))
+        return nameMatch && statusMatch
       }),
     [query, statusFilter, topicList]
   )
@@ -165,7 +196,9 @@ export default function Page() {
   const resetForm = () => {
     setName('')
     setDescription('')
-    setSlots('4')
+    setSlots('2')
+    setDirection('Phát triển phần mềm')
+    setFileUrl('')
     setEditingCode(null)
   }
 
@@ -180,18 +213,16 @@ export default function Page() {
     setName(topic.name)
     setDescription(topic.summary)
     setSlots(topic.slots.split('/')[1] ?? '4')
+    setDirection(topic.direction || 'Phát triển phần mềm')
+    setFileUrl(topic.fileUrl || '')
     setOpenCreate(true)
   }
 
-  const handleDelete = async (topic: Topic) => {
-    const ok = window.confirm(`Bạn có chắc muốn xóa đề tài ${topic.code} - ${topic.name}?`)
-    if (!ok) return
-
-    setDeletingCode(topic.code)
+  const confirmDelete = async () => {
+    if (!deletingTopic || !deletingTopic.id) return
+    setDeletingCode(deletingTopic.code)
     try {
-      if (topic.id) {
-        await topicApi.deleteTopic(topic.id);
-      }
+      await topicApi.deleteTopic(deletingTopic.id);
       const data = await topicApi.getTeacherTopics({ periodId: selectedPeriod?.id });
       setTopicList(data);
       if (data.length > 0) {
@@ -199,6 +230,8 @@ export default function Page() {
       } else {
         setSelectedTopic(null);
       }
+      setViewingTopic(null);
+      setDeletingTopic(null);
     } catch (e) {
       console.error(e);
       alert('Không thể xóa đề tài!');
@@ -251,6 +284,8 @@ export default function Page() {
             name: trimmedName,
             description: trimmedSummary,
             slots: String(maxSlots),
+            direction: direction,
+            fileUrl: fileUrl,
             teacher: 'TS. Nguyễn Văn X',
           });
         }
@@ -259,6 +294,8 @@ export default function Page() {
           name: trimmedName,
           description: trimmedSummary,
           slots: String(maxSlots),
+          direction: direction,
+          fileUrl: fileUrl,
           teacher: 'TS. Nguyễn Văn X',
           periodId: selectedPeriod?.id
         });
@@ -269,12 +306,15 @@ export default function Page() {
       if (data.length > 0) {
         setSelectedTopic((curr) => {
           if (editingCode && data.some((t: any) => t.code === editingCode)) {
-            return data.find((t: any) => t.code === editingCode) || data[0];
+            const updated = data.find((t: any) => t.code === editingCode);
+            if (updated) setViewingTopic(updated);
+            return updated || data[0];
           }
           return data[0];
         })
       } else {
         setSelectedTopic(null);
+        setViewingTopic(null);
       }
     } catch (e) {
       console.error(e);
@@ -301,75 +341,69 @@ export default function Page() {
         }
       />
 
-      <div className="mb-4 flex flex-wrap gap-2 rounded-[28px] border border-slate-200 bg-white p-2 shadow-[0_12px_40px_rgba(15,23,42,0.05)]">
-        {[
-          { key: 'all', label: 'Tất cả', count: statusCount.all },
-          { key: 'Đã duyệt', label: 'Đã duyệt', count: statusCount.approved },
-          { key: 'Chờ duyệt', label: 'Chờ duyệt', count: statusCount.pending },
-          { key: 'Từ chối', label: 'Từ chối', count: statusCount.rejected },
-        ].map((tab) => {
-          const active = statusFilter === tab.key
-          return (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => setStatusFilter(tab.key as typeof statusFilter)}
-              className={`inline-flex items-center gap-2 rounded-[20px] px-4 py-2.5 text-sm font-medium transition ${active ? 'bg-[#2196F3] text-white shadow-lg shadow-blue-200' : 'text-slate-600 hover:bg-slate-50'}`}
-            >
-              {tab.label}
-              <span className={`rounded-full px-2 py-0.5 text-xs ${active ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'}`}>{tab.count}</span>
-            </button>
-          )
-        })}
-      </div>
-
       <TeacherCard>
         <TeacherToolbar
-          placeholder="Tìm mã đề tài, tên đề tài, trạng thái..."
+          placeholder="Tìm tên đề tài..."
           value={query}
           onChange={setQuery}
         >
-          <TeacherPill tone="blue">Tất cả học kỳ</TeacherPill>
-          <TeacherPill tone="green">{statusCount.approved} đề tài đã duyệt</TeacherPill>
-          <TeacherPill tone="orange">{statusCount.pending} đề tài chờ duyệt</TeacherPill>
+          <div className="flex items-center gap-2 mr-2">
+            <span className="text-xs font-semibold text-slate-500 shrink-0">Trạng thái:</span>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as any)}
+              className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 outline-none focus:border-[#2196F3] shadow-sm cursor-pointer"
+            >
+              <option value="all">Tất cả ({statusCount.all})</option>
+              <option value="Đã duyệt">Đã duyệt ({statusCount.approved})</option>
+              <option value="Chờ duyệt">Chờ duyệt ({statusCount.pending})</option>
+              <option value="Từ chối">Từ chối ({statusCount.rejected})</option>
+            </select>
+          </div>
+          <TeacherPill tone="blue">{selectedPeriod?.name || 'Đợt hiện tại'}</TeacherPill>
         </TeacherToolbar>
 
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-slate-600">
             <tr>
-              <th className="px-5 py-3 text-left">Mã</th>
+              <th className="px-5 py-3 text-left w-16">STT</th>
               <th className="px-5 py-3 text-left">Tên đề tài</th>
-              <th className="px-5 py-3 text-left">Slot</th>
-              <th className="px-5 py-3 text-left">Ghi chú</th>
-              <th className="px-5 py-3 text-left">Trạng thái</th>
-              <th className="px-5 py-3 text-right">Hành động</th>
+              <th className="px-5 py-3 text-left w-48">Số lượng thành viên</th>
+              <th className="px-5 py-3 text-left w-1/3">Mô tả</th>
+              <th className="px-5 py-3 text-left w-36">Trạng thái</th>
+              <th className="px-5 py-3 text-right w-36">Hành động</th>
             </tr>
           </thead>
           <tbody>
-            {filtered.map((topic) => (
+            {filtered.map((topic, index) => (
               <tr key={topic.code} className="border-t border-slate-100 transition hover:bg-slate-50/80">
-                <td className="px-5 py-4 font-medium text-[#1976D2]">{topic.code}</td>
-                <td className="px-5 py-4 text-slate-900">{topic.name}</td>
-                <td className="px-5 py-4 text-slate-600">{topic.slots}</td>
-                <td className="px-5 py-4 text-slate-600">{topic.note}</td>
+                <td className="px-5 py-4 font-medium text-slate-500">{index + 1}</td>
+                <td className="px-5 py-4 text-slate-900 font-medium">{topic.name}</td>
+                <td className="px-5 py-4 text-slate-600">{topic.slots.split('/')[1] || topic.slots}</td>
+                <td className="px-5 py-4 text-slate-600 max-w-xs truncate" title={topic.summary}>{topic.summary}</td>
                 <td className="px-5 py-4">
                   <TeacherPill tone={topic.status === 'Đã duyệt' ? 'green' : topic.status === 'Từ chối' ? 'red' : 'orange'}>
                     {topic.status}
                   </TeacherPill>
                 </td>
-                <td className="px-5 py-4">
-                  <div className="flex justify-end gap-2">
-                    <button className="rounded-2xl p-2 text-[#1976D2] transition hover:bg-blue-50" title="Xem chi tiết" onClick={() => setSelectedTopic(topic)}>
+                <td className="px-5 py-4 text-right">
+                  <div className="flex justify-end gap-1">
+                    <button className="rounded-2xl p-2 text-[#1976D2] transition hover:bg-blue-50" title="Xem chi tiết" onClick={() => setViewingTopic(topic)}>
                       <Eye className="h-4 w-4" />
                     </button>
-                    <button className="rounded-2xl p-2 text-amber-600 transition hover:bg-amber-50" title="Sửa" onClick={() => handleEdit(topic)}>
+                    <button
+                      className="rounded-2xl p-2 text-amber-600 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-30"
+                      title={topic.status === 'Đã duyệt' ? 'Đề tài đã duyệt không được chỉnh sửa' : 'Sửa'}
+                      onClick={() => handleEdit(topic)}
+                      disabled={topic.status === 'Đã duyệt'}
+                    >
                       <Edit2 className="h-4 w-4" />
                     </button>
                     <button
-                      className="rounded-2xl p-2 text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-                      title="Xóa"
-                      onClick={() => handleDelete(topic)}
-                      disabled={deletingCode === topic.code}
+                      className="rounded-2xl p-2 text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-30"
+                      title={topic.status === 'Đã duyệt' ? 'Đề tài đã duyệt không được xóa' : 'Xóa'}
+                      onClick={() => setDeletingTopic(topic)}
+                      disabled={deletingCode === topic.code || topic.status === 'Đã duyệt'}
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -377,64 +411,14 @@ export default function Page() {
                 </td>
               </tr>
             ))}
+            {filtered.length === 0 && (
+              <tr>
+                <td colSpan={6} className="px-5 py-8 text-center text-slate-500">Không có đề tài nào phù hợp bộ lọc.</td>
+              </tr>
+            )}
           </tbody>
         </table>
       </TeacherCard>
-
-      <section className="mt-6 grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
-        <TeacherCard className="p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm font-semibold text-slate-900">Chi tiết đề tài</div>
-              <div className="text-xs text-slate-500">Xem nhanh thông tin đang được chọn trong bảng</div>
-            </div>
-            <TeacherPill tone={selectedTopic?.status === 'Đã duyệt' ? 'green' : selectedTopic?.status === 'Từ chối' ? 'red' : 'orange'}>
-              {selectedTopic?.status ?? 'Chưa chọn'}
-            </TeacherPill>
-          </div>
-
-          {selectedTopic ? (
-            <div className="mt-4 grid gap-4 md:grid-cols-2">
-              <div className="rounded-[24px] bg-slate-50 p-4">
-                <div className="text-xs text-slate-500">Mã đề tài</div>
-                <div className="mt-1 text-lg font-semibold text-slate-900">{selectedTopic.code}</div>
-              </div>
-              <div className="rounded-[24px] bg-slate-50 p-4">
-                <div className="text-xs text-slate-500">Học kỳ</div>
-                <div className="mt-1 text-lg font-semibold text-slate-900">{selectedTopic.semester}</div>
-              </div>
-              <div className="rounded-[24px] bg-slate-50 p-4 md:col-span-2">
-                <div className="text-xs text-slate-500">Mô tả ngắn</div>
-                <div className="mt-1 text-sm leading-6 text-slate-700">{selectedTopic.summary}</div>
-              </div>
-              <div className="rounded-[24px] bg-slate-50 p-4">
-                <div className="flex items-center justify-between text-xs text-slate-500">
-                  <span>Slot đã đăng ký</span>
-                  <span>{selectedTopic.slots}</span>
-                </div>
-                <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-200">
-                  <div className="h-full rounded-full bg-[#2196F3]" style={{ width: `${selectedTopic.progress}%` }} />
-                </div>
-                <div className="mt-2 text-xs text-slate-500">Tiến độ lấp đầy đề tài</div>
-              </div>
-              <div className="rounded-[24px] bg-slate-50 p-4">
-                <div className="text-xs text-slate-500">Ghi chú</div>
-                <div className="mt-1 text-sm text-slate-700">{selectedTopic.note}</div>
-              </div>
-            </div>
-          ) : null}
-        </TeacherCard>
-
-        <TeacherCard className="bg-[linear-gradient(135deg,#eff6ff_0%,#ffffff_100%)] p-5">
-          <div className="text-sm font-semibold text-slate-900">Luồng duyệt</div>
-          <div className="mt-4 space-y-3 text-sm text-slate-600">
-            <div className="flex items-center gap-2 rounded-2xl bg-white/80 p-3"><CheckCircle className="h-4 w-4 text-emerald-600" /> Soạn đề tài và nhập mô tả</div>
-            <div className="flex items-center gap-2 rounded-2xl bg-white/80 p-3"><ShieldCheck className="h-4 w-4 text-[#1976D2]" /> Gửi duyệt cho bộ phận quản lý</div>
-            <div className="flex items-center gap-2 rounded-2xl bg-white/80 p-3"><Users className="h-4 w-4 text-[#1976D2]" /> Sinh viên đăng ký theo slot</div>
-            <div className="flex items-center gap-2 rounded-2xl bg-white/80 p-3"><BarChart3 className="h-4 w-4 text-[#1976D2]" /> Theo dõi tiến độ nhóm đăng ký</div>
-          </div>
-        </TeacherCard>
-      </section>
 
       <ModalCreateEditTopic
         open={openCreate}
@@ -443,9 +427,15 @@ export default function Page() {
         name={name}
         description={description}
         slots={slots}
+        direction={direction}
+        fileUrl={fileUrl}
+        status={selectedTopic?.status || ''}
+        rejectReason={selectedTopic?.note || ''}
         onChangeName={setName}
         onChangeDescription={setDescription}
         onChangeSlots={setSlots}
+        onChangeDirection={setDirection}
+        onChangeFileUrl={setFileUrl}
         onClose={() => {
           setOpenCreate(false)
           resetForm()
@@ -453,6 +443,35 @@ export default function Page() {
         onSave={handleSave}
         onImportFile={handleImportFile}
       />
+
+      <ModalDetailTopic
+        open={viewingTopic !== null}
+        topic={viewingTopic}
+        onClose={() => setViewingTopic(null)}
+      />
+
+      <TeacherModal
+        open={deletingTopic !== null}
+        title="Xác nhận xóa đề tài"
+        onClose={() => setDeletingTopic(null)}
+        footer={
+          <div className="flex justify-end gap-2">
+            <TeacherButton variant="secondary" onClick={() => setDeletingTopic(null)}>Hủy</TeacherButton>
+            <TeacherButton
+              variant="primary"
+              className="!bg-red-600 hover:!bg-red-700 text-white"
+              onClick={confirmDelete}
+              disabled={submitting}
+            >
+              {submitting ? 'Đang xóa...' : 'Xác nhận xóa'}
+            </TeacherButton>
+          </div>
+        }
+      >
+        <div className="mt-2 text-sm text-slate-600 leading-relaxed">
+          Bạn có chắc chắn muốn xóa đề tài <span className="font-semibold text-slate-900">&quot;{deletingTopic?.name}&quot;</span>? Hành động này không thể hoàn tác.
+        </div>
+      </TeacherModal>
     </>
   )
 }

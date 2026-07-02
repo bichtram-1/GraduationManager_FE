@@ -136,7 +136,7 @@ export function TeacherModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl bg-white shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-          <div className="text-base font-medium text-slate-900">{title}</div>
+          <div className="text-lg font-bold text-slate-900 tracking-tight">{title}</div>
           <button onClick={onClose} className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600">×</button>
         </div>
         <div className="flex-1 overflow-y-auto px-5 py-4">{children}</div>

@@ -96,7 +96,28 @@ axiosInstance.interceptors.response.use(
   async function (error) {
     if (error?.response?.status === 401) {
       if (typeof window !== 'undefined') {
-        window.location.href = '/api/logout?from=/login';
+        const currentToken = getCookie(STORAGES.ACCESS_TOKEN);
+        const headers = error.config?.headers;
+        let authHeader: string | undefined;
+        
+        if (headers) {
+          if (typeof headers.get === 'function') {
+            authHeader = headers.get('Authorization') || headers.get('authorization');
+          } else {
+            authHeader = headers.Authorization || headers.authorization || headers['Authorization'] || headers['authorization'];
+          }
+        }
+        
+        const requestToken = typeof authHeader === 'string' ? authHeader.replace('Bearer ', '') : '';
+
+        if (currentToken !== requestToken) {
+          // Token in cookie is different/newer/cleared (e.g. login action in another tab).
+          // Do not logout! Just redirect this tab to '/' to be routed correctly.
+          window.location.href = '/';
+        } else {
+          // Token is the same or empty, meaning the session is truly invalid.
+          window.location.href = '/api/logout?from=/login';
+        }
       }
     }
     return Promise.reject(error);
