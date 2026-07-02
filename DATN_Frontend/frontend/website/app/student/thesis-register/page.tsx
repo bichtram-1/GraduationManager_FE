@@ -160,7 +160,7 @@ export default function ThesisRegisterPage() {
                     <div>
                       <a className="text-[#2196F3] font-medium text-sm">{t.id}</a>
                       <h3 className="mt-2 text-lg font-semibold text-slate-900">{t.title}</h3>
-                      <div className="mt-2 text-xs text-slate-500">{teacher} • Số thành viên: {used}/{maxSlots}</div>
+                      <div className="mt-2 text-xs text-slate-500">{teacher} • Số lượng: {used}/{maxSlots} sinh viên</div>
                       {isCurrentTopic && registration && (
                         <div className="mt-3 flex flex-wrap items-center gap-2">
                           <StudentPill tone={registrationTone}>{registration.status === 'accepted' ? 'Nhóm đã duyệt' : registration.status === 'rejected' ? 'Nhóm bị từ chối' : 'Nhóm đang chờ duyệt'}</StudentPill>
@@ -170,7 +170,7 @@ export default function ThesisRegisterPage() {
                     </div>
                     <div>
                       <div className={`rounded-full px-3 py-1 text-xs font-medium ${hasSlot ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
-                        {hasSlot ? 'Còn slot' : 'Hết slot'}
+                        {hasSlot ? 'Còn nhận' : 'Đủ số lượng'}
                       </div>
                     </div>
                   </div>

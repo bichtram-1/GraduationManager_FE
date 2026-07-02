@@ -241,6 +241,7 @@ const TopicsPage = () => {
             slots: detail.slots,
             status: detail.status,
             rejectReason: detail.rejectReason || '',
+            fileUrl: detail.fileUrl || '',
           })}
           formatFormValues={(values: Record<string, unknown>) => values as ICreateTopic | IUpdateTopic}
           filterRender={() => (
