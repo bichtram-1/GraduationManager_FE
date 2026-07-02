@@ -4,6 +4,7 @@ import { QueryKey } from '../constants/queryKey';
 import { internshipApi } from '../api/internshipApi';
 import type { BaseListParams } from '@shared/types/GeneralType';
 import type { IConfirmationRequest, ICreateConfirmationRequest, ICreateNoCompanyStudent, INoCompanyStudent, IUpdateConfirmationRequest, IUpdateNoCompanyStudent } from '../type/InternshipType';
+import { useGlobalVariable } from './GlobalVariableProvider';
 
 export const internshipHooks = {
   useFetchListConfirmationRequests: (params?: { periodId?: string }) => {
@@ -63,10 +64,11 @@ export const internshipHooks = {
 
 
   useFetchDetailNoCompanyStudent: (id: string, enabled: boolean = true) => {
+    const { selectedPeriod } = useGlobalVariable();
     return useQuery({
-      queryKey: [QueryKey.internships.noCompany.detail, id],
+      queryKey: [QueryKey.internships.noCompany.detail, id, selectedPeriod?.id],
       enabled: !!id && enabled,
-      queryFn: () => internshipApi.getNoCompanyStudentDetail(id),
+      queryFn: () => internshipApi.getNoCompanyStudentDetail(id, selectedPeriod?.id),
     });
   },
 

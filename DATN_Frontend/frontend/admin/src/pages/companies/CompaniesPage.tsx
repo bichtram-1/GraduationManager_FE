@@ -139,7 +139,14 @@ const CompaniesPage = () => {
       ellipsis: true,
       render: (value: string, record) => (
         <div className="truncate">
-          <div className="font-medium text-[var(--color-primary)] truncate" title={value}>{value}</div>
+          <div className="flex items-center gap-2 truncate">
+            <span className="font-medium text-[var(--color-primary)] truncate" title={value}>{value}</span>
+            {record.reviewStatus === STATUS_CODE.PENDING && (
+              <Tag color="purple" className="m-0 rounded-md text-[10px] py-0 px-1.5 border-none">
+                Tự khai báo
+              </Tag>
+            )}
+          </div>
           <div className="text-xs text-slate-500 truncate">{record.field}</div>
         </div>
       ),

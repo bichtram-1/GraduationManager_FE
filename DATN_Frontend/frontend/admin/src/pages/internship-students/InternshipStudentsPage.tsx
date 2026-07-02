@@ -357,7 +357,7 @@ const InternshipStudentsPage = () => {
             updateInfo={isPeriodClosed ? undefined : { type: 'modal', modalInfo: { modalContent: <StudentForm />, modalProps: { centered: true, width: 720, title: t(getKey('edit_student')) }, modalFunc: updateNoCompanyMutation } }}
             deleteInfo={isPeriodClosed ? undefined : { type: 'modal', modalInfo: { modalContent: null, modalProps: {}, modalFunc: deleteNoCompanyMutation as unknown as import('@tanstack/react-query').UseMutationResult<INoCompanyStudent, import('axios').AxiosError, { id: string; params: BaseListParams }> } }}
             detailInfo={{ type: 'modal', modalInfo: { modalContent: <StudentForm disabled />, modalProps: { centered: true, width: 720, title: t(getKey('detail_student')), footer: null }, modalFunc: internshipHooks.useFetchDetailNoCompanyStudent } }}
-            formatInitialValues={(d) => ({ studentId: d?.studentId ?? '', studentName: d?.studentName ?? '', className: d?.className ?? '', phone: d?.phone ?? '', status: d?.status ?? STATUS_CODE.NOT_REGISTERED })}
+            formatInitialValues={(d) => ({ studentId: d?.studentId ?? '', studentName: d?.studentName ?? '', className: d?.className ?? '', phone: d?.phone ?? '', status: d?.status ?? STATUS_CODE.NOT_REGISTERED, companyName: d?.companyName ?? '—', internshipLocation: d?.internshipLocation ?? '—' })}
             formatFormValues={(v) => v as unknown as ICreateNoCompanyStudent}
             filterRender={() => (
               <div className="mb-4">
@@ -378,7 +378,7 @@ const InternshipStudentsPage = () => {
                 </div>
               </div>
             )}
-            actions={{ isDetail: true, isEdit: !isPeriodClosed, isDelete: !isPeriodClosed, customAction: (record: unknown) => {
+            actions={{ isDetail: true, isEdit: !isPeriodClosed, isDelete: false, customAction: (record: unknown) => {
               const r = record as INoCompanyStudent;
               return (
                 <div className="pointer-events-auto">

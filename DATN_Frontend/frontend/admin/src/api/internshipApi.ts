@@ -33,8 +33,10 @@ export const internshipApi = {
     return response?.data?.results?.objects;
   },
 
-  getNoCompanyStudentDetail: async (id: string) => {
-    const response = await axiosInstance.get(`/private/v1/internships/no-company/${id}`);
+  getNoCompanyStudentDetail: async (id: string, periodId?: string) => {
+    const response = await axiosInstance.get(`/private/v1/internships/no-company/${id}`, {
+      params: { periodId }
+    });
     return response?.data?.results?.object;
   },
 
@@ -43,8 +45,8 @@ export const internshipApi = {
     return response?.data?.results?.object;
   },
 
-  updateNoCompanyStudent: async ({ id, body }: { id: string; body: IUpdateNoCompanyStudent; index: number; params: BaseListParams }) => {
-    const response = await axiosInstance.patch(`/private/v1/internships/no-company/${id}`, body);
+  updateNoCompanyStudent: async ({ id, body, params }: { id: string; body: IUpdateNoCompanyStudent; index: number; params: BaseListParams }) => {
+    const response = await axiosInstance.patch(`/private/v1/internships/no-company/${id}`, body, { params });
     return response?.data?.results?.object;
   },
 

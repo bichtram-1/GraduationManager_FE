@@ -33,6 +33,12 @@ const StudentForm: React.FC<Props> = ({ disabled = false }) => {
           ]}
         />
       </Form.Item>
+      <Form.Item label="Tên công ty" name="companyName">
+        <Input disabled={true} />
+      </Form.Item>
+      <Form.Item label="Vị trí thực tập" name="internshipLocation">
+        <Input disabled={true} />
+      </Form.Item>
     </div>
   );
 };
