@@ -16,35 +16,26 @@ export function GET(req: Request) {
   const isIPOrLocalhost = host === 'localhost' || host === '127.0.0.1' || /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host || '')
   const domain = (host && !isIPOrLocalhost) ? host : undefined
 
-  res.cookies.set({
-    name: STORAGES.ACCESS_TOKEN,
-    value: '',
-    path: '/',
-    maxAge: 0,
-  })
-  res.cookies.set({
-    name: 'WEBSITE_USER_ROLE',
-    value: '',
-    path: '/',
-    maxAge: 0,
-  })
+  const cookiesToClear = [STORAGES.ACCESS_TOKEN, 'WEBSITE_USER_ROLE']
 
-  if (domain) {
-    res.cookies.set({
-      name: STORAGES.ACCESS_TOKEN,
-      value: '',
-      path: '/',
-      domain,
-      maxAge: 0,
-    })
-    res.cookies.set({
-      name: 'WEBSITE_USER_ROLE',
-      value: '',
-      path: '/',
-      domain,
-      maxAge: 0,
-    })
-  }
+  cookiesToClear.forEach((cookieName) => {
+    // 1. Clear host-only cookie (without domain)
+    res.headers.append('Set-Cookie', `${cookieName}=; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT`)
+
+    // 2. Clear explicit domain 'localhost'
+    res.headers.append('Set-Cookie', `${cookieName}=; Path=/; Domain=localhost; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT`)
+
+    // 3. Clear explicit domain '.localhost'
+    res.headers.append('Set-Cookie', `${cookieName}=; Path=/; Domain=.localhost; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT`)
+
+    // 4. Clear explicit domain '127.0.0.1'
+    res.headers.append('Set-Cookie', `${cookieName}=; Path=/; Domain=127.0.0.1; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT`)
+
+    // 5. Clear dynamic resolved domain if present
+    if (domain) {
+      res.headers.append('Set-Cookie', `${cookieName}=; Path=/; Domain=${domain}; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT`)
+    }
+  })
 
   return res
 }

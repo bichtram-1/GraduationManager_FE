@@ -63,6 +63,10 @@ const RealtimeListener = () => {
           // Invalidate lists in query client
           if (data.type === 'topic_proposed') {
             queryClientRef.current.invalidateQueries({ queryKey: [QueryKey.topics.list] });
+          } else if (data.type === 'group_status_updated' || data.type === 'student_registered_topic') {
+            queryClientRef.current.invalidateQueries({ queryKey: [QueryKey.groups.list] });
+            queryClientRef.current.invalidateQueries({ queryKey: [QueryKey.topics.list] });
+            queryClientRef.current.invalidateQueries({ queryKey: [QueryKey.assignments.list] });
           } else if (data.type === 'internship_declared' || data.type === 'internship_updated') {
             queryClientRef.current.invalidateQueries({ queryKey: [QueryKey.internships.confirmations.list] });
             queryClientRef.current.invalidateQueries({ queryKey: [QueryKey.companies.list] });
@@ -89,6 +93,7 @@ const RealtimeListener = () => {
           queryClientRef.current.invalidateQueries({ queryKey: [QueryKey.topics.list] });
           queryClientRef.current.invalidateQueries({ queryKey: [QueryKey.groups.list] });
           queryClientRef.current.invalidateQueries({ queryKey: [QueryKey.classes.list] });
+          queryClientRef.current.invalidateQueries({ queryKey: [QueryKey.assignments.list] });
         } catch (err) {
           console.error(err);
         }

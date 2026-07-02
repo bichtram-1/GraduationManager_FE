@@ -18,40 +18,60 @@ export function middleware(req: NextRequest) {
     return NextResponse.next()
   }
 
+  let response: NextResponse
+
   // 1. Nếu đang vào public path
   if (PUBLIC_PATHS.some(p => pathname.startsWith(p))) {
     // 1a. Nếu đã login (token tồn tại) → redirect về homepage
     if (token) {
       const url = req.nextUrl.clone()
       url.pathname = '/'
-      return NextResponse.redirect(url)
+      response = NextResponse.redirect(url)
+    } else {
+      response = NextResponse.next()
     }
-    // 1b. Chưa login → cho qua (để xem login/signup)
-    return NextResponse.next()
   }
-
   // 2. Nếu không có token → redirect về login
-  if (!token) {
+  else if (!token) {
     const loginUrl = req.nextUrl.clone()
     loginUrl.pathname = '/login'
-    // bạn có thể thêm ?callbackUrl=pathname để redirect sau khi login
     loginUrl.searchParams.set('from', pathname)
-    return NextResponse.redirect(loginUrl)
+    response = NextResponse.redirect(loginUrl)
   }
-
-  // 3. Nếu vào trang chủ "/" và đã login -> redirect đến cổng tương ứng
-  if (pathname === '/') {
-    const url = req.nextUrl.clone()
+  else {
     const roleCookie = req.cookies.get('WEBSITE_USER_ROLE')?.value
-    url.pathname = (roleCookie === 'teacher' || token === 'mock-token-teacher') ? '/teacher' : '/student'
-    return NextResponse.redirect(url)
+    const userRole = (roleCookie === 'teacher' || token === 'mock-token-teacher') ? 'teacher' : 'student'
+
+    // 3. Nếu vào trang chủ "/" và đã login -> redirect đến cổng tương ứng
+    if (pathname === '/') {
+      const url = req.nextUrl.clone()
+      url.pathname = userRole === 'teacher' ? '/teacher' : '/student'
+      response = NextResponse.redirect(url)
+    }
+    // 3b. Kiểm tra quyền truy cập theo Route để tránh trường hợp vai trò này vào route của vai trò kia
+    else if (pathname.startsWith('/teacher') && userRole !== 'teacher') {
+      const url = req.nextUrl.clone()
+      url.pathname = '/student'
+      response = NextResponse.redirect(url)
+    }
+    else if (pathname.startsWith('/student') && userRole !== 'student') {
+      const url = req.nextUrl.clone()
+      url.pathname = '/teacher'
+      response = NextResponse.redirect(url)
+    }
+    else {
+      response = NextResponse.next()
+    }
   }
 
-  // 4. Token ok → cho qua
-  return NextResponse.next()
+  // Prevent caching of middleware redirects/responses
+  response.headers.set('x-middleware-cache', 'no-cache')
+  response.headers.set('Cache-Control', 'no-store, max-age=0, must-revalidate')
+  return response
 }
 
-// Áp dụng middleware cho toàn bộ route, trừ static, api/public, _next...
+// Áp dụng middleware cho toàn bộ route, trừ static, api, _next...
 export const config = {
-  matcher: '/((?!api/public|api/mock|_next/static|_next/image|favicon.ico|.*\\..*).*)',
+  matcher: '/((?!api/|_next/static|_next/image|favicon.ico|.*\\..*).*)',
 }
+
