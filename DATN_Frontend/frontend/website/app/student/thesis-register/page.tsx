@@ -188,9 +188,9 @@ export default function ThesisRegisterPage() {
                     <button className="flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Xem chi tiết</button>
                     {!isCurrentTopic ? (
                       <button 
-                        disabled={!!registration}
+                        disabled={!!registration && !!registration.topicId}
                         onClick={() => handleRegister(t.id)} 
-                        className={`flex-1 rounded-2xl px-4 py-2 text-sm font-medium shadow-sm transition ${!!registration ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-[#2196F3] text-white hover:bg-[#1976D2]'}`}
+                        className={`flex-1 rounded-2xl px-4 py-2 text-sm font-medium shadow-sm transition ${!!registration && !!registration.topicId ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-[#2196F3] text-white hover:bg-[#1976D2]'}`}
                       >
                         Đăng ký
                       </button>
