@@ -24,6 +24,8 @@ export interface INoCompanyStudent {
   status: NoCompanyStatus;
   supervisor?: string | null;
   assignmentStatus?: 'assigned' | 'unassigned';
+  companyName?: string;
+  internshipLocation?: string;
 }
 
 export type ICreateConfirmationRequest = Omit<IConfirmationRequest, 'id'>;
