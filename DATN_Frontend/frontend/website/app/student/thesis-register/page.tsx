@@ -41,8 +41,17 @@ export default function ThesisRegisterPage() {
       }
     }
     load()
+
+    const handleSync = () => {
+      load()
+    }
+    window.addEventListener('realtime-topic-updated', handleSync)
+    window.addEventListener('realtime-group-updated', handleSync)
+
     return () => {
       mounted = false
+      window.removeEventListener('realtime-topic-updated', handleSync)
+      window.removeEventListener('realtime-group-updated', handleSync)
     }
   }, [selectedPeriod?.id])
 
@@ -178,9 +187,21 @@ export default function ThesisRegisterPage() {
                   <div className="mt-6 flex items-center gap-3">
                     <button className="flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Xem chi tiết</button>
                     {!isCurrentTopic ? (
-                      <button onClick={() => handleRegister(t.id)} className="flex-1 rounded-2xl bg-[#2196F3] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-[#1976D2]">Đăng ký</button>
+                      <button 
+                        disabled={!!registration}
+                        onClick={() => handleRegister(t.id)} 
+                        className={`flex-1 rounded-2xl px-4 py-2 text-sm font-medium shadow-sm transition ${!!registration ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-[#2196F3] text-white hover:bg-[#1976D2]'}`}
+                      >
+                        Đăng ký
+                      </button>
                     ) : (
-                      <button onClick={() => handleCancel(t.id)} className="flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Hủy đăng ký</button>
+                      <button 
+                        disabled={registration?.status === 'accepted'}
+                        onClick={() => handleCancel(t.id)} 
+                        className={`flex-1 rounded-2xl border px-4 py-2 text-sm font-medium transition ${registration?.status === 'accepted' ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
+                      >
+                        {registration?.status === 'accepted' ? 'Đã khóa đề tài' : 'Hủy đăng ký'}
+                      </button>
                     )}
                   </div>
                   {isCurrentTopic && registration && (

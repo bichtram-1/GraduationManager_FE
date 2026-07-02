@@ -156,6 +156,11 @@ export default function Page() {
 
     fetchTopics(true);
 
+    const handleSync = () => {
+      fetchTopics(false);
+    }
+    window.addEventListener('realtime-topic-updated', handleSync)
+
     const intervalId = setInterval(() => {
       fetchTopics(false);
     }, 5000);
@@ -163,6 +168,7 @@ export default function Page() {
     return () => {
       mounted = false;
       clearInterval(intervalId);
+      window.removeEventListener('realtime-topic-updated', handleSync)
     }
   }, [selectedPeriod?.id])
 

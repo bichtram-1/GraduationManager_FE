@@ -35,49 +35,70 @@ export default function TeacherStudentsPage() {
   useEffect(() => {
     let mounted = true
     setLoading(true)
-    teacherApi.getStudents({ periodId: selectedPeriod?.id })
-      .then((res) => {
-        if (!mounted) return
-        if (res?.success) {
-          const tttn = res.tttn || []
-          const datn = res.datn || []
-          setTttnList(tttn)
-          setDatnList(datn)
+    const load = () => {
+      teacherApi.getStudents({ periodId: selectedPeriod?.id })
+        .then((res) => {
+          if (!mounted) return
+          if (res?.success) {
+            const tttn = res.tttn || []
+            const datn = res.datn || []
+            setTttnList(tttn)
+            setDatnList(datn)
 
-          // Load comments from backend
-          const initialComments: Record<string, string> = {}
-          tttn.forEach((item: any) => {
-            if (item.comment) initialComments[item.id] = item.comment
-          })
-          datn.forEach((item: any) => {
-            if (item.comment) initialComments[item.group] = item.comment
-          })
-          setComments(initialComments)
+            // Load comments from backend
+            const initialComments: Record<string, string> = {}
+            tttn.forEach((item: any) => {
+              if (item.comment) initialComments[item.id] = item.comment
+            })
+            datn.forEach((item: any) => {
+              if (item.comment) initialComments[item.group] = item.comment
+            })
+            setComments(initialComments)
 
-          if (tttn.length > 0) setSelectedTTTN(tttn[0])
-          else setSelectedTTTN(null)
-          if (datn.length > 0) setSelectedDATN(datn[0])
-          else setSelectedDATN(null)
-        } else {
-          setTttnList(MOCK_TTTN)
-          setDatnList(MOCK_DATN)
-          setSelectedTTTN(MOCK_TTTN[0])
-          setSelectedDATN(MOCK_DATN[0])
-        }
-      })
-      .catch(() => {
-        if (mounted) {
-          setTttnList(MOCK_TTTN)
-          setDatnList(MOCK_DATN)
-          setSelectedTTTN(MOCK_TTTN[0])
-          setSelectedDATN(MOCK_DATN[0])
-        }
-      })
-      .finally(() => {
-        if (mounted) setLoading(false)
-      })
+            setSelectedTTTN((curr: any) => {
+              if (curr && tttn.some((s: any) => s.id === curr.id)) {
+                return tttn.find((s: any) => s.id === curr.id)
+              }
+              return tttn.length > 0 ? tttn[0] : null
+            })
+            setSelectedDATN((curr: any) => {
+              if (curr && datn.some((g: any) => g.group === curr.group)) {
+                return datn.find((g: any) => g.group === curr.group)
+              }
+              return datn.length > 0 ? datn[0] : null
+            })
+          } else {
+            setTttnList(MOCK_TTTN)
+            setDatnList(MOCK_DATN)
+            setSelectedTTTN(MOCK_TTTN[0])
+            setSelectedDATN(MOCK_DATN[0])
+          }
+        })
+        .catch(() => {
+          if (mounted) {
+            setTttnList(MOCK_TTTN)
+            setDatnList(MOCK_DATN)
+            setSelectedTTTN(MOCK_TTTN[0])
+            setSelectedDATN(MOCK_DATN[0])
+          }
+        })
+        .finally(() => {
+          if (mounted) setLoading(false)
+        })
+    }
+
+    load()
+
+    const handleSync = () => {
+      load()
+    }
+    window.addEventListener('realtime-group-updated', handleSync)
+    window.addEventListener('realtime-topic-updated', handleSync)
+
     return () => {
       mounted = false
+      window.removeEventListener('realtime-group-updated', handleSync)
+      window.removeEventListener('realtime-topic-updated', handleSync)
     }
   }, [selectedPeriod?.id])
 

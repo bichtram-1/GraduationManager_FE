@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState, useEffect } from 'react'
+import Link from 'next/link'
 import { CheckCircle2, FileText, Plus, Upload, Clock3, MessageSquareQuote, Rocket } from 'lucide-react'
 import { StudentPill, StudentSectionHeader, StudentStatCard } from '../../_components/StudentShell'
 import { studentApi, IDatnProgressReport } from '@/lib/api/studentApi'
@@ -15,30 +16,46 @@ export default function StudentReportsDATNPage() {
     note: '',
   })
   const [loading, setLoading] = useState(true)
+  const [registration, setRegistration] = useState<any>(null)
 
   useEffect(() => {
     let mounted = true
     setLoading(true)
     async function load() {
       try {
-        const data = await studentApi.getDatnReports()
+        const [reportsData, regData] = await Promise.all([
+          studentApi.getDatnReports(),
+          studentApi.getMyThesisRegistration()
+        ])
         if (!mounted) return
-        setMilestones(data)
-        if (data.length > 0) {
-          setSelectedMilestone(data[0].name)
+        setMilestones(reportsData)
+        setRegistration(regData)
+        if (reportsData.length > 0) {
+          setSelectedMilestone(reportsData[0].name)
         }
       } catch (_err) {
         if (!mounted) return
         setMilestones([])
+        setRegistration(null)
       } finally {
         if (mounted) {
           setLoading(false)
         }
       }
     }
+
     load()
+
+    const handleSync = () => {
+      load()
+    }
+    window.addEventListener('realtime-group-updated', handleSync)
+    window.addEventListener('realtime-topic-updated', handleSync)
+
     return () => {
       mounted = false
+      window.removeEventListener('realtime-group-updated', handleSync)
+      window.removeEventListener('realtime-topic-updated', handleSync)
     }
   }, [])
 
@@ -93,7 +110,7 @@ export default function StudentReportsDATNPage() {
       <StudentSectionHeader
         title="Báo cáo ĐATN"
         description="Nộp bản thảo từng giai đoạn, theo dõi phản hồi và trạng thái chấm của giảng viên theo bố cục chi tiết hơn."
-        actions={(
+        actions={registration?.status === 'accepted' ? (
           <button
             type="button"
             onClick={openSubmitModal}
@@ -102,8 +119,32 @@ export default function StudentReportsDATNPage() {
             <Plus className="h-4 w-4" />
             Nộp bản thảo
           </button>
-        )}
+        ) : undefined}
       />
+
+      {!loading && registration?.status !== 'accepted' && (
+        <div className="mb-5 p-5 rounded-[22px] border border-amber-200 bg-amber-50 text-amber-900 shadow-sm flex flex-col gap-2">
+          <h3 className="font-semibold text-base text-amber-950 flex items-center gap-2">
+            <Clock3 className="h-5 w-5 text-amber-700" />
+            Yêu cầu phê duyệt đề tài
+          </h3>
+          <p className="text-sm m-0">
+            {registration?.status === 'rejected'
+              ? 'Đề tài đồ án tốt nghiệp của bạn đã bị giảng viên TỪ CHỐI. Bạn không được phép tham gia làm đồ án này và thực hiện các tác vụ liên quan (như nộp báo cáo tiến độ).'
+              : registration?.status === 'pending'
+              ? 'Đề tài đồ án tốt nghiệp của bạn đang CHỜ DUYỆT. Bạn chỉ có thể tham gia làm đồ án và nộp báo cáo tiến độ sau khi giảng viên phê duyệt chấp nhận đề tài.'
+              : 'Bạn CHƯA ĐĂNG KÝ đề tài đồ án tốt nghiệp hoặc chưa gia nhập nhóm đồ án tốt nghiệp nào. Vui lòng hoàn tất đăng ký đề tài trước.'}
+          </p>
+          <div className="mt-2">
+            <Link 
+              href="/student/thesis-register" 
+              className="inline-flex items-center gap-1 text-sm font-medium text-[#1976D2] hover:text-[#1565C0] hover:underline"
+            >
+              Đi tới trang Đăng ký ĐATN &rarr;
+            </Link>
+          </div>
+        </div>
+      )}
 
       <div className="mb-5 grid gap-4 md:grid-cols-3">
         <StudentStatCard title="Đã duyệt" value={`${approvedCount}`} hint="Bản thảo đã được xác nhận" accent="green" />

@@ -71,24 +71,43 @@ export default function TeacherReviewGroupsPage() {
   useEffect(() => {
     let mounted = true
     setLoading(true)
-    teacherApi.getReviewGroups({ periodId: selectedPeriod?.id })
-      .then((data: ReviewApiResponse | null) => {
-        if (!mounted) return
-        // Support both shapes: { guidanceGroups, reviewGroups } (new) and
-        // { tttnGroups, datnGroups } (mock API current).
-        const nextGuidanceGroups: GuidanceGroup[] = data?.guidanceGroups ?? data?.tttnGroups ?? []
-        const nextReviewGroups: ReviewGroup[] = data?.reviewGroups ?? data?.datnGroups ?? []
+    const load = () => {
+      teacherApi.getReviewGroups({ periodId: selectedPeriod?.id })
+        .then((data: ReviewApiResponse | null) => {
+          if (!mounted) return
+          // Support both shapes: { guidanceGroups, reviewGroups } (new) and
+          // { tttnGroups, datnGroups } (mock API current).
+          const nextGuidanceGroups: GuidanceGroup[] = data?.guidanceGroups ?? data?.tttnGroups ?? []
+          const nextReviewGroups: ReviewGroup[] = data?.reviewGroups ?? data?.datnGroups ?? []
 
-        setGuidanceGroups(nextGuidanceGroups)
-        setReviewGroups(nextReviewGroups)
-        setSelectedGuidanceId((current) => current ?? nextGuidanceGroups[0]?.id ?? null)
-        setSelectedReviewId((current) => current ?? nextReviewGroups[0]?.id ?? null)
-      })
-      .finally(() => {
-        if (mounted) setLoading(false)
-      })
+          setGuidanceGroups(nextGuidanceGroups)
+          setReviewGroups(nextReviewGroups)
+          setSelectedGuidanceId((current) => {
+            if (current && nextGuidanceGroups.some((g) => g.id === current)) return current
+            return nextGuidanceGroups[0]?.id ?? null
+          })
+          setSelectedReviewId((current) => {
+            if (current && nextReviewGroups.some((g) => g.id === current)) return current
+            return nextReviewGroups[0]?.id ?? null
+          })
+        })
+        .finally(() => {
+          if (mounted) setLoading(false)
+        })
+    }
+
+    load()
+
+    const handleSync = () => {
+      load()
+    }
+    window.addEventListener('realtime-group-updated', handleSync)
+    window.addEventListener('realtime-topic-updated', handleSync)
+
     return () => {
       mounted = false
+      window.removeEventListener('realtime-group-updated', handleSync)
+      window.removeEventListener('realtime-topic-updated', handleSync)
     }
   }, [selectedPeriod?.id])
 

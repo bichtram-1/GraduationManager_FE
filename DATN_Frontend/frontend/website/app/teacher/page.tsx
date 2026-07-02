@@ -27,37 +27,50 @@ export default function TeacherIndexPage() {
   useEffect(() => {
     let mounted = true
     setLoading(true)
-    teacherApi.getDashboardData({ periodId: selectedPeriod?.id })
-      .then((res) => {
-        if (!mounted) return
-        if (res?.success) {
-          setStats(res.stats)
-          setTopics(res.topics || [])
-        } else {
-          // fallback mock values if backend is empty
-          setStats({ topics: 3, tttn: 4, datn: 2, councils: 1 })
-          setTopics([
-            { code: 'DA001', name: 'Hệ thống IoT giám sát nông nghiệp', slot: '3/4', status: 'Đã duyệt', students: 2, note: 'Đã có 2 nhóm đăng ký' },
-            { code: 'DA007', name: 'Blockchain cho quản lý chuỗi cung ứng', slot: '0/3', status: 'Chờ duyệt', students: 0, note: 'Chờ phê duyệt từ Khoa' },
-            { code: 'DA012', name: 'Ứng dụng ML dự đoán giá chứng khoán', slot: '0/4', status: 'Chờ duyệt', students: 0, note: 'Mới tạo trong tuần' },
-          ])
-        }
-      })
-      .catch(() => {
-        if (mounted) {
-          setStats({ topics: 3, tttn: 4, datn: 2, councils: 1 })
-          setTopics([
-            { code: 'DA001', name: 'Hệ thống IoT giám sát nông nghiệp', slot: '3/4', status: 'Đã duyệt', students: 2, note: 'Đã có 2 nhóm đăng ký' },
-            { code: 'DA007', name: 'Blockchain cho quản lý chuỗi cung ứng', slot: '0/3', status: 'Chờ duyệt', students: 0, note: 'Chờ phê duyệt từ Khoa' },
-            { code: 'DA012', name: 'Ứng dụng ML dự đoán giá chứng khoán', slot: '0/4', status: 'Chờ duyệt', students: 0, note: 'Mới tạo trong tuần' },
-          ])
-        }
-      })
-      .finally(() => {
-        if (mounted) setLoading(false)
-      })
+    const load = () => {
+      teacherApi.getDashboardData({ periodId: selectedPeriod?.id })
+        .then((res) => {
+          if (!mounted) return
+          if (res?.success) {
+            setStats(res.stats)
+            setTopics(res.topics || [])
+          } else {
+            // fallback mock values if backend is empty
+            setStats({ topics: 3, tttn: 4, datn: 2, councils: 1 })
+            setTopics([
+              { code: 'DA001', name: 'Hệ thống IoT giám sát nông nghiệp', slot: '3/4', status: 'Đã duyệt', students: 2, note: 'Đã có 2 nhóm đăng ký' },
+              { code: 'DA007', name: 'Blockchain cho quản lý chuỗi cung ứng', slot: '0/3', status: 'Chờ duyệt', students: 0, note: 'Chờ phê duyệt từ Khoa' },
+              { code: 'DA012', name: 'Ứng dụng ML dự đoán giá chứng khoán', slot: '0/4', status: 'Chờ duyệt', students: 0, note: 'Mới tạo trong tuần' },
+            ])
+          }
+        })
+        .catch(() => {
+          if (mounted) {
+            setStats({ topics: 3, tttn: 4, datn: 2, councils: 1 })
+            setTopics([
+              { code: 'DA001', name: 'Hệ thống IoT giám sát nông nghiệp', slot: '3/4', status: 'Đã duyệt', students: 2, note: 'Đã có 2 nhóm đăng ký' },
+              { code: 'DA007', name: 'Blockchain cho quản lý chuỗi cung ứng', slot: '0/3', status: 'Chờ duyệt', students: 0, note: 'Chờ phê duyệt từ Khoa' },
+              { code: 'DA012', name: 'Ứng dụng ML dự đoán giá chứng khoán', slot: '0/4', status: 'Chờ duyệt', students: 0, note: 'Mới tạo trong tuần' },
+            ])
+          }
+        })
+        .finally(() => {
+          if (mounted) setLoading(false)
+        })
+    }
+
+    load()
+
+    const handleSync = () => {
+      load()
+    }
+    window.addEventListener('realtime-group-updated', handleSync)
+    window.addEventListener('realtime-topic-updated', handleSync)
+
     return () => {
       mounted = false
+      window.removeEventListener('realtime-group-updated', handleSync)
+      window.removeEventListener('realtime-topic-updated', handleSync)
     }
   }, [selectedPeriod?.id])
 
