@@ -19,7 +19,9 @@ export default function StudentInternshipPage() {
   const [declareOpen, setDeclareOpen] = useState(false)
   const [declareForm, setDeclareForm] = useState({
     companyName: '',
+    taxId: '',
     field: '',
+    position: '',
     address: '',
     internshipAddress: '',
     mentor: '',
@@ -49,7 +51,9 @@ export default function StudentInternshipPage() {
   const handleSelectSuggestion = (c: ICompany) => {
     setDeclareForm({
       companyName: c.name,
+      taxId: c.taxId || '',
       field: c.field || '',
+      position: declareForm.position,
       address: c.address || '',
       internshipAddress: c.address || '',
       mentor: c.mentor || '',
@@ -114,12 +118,18 @@ export default function StudentInternshipPage() {
       message.error('Vui lòng nhập tên công ty!')
       return
     }
+    if (!declareForm.taxId.trim()) {
+      message.error('Vui lòng nhập mã số thuế công ty!')
+      return
+    }
 
     setSubmitting(true)
     try {
       await studentApi.declareInternship({
         companyName: declareForm.companyName,
+        taxId: declareForm.taxId,
         field: declareForm.field,
+        position: declareForm.position,
         address: declareForm.address,
         mentor: declareForm.mentor,
         phone: declareForm.phone,
@@ -134,7 +144,9 @@ export default function StudentInternshipPage() {
       // Reset form fields
       setDeclareForm({
         companyName: '',
+        taxId: '',
         field: '',
+        position: '',
         address: '',
         internshipAddress: '',
         mentor: '',
@@ -394,12 +406,32 @@ export default function StudentInternshipPage() {
                   )}
                 </div>
                 <label className="block">
+                  <div className="text-sm font-medium text-slate-700">Mã số thuế công ty <span className="text-red-500">*</span></div>
+                  <input
+                    value={declareForm.taxId}
+                    onChange={(event) => setDeclareForm((current) => ({ ...current, taxId: event.target.value }))}
+                    className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white"
+                    placeholder="VD: 0101243150"
+                    disabled={submitting}
+                  />
+                </label>
+                <label className="block">
                   <div className="text-sm font-medium text-slate-700">Lĩnh vực</div>
-                  <input 
-                    value={declareForm.field} 
-                    onChange={(event) => setDeclareForm((current) => ({ ...current, field: event.target.value }))} 
-                    className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white" 
-                    placeholder="Phần mềm, fintech, phần cứng..." 
+                  <input
+                    value={declareForm.field}
+                    onChange={(event) => setDeclareForm((current) => ({ ...current, field: event.target.value }))}
+                    className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white"
+                    placeholder="Phần mềm, fintech, phần cứng..."
+                    disabled={submitting}
+                  />
+                </label>
+                <label className="block">
+                  <div className="text-sm font-medium text-slate-700">Vị trí thực tập</div>
+                  <input
+                    value={declareForm.position}
+                    onChange={(event) => setDeclareForm((current) => ({ ...current, position: event.target.value }))}
+                    className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white"
+                    placeholder="VD: Thực tập sinh Backend Developer"
                     disabled={submitting}
                   />
                 </label>

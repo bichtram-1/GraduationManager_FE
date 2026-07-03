@@ -66,11 +66,13 @@ export default function TeacherIndexPage() {
     }
     window.addEventListener('realtime-group-updated', handleSync)
     window.addEventListener('realtime-topic-updated', handleSync)
+    window.addEventListener('realtime-assignment-published', handleSync)
 
     return () => {
       mounted = false
       window.removeEventListener('realtime-group-updated', handleSync)
       window.removeEventListener('realtime-topic-updated', handleSync)
+      window.removeEventListener('realtime-assignment-published', handleSync)
     }
   }, [selectedPeriod?.id])
 

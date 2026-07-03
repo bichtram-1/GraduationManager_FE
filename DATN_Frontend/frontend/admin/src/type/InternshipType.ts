@@ -9,6 +9,7 @@ export interface IConfirmationRequest {
   companyName: string;
   companyAddress: string;
   internshipLocation: string;
+  position: string;
   taxId: string;
   mentor: string;
   regDate: string;

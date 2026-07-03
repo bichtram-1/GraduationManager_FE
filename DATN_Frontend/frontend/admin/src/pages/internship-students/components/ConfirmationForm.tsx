@@ -36,6 +36,10 @@ const ConfirmationForm: React.FC<Props> = ({ disabled = false }) => {
         <Input disabled={disabled} />
       </Form.Item>
 
+      <Form.Item label={t(getKey('internship_position'))} name="position" className="md:col-span-2">
+        <Input disabled={disabled} placeholder="VD: Thực tập sinh Backend Developer" />
+      </Form.Item>
+
       <Form.Item label={t(getKey('company_tax_id'))} name="taxId" rules={[{ required: true, message: t(getKey('please_enter_tax_id')) }]}>
         <Input disabled={disabled} />
       </Form.Item>

@@ -17,6 +17,8 @@ export interface IStudentDashboardData {
     status: string;
     companyName: string | null;
     mentor: string | null;
+    position: string | null;
+    supervisorTeacher: string | null;
     trangThaiDangKy: string | null;
   };
   datn: {
@@ -46,6 +48,7 @@ export interface IStudentDashboardData {
 export interface ICompany {
   code: string;
   name: string;
+  taxId?: string;
   field: string;
   address: string;
   mentor: string;
@@ -59,7 +62,9 @@ export interface ICompany {
 
 export interface IInternshipDeclareInput {
   companyName: string;
+  taxId: string;
   field?: string;
+  position?: string;
   address?: string;
   mentor?: string;
   phone?: string;
@@ -78,6 +83,7 @@ export interface IInternshipDeclareResult {
 
 export interface IGroupInviteOutgoing {
   id: string;
+  inviteId?: string;
   status: 'pending' | 'accepted' | 'rejected';
 }
 
@@ -157,6 +163,8 @@ export const studentApi = {
           status: 'Chờ phê duyệt',
           companyName: 'FPT Software',
           mentor: 'Nguyễn Văn A',
+          position: 'Thực tập sinh Backend Developer',
+          supervisorTeacher: null,
           trangThaiDangKy: 'CHO_DUYET'
         },
         datn: {
@@ -307,6 +315,15 @@ export const studentApi = {
     return response?.data;
   },
 
+  leaveGroup: async (): Promise<unknown> => {
+    if (USE_MOCK) {
+      return { success: true };
+    }
+
+    const response = await axiosInstance.post('/private/v1/student/thesis/group/leave');
+    return response?.data;
+  },
+
   getOutgoingInvitations: async (): Promise<IGroupInviteOutgoing[]> => {
     if (USE_MOCK) {
       return [
@@ -327,6 +344,15 @@ export const studentApi = {
 
     const response = await axiosInstance.post('/private/v1/student/thesis/invitations/send', { studentCode, topicId });
     return response?.data?.results?.object || response?.data;
+  },
+
+  cancelInvitation: async (inviteId: string): Promise<unknown> => {
+    if (USE_MOCK) {
+      return { success: true };
+    }
+
+    const response = await axiosInstance.post(`/private/v1/student/thesis/invitations/${inviteId}/cancel`);
+    return response?.data;
   },
 
   getIncomingInvitations: async (): Promise<IGroupInviteIncoming[]> => {

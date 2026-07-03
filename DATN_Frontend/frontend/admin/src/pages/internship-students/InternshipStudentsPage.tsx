@@ -1,5 +1,6 @@
-import { BankOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, FileTextOutlined, SearchOutlined, SolutionOutlined } from '@ant-design/icons';
+import { BankOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, DownloadOutlined, FileTextOutlined, SearchOutlined, SolutionOutlined } from '@ant-design/icons';
 import { Button, Card, Form, Input, Select, Space, Tag, Tabs, Typography, message } from 'antd';
+import * as XLSX from 'xlsx';
 import RemindModal from './components/RemindModal';
 import { useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
@@ -292,6 +293,30 @@ const InternshipStudentsPage = () => {
     );
   };
 
+  const handleExportIssuedList = () => {
+    const approvedRows = declarationsRows.filter((r: IConfirmationRequest) => r.status === STATUS_CODE.APPROVED);
+    if (approvedRows.length === 0) {
+      message.warning('Không có sinh viên nào đã được cấp giấy xác nhận thực tập trong đợt này!');
+      return;
+    }
+    const data = approvedRows.map((r: IConfirmationRequest, index: number) => ({
+      'STT': index + 1,
+      'MSSV': r.studentId,
+      'Họ và tên': r.studentName,
+      'Lớp': r.className,
+      'Tên công ty': r.companyName,
+      'Địa điểm thực tập': r.internshipLocation || r.companyAddress,
+      'Vị trí thực tập': r.position || '',
+      'Mã số thuế công ty': r.taxId,
+      'Người hướng dẫn': r.mentor,
+      'Ngày đăng ký': r.regDate,
+    }));
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'DS cap giay xac nhan');
+    XLSX.writeFile(workbook, `danh-sach-sv-cap-giay-xac-nhan-${selectedPeriod?.name || 'export'}.xlsx`);
+  };
+
   const confirmationColumns = [
     { title: t(getKey('stt')), key: 'index', width: 70, render: (_: unknown, __: IConfirmationRequest, index: number) => formatNumber(index + 1) },
     { title: t(getKey('student_info')), key: 'student', width: 240, ellipsis: true, render: (_: unknown, record: IConfirmationRequest) => (
@@ -306,6 +331,7 @@ const InternshipStudentsPage = () => {
         <div className="font-medium text-slate-900 truncate" title={record.companyName}>{record.companyName}</div>
         <div className="text-xs text-slate-500 truncate" title={record.companyAddress}>{t(getKey('company_address'))}: {record.companyAddress}</div>
         <div className="text-xs text-slate-500 truncate" title={record.internshipLocation}>{t(getKey('internship_location'))}: {record.internshipLocation}</div>
+        <div className="text-xs text-slate-500 truncate" title={record.position}>{t(getKey('internship_position'))}: {record.position || '—'}</div>
         <div className="text-xs text-slate-500 truncate">{t(getKey('company_tax_id'))}: {record.taxId}</div>
         <div className="text-xs text-slate-500 truncate">{t(getKey('mentor'))}: {record.mentor}</div>
       </div>
@@ -356,6 +382,7 @@ const InternshipStudentsPage = () => {
         <div className="font-medium text-slate-900 truncate" title={record.companyName}>{record.companyName}</div>
         <div className="text-xs text-slate-500 truncate" title={record.companyAddress}>{t(getKey('company_address'))}: {record.companyAddress}</div>
         <div className="text-xs text-slate-500 truncate" title={record.internshipLocation}>{t(getKey('internship_location'))}: {record.internshipLocation}</div>
+        <div className="text-xs text-slate-500 truncate" title={record.position}>{t(getKey('internship_position'))}: {record.position || '—'}</div>
         <div className="text-xs text-slate-500 truncate">{t(getKey('company_tax_id'))}: {record.taxId}</div>
         <div className="text-xs text-slate-500 truncate">{t(getKey('mentor'))}: {record.mentor}</div>
       </div>
@@ -524,30 +551,37 @@ const InternshipStudentsPage = () => {
             updateInfo={isPeriodClosed ? undefined : { type: 'modal', modalInfo: { modalContent: <ConfirmationForm />, modalProps: { centered: true, width: 720, title: t(getKey('edit_profile')) }, modalFunc: mode === 'declarations' ? updateDeclarationMutation : updateConfirmationMutation } }}
             deleteInfo={isPeriodClosed ? undefined : { type: 'modal', modalInfo: { modalContent: null, modalProps: {}, modalFunc: (mode === 'declarations' ? deleteDeclarationMutation : deleteConfirmationMutation) as unknown as UseMutationResult<IConfirmationRequest, AxiosError, { id: string; params: BaseListParams }> } }}
             detailInfo={{ type: 'modal', modalInfo: { modalContent: <ConfirmationForm disabled />, modalProps: { centered: true, width: 720, title: t(getKey('detail_profile')), footer: null }, modalFunc: mode === 'declarations' ? internshipHooks.useFetchDetailDeclaration : internshipHooks.useFetchDetailConfirmationRequest } }}
-            formatInitialValues={(d) => ({ studentId: d?.studentId ?? '', studentName: d?.studentName ?? '', className: d?.className ?? '', regDate: d?.regDate ?? '', companyName: d?.companyName ?? '', companyAddress: d?.companyAddress ?? '', internshipLocation: d?.internshipLocation ?? '', taxId: d?.taxId ?? '', mentor: d?.mentor ?? '', status: d?.status ?? STATUS_CODE.PENDING })}
+            formatInitialValues={(d) => ({ studentId: d?.studentId ?? '', studentName: d?.studentName ?? '', className: d?.className ?? '', regDate: d?.regDate ?? '', companyName: d?.companyName ?? '', companyAddress: d?.companyAddress ?? '', internshipLocation: d?.internshipLocation ?? '', position: d?.position ?? '', taxId: d?.taxId ?? '', mentor: d?.mentor ?? '', status: d?.status ?? STATUS_CODE.PENDING })}
             formatFormValues={(v) => v as unknown as ICreateConfirmationRequest}
             filterRender={() => (
               <div className="mb-4">
-                <div className="mb-3 grid grid-cols-1 gap-3 xl:grid-cols-12">
-                  <Form.Item name="keyword" className="xl:col-span-5 !mb-0">
-                    <Input allowClear prefix={<SearchOutlined className="text-slate-400" />} placeholder={t(getKey('search_student_company_placeholder'))} className="!h-11 !rounded-[12px] !border-slate-300" />
-                  </Form.Item>
-                  <Form.Item name="companyName" className="xl:col-span-4 !mb-0" initialValue="all">
-                    <Select
-                      allowClear
-                      showSearch
-                      placeholder={t(getKey('filter_company_name_placeholder'))}
-                      className="!h-11 w-full"
-                      options={[
-                        { value: 'all', label: 'Tất cả công ty' },
-                        ...companiesList.map((c) => ({ value: c.name, label: c.name }))
-                      ]}
-                      optionFilterProp="label"
-                    />
-                  </Form.Item>
-                  <Form.Item name="className" className="xl:col-span-3 !mb-0">
-                    <Select allowClear placeholder={t(getKey('all_classes'))} className="!h-11 !w-full" options={[{ value: 'all', label: t(getKey('all_classes')) }, ...classOptions.map((c) => ({ value: c, label: c }))]} />
-                  </Form.Item>
+                <div className="mb-3 flex flex-col gap-3 xl:flex-row xl:items-start">
+                  <div className="grid flex-1 grid-cols-1 gap-3 xl:grid-cols-12">
+                    <Form.Item name="keyword" className="xl:col-span-5 !mb-0">
+                      <Input allowClear prefix={<SearchOutlined className="text-slate-400" />} placeholder={t(getKey('search_student_company_placeholder'))} className="!h-11 !rounded-[12px] !border-slate-300" />
+                    </Form.Item>
+                    <Form.Item name="companyName" className="xl:col-span-4 !mb-0" initialValue="all">
+                      <Select
+                        allowClear
+                        showSearch
+                        placeholder={t(getKey('filter_company_name_placeholder'))}
+                        className="!h-11 w-full"
+                        options={[
+                          { value: 'all', label: 'Tất cả công ty' },
+                          ...companiesList.map((c) => ({ value: c.name, label: c.name }))
+                        ]}
+                        optionFilterProp="label"
+                      />
+                    </Form.Item>
+                    <Form.Item name="className" className="xl:col-span-3 !mb-0">
+                      <Select allowClear placeholder={t(getKey('all_classes'))} className="!h-11 !w-full" options={[{ value: 'all', label: t(getKey('all_classes')) }, ...classOptions.map((c) => ({ value: c, label: c }))]} />
+                    </Form.Item>
+                  </div>
+                  {mode === 'declarations' && (
+                    <Button icon={<DownloadOutlined />} className="!h-11" onClick={handleExportIssuedList}>
+                      Xuất DS cấp giấy
+                    </Button>
+                  )}
                 </div>
               </div>
             )}

@@ -12,6 +12,7 @@ interface IBaseCompany {
   students?: number;
   status: CompanyStatus;
   reviewStatus?: CompanyReviewStatus;
+  published?: boolean;
 }
 
 export interface IListCompany extends IBaseCompany {

@@ -34,6 +34,7 @@ type CompanyRow = {
   email: string;
   status: CompanyStatus;
   reviewStatus: ReviewStatus;
+  published: boolean;
 };
 const getReviewMeta = (t: (key: string) => string) => ({
   [STATUS_CODE.APPROVED]: { label: t(getKey('status_approved')), className: 'bg-[var(--color-green-light)] text-[var(--color-green-medium)]' },
@@ -49,6 +50,7 @@ const CompaniesPage = () => {
   const createCompanyMutation = companyHooks.useCreateCompany();
   const updateCompanyMutation = companyHooks.useUpdateCompany();
   const deleteCompanyMutation = companyHooks.useDeleteCompany();
+  const publishCompaniesMutation = companyHooks.usePublishCompanies();
   const companyRows = (companyList?.rows ?? []) as CompanyRow[];
 
   const useFilteredCompanyListQuery = (params: BaseListParams) => {
@@ -107,6 +109,23 @@ const CompaniesPage = () => {
     rejected: companyRows.filter((item) => item.reviewStatus === STATUS_CODE.REJECTED).length,
   }), [companyRows]);
 
+  const unpublishedCount = useMemo(
+    () => companyRows.filter((item) => item.status === STATUS_CODE.ACTIVE && !item.published).length,
+    [companyRows]
+  );
+
+  const handlePublish = () => {
+    publishCompaniesMutation.mutate(undefined, {
+      onSuccess: (data) => {
+        message.success(data?.message || 'Công bố danh sách công ty thành công!');
+        setPublishOpen(false);
+      },
+      onError: () => {
+        message.error('Có lỗi xảy ra khi công bố danh sách công ty!');
+      },
+    });
+  };
+
   const confirmReviewChange = (record: CompanyRow, reviewStatus: ReviewStatus) => {
     const meta = getReviewMeta(t)[reviewStatus];
     const label = meta.label;
@@ -142,6 +161,11 @@ const CompaniesPage = () => {
             {record.reviewStatus === STATUS_CODE.PENDING && (
               <Tag color="purple" className="m-0 rounded-md text-[10px] py-0 px-1.5 border-none">
                 Tự khai báo
+              </Tag>
+            )}
+            {record.status === STATUS_CODE.ACTIVE && !record.published && (
+              <Tag color="blue" className="m-0 rounded-md text-[10px] py-0 px-1.5 border-none">
+                Mới, chưa công bố
               </Tag>
             )}
           </div>
@@ -378,7 +402,15 @@ const CompaniesPage = () => {
         />
       </Card>
 
-      <PublishModal open={publishOpen} onCancel={() => setPublishOpen(false)} onOk={() => setPublishOpen(false)} companyStats={companyStats} reviewStats={reviewStats} />
+      <PublishModal
+        open={publishOpen}
+        onCancel={() => setPublishOpen(false)}
+        onOk={handlePublish}
+        confirmLoading={publishCompaniesMutation.isPending}
+        companyStats={companyStats}
+        reviewStats={reviewStats}
+        unpublishedCount={unpublishedCount}
+      />
     </div>
   );
 };

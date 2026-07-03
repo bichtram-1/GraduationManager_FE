@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { ArrowRight, CalendarDays, CheckCircle2, FileText, MapPin, Trophy, Upload, Building2, Clock3, TrendingUp } from 'lucide-react'
 import { StudentPill, StudentSectionHeader, StudentStatCard } from './_components/StudentShell'
 import { studentApi, IStudentDashboardData } from '@/lib/api/studentApi'
-import { Spin } from 'antd'
+import { Spin, message } from 'antd'
 
 export default function StudentIndexPage() {
   const [data, setData] = useState<IStudentDashboardData | null>(null)
@@ -35,13 +35,19 @@ export default function StudentIndexPage() {
     const handleSync = () => {
       load()
     }
+    const handleAssignmentPublished = () => {
+      message.success('Bạn vừa được công bố giảng viên hướng dẫn TTTN!')
+      load()
+    }
     window.addEventListener('realtime-group-updated', handleSync)
     window.addEventListener('realtime-topic-updated', handleSync)
+    window.addEventListener('realtime-assignment-published', handleAssignmentPublished)
 
     return () => {
       mounted = false
       window.removeEventListener('realtime-group-updated', handleSync)
       window.removeEventListener('realtime-topic-updated', handleSync)
+      window.removeEventListener('realtime-assignment-published', handleAssignmentPublished)
     }
   }, [])
 
@@ -80,8 +86,8 @@ export default function StudentIndexPage() {
               {datn.hasPeriod && ` | Đợt ĐATN: ${datn.periodName}`}
             </h2>
             <p className="mt-2 text-sm leading-6 text-slate-600">
-              {tttn.status === 'Đang thực tập' 
-                ? `Bạn đang thực tập tại ${tttn.companyName} (Người hướng dẫn: ${tttn.mentor || 'Chưa phân công'}).` 
+              {tttn.status === 'Đang thực tập'
+                ? `Bạn đang thực tập tại ${tttn.companyName} với vị trí "${tttn.position || 'Chưa cập nhật'}" (Người hướng dẫn tại công ty: ${tttn.mentor || 'Chưa cập nhật'}).`
                 : tttn.status === 'Chờ phê duyệt'
                 ? `Yêu cầu tự khai báo thực tập tại ${tttn.companyName} đang chờ duyệt.`
                 : 'Bạn chưa đăng ký nơi thực tập.'}
@@ -92,6 +98,13 @@ export default function StudentIndexPage() {
                 ? 'Bạn chưa đăng ký đề tài đồ án tốt nghiệp.'
                 : ''}
             </p>
+            {tttn.hasPeriod && (
+              <p className="mt-1 text-sm leading-6 text-slate-600">
+                {tttn.supervisorTeacher
+                  ? `Giảng viên hướng dẫn TTTN (nhà trường phân công): ${tttn.supervisorTeacher}.`
+                  : 'Nhà trường chưa công bố giảng viên hướng dẫn TTTN cho bạn.'}
+              </p>
+            )}
           </div>
           <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[420px]">
             <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">

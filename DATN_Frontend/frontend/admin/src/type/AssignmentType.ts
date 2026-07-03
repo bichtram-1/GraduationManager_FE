@@ -7,6 +7,7 @@ interface IBaseAssignment {
   topic?: string;
   supervisor?: string | null;
   assignedAt?: string | null;
+  published?: boolean;
   status: AssignmentStatus;
   groupId?: string | null;
   groupCode?: string | null;

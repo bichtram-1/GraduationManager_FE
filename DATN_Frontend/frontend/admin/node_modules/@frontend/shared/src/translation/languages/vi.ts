@@ -179,6 +179,8 @@ const ViTranslation = {
   internship_students_desc: 'Theo dõi sinh viên đăng ký giấy xác nhận và sinh viên chưa có công ty',
   company_address: 'Địa chỉ công ty',
   internship_location: 'Địa điểm thực tập',
+  internship_position: 'Vị trí thực tập',
+  please_enter_internship_position: 'Vui lòng nhập vị trí thực tập',
   stt: 'STT',
   approve_cert: 'Cấp giấy',
   reject_cert: 'Từ chối',
