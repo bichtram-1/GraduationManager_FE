@@ -1,4 +1,4 @@
-import { Form, Input, InputNumber, Select } from 'antd';
+import { Form, Input, Select } from 'antd';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { getKey } from '@shared/types/I18nKeyType';
@@ -58,12 +58,6 @@ const CompanyForm: React.FC<Props> = ({ disabled = false }) => {
       </Form.Item>
       <Form.Item label={t(getKey('email'))} name="email" rules={[{ required: true, message: t(getKey('please_enter_email')) }, { type: 'email', message: t(getKey('email_invalid')) }]}>
           <Input disabled={disabled} placeholder="contact@company.com" />
-      </Form.Item>
-      <Form.Item label={t(getKey('partners_count_label'))} name="partners">
-          <InputNumber disabled={disabled} className="!w-full" min={0} />
-      </Form.Item>
-      <Form.Item label={t(getKey('cooperating_students_count'))} name="students">
-          <InputNumber disabled={disabled} className="!w-full" min={0} />
       </Form.Item>
       <Form.Item label={t(getKey('review_status'))} name="reviewStatus">
           <Select

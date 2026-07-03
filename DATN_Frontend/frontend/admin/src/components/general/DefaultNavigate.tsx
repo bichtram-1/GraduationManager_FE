@@ -115,7 +115,7 @@ const DefaultNavigate = ({ collapsed, onToggle }: IDefaultNavigate) => {
       label: t(getKey('internship_students')),
       icon: <SolutionOutlined style={{ fontSize: 20 }} />,
       children: [
-        { key: ROUTES.INTERNSHIP_STUDENTS_CONFIRM, label: t(getKey('internship_students_confirm')) },
+        { key: ROUTES.INTERNSHIP_STUDENTS_DECLARATIONS, label: t(getKey('internship_students_declarations')) },
         { key: ROUTES.INTERNSHIP_STUDENTS_NOCOMPANY, label: t(getKey('internship_students_nocompany')) },
       ],
     },

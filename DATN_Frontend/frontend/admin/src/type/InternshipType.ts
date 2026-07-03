@@ -1,5 +1,5 @@
-export type ConfirmationStatus = 'pending' | 'approved' | 'rejected';
-export type NoCompanyStatus = 'not_registered' | 'searching' | 'has_company';
+export type ConfirmationStatus = 'pending' | 'approved' | 'rejected' | 'cho_cap_giay';
+export type NoCompanyStatus = 'not_registered' | 'has_company';
 
 export interface IConfirmationRequest {
   id: string;

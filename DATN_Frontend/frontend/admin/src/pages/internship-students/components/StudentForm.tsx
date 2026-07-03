@@ -28,7 +28,6 @@ const StudentForm: React.FC<Props> = ({ disabled = false }) => {
           disabled={disabled}
           options={[
             { value: STATUS_CODE.NOT_REGISTERED, label: t(getKey('not_registered_list')) },
-            { value: STATUS_CODE.SEARCHING, label: t(getKey('searching_list')) },
             { value: STATUS_CODE.HAS_COMPANY, label: t(getKey('has_company_list')) },
           ]}
         />

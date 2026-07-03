@@ -192,7 +192,7 @@ export const studentApi = {
     return response?.data?.results?.object || response?.data;
   },
 
-  getCompanies: async (): Promise<ICompany[]> => {
+  getCompanies: async (periodId?: number | string): Promise<ICompany[]> => {
     if (USE_MOCK) {
       return [
         {
@@ -237,11 +237,11 @@ export const studentApi = {
       ];
     }
 
-    const response = await axiosInstance.get('/private/v1/student/companies');
+    const response = await axiosInstance.get('/private/v1/student/companies', { params: { periodId } });
     return response?.data?.results?.objects || response?.data;
   },
 
-  declareInternship: async (data: IInternshipDeclareInput): Promise<IInternshipDeclareResult> => {
+  declareInternship: async (data: IInternshipDeclareInput, periodId?: number | string): Promise<IInternshipDeclareResult> => {
     if (USE_MOCK) {
       return {
         id: 'CONF_MOCK',
@@ -251,16 +251,16 @@ export const studentApi = {
       };
     }
 
-    const response = await axiosInstance.post('/private/v1/student/internships/declare', data);
+    const response = await axiosInstance.post('/private/v1/student/internships/declare', data, { params: { periodId } });
     return response?.data?.results?.object || response?.data;
   },
 
-  getMyInternshipRequest: async (): Promise<unknown> => {
+  getMyInternshipRequest: async (periodId?: number | string): Promise<unknown> => {
     if (USE_MOCK) {
       return null;
     }
 
-    const response = await axiosInstance.get('/private/v1/student/internships/my-request');
+    const response = await axiosInstance.get('/private/v1/student/internships/my-request', { params: { periodId } });
     return response?.data?.results?.object || response?.data;
   },
 

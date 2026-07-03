@@ -34,7 +34,7 @@ const RealtimeListener = () => {
 
   useEffect(() => {
     const backendUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
-    let lastEventId = '';
+    const lastEventId = '';
     let eventSource: EventSource | null = null;
 
     const connectSSE = () => {
@@ -69,6 +69,7 @@ const RealtimeListener = () => {
             queryClientRef.current.invalidateQueries({ queryKey: [QueryKey.assignments.list] });
           } else if (data.type === 'internship_declared' || data.type === 'internship_updated') {
             queryClientRef.current.invalidateQueries({ queryKey: [QueryKey.internships.confirmations.list] });
+            queryClientRef.current.invalidateQueries({ queryKey: [QueryKey.internships.declarations.list] });
             queryClientRef.current.invalidateQueries({ queryKey: [QueryKey.companies.list] });
           }
         } catch (err) {

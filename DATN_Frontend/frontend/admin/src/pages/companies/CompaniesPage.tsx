@@ -32,8 +32,6 @@ type CompanyRow = {
   contact: string;
   phone: string;
   email: string;
-  partners: number;
-  students: number;
   status: CompanyStatus;
   reviewStatus: ReviewStatus;
 };
@@ -155,8 +153,6 @@ const CompaniesPage = () => {
     { title: t(getKey('company_contact')), dataIndex: 'contact', key: 'contact', width: 180, ellipsis: true },
     { title: t(getKey('phone_number')), dataIndex: 'phone', key: 'phone', width: 140 },
     { title: t(getKey('email')), dataIndex: 'email', key: 'email', ellipsis: true },
-    { title: t(getKey('partners_count_label')), dataIndex: 'partners', key: 'partners', width: 100, render: (value: number) => <span>{formatNumber(value)}</span> },
-    { title: t(getKey('students_count_short')), dataIndex: 'students', key: 'students', width: 80, render: (value: number) => <span>{formatNumber(value)}</span> },
     {
       title: t(getKey('status')),
       key: 'reviewStatus',
@@ -319,8 +315,6 @@ const CompaniesPage = () => {
             contact: detail.contact,
             phone: detail.phone || '',
             email: detail.email || '',
-            partners: detail.partners ?? 0,
-            students: detail.students ?? 0,
             status: detail.status,
             reviewStatus: detail.reviewStatus ?? STATUS_CODE.PENDING,
           })}
