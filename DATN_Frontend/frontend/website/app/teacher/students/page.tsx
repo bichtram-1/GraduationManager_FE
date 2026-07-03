@@ -20,8 +20,11 @@ const MOCK_DATN = [
 ]
 
 export default function TeacherStudentsPage() {
-  const { selectedPeriod } = usePeriod()
-  const [segment, setSegment] = useState<'TTTN' | 'ĐATN'>('TTTN')
+  const { selectedPeriod, studentsTab, setStudentsTab } = usePeriod()
+  const segment = studentsTab === 'DATN' ? 'ĐATN' : 'TTTN'
+  const setSegment = (seg: 'TTTN' | 'ĐATN') => {
+    setStudentsTab(seg === 'ĐATN' ? 'DATN' : 'TTTN')
+  }
   const [query, setQuery] = useState('')
   const [tttnList, setTttnList] = useState<any[]>([])
   const [datnList, setDatnList] = useState<any[]>([])
@@ -176,7 +179,7 @@ export default function TeacherStudentsPage() {
     <>
       <TeacherSectionHeader
         title="Hướng dẫn sinh viên"
-        description="Theo dõi sinh viên thực tập và nhóm đồ án với giao diện phân cấp rõ ràng."
+        description="Theo dõi sinh viên thực tập và nhóm đồ án hướng dẫn"
         actions={(
           <>
             <TeacherPill tone="blue">TTTN: {tttnList.length}</TeacherPill>
@@ -184,30 +187,6 @@ export default function TeacherStudentsPage() {
           </>
         )}
       />
-
-      <section className="mb-5 rounded-3xl border border-blue-100 bg-[linear-gradient(135deg,#eff6ff_0%,#ffffff_100%)] p-5 shadow-[0_12px_40px_rgba(15,23,42,0.05)]">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="max-w-3xl">
-            <TeacherPill tone="blue">Theo dõi tập trung</TeacherPill>
-            <h2 className="mt-3 text-xl font-semibold tracking-tight text-slate-900">Mọi sinh viên TTTN và nhóm ĐATN được gom chung vào một dashboard để giảng viên xem nhanh hơn.</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600">Khối này nhấn mạnh số lượng, trạng thái và hành động ngắn: mở chi tiết, Nhận xét, hoặc nhắc nộp đúng nhịp.</p>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[440px]">
-            <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
-              <div className="text-xs text-slate-500">Đang xem</div>
-              <div className="mt-2 text-lg font-semibold text-slate-900">{segment}</div>
-            </div>
-            <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
-              <div className="text-xs text-slate-500">Kết quả lọc</div>
-              <div className="mt-2 text-lg font-semibold text-slate-900">{segment === 'TTTN' ? filteredTTTN.length : filteredDATN.length}</div>
-            </div>
-            <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
-              <div className="text-xs text-slate-500">Tương tác</div>
-              <div className="mt-2 text-lg font-semibold text-slate-900">{loading ? 'Đang tải...' : 'Xem nhanh'}</div>
-            </div>
-          </div>
-        </div>
-      </section>
 
       <div className="mb-5 grid gap-4 md:grid-cols-3">
         {summary.map((item) => (

@@ -31,7 +31,7 @@ function getActiveKey(pathname: string) {
 
 export function TeacherShell({ children }: { children: ReactNode }) {
   const pathname = usePathname()
-  const { periods, selectedPeriod, setSelectedPeriod } = usePeriod()
+  const { periods, selectedPeriod, setSelectedPeriod, studentsTab } = usePeriod()
   const [profileOpen, setProfileOpen] = useState(false)
   const [teacher, setTeacher] = useState<{
     id: number
@@ -67,8 +67,22 @@ export function TeacherShell({ children }: { children: ReactNode }) {
         const activePeriod = datnPeriods.find(p => p.status === 'open' || p.status === 'published') || datnPeriods[0];
         setSelectedPeriod(activePeriod);
       }
+    } else if (pathname.startsWith('/teacher/students')) {
+      if (studentsTab === 'TTTN') {
+        const tttnPeriods = periods.filter(p => p.type === 'tttn');
+        if (tttnPeriods.length > 0 && (!selectedPeriod || selectedPeriod.type !== 'tttn')) {
+          const activePeriod = tttnPeriods.find(p => p.status === 'open' || p.status === 'published') || tttnPeriods[0];
+          setSelectedPeriod(activePeriod);
+        }
+      } else if (studentsTab === 'DATN') {
+        const datnPeriods = periods.filter(p => p.type === 'datn');
+        if (datnPeriods.length > 0 && (!selectedPeriod || selectedPeriod.type !== 'datn')) {
+          const activePeriod = datnPeriods.find(p => p.status === 'open' || p.status === 'published') || datnPeriods[0];
+          setSelectedPeriod(activePeriod);
+        }
+      }
     }
-  }, [pathname, periods, selectedPeriod, setSelectedPeriod]);
+  }, [pathname, periods, selectedPeriod, setSelectedPeriod, studentsTab]);
 
   const activeKey = useMemo(() => getActiveKey(pathname), [pathname])
 
@@ -112,7 +126,7 @@ export function TeacherShell({ children }: { children: ReactNode }) {
                 variant="borderless"
                 classNames={{ popup: { root: 'rounded-xl shadow-lg' } }}
               >
-                {periods.filter(p => p.type === 'tttn').length > 0 && !pathname.startsWith('/teacher/topics') && !pathname.startsWith('/teacher/groups') && (
+                {periods.filter(p => p.type === 'tttn').length > 0 && !pathname.startsWith('/teacher/topics') && !pathname.startsWith('/teacher/groups') && (!pathname.startsWith('/teacher/students') || studentsTab === 'TTTN') && (
                   <Select.OptGroup label="Đợt Thực tập tốt nghiệp (TTTN)">
                     {periods.filter(p => p.type === 'tttn').map(p => (
                       <Select.Option key={p.id} value={p.id}>
@@ -121,7 +135,7 @@ export function TeacherShell({ children }: { children: ReactNode }) {
                     ))}
                   </Select.OptGroup>
                 )}
-                {periods.filter(p => p.type === 'datn').length > 0 && (
+                {periods.filter(p => p.type === 'datn').length > 0 && (!pathname.startsWith('/teacher/students') || studentsTab === 'DATN') && (
                   <Select.OptGroup label="Đợt Đồ án tốt nghiệp (ĐATN)">
                     {periods.filter(p => p.type === 'datn').map(p => (
                       <Select.Option key={p.id} value={p.id}>
