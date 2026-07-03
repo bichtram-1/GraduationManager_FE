@@ -112,7 +112,7 @@ export function TeacherShell({ children }: { children: ReactNode }) {
           </Link>
 
           {/* Global Period Selector (replacing search bar) */}
-          <div className="hidden max-w-sm flex-1 px-6 sm:flex items-center justify-center min-w-0" title={selectedPeriod?.name}>
+          <div className="hidden max-w-lg flex-1 px-6 sm:flex items-center justify-center min-w-0" title={selectedPeriod?.name}>
             <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1 rounded-[12px] shadow-sm w-full min-w-0">
               <span className="text-xs font-semibold text-slate-500 shrink-0">Đợt hoạt động:</span>
               <Select
@@ -124,13 +124,15 @@ export function TeacherShell({ children }: { children: ReactNode }) {
                   setSelectedPeriod(period)
                 }}
                 variant="borderless"
+                popupMatchSelectWidth={false}
+                dropdownStyle={{ minWidth: 'max-content' }}
                 classNames={{ popup: { root: 'rounded-xl shadow-lg' } }}
               >
                 {periods.filter(p => p.type === 'tttn').length > 0 && !pathname.startsWith('/teacher/topics') && !pathname.startsWith('/teacher/groups') && (!pathname.startsWith('/teacher/students') || studentsTab === 'TTTN') && (
                   <Select.OptGroup label="Đợt Thực tập tốt nghiệp (TTTN)">
                     {periods.filter(p => p.type === 'tttn').map(p => (
                       <Select.Option key={p.id} value={p.id}>
-                        <span className="font-medium text-slate-700 text-sm">{p.name}</span>
+                        <span className="font-medium text-slate-700 text-sm whitespace-nowrap">{p.name}</span>
                       </Select.Option>
                     ))}
                   </Select.OptGroup>
@@ -139,7 +141,7 @@ export function TeacherShell({ children }: { children: ReactNode }) {
                   <Select.OptGroup label="Đợt Đồ án tốt nghiệp (ĐATN)">
                     {periods.filter(p => p.type === 'datn').map(p => (
                       <Select.Option key={p.id} value={p.id}>
-                        <span className="font-medium text-slate-700 text-sm">{p.name}</span>
+                        <span className="font-medium text-slate-700 text-sm whitespace-nowrap">{p.name}</span>
                       </Select.Option>
                     ))}
                   </Select.OptGroup>

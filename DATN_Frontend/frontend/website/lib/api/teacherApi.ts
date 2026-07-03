@@ -59,7 +59,7 @@ export const teacherApi = {
     return response?.data;
   },
 
-  saveReportComment: async (payload: { studentId: string; periodId?: string; comment: string; evaluation?: 'DAT' | 'CHUA_DAT'; type: 'TTTN' | 'DATN' }) => {
+  saveReportComment: async (payload: { studentId: string; periodId?: string; comment: string; evaluation?: 'DAT' | 'CHUA_DAT'; type: 'TTTN' | 'DATN'; baoCaoId?: number }) => {
     if (USE_MOCK) {
       return { success: true };
     }
