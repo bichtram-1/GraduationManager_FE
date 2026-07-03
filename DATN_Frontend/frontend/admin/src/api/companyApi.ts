@@ -27,4 +27,9 @@ export const companyApi = {
     const response = await axiosInstance.delete(`/private/v1/companies/${id}`);
     return response?.data;
   },
+
+  publishCompanies: async (): Promise<{ success: boolean; message: string; results?: { publishedCount: number } }> => {
+    const response = await axiosInstance.post('/private/v1/companies/publish');
+    return response?.data;
+  },
 };

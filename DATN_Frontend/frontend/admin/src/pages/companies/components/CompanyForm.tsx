@@ -1,4 +1,4 @@
-import { Form, Input, InputNumber, Select } from 'antd';
+import { Form, Input, Select } from 'antd';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { getKey } from '@shared/types/I18nKeyType';
@@ -35,13 +35,13 @@ const CompanyForm: React.FC<Props> = ({ disabled = false }) => {
       <Form.Item label={t(getKey('company_name'))} name="name" rules={[{ required: true, message: t(getKey('please_enter_company_name')) }]}>
           <Input disabled={disabled} placeholder="VD: FPT Software" />
       </Form.Item>
-      <Form.Item label={t(getKey('company_tax_id'))} name="taxId" rules={[{ required: true, message: t(getKey('please_enter_tax_id')) }]}>
+      <Form.Item label={t(getKey('company_tax_id'))} name="taxId">
           <Input disabled={disabled} placeholder="VD: 0101243150" />
       </Form.Item>
       <Form.Item label={t(getKey('company_field'))} name="field" rules={[{ required: true, message: t(getKey('please_select_field')) }]}>
           <Select disabled={disabled} options={companyFieldOptions} />
       </Form.Item>
-      <Form.Item label={t(getKey('company_status'))} name="status" rules={[{ required: true, message: t(getKey('please_select_status')) }]}>
+      <Form.Item label={t(getKey('company_status'))} name="status" initialValue={STATUS_CODE.PENDING} rules={[{ required: true, message: t(getKey('please_select_status')) }]}>
           <Select
             disabled={disabled}
             options={companyStatusOptions.map((option) => ({
@@ -50,20 +50,14 @@ const CompanyForm: React.FC<Props> = ({ disabled = false }) => {
             }))}
           />
       </Form.Item>
-      <Form.Item label={t(getKey('company_contact'))} name="contact" rules={[{ required: true, message: t(getKey('please_enter_contact')) }]}>
+      <Form.Item label={t(getKey('company_contact'))} name="contact">
           <Input disabled={disabled} placeholder="VD: Nguyễn Văn Hùng" />
       </Form.Item>
-      <Form.Item label={t(getKey('phone_number'))} name="phone" rules={[{ required: true, message: t(getKey('please_enter_phone')) }]}>
+      <Form.Item label={t(getKey('phone_number'))} name="phone">
           <Input disabled={disabled} placeholder="0901234567" />
       </Form.Item>
-      <Form.Item label={t(getKey('email'))} name="email" rules={[{ required: true, message: t(getKey('please_enter_email')) }, { type: 'email', message: t(getKey('email_invalid')) }]}>
+      <Form.Item label={t(getKey('email'))} name="email" rules={[{ type: 'email', message: t(getKey('email_invalid')) }]}>
           <Input disabled={disabled} placeholder="contact@company.com" />
-      </Form.Item>
-      <Form.Item label={t(getKey('partners_count_label'))} name="partners">
-          <InputNumber disabled={disabled} className="!w-full" min={0} />
-      </Form.Item>
-      <Form.Item label={t(getKey('cooperating_students_count'))} name="students">
-          <InputNumber disabled={disabled} className="!w-full" min={0} />
       </Form.Item>
       <Form.Item label={t(getKey('review_status'))} name="reviewStatus">
           <Select

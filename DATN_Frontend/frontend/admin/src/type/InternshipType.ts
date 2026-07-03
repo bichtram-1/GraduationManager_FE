@@ -1,5 +1,5 @@
-export type ConfirmationStatus = 'pending' | 'approved' | 'rejected';
-export type NoCompanyStatus = 'not_registered' | 'searching' | 'has_company';
+export type ConfirmationStatus = 'pending' | 'approved' | 'rejected' | 'cho_cap_giay';
+export type NoCompanyStatus = 'not_registered' | 'has_company';
 
 export interface IConfirmationRequest {
   id: string;
@@ -9,6 +9,7 @@ export interface IConfirmationRequest {
   companyName: string;
   companyAddress: string;
   internshipLocation: string;
+  position: string;
   taxId: string;
   mentor: string;
   regDate: string;
@@ -24,6 +25,8 @@ export interface INoCompanyStudent {
   status: NoCompanyStatus;
   supervisor?: string | null;
   assignmentStatus?: 'assigned' | 'unassigned';
+  companyName?: string;
+  internshipLocation?: string;
 }
 
 export type ICreateConfirmationRequest = Omit<IConfirmationRequest, 'id'>;

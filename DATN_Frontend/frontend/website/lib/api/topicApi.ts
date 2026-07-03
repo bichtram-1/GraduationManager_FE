@@ -14,8 +14,9 @@ export const topicApi = {
     const resData = response?.data?.results?.objects || response?.data?.results?.object || response?.data;
     const rawList = (resData && typeof resData === 'object' && 'rows' in resData) ? resData.rows : (Array.isArray(resData) ? resData : []);
     
-    return rawList.map((t: { id?: string | number; name?: string; title?: string; teacher?: string; module?: string; status?: string; published?: boolean; slots?: string }) => ({
+    return rawList.map((t: { id?: string | number; code?: string; name?: string; title?: string; teacher?: string; module?: string; status?: string; published?: boolean; slots?: string }) => ({
       id: String(t.id ?? ''),
+      code: t.code || `DA${String(t.id || '').padStart(3, '0')}`,
       title: t.name || t.title || '',
       module: t.teacher || t.module || '',
       published: t.status === 'approved',

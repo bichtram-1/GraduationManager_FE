@@ -143,7 +143,7 @@ const FilterTable = <
   formatFormValues,
   extraHeaderActions,
   extraActions,
-  showSizeChanger,
+  showSizeChanger = true,
 }: FilterTableProps<TList, TDetail, TCreate, TUpdate>) => {
   const hasPageHeader = !!pageTitle;
 

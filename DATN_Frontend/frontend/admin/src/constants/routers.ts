@@ -15,7 +15,7 @@ export const ROUTES = {
   STUDENT_SCORES: '/student-scores',
   CLASSES: '/classes',
   INTERNSHIP_STUDENTS: '/internship-students',
-  INTERNSHIP_STUDENTS_CONFIRM: '/internship-students/confirmations',
+  INTERNSHIP_STUDENTS_DECLARATIONS: '/internship-students/declarations',
   INTERNSHIP_STUDENTS_NOCOMPANY: '/internship-students/no-company',
   PERIODS: '/periods',
   FORGOTPW: '/forgot-password',
@@ -39,7 +39,7 @@ export const HEADER_TITLES: Record<RoutePath, keyof I18nKey> = {
   [ROUTES.STUDENT_SCORES]: 'student_score_management',
   [ROUTES.CLASSES]: 'class_management',
   [ROUTES.INTERNSHIP_STUDENTS]: 'internship_students',
-  [ROUTES.INTERNSHIP_STUDENTS_CONFIRM]: 'internship_students_confirm',
+  [ROUTES.INTERNSHIP_STUDENTS_DECLARATIONS]: 'internship_students_declarations',
   [ROUTES.INTERNSHIP_STUDENTS_NOCOMPANY]: 'internship_students_nocompany',
   [ROUTES.FORGOTPW]: 'forgot_password_title',
 };

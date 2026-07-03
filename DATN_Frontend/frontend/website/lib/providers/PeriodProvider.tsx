@@ -91,13 +91,15 @@ export const PeriodProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           if (data.type === 'topic_proposed' || data.type === 'topic_updated' || data.type === 'topic_deleted') {
             window.dispatchEvent(new CustomEvent('realtime-topic-updated'));
           } else if (
-            data.type === 'group_status_updated' || 
-            data.type === 'student_registered_topic' || 
-            data.type === 'student_cancelled_registration' || 
+            data.type === 'group_status_updated' ||
+            data.type === 'student_registered_topic' ||
+            data.type === 'student_cancelled_registration' ||
             data.type === 'group_member_joined'
           ) {
             window.dispatchEvent(new CustomEvent('realtime-group-updated'));
             window.dispatchEvent(new CustomEvent('realtime-topic-updated'));
+          } else if (data.type === 'assignment_published') {
+            window.dispatchEvent(new CustomEvent('realtime-assignment-published', { detail: data }));
           }
         } catch (err) {
           console.error(err);

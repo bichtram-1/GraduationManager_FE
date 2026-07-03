@@ -39,6 +39,10 @@ export const QueryKey = {
       list: 'internshipConfirmationsList',
       detail: 'internshipConfirmationsDetail',
     },
+    declarations: {
+      list: 'internshipDeclarationsList',
+      detail: 'internshipDeclarationsDetail',
+    },
     noCompany: {
       list: 'internshipNoCompanyList',
       detail: 'internshipNoCompanyDetail',

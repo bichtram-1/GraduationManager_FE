@@ -263,10 +263,30 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled, allowStudentListUpload }) 
       </Form.Item>
 
       <div className="grid grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-2">
+        <Form.Item name="semester" label="Học kỳ">
+          <Select
+            disabled={disabled}
+            placeholder="Chọn học kỳ"
+            options={[
+              { value: '1', label: 'Học kỳ 1' },
+              { value: '2', label: 'Học kỳ 2' },
+              { value: 'HE', label: 'Học kỳ hè' },
+            ]}
+          />
+        </Form.Item>
+        <Form.Item name="schoolYear" label="Năm học">
+          <Input disabled={disabled} placeholder="VD: 2026-2027" />
+        </Form.Item>
+      </div>
+
+      <div className="grid grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-2">
         <Form.Item name="startDate" label={t(getKey('start_date'))} rules={[{ required: true, message: t(getKey('start_date_required')) }]}>
           <Input disabled={disabled} placeholder={DATE_DISPLAY_FORMAT} />
         </Form.Item>
         <Form.Item name="endDate" label={t(getKey('end_date'))} rules={[{ required: true, message: t(getKey('end_date_required')) }]}>
+          <Input disabled={disabled} placeholder={DATE_DISPLAY_FORMAT} />
+        </Form.Item>
+        <Form.Item name="regOpenDate" label="Mở đăng ký">
           <Input disabled={disabled} placeholder={DATE_DISPLAY_FORMAT} />
         </Form.Item>
         <Form.Item name="regDeadline" label={t(getKey('reg_deadline_label'))} rules={[{ required: true, message: t(getKey('reg_deadline_required')) }]}>
@@ -282,7 +302,19 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled, allowStudentListUpload }) 
         </Form.Item>
       </div>
 
+      <Divider orientation="left" className="!text-sm !text-slate-500">Mốc báo cáo & chấm điểm</Divider>
 
+      <div className="grid grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-2">
+        <Form.Item name="reportDeadline" label="Hạn nộp báo cáo tiến độ">
+          <Input disabled={disabled} placeholder={DATE_DISPLAY_FORMAT} />
+        </Form.Item>
+        <Form.Item name="gradingStartDate" label="Bắt đầu chấm điểm">
+          <Input disabled={disabled} placeholder={DATE_DISPLAY_FORMAT} />
+        </Form.Item>
+        <Form.Item name="gradingEndDate" label="Kết thúc chấm điểm">
+          <Input disabled={disabled} placeholder={DATE_DISPLAY_FORMAT} />
+        </Form.Item>
+      </div>
     </>
   );
 };

@@ -3,10 +3,6 @@ import { getKey } from '@shared/types/I18nKeyType';
 import clsx, { ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { BaseListParams, OptionType } from '@shared/types/GeneralType';
-
-
-
-
 export const NUMBER_FORMAT = '0,0[.]0';
 export const DATE_FORMAT = 'YYYY-MM-DD';
 export const DATE_DISPLAY_FORMAT = 'DD/MM/YYYY';
@@ -42,6 +38,7 @@ export const STATUS_CODE = {
   NOT_REGISTERED: 'not_registered',
   SEARCHING: 'searching',
   HAS_COMPANY: 'has_company',
+  CHO_CAP_GIAY: 'cho_cap_giay',
   ASSIGNED: 'assigned',
   UNASSIGNED: 'unassigned',
   AVAILABLE: 'available',
@@ -100,6 +97,3 @@ export const RoleLevel = () => [
 
 export const BrandCountryKorea = () => ({ value: 'KR', label: 'Korea' });
 export const BrandCountryVietnam = () => ({ value: 'VN', label: 'Vietnam' });
-
-
-

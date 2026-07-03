@@ -8,7 +8,7 @@ import { CalendarDays, CheckCircle2, Clock3, Users } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { StudentPill, StudentSectionHeader } from '../_components/StudentShell'
 
-type Topic = { id: string; title: string; module: string; published: boolean; slots?: string }
+type Topic = { id: string; code?: string; title: string; module: string; published: boolean; slots?: string }
 
 type Registration = IThesisRegistration;
 
@@ -56,6 +56,11 @@ export default function ThesisRegisterPage() {
   }, [selectedPeriod?.id])
 
   const handleRegister = async (id: string) => {
+    if (registration && registration.topicId) {
+      if (!confirm('Bạn đang thay đổi đề tài cho nhóm. Đề tài cũ sẽ bị thay thế. Bạn có chắc chắn muốn thay đổi không?')) {
+        return
+      }
+    }
     try {
       setLoading(true)
       const res = await studentApi.registerThesis(Number(id))
@@ -70,19 +75,39 @@ export default function ThesisRegisterPage() {
     }
   }
 
-  const handleCancel = async (id: string) => {
-    if (!confirm('Bạn có chắc chắn muốn hủy đăng ký đề tài này không? Nhóm của bạn sẽ bị giải tán.')) {
+  const handleCancel = async () => {
+    if (!confirm('Bạn có chắc chắn muốn rời nhóm hoặc giải tán nhóm không? Hành động này không thể hoàn tác.')) {
       return
     }
     try {
       setLoading(true)
-      await studentApi.cancelThesisRegistration()
+      await studentApi.leaveGroup()
       setRegistration(null)
       // refresh topics to update slot status if needed
       const topicsData = await topicApi.getTopics({ periodId: selectedPeriod?.id })
       setTopics(topicsData)
     } catch (err: any) {
-      alert(err?.response?.data?.message || 'Có lỗi xảy ra khi hủy đăng ký.')
+      alert(err?.response?.data?.message || 'Có lỗi xảy ra khi giải tán nhóm.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleCancelTopic = async () => {
+    if (!confirm('Bạn có chắc chắn muốn hủy đăng ký đề tài này không? Nhóm của bạn vẫn sẽ được giữ lại.')) {
+      return
+    }
+    try {
+      setLoading(true)
+      await studentApi.cancelThesisRegistration()
+      const [topicsData, regData] = await Promise.all([
+        topicApi.getTopics({ periodId: selectedPeriod?.id }),
+        studentApi.getMyThesisRegistration()
+      ])
+      setTopics(topicsData)
+      setRegistration(regData)
+    } catch (err: any) {
+      alert(err?.response?.data?.message || 'Có lỗi xảy ra khi hủy đăng ký đề tài.')
     } finally {
       setLoading(false)
     }
@@ -129,6 +154,17 @@ export default function ThesisRegisterPage() {
               </div>
             </div>
           </div>
+          {registration && registration.status !== 'accepted' && (
+            <div className="mt-4 flex justify-end">
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="rounded-2xl border border-red-200 px-4 py-2 text-xs font-medium text-red-600 transition hover:bg-red-50"
+              >
+                Giải tán / Rời nhóm
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="rounded-[22px] bg-slate-50 p-4">
@@ -167,7 +203,7 @@ export default function ThesisRegisterPage() {
                 <div key={t.id} className="rounded-[18px] border border-slate-100 bg-white p-6 shadow-sm">
                   <div className="flex items-start justify-between">
                     <div>
-                      <a className="text-[#2196F3] font-medium text-sm">{t.id}</a>
+                      <a className="text-[#2196F3] font-medium text-sm">{t.code || t.id}</a>
                       <h3 className="mt-2 text-lg font-semibold text-slate-900">{t.title}</h3>
                       <div className="mt-2 text-xs text-slate-500">{teacher} • Số lượng: {used}/{maxSlots} sinh viên</div>
                       {isCurrentTopic && registration && (
@@ -188,16 +224,16 @@ export default function ThesisRegisterPage() {
                     <button className="flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Xem chi tiết</button>
                     {!isCurrentTopic ? (
                       <button 
-                        disabled={!!registration}
+                        disabled={!!registration && registration.status === 'accepted'}
                         onClick={() => handleRegister(t.id)} 
-                        className={`flex-1 rounded-2xl px-4 py-2 text-sm font-medium shadow-sm transition ${!!registration ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-[#2196F3] text-white hover:bg-[#1976D2]'}`}
+                        className={`flex-1 rounded-2xl px-4 py-2 text-sm font-medium shadow-sm transition ${!!registration && registration.status === 'accepted' ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-[#2196F3] text-white hover:bg-[#1976D2]'}`}
                       >
                         Đăng ký
                       </button>
                     ) : (
                       <button 
                         disabled={registration?.status === 'accepted'}
-                        onClick={() => handleCancel(t.id)} 
+                        onClick={handleCancelTopic} 
                         className={`flex-1 rounded-2xl border px-4 py-2 text-sm font-medium transition ${registration?.status === 'accepted' ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
                       >
                         {registration?.status === 'accepted' ? 'Đã khóa đề tài' : 'Hủy đăng ký'}
