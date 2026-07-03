@@ -8,11 +8,13 @@ type Props = {
   open: boolean;
   onCancel: () => void;
   onOk: () => void;
+  confirmLoading?: boolean;
   companyStats: { total: number };
   reviewStats: { approved: number; pending: number };
+  unpublishedCount: number;
 };
 
-const PublishModal: React.FC<Props> = ({ open, onCancel, onOk, companyStats, reviewStats }) => {
+const PublishModal: React.FC<Props> = ({ open, onCancel, onOk, confirmLoading, companyStats, reviewStats, unpublishedCount }) => {
   const { t } = useTranslation();
 
   return (
@@ -25,12 +27,17 @@ const PublishModal: React.FC<Props> = ({ open, onCancel, onOk, companyStats, rev
       width={560}
       okText={t(getKey('publish_btn'))}
       cancelText={t(getKey('cancel_btn'))}
-      okButtonProps={{ className: '!h-10 !rounded-lg !font-medium' }}
+      confirmLoading={confirmLoading}
+      okButtonProps={{ className: '!h-10 !rounded-lg !font-medium', disabled: unpublishedCount === 0 }}
       cancelButtonProps={{ className: '!h-10 !rounded-lg !font-medium' }}
       onOk={onOk}
     >
       <div className="space-y-3 text-sm text-slate-600">
         <p className="m-0">{t(getKey('publish_companies_desc'))}</p>
+        <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-center">
+          <div className="text-3xl font-bold text-[var(--color-blue-md)]">{formatNumber(unpublishedCount)}</div>
+          <div className="text-xs text-slate-600">công ty mới sẽ được công bố cho sinh viên</div>
+        </div>
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
           <div className="mb-2 font-medium text-slate-900">{t(getKey('current_summary'))}</div>
           <div className="grid grid-cols-3 gap-3 text-center">

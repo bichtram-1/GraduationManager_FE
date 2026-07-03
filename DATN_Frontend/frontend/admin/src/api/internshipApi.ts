@@ -28,13 +28,40 @@ export const internshipApi = {
     return response?.data;
   },
 
+  getListDeclarations: async (params?: { periodId?: string }) => {
+    const response = await axiosInstance.get('/private/v1/internships/declarations', { params });
+    return response?.data?.results?.objects;
+  },
+
+  getDeclarationDetail: async (id: string) => {
+    const response = await axiosInstance.get(`/private/v1/internships/declarations/${id}`);
+    return response?.data?.results?.object;
+  },
+
+  createDeclaration: async ({ body, params }: { body: ICreateConfirmationRequest; params: BaseListParams & { periodId?: string } }) => {
+    const response = await axiosInstance.post('/private/v1/internships/declarations', body, { params });
+    return response?.data?.results?.object;
+  },
+
+  updateDeclaration: async ({ id, body }: { id: string; body: IUpdateConfirmationRequest; index: number; params: BaseListParams }) => {
+    const response = await axiosInstance.patch(`/private/v1/internships/declarations/${id}`, body);
+    return response?.data?.results?.object;
+  },
+
+  deleteDeclaration: async ({ id }: { id: string; params: BaseListParams }) => {
+    const response = await axiosInstance.delete(`/private/v1/internships/declarations/${id}`);
+    return response?.data;
+  },
+
   getListNoCompanyStudent: async (params?: { periodId?: string }) => {
     const response = await axiosInstance.get('/private/v1/internships/no-company', { params });
     return response?.data?.results?.objects;
   },
 
-  getNoCompanyStudentDetail: async (id: string) => {
-    const response = await axiosInstance.get(`/private/v1/internships/no-company/${id}`);
+  getNoCompanyStudentDetail: async (id: string, periodId?: string) => {
+    const response = await axiosInstance.get(`/private/v1/internships/no-company/${id}`, {
+      params: { periodId }
+    });
     return response?.data?.results?.object;
   },
 
@@ -43,8 +70,8 @@ export const internshipApi = {
     return response?.data?.results?.object;
   },
 
-  updateNoCompanyStudent: async ({ id, body }: { id: string; body: IUpdateNoCompanyStudent; index: number; params: BaseListParams }) => {
-    const response = await axiosInstance.patch(`/private/v1/internships/no-company/${id}`, body);
+  updateNoCompanyStudent: async ({ id, body, params }: { id: string; body: IUpdateNoCompanyStudent; index: number; params: BaseListParams }) => {
+    const response = await axiosInstance.patch(`/private/v1/internships/no-company/${id}`, body, { params });
     return response?.data?.results?.object;
   },
 

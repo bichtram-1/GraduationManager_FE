@@ -1,21 +1,27 @@
 "use client"
 
 import { useEffect, useMemo, useState } from 'react'
-import { BarChart3, Building2, MapPin, Search, Users, CalendarDays, Phone, Mail, X, Plus } from 'lucide-react'
+import { BarChart3, Building2, ChevronLeft, ChevronRight, MapPin, Search, Users, CalendarDays, Phone, Mail, X, Plus } from 'lucide-react'
 import { StudentPill, StudentSectionHeader } from '../_components/StudentShell'
 import { studentApi, ICompany } from '@/lib/api/studentApi'
 import { Spin, message } from 'antd'
+import { usePeriod } from '@/lib/providers/PeriodProvider'
 
 export default function StudentInternshipPage() {
+  const { selectedPeriod } = usePeriod()
   const [companies, setCompanies] = useState<ICompany[]>([])
   const [myRequest, setMyRequest] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [query, setQuery] = useState('')
+  const [page, setPage] = useState(1)
+  const pageSize = 10
   const [declareOpen, setDeclareOpen] = useState(false)
   const [declareForm, setDeclareForm] = useState({
     companyName: '',
+    taxId: '',
     field: '',
+    position: '',
     address: '',
     internshipAddress: '',
     mentor: '',
@@ -45,7 +51,9 @@ export default function StudentInternshipPage() {
   const handleSelectSuggestion = (c: ICompany) => {
     setDeclareForm({
       companyName: c.name,
+      taxId: c.taxId || '',
       field: c.field || '',
+      position: declareForm.position,
       address: c.address || '',
       internshipAddress: c.address || '',
       mentor: c.mentor || '',
@@ -59,10 +67,14 @@ export default function StudentInternshipPage() {
   };
 
   const loadData = async () => {
+    if (!selectedPeriod?.id) {
+      setLoading(false);
+      return;
+    }
     try {
       const [compList, request] = await Promise.all([
-        studentApi.getCompanies(),
-        studentApi.getMyInternshipRequest()
+        studentApi.getCompanies(selectedPeriod.id),
+        studentApi.getMyInternshipRequest(selectedPeriod.id)
       ])
       setCompanies(compList)
       setMyRequest(request)
@@ -75,8 +87,9 @@ export default function StudentInternshipPage() {
   }
 
   useEffect(() => {
+    setLoading(true)
     loadData()
-  }, [])
+  }, [selectedPeriod?.id])
 
   const filtered = useMemo(() => {
     return companies.filter((company) => {
@@ -84,6 +97,17 @@ export default function StudentInternshipPage() {
       return text.includes(query.toLowerCase())
     })
   }, [query, companies])
+
+  useEffect(() => {
+    setPage(1)
+  }, [query, companies])
+
+  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize))
+  const currentPage = Math.min(page, pageCount)
+  const paginated = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return filtered.slice(start, start + pageSize)
+  }, [filtered, currentPage])
 
   const totalSlots = useMemo(() => {
     return companies.reduce((total, company) => total + (company.slots || 0), 0)
@@ -94,12 +118,18 @@ export default function StudentInternshipPage() {
       message.error('Vui lòng nhập tên công ty!')
       return
     }
+    if (!declareForm.taxId.trim()) {
+      message.error('Vui lòng nhập mã số thuế công ty!')
+      return
+    }
 
     setSubmitting(true)
     try {
       await studentApi.declareInternship({
         companyName: declareForm.companyName,
+        taxId: declareForm.taxId,
         field: declareForm.field,
+        position: declareForm.position,
         address: declareForm.address,
         mentor: declareForm.mentor,
         phone: declareForm.phone,
@@ -107,14 +137,16 @@ export default function StudentInternshipPage() {
         duration: declareForm.duration,
         confirmPaper: declareForm.confirmPaper,
         internshipAddress: declareForm.internshipAddress
-      })
+      }, selectedPeriod?.id)
 
       message.success('Gửi hồ sơ khai báo nơi thực tập thành công!')
       setDeclareOpen(false)
       // Reset form fields
       setDeclareForm({
         companyName: '',
+        taxId: '',
         field: '',
+        position: '',
         address: '',
         internshipAddress: '',
         mentor: '',
@@ -126,9 +158,10 @@ export default function StudentInternshipPage() {
       })
       // Reload updated status
       loadData()
-    } catch (err) {
+    } catch (err: any) {
       console.error('Declaration failed:', err)
-      message.error('Gửi khai báo thất bại. Vui lòng thử lại!')
+      const errorMsg = err.response?.data?.message || 'Gửi khai báo thất bại. Vui lòng thử lại!'
+      message.error(errorMsg)
     } finally {
       setSubmitting(false)
     }
@@ -147,6 +180,7 @@ export default function StudentInternshipPage() {
     if (!myRequest) return 'Chưa khai báo'
     if (myRequest.status === 'approved') return 'Đã duyệt'
     if (myRequest.status === 'rejected') return 'Bị từ chối'
+    if (myRequest.status === 'cho_cap_giay') return 'Chờ cấp giấy'
     return 'Chờ phê duyệt'
   })()
 
@@ -164,14 +198,16 @@ export default function StudentInternshipPage() {
         actions={
           <>
             <StudentPill tone="green">Đang mở đăng ký</StudentPill>
-            <button
-              type="button"
-              onClick={() => setDeclareOpen(true)}
-              className="inline-flex items-center gap-2 rounded-2xl bg-[#2196F3] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-blue-200 transition hover:bg-[#1976D2]"
-            >
-              <Plus className="h-4 w-4" />
-              Khai báo
-            </button>
+            {myRequest?.status !== 'approved' && (
+              <button
+                type="button"
+                onClick={() => setDeclareOpen(true)}
+                className="inline-flex items-center gap-2 rounded-2xl bg-[#2196F3] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-blue-200 transition hover:bg-[#1976D2]"
+              >
+                <Plus className="h-4 w-4" />
+                Khai báo
+              </button>
+            )}
           </>
         }
       />
@@ -195,7 +231,7 @@ export default function StudentInternshipPage() {
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs font-semibold text-slate-500">HỒ SƠ KHAI BÁO CỦA BẠN:</span>
-                <StudentPill tone={myRequest.status === 'approved' ? 'green' : (myRequest.status === 'rejected' ? 'red' : 'orange')}>
+                <StudentPill tone={myRequest.status === 'approved' ? 'green' : (myRequest.status === 'rejected' ? 'red' : (myRequest.status === 'cho_cap_giay' ? 'blue' : 'orange'))}>
                   {myRequestStatusText}
                 </StudentPill>
                 {myRequest.confirmPaper && <StudentPill tone="blue">Yêu cầu giấy giới thiệu</StudentPill>}
@@ -240,7 +276,7 @@ export default function StudentInternshipPage() {
           {filtered.length === 0 ? (
             <div className="p-8 text-center text-slate-500 text-sm">Không tìm thấy công ty nào phù hợp từ khóa tìm kiếm.</div>
           ) : (
-            filtered.map((company) => (
+            paginated.map((company) => (
               <div
                 key={company.code}
                 className="flex flex-col gap-4 px-5 py-4 hover:bg-slate-50/80 md:flex-row md:items-center md:justify-between"
@@ -253,9 +289,6 @@ export default function StudentInternshipPage() {
                     <div className="flex flex-wrap items-center gap-2">
                       <div className="text-sm font-medium text-slate-900">{company.name}</div>
                       <StudentPill tone="green">{company.field}</StudentPill>
-                      <StudentPill tone={company.slots > 0 ? 'blue' : 'orange'}>
-                        {company.slots > 0 ? 'Còn slot' : 'Hết slot'}
-                      </StudentPill>
                     </div>
                     <div className="mt-1 flex items-center gap-1 text-xs text-slate-500">
                       <MapPin className="h-3.5 w-3.5" /> {company.address}
@@ -267,19 +300,54 @@ export default function StudentInternshipPage() {
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 self-start md:self-auto">
-                  <div className="text-right whitespace-nowrap">
-                    <div className="text-sm font-medium text-emerald-600">
-                      <span className="text-xs text-slate-500 inline-block mr-2 align-middle">Mở thêm</span>
-                      <span className="align-middle text-lg font-semibold">{company.slots}</span>
-                      <span className="text-xs text-slate-500 inline-block ml-1 align-middle">slot</span>
-                    </div>
-                  </div>
-                </div>
               </div>
             ))
           )}
         </div>
+
+        {filtered.length > 0 && (
+          <div className="flex flex-col gap-3 border-t border-slate-200 bg-slate-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="text-xs text-slate-500">
+              Hiển thị {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filtered.length)} trong {filtered.length} doanh nghiệp
+            </div>
+            {pageCount > 1 && (
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+                  aria-label="Trang trước"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                {Array.from({ length: pageCount }, (_, i) => i + 1).map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setPage(p)}
+                    className={`flex h-8 min-w-8 items-center justify-center rounded-xl px-2 text-xs font-medium transition ${
+                      p === currentPage
+                        ? 'bg-[#2196F3] text-white'
+                        : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+                  disabled={currentPage === pageCount}
+                  className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+                  aria-label="Trang sau"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </section>
 
       {declareOpen && (
@@ -338,12 +406,32 @@ export default function StudentInternshipPage() {
                   )}
                 </div>
                 <label className="block">
+                  <div className="text-sm font-medium text-slate-700">Mã số thuế công ty <span className="text-red-500">*</span></div>
+                  <input
+                    value={declareForm.taxId}
+                    onChange={(event) => setDeclareForm((current) => ({ ...current, taxId: event.target.value }))}
+                    className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white"
+                    placeholder="VD: 0101243150"
+                    disabled={submitting}
+                  />
+                </label>
+                <label className="block">
                   <div className="text-sm font-medium text-slate-700">Lĩnh vực</div>
-                  <input 
-                    value={declareForm.field} 
-                    onChange={(event) => setDeclareForm((current) => ({ ...current, field: event.target.value }))} 
-                    className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white" 
-                    placeholder="Phần mềm, fintech, phần cứng..." 
+                  <input
+                    value={declareForm.field}
+                    onChange={(event) => setDeclareForm((current) => ({ ...current, field: event.target.value }))}
+                    className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white"
+                    placeholder="Phần mềm, fintech, phần cứng..."
+                    disabled={submitting}
+                  />
+                </label>
+                <label className="block">
+                  <div className="text-sm font-medium text-slate-700">Vị trí thực tập</div>
+                  <input
+                    value={declareForm.position}
+                    onChange={(event) => setDeclareForm((current) => ({ ...current, position: event.target.value }))}
+                    className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white"
+                    placeholder="VD: Thực tập sinh Backend Developer"
                     disabled={submitting}
                   />
                 </label>

@@ -51,10 +51,20 @@ export const assignmentHooks = {
     });
   },
 
-  useFetchTeachers: () => {
+  usePublishAssignments: () => {
+    const queryClient = useQueryClient();
+    return useMutation<{ success: boolean; message: string; results?: { publishedCount: number } }, AxiosError, string | undefined>({
+      mutationFn: (periodId) => assignmentApi.publishAssignments(periodId),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: [QueryKey.assignments.list] });
+      },
+    });
+  },
+
+  useFetchTeachers: (periodId?: string) => {
     return useQuery({
-      queryKey: ['assignmentsTeachers'],
-      queryFn: () => assignmentApi.getTeachers(),
+      queryKey: ['assignmentsTeachers', periodId],
+      queryFn: () => assignmentApi.getTeachers(periodId),
     });
   },
 };

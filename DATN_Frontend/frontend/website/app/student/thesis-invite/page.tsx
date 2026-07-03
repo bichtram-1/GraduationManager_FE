@@ -9,6 +9,7 @@ import { usePeriod } from '@/lib/providers/PeriodProvider'
 
 type Invite = {
   id: string
+  inviteId?: string
   status: 'pending' | 'accepted' | 'rejected'
   from?: string
   topic?: string
@@ -109,6 +110,21 @@ export default function InvitePage() {
     }
   }
 
+  const handleCancelInvite = async (inviteId: string) => {
+    if (!confirm('Bạn có chắc chắn muốn hủy lời mời này không?')) {
+      return
+    }
+    try {
+      setLoading(true)
+      await studentApi.cancelInvitation(inviteId)
+      setOutgoingInvites((current) => current.filter((item) => item.inviteId !== inviteId))
+    } catch (err: any) {
+      alert(err?.response?.data?.message || 'Có lỗi xảy ra khi hủy lời mời.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <>
       <StudentSectionHeader
@@ -202,9 +218,21 @@ export default function InvitePage() {
                     <Mail className="text-slate-400" />
                     MSSV {invite.id}
                   </div>
-                  <StudentPill tone={invite.status === 'accepted' ? 'green' : invite.status === 'rejected' ? 'red' : 'orange'}>
-                    {invite.status === 'accepted' ? 'Đã chấp nhận' : invite.status === 'rejected' ? 'Đã từ chối' : 'Chờ phản hồi'}
-                  </StudentPill>
+                  <div className="flex items-center gap-2">
+                    <StudentPill tone={invite.status === 'accepted' ? 'green' : invite.status === 'rejected' ? 'red' : 'orange'}>
+                      {invite.status === 'accepted' ? 'Đã chấp nhận' : invite.status === 'rejected' ? 'Đã từ chối' : 'Chờ phản hồi'}
+                    </StudentPill>
+                    {invite.status === 'pending' && invite.inviteId && (
+                      <button
+                        type="button"
+                        onClick={() => handleCancelInvite(invite.inviteId!)}
+                        className="rounded-lg p-1 text-red-500 transition hover:bg-red-50 hover:text-red-700"
+                        title="Hủy lời mời"
+                      >
+                        <XCircle className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

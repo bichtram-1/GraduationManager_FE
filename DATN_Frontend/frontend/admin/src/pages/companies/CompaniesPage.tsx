@@ -32,10 +32,9 @@ type CompanyRow = {
   contact: string;
   phone: string;
   email: string;
-  partners: number;
-  students: number;
   status: CompanyStatus;
   reviewStatus: ReviewStatus;
+  published: boolean;
 };
 const getReviewMeta = (t: (key: string) => string) => ({
   [STATUS_CODE.APPROVED]: { label: t(getKey('status_approved')), className: 'bg-[var(--color-green-light)] text-[var(--color-green-medium)]' },
@@ -51,6 +50,7 @@ const CompaniesPage = () => {
   const createCompanyMutation = companyHooks.useCreateCompany();
   const updateCompanyMutation = companyHooks.useUpdateCompany();
   const deleteCompanyMutation = companyHooks.useDeleteCompany();
+  const publishCompaniesMutation = companyHooks.usePublishCompanies();
   const companyRows = (companyList?.rows ?? []) as CompanyRow[];
 
   const useFilteredCompanyListQuery = (params: BaseListParams) => {
@@ -109,6 +109,23 @@ const CompaniesPage = () => {
     rejected: companyRows.filter((item) => item.reviewStatus === STATUS_CODE.REJECTED).length,
   }), [companyRows]);
 
+  const unpublishedCount = useMemo(
+    () => companyRows.filter((item) => item.status === STATUS_CODE.ACTIVE && !item.published).length,
+    [companyRows]
+  );
+
+  const handlePublish = () => {
+    publishCompaniesMutation.mutate(undefined, {
+      onSuccess: (data) => {
+        message.success(data?.message || 'Công bố danh sách công ty thành công!');
+        setPublishOpen(false);
+      },
+      onError: () => {
+        message.error('Có lỗi xảy ra khi công bố danh sách công ty!');
+      },
+    });
+  };
+
   const confirmReviewChange = (record: CompanyRow, reviewStatus: ReviewStatus) => {
     const meta = getReviewMeta(t)[reviewStatus];
     const label = meta.label;
@@ -139,7 +156,19 @@ const CompaniesPage = () => {
       ellipsis: true,
       render: (value: string, record) => (
         <div className="truncate">
-          <div className="font-medium text-[var(--color-primary)] truncate" title={value}>{value}</div>
+          <div className="flex items-center gap-2 truncate">
+            <span className="font-medium text-[var(--color-primary)] truncate" title={value}>{value}</span>
+            {record.reviewStatus === STATUS_CODE.PENDING && (
+              <Tag color="purple" className="m-0 rounded-md text-[10px] py-0 px-1.5 border-none">
+                Tự khai báo
+              </Tag>
+            )}
+            {record.status === STATUS_CODE.ACTIVE && !record.published && (
+              <Tag color="blue" className="m-0 rounded-md text-[10px] py-0 px-1.5 border-none">
+                Mới, chưa công bố
+              </Tag>
+            )}
+          </div>
           <div className="text-xs text-slate-500 truncate">{record.field}</div>
         </div>
       ),
@@ -148,8 +177,6 @@ const CompaniesPage = () => {
     { title: t(getKey('company_contact')), dataIndex: 'contact', key: 'contact', width: 180, ellipsis: true },
     { title: t(getKey('phone_number')), dataIndex: 'phone', key: 'phone', width: 140 },
     { title: t(getKey('email')), dataIndex: 'email', key: 'email', ellipsis: true },
-    { title: t(getKey('partners_count_label')), dataIndex: 'partners', key: 'partners', width: 100, render: (value: number) => <span>{formatNumber(value)}</span> },
-    { title: t(getKey('students_count_short')), dataIndex: 'students', key: 'students', width: 80, render: (value: number) => <span>{formatNumber(value)}</span> },
     {
       title: t(getKey('status')),
       key: 'reviewStatus',
@@ -312,8 +339,6 @@ const CompaniesPage = () => {
             contact: detail.contact,
             phone: detail.phone || '',
             email: detail.email || '',
-            partners: detail.partners ?? 0,
-            students: detail.students ?? 0,
             status: detail.status,
             reviewStatus: detail.reviewStatus ?? STATUS_CODE.PENDING,
           })}
@@ -377,7 +402,15 @@ const CompaniesPage = () => {
         />
       </Card>
 
-      <PublishModal open={publishOpen} onCancel={() => setPublishOpen(false)} onOk={() => setPublishOpen(false)} companyStats={companyStats} reviewStats={reviewStats} />
+      <PublishModal
+        open={publishOpen}
+        onCancel={() => setPublishOpen(false)}
+        onOk={handlePublish}
+        confirmLoading={publishCompaniesMutation.isPending}
+        companyStats={companyStats}
+        reviewStats={reviewStats}
+        unpublishedCount={unpublishedCount}
+      />
     </div>
   );
 };

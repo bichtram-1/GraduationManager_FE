@@ -77,6 +77,33 @@ export function StudentShell({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  useEffect(() => {
+    if (periods.length === 0) return;
+
+    const isInternship = pathname.startsWith('/student/internship') || pathname.startsWith('/student/reports/tttn');
+    const isThesis = pathname.startsWith('/student/thesis-register') || pathname.startsWith('/student/thesis-invite') || pathname.startsWith('/student/reports/datn');
+
+    if (isInternship) {
+      const tttnPeriods = periods.filter(p => p.type === 'tttn');
+      if (tttnPeriods.length > 0) {
+        const isCurrentTttn = selectedPeriod && selectedPeriod.type === 'tttn';
+        if (!isCurrentTttn) {
+          const activeTttn = tttnPeriods.find(p => p.status === 'open' || p.status === 'published') || tttnPeriods[0];
+          setSelectedPeriod(activeTttn);
+        }
+      }
+    } else if (isThesis) {
+      const datnPeriods = periods.filter(p => p.type === 'datn');
+      if (datnPeriods.length > 0) {
+        const isCurrentDatn = selectedPeriod && selectedPeriod.type === 'datn';
+        if (!isCurrentDatn) {
+          const activeDatn = datnPeriods.find(p => p.status === 'open' || p.status === 'published') || datnPeriods[0];
+          setSelectedPeriod(activeDatn);
+        }
+      }
+    }
+  }, [periods, selectedPeriod, setSelectedPeriod, pathname]);
+
   const activeKey = useMemo(() => getActiveKey(pathname), [pathname])
 
   const handleLogout = () => {

@@ -25,18 +25,27 @@ export const assignmentApi = {
     return response?.data?.results?.object;
   },
 
-  updateAssignment: async ({ id, body }: { id: string; body: IUpdateAssignment; index: number; params: BaseListParams }) => {
-    const response = await axiosInstance.patch(`/private/v1/assignments/${id}`, body);
+  updateAssignment: async ({ id, body, params }: { id: string; body: IUpdateAssignment; index: number; params: BaseListParams }) => {
+    const response = await axiosInstance.patch(`/private/v1/assignments/${id}`, body, {
+      params: { periodId: (params as IAssignmentListParams)?.periodId },
+    });
     return response?.data?.results?.object;
   },
 
-  deleteAssignment: async ({ id }: { id: string; params: BaseListParams }) => {
-    const response = await axiosInstance.delete(`/private/v1/assignments/${id}`);
+  deleteAssignment: async ({ id, params }: { id: string; params: BaseListParams }) => {
+    const response = await axiosInstance.delete(`/private/v1/assignments/${id}`, {
+      params: { periodId: (params as IAssignmentListParams)?.periodId },
+    });
     return response?.data;
   },
 
-  getTeachers: async () => {
-    const response = await axiosInstance.get('/private/v1/teachers');
+  publishAssignments: async (periodId?: string): Promise<{ success: boolean; message: string; results?: { publishedCount: number } }> => {
+    const response = await axiosInstance.post('/private/v1/assignments/publish', null, { params: { periodId } });
+    return response?.data;
+  },
+
+  getTeachers: async (periodId?: string) => {
+    const response = await axiosInstance.get('/private/v1/teachers', { params: { periodId } });
     return response?.data?.results?.objects || response?.data?.results?.object;
   },
 };

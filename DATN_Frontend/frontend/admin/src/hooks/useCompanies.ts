@@ -53,4 +53,14 @@ export const companyHooks = {
       },
     });
   },
+
+  usePublishCompanies: () => {
+    const queryClient = useQueryClient();
+    return useMutation<{ success: boolean; message: string; results?: { publishedCount: number } }, AxiosError>({
+      mutationFn: companyApi.publishCompanies,
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: [QueryKey.companies.list] });
+      },
+    });
+  },
 };

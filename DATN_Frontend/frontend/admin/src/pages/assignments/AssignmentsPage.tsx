@@ -1,6 +1,7 @@
 import { TeamOutlined, SearchOutlined, DownloadOutlined, SendOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
 import { Button, Card, Checkbox, Form, Input, Modal, Pagination, Radio, Select, Space, Tag, Tabs, Typography, message } from 'antd';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import * as XLSX from 'xlsx';
 import AssignmentModal from './components/AssignmentModal';
 import AssignmentForm from './components/AssignmentForm';
 import FilterTable from '../../components/shared/table/FilterTable';
@@ -30,6 +31,10 @@ const AssignmentsPage = () => {
   const [assignmentModalMode, setAssignmentModalMode] = useState<AssignmentModalMode>('create');
   const [selectedAssignment, setSelectedAssignment] = useState<AssignmentRow | null>(null);
   const [manualClassFilter, setManualClassFilter] = useState('all');
+  const [studentPage, setStudentPage] = useState(1);
+  const [studentPageSize, setStudentPageSize] = useState(10);
+  const [teacherPage, setTeacherPage] = useState(1);
+  const [teacherPageSize, setTeacherPageSize] = useState(10);
   const [form] = Form.useForm();
   const { selectedPeriod } = useGlobalVariable();
 
@@ -46,9 +51,11 @@ const AssignmentsPage = () => {
   }), [selectedPeriod?.id]);
 
   const { data: assignmentList } = assignmentHooks.useFetchListAssignments(assignmentListParams);
-  const { data: teachers = [] } = assignmentHooks.useFetchTeachers();
+  const { data: teachers = [] } = assignmentHooks.useFetchTeachers(selectedPeriod?.id);
   const createAssignmentMutation = assignmentHooks.useCreateAssignment();
   const updateAssignmentMutation = assignmentHooks.useUpdateAssignment();
+  const deleteAssignmentMutation = assignmentHooks.useDeleteAssignment();
+  const publishAssignmentsMutation = assignmentHooks.usePublishAssignments();
 
   const rows = assignmentList?.rows ?? [];
   const classOptions = useMemo(
@@ -62,6 +69,11 @@ const AssignmentsPage = () => {
       .filter((r) => r.status === STATUS_CODE.UNASSIGNED)
       .filter((r) => manualClassFilter === 'all' || r.className === manualClassFilter),
     [rows, manualClassFilter],
+  );
+
+  const paginatedStudents = useMemo(
+    () => filtered.slice((studentPage - 1) * studentPageSize, studentPage * studentPageSize),
+    [filtered, studentPage, studentPageSize],
   );
 
   const filteredAssignedRows = useMemo(
@@ -84,6 +96,19 @@ const AssignmentsPage = () => {
     }),
     [teacherQuery, teacherStatusFilter, teachers],
   );
+
+  const paginatedTeachers = useMemo(
+    () => filteredTeachers.slice((teacherPage - 1) * teacherPageSize, teacherPage * teacherPageSize),
+    [filteredTeachers, teacherPage, teacherPageSize],
+  );
+
+  useEffect(() => {
+    setStudentPage(1);
+  }, [manualClassFilter, rows.length]);
+
+  useEffect(() => {
+    setTeacherPage(1);
+  }, [teacherQuery, teacherStatusFilter]);
 
   const openEditAssignment = (record: AssignmentRow) => {
     setAssignmentModalMode('edit');
@@ -127,9 +152,14 @@ const AssignmentsPage = () => {
   };
 
   const selectAllOnPage = (checked: boolean) => {
-    const newMap: Record<string, boolean> = {};
-    filtered.forEach((r) => (newMap[r.studentId] = checked));
-    setSelectedStudents(newMap);
+    setSelectedStudents((prev) => {
+      const newMap = { ...prev };
+      paginatedStudents.forEach((r) => {
+        if (checked) newMap[r.studentId] = true;
+        else delete newMap[r.studentId];
+      });
+      return newMap;
+    });
   };
 
   const toggleSelectStudent = (id: string, checked: boolean) => setSelectedStudents((p) => ({ ...p, [id]: checked }));
@@ -144,20 +174,32 @@ const AssignmentsPage = () => {
       content: (t(getKey('confirm_assignment_content'), { count: studentIds.length, teacher: teacher.name } as any) as string),
       okText: t(getKey('confirm_btn')),
       cancelText: t(getKey('cancel_btn')),
-      onOk: () => {
-        const now = new Date().toLocaleDateString('vi-VN');
-        Promise.all(
-          studentIds.map((studentId) =>
-            updateAssignmentMutation.mutateAsync({
+      onOk: async () => {
+        // Gửi tuần tự (không dùng Promise.all) để backend kiểm tra đúng giới hạn số SV/GV
+        // cho từng request một, tránh race condition khi chọn nhiều SV cùng lúc.
+        let successCount = 0;
+        let lastError: string | null = null;
+        for (const studentId of studentIds) {
+          try {
+            await updateAssignmentMutation.mutateAsync({
               id: studentId,
-              body: { supervisor: teacher.name, status: STATUS_CODE.ASSIGNED, assignedAt: now },
+              body: { supervisor: teacher.name, status: STATUS_CODE.ASSIGNED },
               index: 0,
               params: { page: 1, limit: 1000, periodId: selectedPeriod?.id || '' } as any,
-            })
-          )
-        ).then(() => {
-          message.success(t(getKey('assign_teacher_success_msg'), { teacher: teacher.name, count: studentIds.length } as any) as string);
-        });
+            });
+            successCount += 1;
+          } catch (err) {
+            const axiosErr = err as { response?: { data?: { message?: string } } };
+            lastError = axiosErr?.response?.data?.message || 'Có lỗi xảy ra khi phân công!';
+            break;
+          }
+        }
+        if (successCount > 0) {
+          message.success(t(getKey('assign_teacher_success_msg'), { teacher: teacher.name, count: successCount } as any) as string);
+        }
+        if (lastError) {
+          message.error(lastError);
+        }
         setSelectedStudents({});
         setSelectedTeacher(null);
       },
@@ -173,11 +215,9 @@ const AssignmentsPage = () => {
       cancelText: t(getKey('cancel_btn')),
       okButtonProps: { danger: true },
       onOk: () => {
-        updateAssignmentMutation.mutate(
+        deleteAssignmentMutation.mutate(
           {
             id: studentId,
-            body: { supervisor: null, status: STATUS_CODE.UNASSIGNED, assignedAt: null },
-            index: 0,
             params: { page: 1, limit: 1000, periodId: selectedPeriod?.id || '' } as any,
           },
           {
@@ -187,6 +227,45 @@ const AssignmentsPage = () => {
       },
       centered: true,
     });
+  };
+
+  const handlePublishAssignments = () => {
+    const unpublishedCount = filteredAssignedRows.filter((r) => !r.published).length;
+    Modal.confirm({
+      title: t(getKey('publish_assignment_btn')),
+      content: unpublishedCount > 0
+        ? `Công bố ${unpublishedCount} phân công mới cho sinh viên và giảng viên. Bạn có chắc chắn?`
+        : 'Không có phân công mới nào cần công bố. Vẫn tiếp tục?',
+      okText: t(getKey('confirm_btn')),
+      cancelText: t(getKey('cancel_btn')),
+      onOk: () => {
+        publishAssignmentsMutation.mutate(selectedPeriod?.id, {
+          onSuccess: (data) => message.success(data?.message || 'Công bố phân công thành công!'),
+          onError: () => message.error('Có lỗi xảy ra khi công bố phân công!'),
+        });
+      },
+      centered: true,
+    });
+  };
+
+  const handleExportExcel = () => {
+    if (filteredAssignedRows.length === 0) {
+      message.warning('Không có dữ liệu để xuất!');
+      return;
+    }
+    const data = filteredAssignedRows.map((r, index) => ({
+      'STT': index + 1,
+      'MSSV': r.studentId,
+      'Họ tên': r.name,
+      'Lớp': r.className,
+      'GVHD': r.supervisor || '',
+      'Ngày phân': r.assignedAt || '',
+      'Đã công bố': r.published ? 'Có' : 'Chưa',
+    }));
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Phan cong GVHD');
+    XLSX.writeFile(workbook, `phan-cong-huong-dan-tttn-${selectedPeriod?.name || 'export'}.xlsx`);
   };
 
   return (
@@ -245,7 +324,13 @@ const AssignmentsPage = () => {
                 <table className="w-full text-sm">
                   <thead className="bg-slate-50 text-slate-600">
                     <tr>
-                      <th className="px-4 py-3 text-left"><Checkbox onChange={(e) => selectAllOnPage(e.target.checked)} /></th>
+                      <th className="px-4 py-3 text-left">
+                        <Checkbox
+                          checked={paginatedStudents.length > 0 && paginatedStudents.every((r) => selectedStudents[r.studentId])}
+                          indeterminate={paginatedStudents.some((r) => selectedStudents[r.studentId]) && !paginatedStudents.every((r) => selectedStudents[r.studentId])}
+                          onChange={(e) => selectAllOnPage(e.target.checked)}
+                        />
+                      </th>
                       <th className="px-4 py-3 text-left">{t(getKey('student_id'))}</th>
                       <th className="px-4 py-3 text-left">{t(getKey('student_name'))}</th>
                       <th className="px-4 py-3 text-left">{t(getKey('class_name'))}</th>
@@ -253,7 +338,7 @@ const AssignmentsPage = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {filtered.map((r) => (
+                    {paginatedStudents.map((r) => (
                       <tr key={r.studentId} className="border-t border-slate-100 hover:bg-slate-50">
                         <td className="px-4 py-3"><Checkbox checked={!!selectedStudents[r.studentId]} onChange={(e) => toggleSelectStudent(r.studentId, e.target.checked)} /></td>
                         <td className="px-4 py-3 text-[var(--color-primary)] font-medium">{r.studentId}</td>
@@ -265,6 +350,21 @@ const AssignmentsPage = () => {
                   </tbody>
                 </table>
               </div>
+              {filtered.length > 0 && (
+                <div className="flex justify-end border-t border-slate-100 px-1 py-3">
+                  <Pagination
+                    size="small"
+                    current={studentPage}
+                    pageSize={studentPageSize}
+                    total={filtered.length}
+                    onChange={(page, pageSize) => {
+                      setStudentPage(page);
+                      setStudentPageSize(pageSize);
+                    }}
+                    showSizeChanger
+                  />
+                </div>
+              )}
 
               <div className="border-t border-slate-100 bg-slate-50 px-5 py-3 text-xs text-slate-600">{(t(getKey('showing_students_count'), { count: filtered.length } as any) as string)}</div>
             </Card>
@@ -301,10 +401,13 @@ const AssignmentsPage = () => {
 
               <Radio.Group value={selectedTeacher} onChange={(e) => setSelectedTeacher(e.target.value)} className="w-full">
                 <div className="space-y-3">
-                  {filteredTeachers.map((teacher: any) => (
-                    <div key={teacher.id} className="flex items-center justify-between gap-3 border border-slate-100 p-3 rounded-md">
+                  {paginatedTeachers.map((teacher: any) => (
+                    <div key={teacher.id} className={cn(
+                      "flex items-center justify-between gap-3 border border-slate-100 p-3 rounded-md",
+                      teacher.status !== STATUS_CODE.AVAILABLE && "opacity-60"
+                    )}>
                       <div className="flex min-w-0 flex-1 items-start gap-3">
-                        <Radio value={teacher.id} />
+                        <Radio value={teacher.id} disabled={teacher.status !== STATUS_CODE.AVAILABLE} />
                         <div className="min-w-0 flex-1">
                           <div className="block text-sm font-semibold leading-5 text-slate-900">
                             {teacher.degree} {teacher.name}{teacher.major ? ` • ${teacher.major}` : ''}
@@ -326,6 +429,22 @@ const AssignmentsPage = () => {
                 </div>
               </Radio.Group>
 
+              {filteredTeachers.length > 0 && (
+                <div className="mt-3 flex justify-center">
+                  <Pagination
+                    size="small"
+                    current={teacherPage}
+                    pageSize={teacherPageSize}
+                    total={filteredTeachers.length}
+                    onChange={(page, pageSize) => {
+                      setTeacherPage(page);
+                      setTeacherPageSize(pageSize);
+                    }}
+                    showSizeChanger
+                  />
+                </div>
+              )}
+
               <div className="mt-4 flex flex-col gap-2">
                 <Button type="primary" onClick={confirmAssignSelected}>{t(getKey('assign_teacher_btn'))}</Button>
                 <Button onClick={() => setSelectedStudents({})}>{t(getKey('cancel_select_btn'))}</Button>
@@ -344,6 +463,20 @@ const AssignmentsPage = () => {
               { title: t(getKey('class_name')), dataIndex: 'className', key: 'className' },
               { title: t(getKey('mentor')), dataIndex: 'supervisor', key: 'supervisor', ellipsis: true },
               { title: t(getKey('assigned_date_label')), dataIndex: 'assignedAt', key: 'assignedAt' },
+              {
+                title: 'Trạng thái',
+                key: 'published',
+                render: (_: unknown, record: any) => (
+                  <Tag className={cn(
+                    'rounded-full px-[10px] py-0 border-none m-0',
+                    record.published
+                      ? 'bg-[var(--color-green-light)] text-[var(--color-green-medium)]'
+                      : 'bg-[var(--color-gold-light)] text-[var(--color-gold-medium)]'
+                  )}>
+                    {record.published ? 'Đã công bố' : 'Chưa công bố'}
+                  </Tag>
+                ),
+              },
             ]}
             useQueryHook={(params: any) => {
               const typed = params as import('../..//api/assignmentApi').IAssignmentListParams;
@@ -379,12 +512,39 @@ const AssignmentsPage = () => {
                   <Input allowClear placeholder={t(getKey('search_student_placeholder'))} className="min-w-[200px]" />
                 </Form.Item>
                 <div className="ml-auto flex gap-2">
-                  <Button icon={<DownloadOutlined />}>{t(getKey('export_to_excel'))}</Button>
-                  <Button type="primary" icon={<SendOutlined />}>{t(getKey('publish_assignment_btn'))}</Button>
+                  <Button icon={<DownloadOutlined />} onClick={handleExportExcel}>{t(getKey('export_to_excel'))}</Button>
+                  <Button
+                    type="primary"
+                    icon={<SendOutlined />}
+                    loading={publishAssignmentsMutation.isPending}
+                    onClick={handlePublishAssignments}
+                  >
+                    {t(getKey('publish_assignment_btn'))}
+                  </Button>
                 </div>
               </div>
             )}
-            actions={{ isEdit: true, isDetail: true }}
+            actions={{
+              isEdit: true,
+              isDetail: true,
+              customAction: (record: unknown) => {
+                const r = record as AssignmentRow;
+                return (
+                  <div className="pointer-events-auto">
+                    <Button
+                      type="text"
+                      size="small"
+                      danger
+                      className="!px-2 pointer-events-auto"
+                      onClick={() => unassign(r.studentId)}
+                      title="Xóa phân công"
+                    >
+                      <DeleteOutlined />
+                    </Button>
+                  </div>
+                );
+              },
+            }}
             updateInfo={{ type: 'modal', modalInfo: { modalContent: <AssignmentForm />, modalProps: { centered: true, width: 760, title: t(getKey('edit_assignment_title')) }, modalFunc: updateAssignmentMutation } }}
             detailInfo={{ type: 'modal', modalInfo: { modalContent: <AssignmentForm disabled />, modalProps: { centered: true, width: 760, title: t(getKey('detail_assignment_title')), footer: null }, modalFunc: assignmentHooks.useFetchDetailAssignment } }}
             formatInitialValues={(d: any) => d || {}}

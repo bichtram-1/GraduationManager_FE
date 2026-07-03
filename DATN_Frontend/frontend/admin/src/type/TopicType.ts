@@ -7,6 +7,7 @@ interface IBaseTopic {
   slots: string;
   rejectReason?: string;
   status: TopicStatus;
+  fileUrl?: string;
 }
 
 export interface IListTopic extends IBaseTopic {

@@ -1,12 +1,20 @@
 export type BatchType = 'tttn' | 'datn';
 export type BatchStatus = 'open' | 'published' | 'grading' | 'closed';
 
+export type Semester = '1' | '2' | 'HE';
+
 interface IBasePeriod {
   name: string;
   type: BatchType;
   startDate: string;
   endDate: string;
   regDeadline: string;
+  regOpenDate?: string;
+  reportDeadline?: string;
+  gradingStartDate?: string;
+  gradingEndDate?: string;
+  semester?: Semester;
+  schoolYear?: string;
   studentListUrl?: string;
   studentListFileName?: string;
   classIds?: string[];
