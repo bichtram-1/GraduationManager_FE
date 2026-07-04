@@ -8,6 +8,8 @@ interface PeriodContextProps {
   selectedPeriod: IListPeriod | undefined
   setSelectedPeriod: (period: IListPeriod | undefined) => void
   loading: boolean
+  studentsTab: 'TTTN' | 'DATN'
+  setStudentsTab: (tab: 'TTTN' | 'DATN') => void
 }
 
 const PeriodContext = createContext<PeriodContextProps | undefined>(undefined)
@@ -16,6 +18,7 @@ export const PeriodProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [periods, setPeriods] = useState<IListPeriod[]>([])
   const [selectedPeriod, setSelectedPeriodState] = useState<IListPeriod | undefined>(undefined)
   const [loading, setLoading] = useState(true)
+  const [studentsTab, setStudentsTab] = useState<'TTTN' | 'DATN'>('TTTN')
 
   useEffect(() => {
     let mounted = true
@@ -156,7 +159,7 @@ export const PeriodProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }
 
   return (
-    <PeriodContext.Provider value={{ periods, selectedPeriod, setSelectedPeriod, loading }}>
+    <PeriodContext.Provider value={{ periods, selectedPeriod, setSelectedPeriod, loading, studentsTab, setStudentsTab }}>
       {children}
     </PeriodContext.Provider>
   )

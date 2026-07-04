@@ -31,7 +31,7 @@ function getActiveKey(pathname: string) {
 
 export function TeacherShell({ children }: { children: ReactNode }) {
   const pathname = usePathname()
-  const { periods, selectedPeriod, setSelectedPeriod } = usePeriod()
+  const { periods, selectedPeriod, setSelectedPeriod, studentsTab } = usePeriod()
   const [profileOpen, setProfileOpen] = useState(false)
   const [teacher, setTeacher] = useState<{
     id: number
@@ -67,8 +67,22 @@ export function TeacherShell({ children }: { children: ReactNode }) {
         const activePeriod = datnPeriods.find(p => p.status === 'open' || p.status === 'published') || datnPeriods[0];
         setSelectedPeriod(activePeriod);
       }
+    } else if (pathname.startsWith('/teacher/students')) {
+      if (studentsTab === 'TTTN') {
+        const tttnPeriods = periods.filter(p => p.type === 'tttn');
+        if (tttnPeriods.length > 0 && (!selectedPeriod || selectedPeriod.type !== 'tttn')) {
+          const activePeriod = tttnPeriods.find(p => p.status === 'open' || p.status === 'published') || tttnPeriods[0];
+          setSelectedPeriod(activePeriod);
+        }
+      } else if (studentsTab === 'DATN') {
+        const datnPeriods = periods.filter(p => p.type === 'datn');
+        if (datnPeriods.length > 0 && (!selectedPeriod || selectedPeriod.type !== 'datn')) {
+          const activePeriod = datnPeriods.find(p => p.status === 'open' || p.status === 'published') || datnPeriods[0];
+          setSelectedPeriod(activePeriod);
+        }
+      }
     }
-  }, [pathname, periods, selectedPeriod, setSelectedPeriod]);
+  }, [pathname, periods, selectedPeriod, setSelectedPeriod, studentsTab]);
 
   const activeKey = useMemo(() => getActiveKey(pathname), [pathname])
 
@@ -98,7 +112,7 @@ export function TeacherShell({ children }: { children: ReactNode }) {
           </Link>
 
           {/* Global Period Selector (replacing search bar) */}
-          <div className="hidden max-w-sm flex-1 px-6 sm:flex items-center justify-center min-w-0" title={selectedPeriod?.name}>
+          <div className="hidden max-w-lg flex-1 px-6 sm:flex items-center justify-center min-w-0" title={selectedPeriod?.name}>
             <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1 rounded-[12px] shadow-sm w-full min-w-0">
               <span className="text-xs font-semibold text-slate-500 shrink-0">Đợt hoạt động:</span>
               <Select
@@ -110,22 +124,24 @@ export function TeacherShell({ children }: { children: ReactNode }) {
                   setSelectedPeriod(period)
                 }}
                 variant="borderless"
+                popupMatchSelectWidth={false}
+                dropdownStyle={{ minWidth: 'max-content' }}
                 classNames={{ popup: { root: 'rounded-xl shadow-lg' } }}
               >
-                {periods.filter(p => p.type === 'tttn').length > 0 && !pathname.startsWith('/teacher/topics') && !pathname.startsWith('/teacher/groups') && (
+                {periods.filter(p => p.type === 'tttn').length > 0 && !pathname.startsWith('/teacher/topics') && !pathname.startsWith('/teacher/groups') && (!pathname.startsWith('/teacher/students') || studentsTab === 'TTTN') && (
                   <Select.OptGroup label="Đợt Thực tập tốt nghiệp (TTTN)">
                     {periods.filter(p => p.type === 'tttn').map(p => (
                       <Select.Option key={p.id} value={p.id}>
-                        <span className="font-medium text-slate-700 text-sm">{p.name}</span>
+                        <span className="font-medium text-slate-700 text-sm whitespace-nowrap">{p.name}</span>
                       </Select.Option>
                     ))}
                   </Select.OptGroup>
                 )}
-                {periods.filter(p => p.type === 'datn').length > 0 && (
+                {periods.filter(p => p.type === 'datn').length > 0 && (!pathname.startsWith('/teacher/students') || studentsTab === 'DATN') && (
                   <Select.OptGroup label="Đợt Đồ án tốt nghiệp (ĐATN)">
                     {periods.filter(p => p.type === 'datn').map(p => (
                       <Select.Option key={p.id} value={p.id}>
-                        <span className="font-medium text-slate-700 text-sm">{p.name}</span>
+                        <span className="font-medium text-slate-700 text-sm whitespace-nowrap">{p.name}</span>
                       </Select.Option>
                     ))}
                   </Select.OptGroup>
