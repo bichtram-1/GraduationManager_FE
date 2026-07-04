@@ -256,22 +256,11 @@ const CreateCouncilPage = () => {
     }
 
     for (const topic of selectedTopics) {
-      if (!topic.reviewerId) {
-        message.error(t(getKey('topic_missing_reviewer'), { code: topic.topicCode }));
-        return;
-      }
-
       const hasInternal = topic.examinerIds && topic.examinerIds.length > 0;
       const hasExternal = topic.externalExaminers && topic.externalExaminers.length > 0;
-      if (!hasInternal && !hasExternal) {
-        message.error(t(getKey('topic_missing_examiners'), { code: topic.topicCode }));
-        return;
-      }
-
-
 
       if (hasInternal) {
-        const conflict = (topic.examinerIds || []).some((id) => id === topic.advisorId || id === topic.reviewerId);
+        const conflict = (topic.examinerIds || []).some((id) => id === topic.advisorId || (topic.reviewerId && id === topic.reviewerId));
         if (conflict) {
           message.error(t(getKey('examiner_conflict'), { code: topic.topicCode }));
           return;
@@ -279,7 +268,7 @@ const CreateCouncilPage = () => {
       }
 
       if (hasExternal) {
-        const conflictExt = (topic.externalExaminers || []).some((id) => id === topic.advisorId || id === topic.reviewerId);
+        const conflictExt = (topic.externalExaminers || []).some((id) => id === topic.advisorId || (topic.reviewerId && id === topic.reviewerId));
         if (conflictExt) {
           message.error(t(getKey('external_examiner_conflict'), { code: topic.topicCode }));
           return;
@@ -318,7 +307,7 @@ const CreateCouncilPage = () => {
           navigate('/councils');
         },
         onError: (err: any) => {
-          message.error(err.message || t(getKey('config_error_message')));
+          message.error(err?.response?.data?.message || err.message || t(getKey('config_error_message')));
         }
       });
     } else {
@@ -329,7 +318,7 @@ const CreateCouncilPage = () => {
           navigate('/councils');
         },
         onError: (err: any) => {
-          message.error(err.message || t(getKey('config_error_message')));
+          message.error(err?.response?.data?.message || err.message || t(getKey('config_error_message')));
         }
       });
     }

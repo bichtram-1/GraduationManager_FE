@@ -172,6 +172,28 @@ const GroupsAdminPage: React.FC = () => {
       ),
     },
     {
+      title: 'Điều kiện bảo vệ',
+      key: 'defense_eligibility',
+      render: (_: unknown, record: any) => {
+        const hdan = record.ket_qua_huong_dan;
+        const pbien = record.ket_qua_phan_bien;
+
+        if (hdan === 'DAT' && pbien === 'DAT') {
+          return <Tag color="green" className="m-0 rounded-full font-medium">Đủ điều kiện bảo vệ</Tag>;
+        }
+        if (hdan === 'DAT' && pbien === 'KHONG_DAT') {
+          return <Tag color="red" className="m-0 rounded-full font-medium">Không đạt phản biện</Tag>;
+        }
+        if (hdan === 'DAT') {
+          return <Tag color="blue" className="m-0 rounded-full font-medium">Đạt GVHD (Chờ phản biện)</Tag>;
+        }
+        if (hdan === 'KHONG_DAT') {
+          return <Tag color="red" className="m-0 rounded-full font-medium">Không đạt GVHD</Tag>;
+        }
+        return <Tag color="warning" className="m-0 rounded-full font-medium text-amber-600 bg-amber-50 border-amber-200">Chưa đánh giá GVHD</Tag>;
+      }
+    },
+    {
       title: t(getKey('group_status')),
       key: 'status',
       render: (_: unknown, r: IListGroup) => {
