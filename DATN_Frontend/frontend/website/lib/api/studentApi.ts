@@ -138,6 +138,8 @@ export interface IThesisRegistration {
   submittedAt: string;
   status: 'pending' | 'accepted' | 'rejected';
   note: string;
+  instructor?: string | null;
+  members?: { studentCode: string; name: string }[];
 }
 
 export const studentApi = {

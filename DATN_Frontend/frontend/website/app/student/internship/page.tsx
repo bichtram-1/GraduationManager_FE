@@ -236,7 +236,7 @@ export default function StudentInternshipPage() {
                 {myRequest.companyName}
               </h3>
               <p className="mt-1 text-sm text-slate-600">
-                Địa chỉ: {myRequest.internshipAddress || 'Tại công ty'} | Mentor: {myRequest.mentor || 'Chưa cập nhật'} ({myRequest.phone || 'Chưa cập nhật'})
+                Vị trí thực tập: {myRequest.position || 'Chưa cập nhật'} | Địa chỉ: {myRequest.internshipAddress || 'Tại công ty'} | Mentor: {myRequest.mentor || 'Chưa cập nhật'} ({myRequest.phone || 'Chưa cập nhật'})
               </p>
             </div>
             <div className="text-left sm:text-right">
