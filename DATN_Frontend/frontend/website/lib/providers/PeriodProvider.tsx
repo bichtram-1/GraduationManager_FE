@@ -10,6 +10,8 @@ interface PeriodContextProps {
   loading: boolean
   studentsTab: 'TTTN' | 'DATN'
   setStudentsTab: (tab: 'TTTN' | 'DATN') => void
+  gradingTab: 'TTTN' | 'DATN'
+  setGradingTab: (tab: 'TTTN' | 'DATN') => void
 }
 
 const PeriodContext = createContext<PeriodContextProps | undefined>(undefined)
@@ -19,6 +21,7 @@ export const PeriodProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [selectedPeriod, setSelectedPeriodState] = useState<IListPeriod | undefined>(undefined)
   const [loading, setLoading] = useState(true)
   const [studentsTab, setStudentsTab] = useState<'TTTN' | 'DATN'>('TTTN')
+  const [gradingTab, setGradingTab] = useState<'TTTN' | 'DATN'>('TTTN')
 
   useEffect(() => {
     let mounted = true
@@ -103,6 +106,8 @@ export const PeriodProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             window.dispatchEvent(new CustomEvent('realtime-topic-updated'));
           } else if (data.type === 'assignment_published') {
             window.dispatchEvent(new CustomEvent('realtime-assignment-published', { detail: data }));
+          } else if (data.type === 'score_updated' || data.type === 'tttn_score_updated') {
+            window.dispatchEvent(new CustomEvent('realtime-score-updated', { detail: data }));
           }
         } catch (err) {
           console.error(err);
@@ -159,7 +164,7 @@ export const PeriodProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }
 
   return (
-    <PeriodContext.Provider value={{ periods, selectedPeriod, setSelectedPeriod, loading, studentsTab, setStudentsTab }}>
+    <PeriodContext.Provider value={{ periods, selectedPeriod, setSelectedPeriod, loading, studentsTab, setStudentsTab, gradingTab, setGradingTab }}>
       {children}
     </PeriodContext.Provider>
   )
