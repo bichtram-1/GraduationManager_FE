@@ -445,7 +445,7 @@ const CustomTreeSelect: React.FC<CustomTreeSelectProps> = ({
       searchValue={searchValue}
       onSearch={setSearchValue}
       loadData={loadChildren}
-      dropdownStyle={{ maxHeight: 420, overflow: 'auto' }}
+      styles={{ popup: { root: { maxHeight: 420, overflow: 'auto' } } }}
       onPopupScroll={handlePopupScroll}
       treeExpandedKeys={expandedKeys}
       onTreeExpand={(keys) => setExpandedKeys(keys as string[])}

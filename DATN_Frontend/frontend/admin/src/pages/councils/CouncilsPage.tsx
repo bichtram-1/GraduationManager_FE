@@ -71,7 +71,7 @@ const CouncilsPage: React.FC = () => {
             message.success('Cập nhật trạng thái hội đồng thành công!');
           },
           onError: (err: any) => {
-            message.error(err.message || 'Có lỗi xảy ra!');
+            message.error(err?.response?.data?.message || err.message || 'Có lỗi xảy ra!');
           }
         });
       }

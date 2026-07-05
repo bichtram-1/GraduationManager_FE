@@ -67,6 +67,12 @@ export function TeacherShell({ children }: { children: ReactNode }) {
         const activePeriod = datnPeriods.find(p => p.status === 'open' || p.status === 'published') || datnPeriods[0];
         setSelectedPeriod(activePeriod);
       }
+    } else if (pathname.startsWith('/teacher/review-groups')) {
+      const datnPeriods = periods.filter(p => p.type === 'datn');
+      if (datnPeriods.length > 0 && (!selectedPeriod || selectedPeriod.type !== 'datn')) {
+        const activePeriod = datnPeriods.find(p => p.status === 'open' || p.status === 'published' || p.status === 'grading') || datnPeriods[0];
+        setSelectedPeriod(activePeriod);
+      }
     } else if (pathname.startsWith('/teacher/students')) {
       if (studentsTab === 'TTTN') {
         const tttnPeriods = periods.filter(p => p.type === 'tttn');
@@ -125,10 +131,10 @@ export function TeacherShell({ children }: { children: ReactNode }) {
                 }}
                 variant="borderless"
                 popupMatchSelectWidth={false}
-                dropdownStyle={{ minWidth: 'max-content' }}
+                styles={{ popup: { root: { minWidth: 'max-content' } } }}
                 classNames={{ popup: { root: 'rounded-xl shadow-lg' } }}
               >
-                {periods.filter(p => p.type === 'tttn').length > 0 && !pathname.startsWith('/teacher/topics') && !pathname.startsWith('/teacher/groups') && (!pathname.startsWith('/teacher/students') || studentsTab === 'TTTN') && (
+                {periods.filter(p => p.type === 'tttn').length > 0 && !pathname.startsWith('/teacher/topics') && !pathname.startsWith('/teacher/groups') && !pathname.startsWith('/teacher/review-groups') && (!pathname.startsWith('/teacher/students') || studentsTab === 'TTTN') && (
                   <Select.OptGroup label="Đợt Thực tập tốt nghiệp (TTTN)">
                     {periods.filter(p => p.type === 'tttn').map(p => (
                       <Select.Option key={p.id} value={p.id}>
@@ -139,11 +145,13 @@ export function TeacherShell({ children }: { children: ReactNode }) {
                 )}
                 {periods.filter(p => p.type === 'datn').length > 0 && (!pathname.startsWith('/teacher/students') || studentsTab === 'DATN') && (
                   <Select.OptGroup label="Đợt Đồ án tốt nghiệp (ĐATN)">
-                    {periods.filter(p => p.type === 'datn').map(p => (
-                      <Select.Option key={p.id} value={p.id}>
-                        <span className="font-medium text-slate-700 text-sm whitespace-nowrap">{p.name}</span>
-                      </Select.Option>
-                    ))}
+                    {periods
+                      .filter(p => p.type === 'datn')
+                      .map(p => (
+                        <Select.Option key={p.id} value={p.id}>
+                          <span className="font-medium text-slate-700 text-sm whitespace-nowrap">{p.name}</span>
+                        </Select.Option>
+                      ))}
                   </Select.OptGroup>
                 )}
               </Select>
@@ -263,13 +271,14 @@ export function TeacherStatCard({
   title: string
   value: string
   hint: string
-  accent?: 'blue' | 'green' | 'orange' | 'violet'
+  accent?: 'blue' | 'green' | 'orange' | 'violet' | 'red'
 }) {
   const accents = {
     blue: 'from-[#2196F3] to-[#2563eb]',
     green: 'from-[#10b981] to-[#059669]',
     orange: 'from-[#f97316] to-[#ea580c]',
     violet: 'from-[#8b5cf6] to-[#7c3aed]',
+    red: 'from-[#ef4444] to-[#dc2626]',
   } as const
 
   return (

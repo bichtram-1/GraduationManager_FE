@@ -655,10 +655,11 @@ export default function TeacherStudentsPage() {
                 <div className="mt-2 rounded-md border border-slate-100 bg-white p-3 text-sm text-slate-700">
                   {(() => {
                     const fileName = selectedReport?.duong_dan_file || (selectedReport ? `tuan_${selectedReport.tuan_so}.pdf` : 'report.pdf');
+                    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
                     const fileUrl = selectedReport?.duong_dan_file 
                       ? (selectedReport.duong_dan_file.startsWith('http') 
                           ? selectedReport.duong_dan_file 
-                          : `/storage/${selectedReport.duong_dan_file}`) 
+                          : `${backendUrl}/storage/${selectedReport.duong_dan_file}`) 
                       : '#';
                     return (
                       <a href={fileUrl} target="_blank" rel="noreferrer" className="text-blue-600 underline font-semibold hover:text-blue-800">
