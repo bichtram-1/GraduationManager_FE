@@ -76,13 +76,16 @@ export default function TeacherGradingPage() {
   const [tttnScores, setTttnScores] = useState(defaultTttnRows)
   const [toast, setToast] = useState<string | null>(null)
   const [selectedCouncil, setSelectedCouncil] = useState<typeof defaultCouncilGroups[0] | null>(defaultCouncilGroups[0])
-  const [selectedGroup, setSelectedGroup] = useState<null | { id?: string; groupCode: string; topic: string; students: { id: string; name: string }[] }>(null)
+  const [selectedGroup, setSelectedGroup] = useState<null | { id?: string; groupCode: string; topic: string; advisorId?: string; students: { id: string; name: string; class?: string }[] }>(null)
   const [selectedTttnId, setSelectedTttnId] = useState(defaultTttnRows[0].id)
   const [councilList, setCouncilList] = useState(defaultCouncilGroups)
+  const [currentTeacherId, setCurrentTeacherId] = useState<string>('')
   const [scoreList, setScoreList] = useState(defaultScoreRows)
   const [_loading, setLoading] = useState(false)
   const [showScoringModal, setShowScoringModal] = useState(false)
   const [lastUpdatedTime, setLastUpdatedTime] = useState<string>('Chưa cập nhật')
+  const [datnFilter, setDatnFilter] = useState<'all' | 'graded' | 'grading' | 'ungraded'>('all')
+  const [roleFilter, setRoleFilter] = useState<'all' | 'reviewer' | 'member'>('all')
 
   const notify = (message: string) => {
     setToast(message)
@@ -98,6 +101,9 @@ export default function TeacherGradingPage() {
         if (!mounted) return
         console.log('grading data:', data)
         if (data) {
+          if (data.teacherId) {
+            setCurrentTeacherId(String(data.teacherId))
+          }
           const newTttnRows = data.tttnRows ?? defaultTttnRows
           setTttnScores(newTttnRows)
           if (newTttnRows.length > 0) {
@@ -252,6 +258,7 @@ export default function TeacherGradingPage() {
       if (res?.success) {
         notify('Đã lưu điểm thực tập tốt nghiệp thành công!')
         setLastUpdatedTime(formatVietnamTime(new Date()))
+        window.dispatchEvent(new CustomEvent('realtime-score-updated'))
       } else {
         alert('Lưu điểm thất bại!')
       }
@@ -297,7 +304,7 @@ export default function TeacherGradingPage() {
     <>
       <TeacherSectionHeader
         title="Chấm điểm"
-        description="Một màn hình gộp cả chấm điểm TTTN và chấm điểm hội đồng ĐATN theo kiểu trình bày của bộ giao diện tham chiếu."
+        description="Chấm điểm TTTN sinh viên hướng dẫn và chấm điểm sih viên trong Hội động tham gia."
         actions={
           <TeacherPill tone="orange">Quy trình chấm điểm</TeacherPill>
         }
@@ -521,16 +528,35 @@ export default function TeacherGradingPage() {
             <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-5 py-4">
               <div>
                 <div className="text-sm font-semibold text-slate-900">Chấm điểm hội đồng</div>
-                  <div className="text-xs text-slate-500">Thang điểm và vai trò được hiển thị như thiết kế mẫu</div>
-                  <div className="text-xs text-slate-400">debug: groups={selectedCouncil?.groups?.length ?? 0}</div>
               </div>
-              <TeacherPill tone="green">Đang chấm</TeacherPill>
+              <div className="flex items-center gap-3">
+                <select
+                  value={roleFilter}
+                  onChange={(e) => setRoleFilter(e.target.value as any)}
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="all">Tất cả vai trò</option>
+                  <option value="reviewer">Đề tài Phản biện</option>
+                  <option value="member">Đề tài Ủy viên/Chủ tịch</option>
+                </select>
+                <select
+                  value={datnFilter}
+                  onChange={(e) => setDatnFilter(e.target.value as any)}
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="all">Tất cả đề tài</option>
+                  <option value="graded">Đã chấm</option>
+                  <option value="grading">Đang chấm</option>
+                  <option value="ungraded">Chưa chấm</option>
+                </select>
+                <TeacherPill tone="green">Đang chấm</TeacherPill>
+              </div>
             </div>
-              <div className="p-4">
-                <table className="w-full text-sm">
+              <div className="p-4 overflow-x-auto">
+                <table className="w-full text-sm min-w-[800px]">
                   <thead className="bg-slate-50 text-slate-600">
                     <tr>
-                      <th className="px-5 py-3 text-left">Mã nhóm</th>
+                      <th className="px-5 py-3 text-left w-12">STT</th>
                       <th className="px-5 py-3 text-left">Tên đề tài</th>
                       <th className="px-5 py-3 text-left">Thành viên nhóm</th>
                       <th className="px-5 py-3 text-left">GVHD</th>
@@ -539,35 +565,89 @@ export default function TeacherGradingPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {(selectedCouncil?.groups || []).map((g) => {
-                      const membersStr = (g.students || []).map((s) => `${s.id} - ${s.name}`).join(', ')
-                      const hasScore = (g.students || []).some((s) => !!(scoreList.find((r) => r.id === s.id)?.member))
-                      return (
-                        <tr key={g.groupCode} className="border-t border-slate-100 transition hover:bg-slate-50/80">
-                          <td className="px-5 py-4">
-                            <button type="button" onClick={() => { setSelectedGroup(g); setSelectedCouncil(selectedCouncil); setShowScoringModal(true) }} className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-3 py-1 text-xs text-[#1976D2] hover:bg-slate-100">
-                              {g.groupCode}
-                            </button>
-                          </td>
-                          <td className="px-5 py-4 text-slate-900">
-                            <div className="text-sm text-[#1976D2]">{g.topic}</div>
-                            <div className="text-xs text-slate-500"></div>
-                          </td>
-                          <td className="px-5 py-4 text-slate-700 max-w-[320px] truncate">{membersStr}</td>
-                          <td className="px-5 py-4 text-slate-700">{selectedCouncil?.members?.[0]?.name ?? '—'}</td>
-                          <td className="px-5 py-4">
-                            {hasScore ? <span className="inline-flex items-center gap-2 rounded-md bg-emerald-50 px-2 py-1 text-emerald-700 text-xs">Đã chấm</span> : <span className="inline-flex items-center gap-2 rounded-md bg-amber-50 px-2 py-1 text-amber-700 text-xs">Chưa chấm</span>}
-                          </td>
-                          <td className="px-5 py-4">
-                            <div className="flex items-center gap-2">
-                              <TeacherButton variant={hasScore ? 'secondary' : 'primary'} onClick={() => { setSelectedGroup(g); setSelectedCouncil(selectedCouncil); setShowScoringModal(true) }}>
-                                {hasScore ? 'Chấm lại' : 'Vào chấm điểm'}
-                              </TeacherButton>
-                            </div>
-                          </td>
-                        </tr>
-                      )
-                    })}
+                    {(() => {
+                      const list = (selectedCouncil?.groups || []).filter((g) => {
+                        const gradedCount = (g.students || []).filter((s) => !!(scoreList.find((r) => r.id === s.id)?.member)).length;
+                        const totalMembers = (g.students || []).length;
+                        
+                        let currentStatus: 'ungraded' | 'grading' | 'graded' = 'ungraded';
+                        if (gradedCount === totalMembers && totalMembers > 0) {
+                          currentStatus = 'graded';
+                        } else if (gradedCount > 0) {
+                          currentStatus = 'grading';
+                        }
+
+                        if (datnFilter !== 'all' && datnFilter !== currentStatus) return false;
+                        
+                        const isReviewer = selectedCouncil?.role === 'GVPB';
+                        const isMember = selectedCouncil?.role === 'Ủy viên' || selectedCouncil?.role === 'Chủ tịch';
+                        
+                        if (roleFilter === 'reviewer' && !isReviewer) return false;
+                        if (roleFilter === 'member' && !isMember) return false;
+                        return true;
+                      });
+
+                      if (list.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan={6} className="px-5 py-8 text-center text-slate-500">
+                              Không tìm thấy đề tài nào phù hợp với bộ lọc.
+                            </td>
+                          </tr>
+                        );
+                      }
+
+                      return list.map((g, index) => {
+                        const gradedCount = (g.students || []).filter((s) => !!(scoreList.find((r) => r.id === s.id)?.member)).length;
+                        const totalMembers = (g.students || []).length;
+                        
+                        let statusBadge = (
+                          <span className="inline-flex items-center gap-2 rounded-md bg-amber-50 px-2 py-1 text-amber-700 text-xs">Chưa chấm</span>
+                        );
+                        let hasScore = false;
+                        if (gradedCount === totalMembers && totalMembers > 0) {
+                          statusBadge = (
+                            <span className="inline-flex items-center gap-2 rounded-md bg-emerald-50 px-2 py-1 text-emerald-700 text-xs">Đã chấm</span>
+                          );
+                          hasScore = true;
+                        } else if (gradedCount > 0) {
+                          statusBadge = (
+                            <span className="inline-flex items-center gap-2 rounded-md bg-blue-50 px-2 py-1 text-blue-700 text-xs">Đang chấm</span>
+                          );
+                          hasScore = true;
+                        }
+
+                        return (
+                          <tr key={g.groupCode} className="border-t border-slate-100 transition hover:bg-slate-50/80">
+                            <td className="px-5 py-4 text-slate-500 font-medium">{index + 1}</td>
+                            <td className="px-5 py-4 text-slate-900">
+                              <div className="text-sm font-semibold text-[#1976D2]">{g.topic}</div>
+                              <div className="text-xs text-slate-500 mt-1">Nhóm: {g.groupCode}</div>
+                            </td>
+                            <td className="px-5 py-4 text-slate-700">
+                              <div className="space-y-1">
+                                {(g.students || []).map((s) => (
+                                  <div key={s.id} className="text-xs">
+                                    <span className="font-semibold text-slate-600">{s.id}</span> - <span className="text-slate-900">{s.name}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </td>
+                            <td className="px-5 py-4 text-slate-700">{selectedCouncil?.members?.[0]?.name ?? '—'}</td>
+                            <td className="px-5 py-4">
+                              {statusBadge}
+                            </td>
+                            <td className="px-5 py-4">
+                              <div className="flex items-center gap-2">
+                                <TeacherButton variant={hasScore ? 'secondary' : 'primary'} onClick={() => { setSelectedGroup(g); setSelectedCouncil(selectedCouncil); setShowScoringModal(true) }}>
+                                  {hasScore ? 'Chấm lại' : 'Vào chấm điểm'}
+                                </TeacherButton>
+                              </div>
+                            </td>
+                          </tr>
+                        )
+                      });
+                    })()}
                   </tbody>
                 </table>
               </div>
@@ -581,7 +661,7 @@ export default function TeacherGradingPage() {
       )}
 
       {toast && (
-        <div className="fixed right-6 top-20 z-50 rounded-2xl bg-emerald-500 px-4 py-3 text-sm text-white shadow-lg">
+        <div className="fixed right-6 top-20 z-[9999] rounded-2xl bg-emerald-500 px-4 py-3 text-sm text-white shadow-lg">
           ✓ {toast}
         </div>
       )}
@@ -593,7 +673,6 @@ export default function TeacherGradingPage() {
             <div className="mb-4 flex items-start justify-between">
               <div>
                 <div className="text-lg font-semibold text-slate-900">Chấm điểm hội đồng — Nhóm {selectedGroup.groupCode}</div>
-                <div className="text-sm text-slate-500">{selectedGroup.topic}</div>
               </div>
               <div className="flex items-center gap-3">
                 <button type="button" onClick={() => setShowScoringModal(false)} className="rounded-md px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">Đóng</button>
@@ -601,8 +680,9 @@ export default function TeacherGradingPage() {
             </div>
             <ScoringTable
               groupId={selectedGroup.id || selectedGroup.groupCode}
-              students={(selectedGroup.students || []).map((s) => ({ id: s.id, name: s.name }))}
-              canEditReport={selectedCouncil?.members?.some((m) => m.role.toLowerCase().includes('hướng dẫn') || m.role.toLowerCase().includes('phản biện')) || selectedCouncil?.role === 'GVPB'}
+              students={(selectedGroup.students || []).map((s) => ({ id: s.id, name: s.name, class: s.class }))}
+              canEditReport={selectedCouncil?.role === 'GVPB' || selectedGroup.advisorId === currentTeacherId}
+              notify={(msg) => notify(msg)}
             />
           </div>
         </div>
