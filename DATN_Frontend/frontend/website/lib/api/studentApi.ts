@@ -98,6 +98,7 @@ export interface IProgressReport {
 }
 
 export interface IDatnProgressReport {
+  week: number;
   name: string;
   status: string;
   file: string;
@@ -379,13 +380,13 @@ export const studentApi = {
     return response?.data?.results?.objects || response?.data?.results?.object || [];
   },
 
-  submitTttnReport: async (data: { week: number; title: string; note: string; file?: string }): Promise<IProgressReport> => {
+  submitTttnReport: async (data: { week: number; title: string; note: string; file?: string; fileName?: string }): Promise<IProgressReport> => {
     if (USE_MOCK) {
       return {
         week: data.week,
         title: data.title,
         status: 'Chờ duyệt',
-        file: data.file || '—',
+        file: data.fileName || data.file || '—',
         note: data.note,
         updated: new Date().toLocaleDateString('vi-VN')
       };
@@ -398,9 +399,9 @@ export const studentApi = {
   getDatnReports: async (): Promise<IDatnProgressReport[]> => {
     if (USE_MOCK) {
       return [
-        { name: 'Bản thảo Chương 1', status: 'Đã duyệt', file: 'chuong1.pdf', note: 'Phạm vi đề tài và tổng quan', updated: '05/05/2026' },
-        { name: 'Bản thảo Chương 2', status: 'Đang chấm điểm', file: 'chuong2.pdf', note: 'Thiết kế và cơ sở lý thuyết', updated: '14/05/2026' },
-        { name: 'Báo cáo chính thức', status: 'Nháp', file: '—', note: 'Hoàn thiện kết luận và phụ lục', updated: '23/05/2026' },
+        { week: 1, name: 'Bản thảo Chương 1', status: 'Đã duyệt', file: 'chuong1.pdf', note: 'Phạm vi đề tài và tổng quan', updated: '05/05/2026' },
+        { week: 2, name: 'Bản thảo Chương 2', status: 'Đang chấm điểm', file: 'chuong2.pdf', note: 'Thiết kế và cơ sở lý thuyết', updated: '14/05/2026' },
+        { week: 3, name: 'Báo cáo chính thức', status: 'Nháp', file: '—', note: 'Hoàn thiện kết luận và phụ lục', updated: '23/05/2026' },
       ];
     }
 
@@ -408,12 +409,13 @@ export const studentApi = {
     return response?.data?.results?.objects || response?.data?.results?.object || [];
   },
 
-  submitDatnReport: async (data: { name: string; note: string; file?: string }): Promise<IDatnProgressReport> => {
+  submitDatnReport: async (data: { week: number; name: string; note: string; file?: string; fileName?: string }): Promise<IDatnProgressReport> => {
     if (USE_MOCK) {
       return {
+        week: data.week,
         name: data.name,
         status: 'Đang chấm điểm',
-        file: data.file || '—',
+        file: data.fileName || data.file || '—',
         note: data.note,
         updated: new Date().toLocaleDateString('vi-VN')
       };
