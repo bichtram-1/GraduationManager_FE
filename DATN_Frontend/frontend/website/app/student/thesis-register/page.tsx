@@ -7,16 +7,43 @@ import Link from 'next/link'
 import { CalendarDays, CheckCircle2, Clock3, Users } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { StudentPill, StudentSectionHeader } from '../_components/StudentShell'
+import { StudentButton, StudentModal } from '../_components/StudentUI'
+import { COMMON_LABELS } from '@/constants/commonLabels'
 
 type Topic = { id: string; code?: string; title: string; module: string; published: boolean; slots?: string }
 
 type Registration = IThesisRegistration;
+
+type ConfirmAction =
+  | { type: 'register'; topicId: string }
+  | { type: 'leaveGroup' }
+  | { type: 'cancelTopic' }
+
+const CONFIRM_COPY: Record<ConfirmAction['type'], { title: string; message: string; confirmLabel: string }> = {
+  register: {
+    title: 'Xác nhận đổi đề tài',
+    message: 'Bạn đang thay đổi đề tài cho nhóm. Đề tài cũ sẽ bị thay thế. Bạn có chắc chắn muốn thay đổi không?',
+    confirmLabel: 'Xác nhận đổi',
+  },
+  leaveGroup: {
+    title: 'Xác nhận rời/giải tán nhóm',
+    message: 'Bạn có chắc chắn muốn rời nhóm hoặc giải tán nhóm không? Hành động này không thể hoàn tác.',
+    confirmLabel: 'Xác nhận',
+  },
+  cancelTopic: {
+    title: 'Xác nhận hủy đăng ký đề tài',
+    message: 'Bạn có chắc chắn muốn hủy đăng ký đề tài này không? Nhóm của bạn vẫn sẽ được giữ lại.',
+    confirmLabel: 'Xác nhận hủy',
+  },
+}
 
 export default function ThesisRegisterPage() {
   const { selectedPeriod } = usePeriod()
   const [topics, setTopics] = useState<Topic[]>([])
   const [loading, setLoading] = useState(true)
   const [registration, setRegistration] = useState<Registration | null>(null)
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null)
+  const [confirming, setConfirming] = useState(false)
 
   useEffect(() => {
     let mounted = true
@@ -55,12 +82,15 @@ export default function ThesisRegisterPage() {
     }
   }, [selectedPeriod?.id])
 
-  const handleRegister = async (id: string) => {
+  const handleRegister = (id: string) => {
     if (registration && registration.topicId) {
-      if (!confirm('Bạn đang thay đổi đề tài cho nhóm. Đề tài cũ sẽ bị thay thế. Bạn có chắc chắn muốn thay đổi không?')) {
-        return
-      }
+      setConfirmAction({ type: 'register', topicId: id })
+      return
     }
+    void doRegister(id)
+  }
+
+  const doRegister = async (id: string) => {
     try {
       setLoading(true)
       const res = await studentApi.registerThesis(Number(id))
@@ -75,10 +105,7 @@ export default function ThesisRegisterPage() {
     }
   }
 
-  const handleCancel = async () => {
-    if (!confirm('Bạn có chắc chắn muốn rời nhóm hoặc giải tán nhóm không? Hành động này không thể hoàn tác.')) {
-      return
-    }
+  const doLeaveGroup = async () => {
     try {
       setLoading(true)
       await studentApi.leaveGroup()
@@ -93,10 +120,7 @@ export default function ThesisRegisterPage() {
     }
   }
 
-  const handleCancelTopic = async () => {
-    if (!confirm('Bạn có chắc chắn muốn hủy đăng ký đề tài này không? Nhóm của bạn vẫn sẽ được giữ lại.')) {
-      return
-    }
+  const doCancelTopic = async () => {
     try {
       setLoading(true)
       await studentApi.cancelThesisRegistration()
@@ -113,7 +137,29 @@ export default function ThesisRegisterPage() {
     }
   }
 
-  const registrationTone = !registration ? 'slate' : registration.status === 'accepted' ? 'green' : registration.status === 'rejected' ? 'red' : 'orange'
+  const runConfirmAction = async () => {
+    if (!confirmAction) return
+    setConfirming(true)
+    try {
+      if (confirmAction.type === 'register') {
+        await doRegister(confirmAction.topicId)
+      } else if (confirmAction.type === 'leaveGroup') {
+        await doLeaveGroup()
+      } else {
+        await doCancelTopic()
+      }
+    } finally {
+      setConfirming(false)
+      setConfirmAction(null)
+    }
+  }
+
+  const REGISTRATION_TONE: Record<Registration['status'], 'green' | 'red' | 'orange'> = {
+    accepted: 'green',
+    rejected: 'red',
+    pending: 'orange',
+  }
+  const registrationTone = registration ? REGISTRATION_TONE[registration.status] : 'slate'
 
   return (
     <>
@@ -158,7 +204,7 @@ export default function ThesisRegisterPage() {
             <div className="mt-4 flex justify-end">
               <button
                 type="button"
-                onClick={handleCancel}
+                onClick={() => setConfirmAction({ type: 'leaveGroup' })}
                 className="rounded-2xl border border-red-200 px-4 py-2 text-xs font-medium text-red-600 transition hover:bg-red-50"
               >
                 Giải tán / Rời nhóm
@@ -192,9 +238,10 @@ export default function ThesisRegisterPage() {
         ) : topics.length === 0 ? (
           <div className="p-8 text-center text-sm text-slate-500">Không có đề tài nào.</div>
         ) : (
+          <div className="max-h-180 overflow-y-auto pr-1">
           <div className="grid gap-4 md:grid-cols-2">
             {topics.map((t) => {
-              const teacher = t.module ? `GV: ${t.module}` : 'GV: TS. Nguyễn Văn X'
+              const teacher = t.module ? `GV: ${t.module}` : 'GV: Chưa phân công'
               const slotsStr = t.slots || '0/4'
               const [used, maxSlots] = slotsStr.split('/').map(Number)
               const hasSlot = used < maxSlots && t.published
@@ -231,9 +278,9 @@ export default function ThesisRegisterPage() {
                         Đăng ký
                       </button>
                     ) : (
-                      <button 
+                      <button
                         disabled={registration?.status === 'accepted'}
-                        onClick={handleCancelTopic} 
+                        onClick={() => setConfirmAction({ type: 'cancelTopic' })}
                         className={`flex-1 rounded-2xl border px-4 py-2 text-sm font-medium transition ${registration?.status === 'accepted' ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
                       >
                         {registration?.status === 'accepted' ? 'Đã khóa đề tài' : 'Hủy đăng ký'}
@@ -248,6 +295,7 @@ export default function ThesisRegisterPage() {
                 </div>
               )
             })}
+          </div>
           </div>
         )}
       </section>
@@ -264,6 +312,25 @@ export default function ThesisRegisterPage() {
           </Link>
         </div>
       </section>
+
+      <StudentModal
+        open={confirmAction !== null}
+        title={confirmAction ? CONFIRM_COPY[confirmAction.type].title : ''}
+        onClose={() => setConfirmAction(null)}
+        closeDisabled={confirming}
+        footer={
+          <>
+            <StudentButton variant="secondary" disabled={confirming} onClick={() => setConfirmAction(null)}>{COMMON_LABELS.CANCEL}</StudentButton>
+            <StudentButton variant="danger" disabled={confirming} onClick={runConfirmAction}>
+              {confirming ? 'Đang xử lý...' : confirmAction ? CONFIRM_COPY[confirmAction.type].confirmLabel : ''}
+            </StudentButton>
+          </>
+        }
+      >
+        <div className="text-sm leading-relaxed text-slate-600">
+          {confirmAction ? CONFIRM_COPY[confirmAction.type].message : ''}
+        </div>
+      </StudentModal>
     </>
   )
 }

@@ -16,18 +16,69 @@ import PieChart from '@shared/components/chart/PieChart';
 import { dashboardHooks } from '../../hooks/useDashboard';
 import { COLORS } from '@shared/constants/color';
 import { formatNumber } from '@shared/utils/numberUtils';
+import { useMemo } from 'react';
+import { useGlobalVariable } from '../../hooks/GlobalVariableProvider';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
 
 const DashboardPage = () => {
   const { t } = useTranslation();
+  const { selectedPeriod } = useGlobalVariable();
   const { data, isLoading } = dashboardHooks.useFetchDashboard();
 
   const stats = data?.stats;
   const studentsPerCourse = data?.studentsPerCourse ?? [];
   const learningProgress = data?.learningProgress ?? [];
   const recentActivities = data?.recentActivities ?? [];
+
+  const isCompleted = (dStr?: string) => {
+    if (!dStr) return false;
+    const parts = dStr.split('/');
+    if (parts.length === 3) {
+      const d = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
+      return d <= new Date();
+    }
+    return false;
+  };
+
+  const milestones = useMemo(() => {
+    if (!selectedPeriod) {
+      return [
+        { title: t(getKey('company_registration')), date: '01/05/2026', color: 'green' },
+        { title: t(getKey('info_review')), date: '10/05/2026', color: 'green' },
+        { title: t(getKey('internship_start')), date: '15/05/2026', color: 'gray' },
+        { title: t(getKey('submit_final_report')), date: '30/07/2026', color: 'gray' },
+      ];
+    }
+    return [
+      {
+        title: 'Mở đăng ký đợt học',
+        date: selectedPeriod.regOpenDate || '—',
+        color: isCompleted(selectedPeriod.regOpenDate) ? 'green' : 'gray',
+      },
+      {
+        title: 'Hạn đăng ký đợt học',
+        date: selectedPeriod.regDeadline || '—',
+        color: isCompleted(selectedPeriod.regDeadline) ? 'green' : 'gray',
+      },
+      {
+        title: 'Bắt đầu đợt (Thực tập/Đồ án)',
+        date: selectedPeriod.startDate || '—',
+        color: isCompleted(selectedPeriod.startDate) ? 'green' : 'gray',
+      },
+      {
+        title: 'Hạn nộp báo cáo tiến độ',
+        date: selectedPeriod.reportDeadline || '—',
+        color: isCompleted(selectedPeriod.reportDeadline) ? 'green' : 'gray',
+      },
+      {
+        title: 'Kết thúc đợt (Hạn chấm điểm)',
+        date: selectedPeriod.gradingEndDate || selectedPeriod.endDate || '—',
+        color: isCompleted(selectedPeriod.gradingEndDate || selectedPeriod.endDate) ? 'green' : 'gray',
+      },
+    ];
+  }, [selectedPeriod, t]);
 
   const statCards = [ 
     {
@@ -197,12 +248,7 @@ const DashboardPage = () => {
             <Text className="text-slate-500">{t(getKey('milestones_sub'))}</Text>
           </div>
           <List
-            dataSource={[
-              { title: t(getKey('company_registration')), date: '01/05/2026', color: 'green' },
-              { title: t(getKey('info_review')), date: '10/05/2026', color: 'green' },
-              { title: t(getKey('internship_start')), date: '15/05/2026', color: 'gray' },
-              { title: t(getKey('submit_final_report')), date: '30/07/2026', color: 'gray' },
-            ]}
+            dataSource={milestones}
             renderItem={(item) => (
               <List.Item className={cn('!px-0')}>
                 <div className="flex items-start gap-3">

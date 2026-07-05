@@ -7,6 +7,7 @@ import { TeacherButton, TeacherCard, TeacherInputClass } from '../_components/Te
 import ScoringTable from './ScoringTable'
 import { usePeriod } from '@/lib/providers/PeriodProvider'
 import { teacherApi } from '@/lib/api/teacherApi'
+import { COMMON_LABELS } from '@/constants/commonLabels'
 
 // Default fallbacks (used if mock API is unavailable)
 const defaultTttnRows = [
@@ -449,7 +450,7 @@ export default function TeacherGradingPage() {
                 <div className="text-sm text-slate-500">{selectedGroup.topic}</div>
               </div>
               <div className="flex items-center gap-3">
-                <button type="button" onClick={() => setShowScoringModal(false)} className="rounded-md px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">Đóng</button>
+                <button type="button" onClick={() => setShowScoringModal(false)} className="rounded-md px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">{COMMON_LABELS.CLOSE}</button>
               </div>
             </div>
             <ScoringTable

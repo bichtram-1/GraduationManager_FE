@@ -1,11 +1,13 @@
 "use client"
 
 import { useEffect, useMemo, useState } from 'react'
-import { BarChart3, Building2, ChevronLeft, ChevronRight, MapPin, Search, Users, CalendarDays, Phone, Mail, X, Plus } from 'lucide-react'
+import { BarChart3, Building2, ChevronLeft, ChevronRight, MapPin, Search, Users, CalendarDays, Phone, Mail, Plus } from 'lucide-react'
 import { StudentPill, StudentSectionHeader } from '../_components/StudentShell'
+import { StudentButton, StudentField, StudentInputClass, StudentModal } from '../_components/StudentUI'
 import { studentApi, ICompany } from '@/lib/api/studentApi'
 import { Spin, message } from 'antd'
 import { usePeriod } from '@/lib/providers/PeriodProvider'
+import { COMMON_LABELS } from '@/constants/commonLabels'
 
 export default function StudentInternshipPage() {
   const { selectedPeriod } = usePeriod()
@@ -27,7 +29,6 @@ export default function StudentInternshipPage() {
     mentor: '',
     phone: '',
     email: '',
-    slots: '',
     duration: '',
     confirmPaper: false,
   })
@@ -59,7 +60,6 @@ export default function StudentInternshipPage() {
       mentor: c.mentor || '',
       phone: c.phone || '',
       email: c.email || '',
-      slots: String(c.slots || ''),
       duration: c.duration || '8 tuần',
       confirmPaper: declareForm.confirmPaper,
     });
@@ -109,10 +109,6 @@ export default function StudentInternshipPage() {
     return filtered.slice(start, start + pageSize)
   }, [filtered, currentPage])
 
-  const totalSlots = useMemo(() => {
-    return companies.reduce((total, company) => total + (company.slots || 0), 0)
-  }, [companies])
-
   const handleDeclareSubmit = async () => {
     if (!declareForm.companyName) {
       message.error('Vui lòng nhập tên công ty!')
@@ -152,7 +148,6 @@ export default function StudentInternshipPage() {
         mentor: '',
         phone: '',
         email: '',
-        slots: '',
         duration: '',
         confirmPaper: false,
       })
@@ -176,17 +171,18 @@ export default function StudentInternshipPage() {
     )
   }
 
-  const myRequestStatusText = (() => {
-    if (!myRequest) return 'Chưa khai báo'
-    if (myRequest.status === 'approved') return 'Đã duyệt'
-    if (myRequest.status === 'rejected') return 'Bị từ chối'
-    if (myRequest.status === 'cho_cap_giay') return 'Chờ cấp giấy'
-    return 'Chờ phê duyệt'
-  })()
+  const REQUEST_STATUS_META: Record<string, { label: string; tone: 'green' | 'red' | 'blue' | 'orange' }> = {
+    approved: { label: 'Đã duyệt', tone: 'green' },
+    rejected: { label: 'Bị từ chối', tone: 'red' },
+    cho_cap_giay: { label: 'Chờ cấp giấy', tone: 'blue' },
+  }
+  const requestStatusMeta = myRequest
+    ? REQUEST_STATUS_META[myRequest.status] ?? { label: 'Chờ phê duyệt', tone: 'orange' as const }
+    : { label: 'Chưa khai báo', tone: 'orange' as const }
+  const myRequestStatusText = requestStatusMeta.label
 
   const summary = [
-    { title: 'Công ty mở slot', value: companies.length.toString(), hint: 'Đã phê duyệt đối tác' },
-    { title: 'Slot đang mở', value: totalSlots.toString(), hint: 'Có thể nộp đăng ký ngay' },
+    { title: 'Công ty đối tác', value: companies.length.toString(), hint: 'Đã phê duyệt đối tác' },
     { title: 'Trạng thái của bạn', value: myRequestStatusText, hint: myRequest ? `Tại ${myRequest.companyName}` : 'Khai báo để đăng ký' },
   ]
 
@@ -194,7 +190,7 @@ export default function StudentInternshipPage() {
     <>
       <StudentSectionHeader
         title="Đăng ký thực tập tốt nghiệp"
-        description="Tìm kiếm công ty, xem số lượng slot còn trống hoặc tự khai báo thông tin nơi thực tập của bạn."
+        description="Tìm kiếm công ty đối tác đã được duyệt hoặc tự khai báo thông tin nơi thực tập của bạn."
         actions={
           <>
             <StudentPill tone="green">Đang mở đăng ký</StudentPill>
@@ -212,7 +208,7 @@ export default function StudentInternshipPage() {
         }
       />
 
-      <div className="mb-5 grid gap-4 md:grid-cols-3">
+      <div className="mb-5 grid gap-4 md:grid-cols-2">
         {summary.map((item) => (
           <section key={item.title} className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
             <div className="inline-flex rounded-2xl bg-gradient-to-br from-[#2196F3] to-[#2563eb] px-3 py-2 text-white shadow-lg shadow-blue-100">
@@ -231,7 +227,7 @@ export default function StudentInternshipPage() {
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs font-semibold text-slate-500">HỒ SƠ KHAI BÁO CỦA BẠN:</span>
-                <StudentPill tone={myRequest.status === 'approved' ? 'green' : (myRequest.status === 'rejected' ? 'red' : (myRequest.status === 'cho_cap_giay' ? 'blue' : 'orange'))}>
+                <StudentPill tone={requestStatusMeta.tone}>
                   {myRequestStatusText}
                 </StudentPill>
                 {myRequest.confirmPaper && <StudentPill tone="blue">Yêu cầu giấy giới thiệu</StudentPill>}
@@ -350,202 +346,172 @@ export default function StudentInternshipPage() {
         )}
       </section>
 
-      {declareOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 py-8 backdrop-blur-sm">
-          <div className="relative w-full max-w-2xl overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_30px_120px_rgba(15,23,42,0.3)] animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-5 py-4">
-              <div>
-                <div className="text-sm font-semibold text-slate-900">Khai báo nơi thực tập</div>
-                <div className="text-xs text-slate-500">Khai báo đơn vị tự liên hệ thực tập ngoài danh sách</div>
-              </div>
-              <button 
-                onClick={() => setDeclareOpen(false)} 
-                className="rounded-full p-2 text-slate-500 transition hover:bg-slate-200 hover:text-slate-700" 
-                aria-label="Đóng popup"
-                disabled={submitting}
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="max-h-[70vh] overflow-y-auto p-5">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="relative block">
-                  <div className="text-sm font-medium text-slate-700">Tên công ty <span className="text-red-500">*</span></div>
-                  <input
-                    type="text"
-                    value={declareForm.companyName}
-                    onChange={(event) => handleCompanyNameChange(event.target.value)}
-                    onFocus={() => {
-                      if (declareForm.companyName.trim()) {
-                        const filtered = companies.filter((c) =>
-                          c.name.toLowerCase().includes(declareForm.companyName.toLowerCase())
-                        );
-                        setSuggestions(filtered);
-                        setShowSuggestions(filtered.length > 0);
-                      }
-                    }}
-                    onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                    className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white"
-                    placeholder="Nhập tên đầy đủ của công ty"
-                    disabled={submitting}
-                  />
-                  {showSuggestions && (
-                    <div className="absolute left-0 right-0 z-50 mt-1 max-h-60 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
-                      {suggestions.map((c) => (
-                        <div
-                          key={c.code}
-                          onClick={() => handleSelectSuggestion(c)}
-                          className="cursor-pointer rounded-xl px-4 py-2.5 text-left hover:bg-slate-50 transition"
-                        >
-                          <div className="text-xs font-semibold text-slate-900">{c.name}</div>
-                          <div className="text-[10px] text-slate-500">{c.field} • {c.address}</div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <label className="block">
-                  <div className="text-sm font-medium text-slate-700">Mã số thuế công ty <span className="text-red-500">*</span></div>
-                  <input
-                    value={declareForm.taxId}
-                    onChange={(event) => setDeclareForm((current) => ({ ...current, taxId: event.target.value }))}
-                    className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white"
-                    placeholder="VD: 0101243150"
-                    disabled={submitting}
-                  />
-                </label>
-                <label className="block">
-                  <div className="text-sm font-medium text-slate-700">Lĩnh vực</div>
-                  <input
-                    value={declareForm.field}
-                    onChange={(event) => setDeclareForm((current) => ({ ...current, field: event.target.value }))}
-                    className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white"
-                    placeholder="Phần mềm, fintech, phần cứng..."
-                    disabled={submitting}
-                  />
-                </label>
-                <label className="block">
-                  <div className="text-sm font-medium text-slate-700">Vị trí thực tập</div>
-                  <input
-                    value={declareForm.position}
-                    onChange={(event) => setDeclareForm((current) => ({ ...current, position: event.target.value }))}
-                    className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white"
-                    placeholder="VD: Thực tập sinh Backend Developer"
-                    disabled={submitting}
-                  />
-                </label>
-                <label className="block md:col-span-2">
-                  <div className="text-sm font-medium text-slate-700">Địa chỉ công ty</div>
-                  <input 
-                    value={declareForm.address} 
-                    onChange={(event) => setDeclareForm((current) => ({ ...current, address: event.target.value }))} 
-                    className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white" 
-                    placeholder="Nhập địa chỉ trụ sở chính" 
-                    disabled={submitting}
-                  />
-                </label>
-                <label className="block">
-                  <div className="text-sm font-medium text-slate-700">Người hướng dẫn (Mentor)</div>
-                  <input 
-                    value={declareForm.mentor} 
-                    onChange={(event) => setDeclareForm((current) => ({ ...current, mentor: event.target.value }))} 
-                    className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white" 
-                    placeholder="Họ tên người hướng dẫn tại công ty" 
-                    disabled={submitting}
-                  />
-                </label>
-                <label className="block">
-                  <div className="text-sm font-medium text-slate-700">Số điện thoại liên hệ</div>
-                  <input 
-                    value={declareForm.phone} 
-                    onChange={(event) => setDeclareForm((current) => ({ ...current, phone: event.target.value }))} 
-                    className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white" 
-                    placeholder="Nhập số điện thoại liên lạc" 
-                    disabled={submitting}
-                  />
-                </label>
-                <label className="block">
-                  <div className="text-sm font-medium text-slate-700">Email người liên hệ</div>
-                  <input 
-                    value={declareForm.email} 
-                    onChange={(event) => setDeclareForm((current) => ({ ...current, email: event.target.value }))} 
-                    className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white" 
-                    placeholder="mentor@company.com" 
-                    disabled={submitting}
-                  />
-                </label>
-                <label className="block">
-                  <div className="text-sm font-medium text-slate-700">Thời gian thực tập</div>
-                  <input 
-                    value={declareForm.duration} 
-                    onChange={(event) => setDeclareForm((current) => ({ ...current, duration: event.target.value }))} 
-                    className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white" 
-                    placeholder="8 tuần, 12 tuần..." 
-                    disabled={submitting}
-                  />
-                </label>
-              </div>
-
-              <label className="mt-4 flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={declareForm.confirmPaper}
-                  onChange={(event) => setDeclareForm((current) => ({ ...current, confirmPaper: event.target.checked }))}
-                  className="mt-1 h-4 w-4 rounded border-slate-300 text-[#2196F3] focus:ring-[#2196F3]"
-                  disabled={submitting}
-                />
-                <div>
-                  <div className="text-sm font-medium text-slate-900">Yêu cầu giấy giới thiệu thực tập</div>
-                  <div className="mt-1 text-xs text-slate-500">Tích chọn nếu bạn cần Khoa cấp giấy giới thiệu gửi đến doanh nghiệp này.</div>
-                </div>
-              </label>
-
-              {declareForm.confirmPaper && (
-                <label className="mt-4 block">
-                  <div className="text-sm font-medium text-slate-700">Địa chỉ cụ thể nơi thực tập (nếu khác trụ sở chính)</div>
-                  <input
-                    value={declareForm.internshipAddress}
-                    onChange={(event) => setDeclareForm((current) => ({ ...current, internshipAddress: event.target.value }))}
-                    className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white"
-                    placeholder="Nhập địa chỉ chi nhánh, văn phòng làm việc"
-                    disabled={submitting}
-                  />
-                </label>
+      <StudentModal
+        open={declareOpen}
+        title="Khai báo nơi thực tập"
+        description="Khai báo đơn vị tự liên hệ thực tập ngoài danh sách"
+        onClose={() => setDeclareOpen(false)}
+        closeDisabled={submitting}
+        footer={
+          <>
+            <StudentButton variant="secondary" disabled={submitting} onClick={() => setDeclareOpen(false)}>{COMMON_LABELS.CANCEL}</StudentButton>
+            <StudentButton variant="primary" disabled={submitting} onClick={handleDeclareSubmit}>
+              {submitting ? (
+                <>
+                  <Spin size="small" className="text-white" />
+                  Đang gửi...
+                </>
+              ) : (
+                <>
+                  <CalendarDays className="h-4 w-4" />
+                  Gửi khai báo
+                </>
               )}
-
-              <div className="mt-5 flex items-center justify-end gap-3 border-t border-slate-100 pt-4">
-                <button 
-                  type="button" 
-                  onClick={() => setDeclareOpen(false)} 
-                  className="rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-                  disabled={submitting}
-                >
-                  Hủy
-                </button>
-                <button
-                  type="button"
-                  onClick={handleDeclareSubmit}
-                  className="inline-flex items-center gap-2 rounded-2xl bg-[#2196F3] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-blue-200 transition hover:bg-[#1976D2] disabled:opacity-50"
-                  disabled={submitting}
-                >
-                  {submitting ? (
-                    <>
-                      <Spin size="small" className="text-white" />
-                      Đang gửi...
-                    </>
-                  ) : (
-                    <>
-                      <CalendarDays className="h-4 w-4" />
-                      Gửi khai báo
-                    </>
-                  )}
-                </button>
+            </StudentButton>
+          </>
+        }
+      >
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="relative">
+            <StudentField label="Tên công ty" required>
+              <input
+                type="text"
+                value={declareForm.companyName}
+                onChange={(event) => handleCompanyNameChange(event.target.value)}
+                onFocus={() => {
+                  if (declareForm.companyName.trim()) {
+                    const filtered = companies.filter((c) =>
+                      c.name.toLowerCase().includes(declareForm.companyName.toLowerCase())
+                    );
+                    setSuggestions(filtered);
+                    setShowSuggestions(filtered.length > 0);
+                  }
+                }}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                className={StudentInputClass()}
+                placeholder="Nhập tên đầy đủ của công ty"
+                disabled={submitting}
+              />
+            </StudentField>
+            {showSuggestions && (
+              <div className="absolute left-0 right-0 top-full z-50 -mt-3 max-h-60 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
+                {suggestions.map((c) => (
+                  <div
+                    key={c.code}
+                    onClick={() => handleSelectSuggestion(c)}
+                    className="cursor-pointer rounded-xl px-4 py-2.5 text-left hover:bg-slate-50 transition"
+                  >
+                    <div className="text-xs font-semibold text-slate-900">{c.name}</div>
+                    <div className="text-[10px] text-slate-500">{c.field} • {c.address}</div>
+                  </div>
+                ))}
               </div>
-            </div>
+            )}
           </div>
+          <StudentField label="Mã số thuế công ty" required>
+            <input
+              value={declareForm.taxId}
+              onChange={(event) => setDeclareForm((current) => ({ ...current, taxId: event.target.value }))}
+              className={StudentInputClass()}
+              placeholder="VD: 0101243150"
+              disabled={submitting}
+            />
+          </StudentField>
+          <StudentField label="Lĩnh vực">
+            <input
+              value={declareForm.field}
+              onChange={(event) => setDeclareForm((current) => ({ ...current, field: event.target.value }))}
+              className={StudentInputClass()}
+              placeholder="Phần mềm, fintech, phần cứng..."
+              disabled={submitting}
+            />
+          </StudentField>
+          <StudentField label="Vị trí thực tập">
+            <input
+              value={declareForm.position}
+              onChange={(event) => setDeclareForm((current) => ({ ...current, position: event.target.value }))}
+              className={StudentInputClass()}
+              placeholder="VD: Thực tập sinh Backend Developer"
+              disabled={submitting}
+            />
+          </StudentField>
+          <div className="md:col-span-2">
+            <StudentField label="Địa chỉ công ty">
+              <input
+                value={declareForm.address}
+                onChange={(event) => setDeclareForm((current) => ({ ...current, address: event.target.value }))}
+                className={StudentInputClass()}
+                placeholder="Nhập địa chỉ trụ sở chính"
+                disabled={submitting}
+              />
+            </StudentField>
+          </div>
+          <StudentField label="Người hướng dẫn (Mentor)">
+            <input
+              value={declareForm.mentor}
+              onChange={(event) => setDeclareForm((current) => ({ ...current, mentor: event.target.value }))}
+              className={StudentInputClass()}
+              placeholder="Họ tên người hướng dẫn tại công ty"
+              disabled={submitting}
+            />
+          </StudentField>
+          <StudentField label="Số điện thoại liên hệ">
+            <input
+              value={declareForm.phone}
+              onChange={(event) => setDeclareForm((current) => ({ ...current, phone: event.target.value }))}
+              className={StudentInputClass()}
+              placeholder="Nhập số điện thoại liên lạc"
+              disabled={submitting}
+            />
+          </StudentField>
+          <StudentField label="Email người liên hệ">
+            <input
+              value={declareForm.email}
+              onChange={(event) => setDeclareForm((current) => ({ ...current, email: event.target.value }))}
+              className={StudentInputClass()}
+              placeholder="mentor@company.com"
+              disabled={submitting}
+            />
+          </StudentField>
+          <StudentField label="Thời gian thực tập">
+            <input
+              value={declareForm.duration}
+              onChange={(event) => setDeclareForm((current) => ({ ...current, duration: event.target.value }))}
+              className={StudentInputClass()}
+              placeholder="8 tuần, 12 tuần..."
+              disabled={submitting}
+            />
+          </StudentField>
         </div>
-      )}
+
+        <label className="mt-4 flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={declareForm.confirmPaper}
+            onChange={(event) => setDeclareForm((current) => ({ ...current, confirmPaper: event.target.checked }))}
+            className="mt-1 h-4 w-4 rounded border-slate-300 text-[#2196F3] focus:ring-[#2196F3]"
+            disabled={submitting}
+          />
+          <div>
+            <div className="text-sm font-medium text-slate-900">Yêu cầu giấy giới thiệu thực tập</div>
+            <div className="mt-1 text-xs text-slate-500">Tích chọn nếu bạn cần Khoa cấp giấy giới thiệu gửi đến doanh nghiệp này.</div>
+          </div>
+        </label>
+
+        {declareForm.confirmPaper && (
+          <div className="mt-4">
+            <StudentField label="Địa chỉ cụ thể nơi thực tập (nếu khác trụ sở chính)">
+              <input
+                value={declareForm.internshipAddress}
+                onChange={(event) => setDeclareForm((current) => ({ ...current, internshipAddress: event.target.value }))}
+                className={StudentInputClass()}
+                placeholder="Nhập địa chỉ chi nhánh, văn phòng làm việc"
+                disabled={submitting}
+              />
+            </StudentField>
+          </div>
+        )}
+      </StudentModal>
     </>
   )
 }

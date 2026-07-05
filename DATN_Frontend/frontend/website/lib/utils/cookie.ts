@@ -37,7 +37,7 @@ export const getCookie = (name: string) => {
   if (!cookieValue) return '';
 
   const decoded = decodeURIComponent(cookieValue);
-  
+
   // Try decrypting first
   const decryptedData = decrypted(decoded);
   if (decryptedData !== '') {
@@ -46,8 +46,8 @@ export const getCookie = (name: string) => {
 
   // If decryption fails, check if it's a JSON string, else return as raw string
   try {
-    if ((decoded.startsWith('{') && decoded.endsWith('}')) || 
-        (decoded.startsWith('[') && decoded.endsWith(']')) || 
+    if ((decoded.startsWith('{') && decoded.endsWith('}')) ||
+        (decoded.startsWith('[') && decoded.endsWith(']')) ||
         (decoded.startsWith('"') && decoded.endsWith('"'))) {
       return JSON.parse(decoded);
     }

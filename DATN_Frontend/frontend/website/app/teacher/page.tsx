@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { CalendarDays, CheckCircle2, Clock3, Trophy, TrendingUp, Users } from 'lucide-react'
 import { TeacherPill, TeacherSectionHeader, TeacherStatCard } from './_components/TeacherShell'
+import { getTopicStatusTone } from './_components/TeacherUI'
 import { usePeriod } from '@/lib/providers/PeriodProvider'
 import { teacherApi } from '@/lib/api/teacherApi'
 
@@ -122,7 +123,7 @@ export default function TeacherIndexPage() {
                       <td className="px-5 py-4 text-slate-600">{topic.slot}</td>
                       <td className="px-5 py-4 text-slate-600">{topic.students}</td>
                       <td className="px-5 py-4">
-                        <TeacherPill tone={topic.status === 'Đã duyệt' ? 'green' : topic.status === 'Từ chối' ? 'red' : 'orange'}>{topic.status}</TeacherPill>
+                        <TeacherPill tone={getTopicStatusTone(topic.status)}>{topic.status}</TeacherPill>
                       </td>
                     </tr>
                   ))

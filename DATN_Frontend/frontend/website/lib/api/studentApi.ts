@@ -37,12 +37,7 @@ export interface IStudentDashboardData {
     date: string;
     title: string;
   }[];
-  companies: {
-    name: string;
-    field: string;
-    address: string;
-    slots: string;
-  }[];
+  companiesCount: number;
 }
 
 export interface ICompany {
@@ -54,10 +49,7 @@ export interface ICompany {
   mentor: string;
   phone: string;
   email: string;
-  slots: number;
   duration: string;
-  status: string;
-  highlights: string[];
 }
 
 export interface IInternshipDeclareInput {
@@ -101,6 +93,7 @@ export interface IProgressReport {
   file: string;
   fileUrl?: string;
   note: string;
+  teacherComment?: string | null;
   updated: string;
 }
 
@@ -108,8 +101,9 @@ export interface IDatnProgressReport {
   name: string;
   status: string;
   file: string;
-  repo: string;
+  fileUrl?: string;
   note: string;
+  teacherComment?: string | null;
   updated: string;
 }
 
@@ -188,11 +182,7 @@ export const studentApi = {
           { date: '05/05', title: 'Nộp nhật ký tuần 3' },
           { date: '20/06', title: 'Công bố kết quả ĐATN' }
         ],
-        companies: [
-          { name: 'FPT Software', field: 'Phần mềm', address: 'Quận 9, TP.HCM', slots: '15' },
-          { name: 'VNG Corp', field: 'Internet', address: 'Quận 7, TP.HCM', slots: '8' },
-          { name: 'MoMo', field: 'Fintech', address: 'Quận 3, TP.HCM', slots: '5' }
-        ]
+        companiesCount: 3
       };
     }
 
@@ -211,10 +201,7 @@ export const studentApi = {
           mentor: 'Nguyễn A',
           phone: '0901234567',
           email: 'mentor.fpt@fpt.com',
-          slots: 15,
           duration: '8 tuần',
-          status: 'Đã duyệt',
-          highlights: ['Có mentor kỹ thuật', 'Hỗ trợ onsite', 'Phù hợp backend/frontend'],
         },
         {
           code: 'C002',
@@ -224,10 +211,7 @@ export const studentApi = {
           mentor: 'Trần B',
           phone: '0909111222',
           email: 'mentor.vng@vng.com',
-          slots: 8,
           duration: '10 tuần',
-          status: 'Đã duyệt',
-          highlights: ['Môi trường product', 'Quy trình rõ ràng', 'Có bài test đầu vào'],
         },
         {
           code: 'C006',
@@ -237,10 +221,7 @@ export const studentApi = {
           mentor: 'Hoàng F',
           phone: '0988777666',
           email: 'mentor.momo@momo.vn',
-          slots: 5,
           duration: '8 tuần',
-          status: 'Còn slot',
-          highlights: ['Ưu tiên ứng viên chủ động', 'Có code review', 'Thực hành với dự án thực'],
         },
       ];
     }
@@ -398,40 +379,28 @@ export const studentApi = {
     return response?.data?.results?.objects || response?.data?.results?.object || [];
   },
 
-  submitTttnReport: async (data: { week: number; title: string; note: string; file?: File | string }): Promise<IProgressReport> => {
+  submitTttnReport: async (data: { week: number; title: string; note: string; file?: string }): Promise<IProgressReport> => {
     if (USE_MOCK) {
       return {
         week: data.week,
         title: data.title,
         status: 'Chờ duyệt',
-        file: typeof data.file === 'string' ? data.file : (data.file?.name || `week${data.week}.pdf`),
+        file: data.file || '—',
         note: data.note,
         updated: new Date().toLocaleDateString('vi-VN')
       };
     }
 
-    const formData = new FormData()
-    formData.append('week', String(data.week))
-    formData.append('title', data.title)
-    formData.append('note', data.note)
-    if (data.file) {
-      formData.append('file', data.file)
-    }
-
-    const response = await axiosInstance.post('/private/v1/student/reports/tttn', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    })
+    const response = await axiosInstance.post('/private/v1/student/reports/tttn', data)
     return response?.data?.results?.object || response?.data;
   },
 
   getDatnReports: async (): Promise<IDatnProgressReport[]> => {
     if (USE_MOCK) {
       return [
-        { name: 'Bản thảo Chương 1', status: 'Đã duyệt', file: 'chuong1.pdf', repo: 'github.com/user/project', note: 'Phạm vi đề tài và tổng quan', updated: '05/05/2026' },
-        { name: 'Bản thảo Chương 2', status: 'Đang chấm điểm', file: 'chuong2.pdf', repo: 'github.com/user/project', note: 'Thiết kế và cơ sở lý thuyết', updated: '14/05/2026' },
-        { name: 'Báo cáo chính thức', status: 'Nháp', file: '—', repo: '—', note: 'Hoàn thiện kết luận và phụ lục', updated: '23/05/2026' },
+        { name: 'Bản thảo Chương 1', status: 'Đã duyệt', file: 'chuong1.pdf', note: 'Phạm vi đề tài và tổng quan', updated: '05/05/2026' },
+        { name: 'Bản thảo Chương 2', status: 'Đang chấm điểm', file: 'chuong2.pdf', note: 'Thiết kế và cơ sở lý thuyết', updated: '14/05/2026' },
+        { name: 'Báo cáo chính thức', status: 'Nháp', file: '—', note: 'Hoàn thiện kết luận và phụ lục', updated: '23/05/2026' },
       ];
     }
 
@@ -439,13 +408,12 @@ export const studentApi = {
     return response?.data?.results?.objects || response?.data?.results?.object || [];
   },
 
-  submitDatnReport: async (data: { name: string; note: string; repo?: string; file?: string }): Promise<IDatnProgressReport> => {
+  submitDatnReport: async (data: { name: string; note: string; file?: string }): Promise<IDatnProgressReport> => {
     if (USE_MOCK) {
       return {
         name: data.name,
         status: 'Đang chấm điểm',
-        file: data.file || 'draft.pdf',
-        repo: data.repo || '—',
+        file: data.file || '—',
         note: data.note,
         updated: new Date().toLocaleDateString('vi-VN')
       };

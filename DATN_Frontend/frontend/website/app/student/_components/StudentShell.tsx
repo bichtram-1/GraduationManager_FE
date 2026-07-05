@@ -77,13 +77,13 @@ export function StudentShell({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  const isInternshipPage = pathname.startsWith('/student/internship') || pathname.startsWith('/student/reports/tttn');
+  const isThesisPage = pathname.startsWith('/student/thesis-register') || pathname.startsWith('/student/thesis-invite') || pathname.startsWith('/student/reports/datn');
+
   useEffect(() => {
     if (periods.length === 0) return;
 
-    const isInternship = pathname.startsWith('/student/internship') || pathname.startsWith('/student/reports/tttn');
-    const isThesis = pathname.startsWith('/student/thesis-register') || pathname.startsWith('/student/thesis-invite') || pathname.startsWith('/student/reports/datn');
-
-    if (isInternship) {
+    if (isInternshipPage) {
       const tttnPeriods = periods.filter(p => p.type === 'tttn');
       if (tttnPeriods.length > 0) {
         const isCurrentTttn = selectedPeriod && selectedPeriod.type === 'tttn';
@@ -92,7 +92,7 @@ export function StudentShell({ children }: { children: ReactNode }) {
           setSelectedPeriod(activeTttn);
         }
       }
-    } else if (isThesis) {
+    } else if (isThesisPage) {
       const datnPeriods = periods.filter(p => p.type === 'datn');
       if (datnPeriods.length > 0) {
         const isCurrentDatn = selectedPeriod && selectedPeriod.type === 'datn';
@@ -102,7 +102,17 @@ export function StudentShell({ children }: { children: ReactNode }) {
         }
       }
     }
-  }, [periods, selectedPeriod, setSelectedPeriod, pathname]);
+  }, [periods, selectedPeriod, setSelectedPeriod, isInternshipPage, isThesisPage]);
+
+  // Trang chỉ dùng 1 loại đợt thì chỉ cho chọn đúng loại đó trong dropdown
+  const showTttnGroup = !isThesisPage;
+  const showDatnGroup = !isInternshipPage;
+
+  // Chỉ hiện dropdown ở các trang thực sự dùng selectedPeriod để lọc dữ liệu
+  // (trang chủ, kết quả, báo cáo TTTN/ĐATN đều tự lấy đợt hiện tại phía backend, không nhận periodId)
+  const showPeriodSelector = pathname.startsWith('/student/internship')
+    || pathname.startsWith('/student/thesis-register')
+    || pathname.startsWith('/student/thesis-invite');
 
   const activeKey = useMemo(() => getActiveKey(pathname), [pathname])
 
@@ -132,41 +142,43 @@ export function StudentShell({ children }: { children: ReactNode }) {
             </div>
           </Link>
 
-          <div className="hidden max-w-sm flex-1 px-6 sm:flex items-center justify-center min-w-0" title={selectedPeriod?.name}>
-            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1 rounded-[12px] shadow-sm w-full min-w-0">
-              <span className="text-xs font-semibold text-slate-500 shrink-0">Đợt hoạt động:</span>
-              <Select
-                className="w-full min-w-0"
-                placeholder="Chọn đợt hoạt động"
-                value={selectedPeriod?.id}
-                onChange={(id) => {
-                  const period = periods.find((p) => p.id === id)
-                  setSelectedPeriod(period)
-                }}
-                variant="borderless"
-                classNames={{ popup: { root: 'rounded-xl shadow-lg' } }}
-              >
-                {periods.filter(p => p.type === 'tttn').length > 0 && (
-                  <Select.OptGroup label="Đợt Thực tập tốt nghiệp (TTTN)">
-                    {periods.filter(p => p.type === 'tttn').map(p => (
-                      <Select.Option key={p.id} value={p.id}>
-                        <span className="font-medium text-slate-700 text-sm">{p.name}</span>
-                      </Select.Option>
-                    ))}
-                  </Select.OptGroup>
-                )}
-                {periods.filter(p => p.type === 'datn').length > 0 && (
-                  <Select.OptGroup label="Đợt Đồ án tốt nghiệp (ĐATN)">
-                    {periods.filter(p => p.type === 'datn').map(p => (
-                      <Select.Option key={p.id} value={p.id}>
-                        <span className="font-medium text-slate-700 text-sm">{p.name}</span>
-                      </Select.Option>
-                    ))}
-                  </Select.OptGroup>
-                )}
-              </Select>
+          {showPeriodSelector && (
+            <div className="hidden max-w-sm flex-1 px-6 sm:flex items-center justify-center min-w-0" title={selectedPeriod?.name}>
+              <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1 rounded-[12px] shadow-sm w-full min-w-0">
+                <span className="text-xs font-semibold text-slate-500 shrink-0">Đợt hoạt động:</span>
+                <Select
+                  className="w-full min-w-0"
+                  placeholder="Chọn đợt hoạt động"
+                  value={selectedPeriod?.id}
+                  onChange={(id) => {
+                    const period = periods.find((p) => p.id === id)
+                    setSelectedPeriod(period)
+                  }}
+                  variant="borderless"
+                  classNames={{ popup: { root: 'rounded-xl shadow-lg' } }}
+                >
+                  {showTttnGroup && periods.filter(p => p.type === 'tttn').length > 0 && (
+                    <Select.OptGroup label="Đợt Thực tập tốt nghiệp (TTTN)">
+                      {periods.filter(p => p.type === 'tttn').map(p => (
+                        <Select.Option key={p.id} value={p.id}>
+                          <span className="font-medium text-slate-700 text-sm">{p.name}</span>
+                        </Select.Option>
+                      ))}
+                    </Select.OptGroup>
+                  )}
+                  {showDatnGroup && periods.filter(p => p.type === 'datn').length > 0 && (
+                    <Select.OptGroup label="Đợt Đồ án tốt nghiệp (ĐATN)">
+                      {periods.filter(p => p.type === 'datn').map(p => (
+                        <Select.Option key={p.id} value={p.id}>
+                          <span className="font-medium text-slate-700 text-sm">{p.name}</span>
+                        </Select.Option>
+                      ))}
+                    </Select.OptGroup>
+                  )}
+                </Select>
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="relative flex items-center gap-3">
             <div className="hidden text-right sm:block">

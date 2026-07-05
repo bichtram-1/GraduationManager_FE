@@ -344,7 +344,7 @@ const AssignmentsPage = () => {
                         <td className="px-4 py-3 text-[var(--color-primary)] font-medium">{r.studentId}</td>
                         <td className="px-4 py-3">{r.name}</td>
                         <td className="px-4 py-3 text-slate-600">{r.className}</td>
-                        <td className="px-4 py-3">K2020</td>
+                        <td className="px-4 py-3">{r.course || '—'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -479,7 +479,7 @@ const AssignmentsPage = () => {
               },
             ]}
             useQueryHook={(params: any) => {
-              const typed = params as import('../..//api/assignmentApi').IAssignmentListParams;
+              const typed = params as import('../../api/assignmentApi').IAssignmentListParams;
               const query = assignmentHooks.useFetchListAssignments(typed);
               const keyword = (typed.keyword ?? '').trim().toLowerCase();
               const classFilter = typed.className || 'all';

@@ -18,6 +18,7 @@ export * from './utils/DateUtils';
 export * from './utils/numberUtils';
 export * from './utils/phoneUtils';
 export * from './utils/fileDownload';
+export * from './utils/uploadHelper';
 
 // Hooks
 export { default as useWindowSize } from './hooks/useWindowSize';

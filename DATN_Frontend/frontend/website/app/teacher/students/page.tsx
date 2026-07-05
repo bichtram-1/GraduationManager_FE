@@ -1,12 +1,13 @@
 'use client'
 
 import { useMemo, useState, useEffect } from 'react'
-import { BookOpen, Eye, GitBranch, Mail, MapPin, Phone, Search, ShieldCheck, Users, Building2 } from 'lucide-react'
+import { BookOpen, Eye, Mail, MapPin, Phone, Search, ShieldCheck, Users, Building2 } from 'lucide-react'
 import { TeacherPill, TeacherSectionHeader } from '../_components/TeacherShell'
 import { TeacherButton, TeacherCard } from '../_components/TeacherUI'
 import { usePeriod } from '@/lib/providers/PeriodProvider'
 import { teacherApi } from '@/lib/api/teacherApi'
 import { App } from 'antd'
+import { COMMON_LABELS } from '@/constants/commonLabels'
 
 const MOCK_TTTN = [
   { id: '20520001', name: 'Nguyễn Văn A', company: 'FPT Software', mentor: 'TS. Nguyễn Văn X', phone: '0901 234 567', email: 'xnv@fpt.com', report: 'Tuần 3', status: 'Đã nộp', date: '15/05/2026' },
@@ -647,9 +648,6 @@ export default function TeacherStudentsPage() {
                   </div>
                 </div>
               </div>
-
-
-
               <div>
                 <div className="text-sm font-medium text-slate-900">File báo cáo</div>
                 <div className="mt-2 rounded-md border border-slate-100 bg-white p-3 text-sm text-slate-700">
@@ -693,7 +691,7 @@ export default function TeacherStudentsPage() {
               </div>
 
               <div className="flex justify-end gap-3">
-                <button className="rounded-md px-4 py-2 text-sm" onClick={() => setReportModal({ open: false, id: undefined, type: undefined })}>Đóng</button>
+                <button className="rounded-md px-4 py-2 text-sm" onClick={() => setReportModal({ open: false, id: undefined, type: undefined })}>{COMMON_LABELS.CLOSE}</button>
                 <button className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white" onClick={handleSaveReportComment}>Lưu nhận xét</button>
               </div>
             </div>
@@ -710,7 +708,7 @@ export default function TeacherStudentsPage() {
             <p className="mt-2 text-sm text-slate-600 font-sans">Ghi nhận nhận xét cho mục được chọn.</p>
             <textarea autoFocus value={commentModal.text} onChange={(e) => setCommentModal((s) => ({ ...s, text: e.target.value }))} className="mt-4 h-32 w-full rounded-md border border-slate-200 p-3 text-sm outline-none" />
             <div className="mt-4 flex justify-end gap-2 font-sans">
-              <button type="button" className="rounded-md px-4 py-2 text-sm" onClick={() => setCommentModal({ open: false, id: undefined, text: '' })}>Hủy</button>
+              <button type="button" className="rounded-md px-4 py-2 text-sm" onClick={() => setCommentModal({ open: false, id: undefined, text: '' })}>{COMMON_LABELS.CANCEL}</button>
               <button type="button" className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white" onClick={handleSaveCommentFromModal}>Lưu</button>
             </div>
           </div>
@@ -815,8 +813,6 @@ export default function TeacherStudentsPage() {
                 </div>
               </div>
             </div>
-
-
           </div>
         </div>
       )}
@@ -905,8 +901,6 @@ export default function TeacherStudentsPage() {
                 </div>
               </div>
             </div>
-
-
           </div>
         </div>
       )}

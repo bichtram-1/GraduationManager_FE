@@ -4,6 +4,7 @@ interface IBaseAssignment {
   studentId: string;
   name: string;
   className: string;
+  course?: string;
   topic?: string;
   supervisor?: string | null;
   assignedAt?: string | null;
