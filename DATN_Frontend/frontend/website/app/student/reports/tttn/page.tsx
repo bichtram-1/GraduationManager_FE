@@ -82,8 +82,10 @@ export default function StudentReportsTTTNPage() {
   }, [reports, statusFilter])
 
   const latestTeacherComment = useMemo(() => {
-    const withComment = [...reports].reverse().find((report) => report.teacherComment)
-    return withComment?.teacherComment || 'Chưa có nhận xét từ giảng viên.'
+    const withComment = reports.filter((report) => report.teacherComment)
+    if (withComment.length === 0) return 'Chưa có nhận xét từ giảng viên.'
+    const latest = withComment.reduce((acc, report) => (report.week > acc.week ? report : acc))
+    return latest.teacherComment || 'Chưa có nhận xét từ giảng viên.'
   }, [reports])
 
   const openSubmitModal = () => {
@@ -140,7 +142,7 @@ export default function StudentReportsTTTNPage() {
 
       setReports((current) => {
         const withoutWeek = current.filter((report) => report.week !== nextReport.week)
-        return [...withoutWeek, nextReport].sort((left, right) => left.week - right.week)
+        return [nextReport, ...withoutWeek]
       })
       setSelectedWeek(nextReport.week)
       setSubmitOpen(false)
@@ -326,21 +328,17 @@ export default function StudentReportsTTTNPage() {
 
           <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
             <div className="text-sm font-semibold text-slate-900">Ghi chú phản hồi của giảng viên</div>
-            <div className="mt-4 max-h-96 space-y-3 overflow-y-auto pr-1 text-sm text-slate-600">
-              {reports.filter((report) => report.teacherComment).length === 0 ? (
-                <div className="rounded-2xl bg-slate-50 p-4 text-slate-500">Chưa có nhận xét nào từ giảng viên.</div>
+            <div className="mt-4 text-sm text-slate-600">
+              {selectedReport.teacherComment ? (
+                <div className="flex items-start gap-3 rounded-2xl bg-slate-50 p-4">
+                  <MessageSquareQuote className="mt-0.5 h-4 w-4 text-[#1976D2]" />
+                  <div>
+                    <div className="font-medium text-slate-900">Tuần {selectedReport.week}</div>
+                    <div>{selectedReport.teacherComment}</div>
+                  </div>
+                </div>
               ) : (
-                reports
-                  .filter((report) => report.teacherComment)
-                  .map((report) => (
-                    <div key={report.week} className="flex items-start gap-3 rounded-2xl bg-slate-50 p-4">
-                      <MessageSquareQuote className="mt-0.5 h-4 w-4 text-[#1976D2]" />
-                      <div>
-                        <div className="font-medium text-slate-900">Tuần {report.week}</div>
-                        <div>{report.teacherComment}</div>
-                      </div>
-                    </div>
-                  ))
+                <div className="rounded-2xl bg-slate-50 p-4 text-slate-500">Chưa có nhận xét từ giảng viên cho tuần này.</div>
               )}
             </div>
           </section>

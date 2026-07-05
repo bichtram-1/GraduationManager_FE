@@ -126,7 +126,7 @@ export default function StudentReportsDATNPage() {
 
       setMilestones((current) => {
         const withoutMilestone = current.filter((item) => item.name !== nextMilestone.name)
-        return [...withoutMilestone, nextMilestone]
+        return [nextMilestone, ...withoutMilestone]
       })
       setSelectedMilestone(nextMilestone.name)
       setSubmitOpen(false)
@@ -332,21 +332,17 @@ export default function StudentReportsDATNPage() {
 
           <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
             <div className="text-sm font-semibold text-slate-900">Ghi chú phản hồi của giảng viên</div>
-            <div className="mt-4 max-h-96 space-y-3 overflow-y-auto pr-1 text-sm text-slate-600">
-              {milestones.filter((milestone) => milestone.teacherComment).length === 0 ? (
-                <div className="rounded-2xl bg-slate-50 p-4 text-slate-500">Chưa có nhận xét nào từ giảng viên.</div>
+            <div className="mt-4 text-sm text-slate-600">
+              {selected.teacherComment ? (
+                <div className="flex items-start gap-3 rounded-2xl bg-slate-50 p-4">
+                  <MessageSquareQuote className="mt-0.5 h-4 w-4 text-[#1976D2]" />
+                  <div>
+                    <div className="font-medium text-slate-900">{selected.name}</div>
+                    <div>{selected.teacherComment}</div>
+                  </div>
+                </div>
               ) : (
-                milestones
-                  .filter((milestone) => milestone.teacherComment)
-                  .map((milestone) => (
-                    <div key={milestone.name} className="flex items-start gap-3 rounded-2xl bg-slate-50 p-4">
-                      <MessageSquareQuote className="mt-0.5 h-4 w-4 text-[#1976D2]" />
-                      <div>
-                        <div className="font-medium text-slate-900">{milestone.name}</div>
-                        <div>{milestone.teacherComment}</div>
-                      </div>
-                    </div>
-                  ))
+                <div className="rounded-2xl bg-slate-50 p-4 text-slate-500">Chưa có nhận xét từ giảng viên cho mốc này.</div>
               )}
             </div>
           </section>
