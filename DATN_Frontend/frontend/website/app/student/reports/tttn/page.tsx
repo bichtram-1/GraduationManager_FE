@@ -1,10 +1,10 @@
 'use client'
 
 import { useMemo, useState, useEffect, ChangeEvent } from 'react'
-import { CalendarDays, CheckCircle2, FileText, Plus, Upload, Clock3, MessageSquareQuote } from 'lucide-react'
+import { CalendarDays, CheckCircle2, FileText, Plus, Upload, Clock3, MessageSquareQuote, Building2, GraduationCap } from 'lucide-react'
 import { StudentPill, StudentSectionHeader } from '../../_components/StudentShell'
 import { StudentButton, StudentField, StudentFilterTabs, StudentInputClass, StudentModal, getReportStatusTone } from '../../_components/StudentUI'
-import { studentApi, IProgressReport } from '@/lib/api/studentApi'
+import { studentApi, IProgressReport, IStudentDashboardData } from '@/lib/api/studentApi'
 import { uploadApi } from '@/lib/api/uploadApi'
 import { COMMON_LABELS } from '@/constants/commonLabels'
 
@@ -30,21 +30,27 @@ export default function StudentReportsTTTNPage() {
     fileUrl: '',
   })
   const [loading, setLoading] = useState(true)
+  const [internshipInfo, setInternshipInfo] = useState<IStudentDashboardData['tttn'] | null>(null)
 
   useEffect(() => {
     let mounted = true
     setLoading(true)
     async function load() {
       try {
-        const data = await studentApi.getTttnReports()
+        const [data, dashboard] = await Promise.all([
+          studentApi.getTttnReports(),
+          studentApi.getDashboard()
+        ])
         if (!mounted) return
         setReports(data)
+        setInternshipInfo(dashboard?.tttn ?? null)
         if (data.length > 0) {
           setSelectedWeek(data[0].week)
         }
       } catch (_err) {
         if (!mounted) return
         setReports([])
+        setInternshipInfo(null)
       } finally {
         if (mounted) {
           setLoading(false)
@@ -192,6 +198,18 @@ export default function StudentReportsTTTNPage() {
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
             Mỗi tuần có một bản nộp, trạng thái duyệt và ghi chú phản hồi được hiển thị rõ ràng để bạn biết còn thiếu gì.
           </p>
+          {internshipInfo?.companyName && (
+            <div className="mt-4 space-y-2 text-sm text-slate-700">
+              <div className="flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-[#1976D2] shrink-0" />
+                <span>{internshipInfo.companyName} · {internshipInfo.position || 'Chưa cập nhật vị trí thực tập'}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <GraduationCap className="h-4 w-4 text-[#1976D2] shrink-0" />
+                <span>GVHD: {internshipInfo.supervisorTeacher || 'Chưa phân công'}</span>
+              </div>
+            </div>
+          )}
         </div>
         <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
           <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">

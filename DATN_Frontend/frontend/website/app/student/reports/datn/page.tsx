@@ -2,10 +2,10 @@
 
 import { useMemo, useState, useEffect, ChangeEvent } from 'react'
 import Link from 'next/link'
-import { CheckCircle2, FileText, Plus, Upload, Clock3, MessageSquareQuote, Rocket } from 'lucide-react'
+import { CheckCircle2, FileText, Plus, Upload, Clock3, MessageSquareQuote, Rocket, Users, GraduationCap } from 'lucide-react'
 import { StudentPill, StudentSectionHeader } from '../../_components/StudentShell'
 import { StudentButton, StudentField, StudentFilterTabs, StudentInputClass, StudentModal, getReportStatusTone } from '../../_components/StudentUI'
-import { studentApi, IDatnProgressReport } from '@/lib/api/studentApi'
+import { studentApi, IDatnProgressReport, IThesisRegistration } from '@/lib/api/studentApi'
 import { uploadApi } from '@/lib/api/uploadApi'
 import { COMMON_LABELS } from '@/constants/commonLabels'
 
@@ -25,7 +25,7 @@ export default function StudentReportsDATNPage() {
     note: '',
   })
   const [loading, setLoading] = useState(true)
-  const [registration, setRegistration] = useState<any>(null)
+  const [registration, setRegistration] = useState<IThesisRegistration | null>(null)
 
   useEffect(() => {
     let mounted = true
@@ -82,6 +82,13 @@ export default function StudentReportsDATNPage() {
     if (statusFilter === 'all') return milestones
     return milestones.filter((milestone) => milestone.status === statusFilter)
   }, [milestones, statusFilter])
+
+  const latestTeacherComment = useMemo(() => {
+    const withComment = milestones.filter((milestone) => milestone.teacherComment)
+    if (withComment.length === 0) return 'Chưa có nhận xét từ giảng viên.'
+    const latest = withComment.reduce((acc, milestone) => (milestone.week > acc.week ? milestone : acc))
+    return latest.teacherComment || 'Chưa có nhận xét từ giảng viên.'
+  }, [milestones])
 
   const openSubmitModal = () => {
     const nextWeek = milestones.length > 0 ? Math.max(...milestones.map((milestone) => milestone.week)) + 1 : 1
@@ -211,8 +218,30 @@ export default function StudentReportsDATNPage() {
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
             Mỗi bản thảo có file, nhận xét và thời điểm cập nhật để bạn nắm nhanh trạng thái đồ án.
           </p>
+          {registration && (
+            <div className="mt-4 space-y-2 text-sm text-slate-700">
+              <div className="flex items-center gap-2">
+                <Rocket className="h-4 w-4 text-[#1976D2] shrink-0" />
+                <span>{registration.groupName} · {registration.topicTitle}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <GraduationCap className="h-4 w-4 text-[#1976D2] shrink-0" />
+                <span>GVHD: {registration.instructor || 'Chưa phân công'}</span>
+              </div>
+              {registration.members && registration.members.length > 0 && (
+                <div className="flex items-start gap-2">
+                  <Users className="h-4 w-4 text-[#1976D2] shrink-0 mt-0.5" />
+                  <span>Thành viên: {registration.members.map((m) => m.name).join(', ')}</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+        <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+          <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
+            <div className="text-xs text-slate-500">Nhận xét gần nhất</div>
+            <div className="mt-2 text-sm font-semibold text-slate-900">{latestTeacherComment}</div>
+          </div>
           <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
             <div className="text-xs text-slate-500">Lần cập nhật</div>
             <div className="mt-2 text-sm font-semibold text-slate-900">{selected.updated}</div>
