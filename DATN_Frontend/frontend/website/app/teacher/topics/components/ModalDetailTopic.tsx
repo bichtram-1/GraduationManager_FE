@@ -1,6 +1,6 @@
 import { FileText } from 'lucide-react'
 import { TeacherPill } from '../../_components/TeacherShell'
-import { TeacherModal } from '../../_components/TeacherUI'
+import { TeacherModal, getTopicStatusTone } from '../../_components/TeacherUI'
 
 type Topic = {
   id?: string
@@ -42,7 +42,7 @@ export default function ModalDetailTopic({ open, topic, onClose }: ModalDetailTo
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold text-slate-500">Trạng thái:</span>
-            <TeacherPill tone={topic.status === 'Đã duyệt' ? 'green' : topic.status === 'Từ chối' ? 'red' : 'orange'}>
+            <TeacherPill tone={getTopicStatusTone(topic.status)}>
               {topic.status}
             </TeacherPill>
           </div>

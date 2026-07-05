@@ -4,8 +4,10 @@ import { useMemo, useState, useEffect } from 'react'
 import { ArrowLeft, CheckCircle2, Clock3, Mail, Plus, XCircle } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { StudentPill, StudentSectionHeader } from '../_components/StudentShell'
+import { StudentButton, StudentModal } from '../_components/StudentUI'
 import { studentApi, IThesisRegistration } from '@/lib/api/studentApi'
 import { usePeriod } from '@/lib/providers/PeriodProvider'
+import { COMMON_LABELS } from '@/constants/commonLabels'
 
 type Invite = {
   id: string
@@ -13,6 +15,12 @@ type Invite = {
   status: 'pending' | 'accepted' | 'rejected'
   from?: string
   topic?: string
+}
+
+const INVITE_STATUS_META: Record<Invite['status'], { label: string; tone: 'green' | 'red' | 'orange' }> = {
+  accepted: { label: 'Đã chấp nhận', tone: 'green' },
+  rejected: { label: 'Đã từ chối', tone: 'red' },
+  pending: { label: 'Chờ phản hồi', tone: 'orange' },
 }
 
 export default function InvitePage() {
@@ -26,6 +34,8 @@ export default function InvitePage() {
   const [incomingInvites, setIncomingInvites] = useState<Invite[]>([])
   const [registration, setRegistration] = useState<IThesisRegistration | null>(null)
   const [loading, setLoading] = useState(true)
+  const [cancelInviteId, setCancelInviteId] = useState<string | null>(null)
+  const [cancelling, setCancelling] = useState(false)
 
   const outgoingCount = outgoingInvites.length
   const incomingCount = incomingInvites.length
@@ -110,18 +120,17 @@ export default function InvitePage() {
     }
   }
 
-  const handleCancelInvite = async (inviteId: string) => {
-    if (!confirm('Bạn có chắc chắn muốn hủy lời mời này không?')) {
-      return
-    }
+  const confirmCancelInvite = async () => {
+    if (!cancelInviteId) return
+    setCancelling(true)
     try {
-      setLoading(true)
-      await studentApi.cancelInvitation(inviteId)
-      setOutgoingInvites((current) => current.filter((item) => item.inviteId !== inviteId))
+      await studentApi.cancelInvitation(cancelInviteId)
+      setOutgoingInvites((current) => current.filter((item) => item.inviteId !== cancelInviteId))
+      setCancelInviteId(null)
     } catch (err: any) {
       alert(err?.response?.data?.message || 'Có lỗi xảy ra khi hủy lời mời.')
     } finally {
-      setLoading(false)
+      setCancelling(false)
     }
   }
 
@@ -211,7 +220,7 @@ export default function InvitePage() {
               </button>
             </div>
 
-            <div className="space-y-2">
+            <div className="max-h-96 space-y-2 overflow-y-auto pr-1">
               {outgoingInvites.map((invite) => (
                 <div key={invite.id} className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-700">
                   <div className="inline-flex items-center gap-3">
@@ -219,13 +228,13 @@ export default function InvitePage() {
                     MSSV {invite.id}
                   </div>
                   <div className="flex items-center gap-2">
-                    <StudentPill tone={invite.status === 'accepted' ? 'green' : invite.status === 'rejected' ? 'red' : 'orange'}>
-                      {invite.status === 'accepted' ? 'Đã chấp nhận' : invite.status === 'rejected' ? 'Đã từ chối' : 'Chờ phản hồi'}
+                    <StudentPill tone={INVITE_STATUS_META[invite.status].tone}>
+                      {INVITE_STATUS_META[invite.status].label}
                     </StudentPill>
                     {invite.status === 'pending' && invite.inviteId && (
                       <button
                         type="button"
-                        onClick={() => handleCancelInvite(invite.inviteId!)}
+                        onClick={() => setCancelInviteId(invite.inviteId!)}
                         className="rounded-lg p-1 text-red-500 transition hover:bg-red-50 hover:text-red-700"
                         title="Hủy lời mời"
                       >
@@ -252,7 +261,7 @@ export default function InvitePage() {
             <StudentPill tone="blue">Inbox</StudentPill>
           </div>
 
-          <div className="space-y-3 p-5">
+          <div className="max-h-96 space-y-3 overflow-y-auto p-5">
             {incomingInvites.map((invite) => (
               <div key={invite.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -282,7 +291,7 @@ export default function InvitePage() {
                   </div>
                 </div>
                 <div className="mt-3 text-xs text-slate-500">
-                  Trạng thái: <span className="font-medium text-slate-700">{invite.status === 'pending' ? 'Chờ phản hồi' : invite.status === 'accepted' ? 'Đã chấp nhận' : 'Đã từ chối'}</span>
+                  Trạng thái: <span className="font-medium text-slate-700">{INVITE_STATUS_META[invite.status].label}</span>
                 </div>
               </div>
             ))}
@@ -290,12 +299,23 @@ export default function InvitePage() {
         </section>
       </div>
 
-      <section className="mt-6 rounded-[28px] border border-blue-100 bg-[linear-gradient(135deg,#eff6ff_0%,#ffffff_100%)] p-5 shadow-[0_12px_40px_rgba(15,23,42,0.05)]">
-        <div className="text-sm font-semibold text-slate-900">Ghi chú thiết kế</div>
-        <div className="mt-2 text-sm leading-6 text-slate-600">
-          Đợt đăng ký được đồng bộ thống nhất thông qua thanh điều hướng phía trên của Cổng sinh viên, giúp giao diện gọn gàng và tránh mâu thuẫn thông tin giữa các màn hình.
+      <StudentModal
+        open={cancelInviteId !== null}
+        title="Xác nhận hủy lời mời"
+        onClose={() => setCancelInviteId(null)}
+        footer={
+          <>
+            <StudentButton variant="secondary" disabled={cancelling} onClick={() => setCancelInviteId(null)}>{COMMON_LABELS.CLOSE}</StudentButton>
+            <StudentButton variant="danger" disabled={cancelling} onClick={confirmCancelInvite}>
+              {cancelling ? 'Đang hủy...' : 'Xác nhận hủy'}
+            </StudentButton>
+          </>
+        }
+      >
+        <div className="text-sm leading-relaxed text-slate-600">
+          Bạn có chắc chắn muốn hủy lời mời này không? Hành động này không thể hoàn tác.
         </div>
-      </section>
+      </StudentModal>
     </>
   )
 }

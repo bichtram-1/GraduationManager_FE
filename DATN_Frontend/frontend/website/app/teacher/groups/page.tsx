@@ -1,12 +1,18 @@
 "use client"
 
 import { useEffect, useMemo, useState } from 'react'
-import { CheckCircle2, Clock3, Search, ShieldCheck, Users, XCircle } from 'lucide-react'
-import { TeacherBadge, TeacherButton, TeacherCard, TeacherPageHeader, TeacherToolbar, TeacherModal } from '../_components/TeacherUI'
+import { Clock3 } from 'lucide-react'
+import { TeacherBadge, TeacherButton, TeacherCard, TeacherPageHeader, TeacherModal } from '../_components/TeacherUI'
 import { usePeriod } from '@/lib/providers/PeriodProvider'
 import { teacherApi } from '@/lib/api/teacherApi'
 
 type ApprovalStatus = 'pending' | 'accepted' | 'rejected'
+
+const APPROVAL_STATUS_META: Record<ApprovalStatus, { badge: 'success' | 'danger' | 'warning'; label: string }> = {
+  accepted: { badge: 'success', label: 'Đã chấp nhận' },
+  rejected: { badge: 'danger', label: 'Đã từ chối' },
+  pending: { badge: 'warning', label: 'Chờ duyệt' },
+}
 
 type Member = {
   name: string
@@ -199,8 +205,8 @@ export default function TeacherGroupsPage() {
                       </div>
                     </td>
                     <td className="px-5 py-4">
-                      <TeacherBadge type={group.status === 'accepted' ? 'success' : group.status === 'rejected' ? 'danger' : 'warning'}>
-                        {group.status === 'accepted' ? 'Đã chấp nhận' : group.status === 'rejected' ? 'Đã từ chối' : 'Chờ duyệt'}
+                      <TeacherBadge type={APPROVAL_STATUS_META[group.status].badge}>
+                        {APPROVAL_STATUS_META[group.status].label}
                       </TeacherBadge>
                     </td>
                     <td className="px-5 py-4">

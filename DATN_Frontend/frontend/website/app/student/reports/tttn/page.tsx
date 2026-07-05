@@ -1,24 +1,33 @@
 'use client'
 
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState, useEffect, ChangeEvent } from 'react'
 import { CalendarDays, CheckCircle2, FileText, Plus, Upload, Clock3, MessageSquareQuote } from 'lucide-react'
-import { StudentPill, StudentSectionHeader, StudentStatCard } from '../../_components/StudentShell'
+import { StudentPill, StudentSectionHeader } from '../../_components/StudentShell'
+import { StudentButton, StudentField, StudentFilterTabs, StudentInputClass, StudentModal, getReportStatusTone } from '../../_components/StudentUI'
 import { studentApi, IProgressReport } from '@/lib/api/studentApi'
+import { uploadApi } from '@/lib/api/uploadApi'
+import { COMMON_LABELS } from '@/constants/commonLabels'
+
+type StatusFilter = 'all' | 'Đã duyệt' | 'Bị từ chối' | 'Chờ duyệt'
 
 export default function StudentReportsTTTNPage() {
   const [reports, setReports] = useState<IProgressReport[]>([])
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null)
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [submitOpen, setSubmitOpen] = useState(false)
+  const [uploadingFile, setUploadingFile] = useState(false)
   const [submitForm, setSubmitForm] = useState<{
     week: string
     title: string
     note: string
-    file: File | null
+    fileName: string
+    fileUrl: string
   }>({
     week: '1',
     title: '',
     note: '',
-    file: null,
+    fileName: '',
+    fileUrl: '',
   })
   const [loading, setLoading] = useState(true)
 
@@ -51,12 +60,22 @@ export default function StudentReportsTTTNPage() {
   const selectedReport = useMemo(() => {
     return reports.find((report) => report.week === selectedWeek) 
       ?? reports[0] 
-      ?? { week: 1, title: 'Không có dữ liệu', status: '—', file: '—', note: 'Chưa nộp nhật ký nào.', updated: '—' }
+      ?? { week: 1, title: 'Không có dữ liệu', status: 'Chưa nộp', file: 'Chưa có', note: 'Chưa nộp nhật ký nào.', updated: 'Chưa cập nhật' }
   }, [selectedWeek, reports])
 
   const approvedCount = reports.filter((report) => report.status === 'Đã duyệt').length
-  const draftCount = reports.filter((report) => report.status === 'Nháp').length
+  const rejectedCount = reports.filter((report) => report.status === 'Bị từ chối').length
   const pendingCount = reports.filter((report) => report.status === 'Chờ duyệt').length
+
+  const filteredReports = useMemo(() => {
+    if (statusFilter === 'all') return reports
+    return reports.filter((report) => report.status === statusFilter)
+  }, [reports, statusFilter])
+
+  const latestTeacherComment = useMemo(() => {
+    const withComment = [...reports].reverse().find((report) => report.teacherComment)
+    return withComment?.teacherComment || 'Chưa có nhận xét từ giảng viên.'
+  }, [reports])
 
   const openSubmitModal = () => {
     const nextWeek = reports.length > 0 ? Math.max(...reports.map((report) => report.week)) + 1 : 1
@@ -64,9 +83,28 @@ export default function StudentReportsTTTNPage() {
       week: String(nextWeek),
       title: '',
       note: '',
-      file: null,
+      fileName: '',
+      fileUrl: '',
     })
     setSubmitOpen(true)
+  }
+
+  const handleUploadFile = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingFile(true)
+    try {
+      const res = await uploadApi.uploadFile(file)
+      if (res?.cloudFrontUrl) {
+        setSubmitForm((current) => ({ ...current, fileName: file.name, fileUrl: res.cloudFrontUrl }))
+      } else {
+        alert('Tải file lên thất bại!')
+      }
+    } catch (err: any) {
+      alert(err?.response?.data?.message || 'Tải file lên thất bại!')
+    } finally {
+      setUploadingFile(false)
+    }
   }
 
   const handleSubmitReport = async () => {
@@ -88,7 +126,7 @@ export default function StudentReportsTTTNPage() {
         week: nextWeek,
         title: submitForm.title.trim(),
         note: submitForm.note.trim(),
-        file: submitForm.file ?? undefined
+        file: submitForm.fileUrl || undefined
       })
 
       setReports((current) => {
@@ -121,11 +159,16 @@ export default function StudentReportsTTTNPage() {
         )}
       />
 
-      <div className="mb-5 grid gap-4 md:grid-cols-3">
-        <StudentStatCard title="Đã duyệt" value={`${approvedCount}`} hint="Bài đã được giảng viên xác nhận" accent="green" />
-        <StudentStatCard title="Nháp" value={`${draftCount}`} hint="Bản đang soạn hoặc chờ nộp" accent="orange" />
-        <StudentStatCard title="Chờ duyệt" value={`${pendingCount}`} hint="Bản đã nộp và đang chờ phản hồi" accent="violet" />
-      </div>
+      <StudentFilterTabs
+        tabs={[
+          { key: 'all', label: 'Tất cả', count: reports.length },
+          { key: 'Đã duyệt', label: 'Đã duyệt', count: approvedCount },
+          { key: 'Bị từ chối', label: 'Bị từ chối', count: rejectedCount },
+          { key: 'Chờ duyệt', label: 'Chờ duyệt', count: pendingCount },
+        ]}
+        activeKey={statusFilter}
+        onChange={(key) => setStatusFilter(key as StatusFilter)}
+      />
 
       <section className="mb-5 grid gap-4 rounded-[28px] border border-blue-100 bg-[linear-gradient(135deg,#eff6ff_0%,#ffffff_100%)] p-5 shadow-[0_12px_40px_rgba(15,23,42,0.05)] lg:grid-cols-[1.2fr_0.8fr]">
         <div>
@@ -141,7 +184,7 @@ export default function StudentReportsTTTNPage() {
         <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
           <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
             <div className="text-xs text-slate-500">Nhận xét gần nhất</div>
-            <div className="mt-2 text-sm font-semibold text-slate-900">Ổn, chỉ cần bổ sung số liệu.</div>
+            <div className="mt-2 text-sm font-semibold text-slate-900">{latestTeacherComment}</div>
           </div>
           <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
             <div className="text-xs text-slate-500">Cập nhật cuối</div>
@@ -160,9 +203,9 @@ export default function StudentReportsTTTNPage() {
           <div className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">W{selectedReport.week}</div>
           <div className="mt-2 text-sm text-slate-500">{selectedReport.title}</div>
         </section>
-        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.05)] min-w-0">
           <div className="text-xs text-slate-500">Tệp đính kèm</div>
-          <div className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">{selectedReport.file}</div>
+          <div className="mt-2 truncate text-3xl font-semibold tracking-tight text-slate-900" title={selectedReport.file}>{selectedReport.file}</div>
           <div className="mt-2 text-sm text-slate-500">File báo cáo hiện tại</div>
         </section>
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
@@ -179,10 +222,11 @@ export default function StudentReportsTTTNPage() {
               <div className="text-sm font-semibold text-slate-900">Nhật ký theo tuần</div>
               <div className="text-xs text-slate-500">Trạng thái từng lần nộp báo cáo</div>
             </div>
-            <StudentPill tone="green">{reports.length} tuần</StudentPill>
+            <StudentPill tone="green">{filteredReports.length} tuần</StudentPill>
           </div>
+          <div className="max-h-120 overflow-y-auto">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-slate-600">
+            <thead className="sticky top-0 z-10 bg-slate-50 text-slate-600">
               <tr>
                 <th className="px-5 py-3 text-left">Tuần</th>
                 <th className="px-5 py-3 text-left">Nội dung</th>
@@ -192,7 +236,12 @@ export default function StudentReportsTTTNPage() {
               </tr>
             </thead>
             <tbody>
-              {reports.map((report) => {
+              {filteredReports.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-5 py-8 text-center text-slate-500">Không có báo cáo nào phù hợp bộ lọc.</td>
+                </tr>
+              )}
+              {filteredReports.map((report) => {
                 const active = selectedWeek === report.week
                 return (
                   <tr key={report.week} className={`border-t border-slate-100 transition hover:bg-slate-50/80 ${active ? 'bg-blue-50/60' : ''}`}>
@@ -203,21 +252,21 @@ export default function StudentReportsTTTNPage() {
                         <div className="text-xs text-slate-500">{report.note}</div>
                       </div>
                     </td>
-                    <td className="px-5 py-4 text-[#1976D2]">
+                    <td className="px-5 py-4 text-[#1976D2] max-w-40">
                       {report.fileUrl ? (
-                        <a href={report.fileUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:underline">
-                          <FileText className="h-4 w-4" />
-                          {report.file}
+                        <a href={report.fileUrl} target="_blank" rel="noopener noreferrer" title={report.file} className="flex min-w-0 items-center gap-1 hover:underline">
+                          <FileText className="h-4 w-4 shrink-0" />
+                          <span className="min-w-0 truncate">{report.file}</span>
                         </a>
                       ) : (
-                        <span className="inline-flex items-center gap-1">
-                          <FileText className="h-4 w-4" />
-                          {report.file}
+                        <span className="flex min-w-0 items-center gap-1" title={report.file}>
+                          <FileText className="h-4 w-4 shrink-0" />
+                          <span className="min-w-0 truncate">{report.file}</span>
                         </span>
                       )}
                     </td>
                     <td className="px-5 py-4">
-                      <StudentPill tone={report.status === 'Đã duyệt' ? 'green' : report.status === 'Chờ duyệt' ? 'orange' : 'slate'}>{report.status}</StudentPill>
+                      <StudentPill tone={getReportStatusTone(report.status)}>{report.status}</StudentPill>
                     </td>
                     <td className="px-5 py-4 text-right">
                       <button
@@ -234,6 +283,7 @@ export default function StudentReportsTTTNPage() {
               })}
             </tbody>
           </table>
+          </div>
         </section>
 
         <div className="space-y-6">
@@ -244,15 +294,15 @@ export default function StudentReportsTTTNPage() {
               <div className="mt-1 text-lg font-semibold text-slate-900">Tuần {selectedReport.week}</div>
               <div className="mt-1 text-sm text-slate-600">{selectedReport.title}</div>
               <div className="mt-4 space-y-2 text-sm text-slate-600">
-                <div className="flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-[#1976D2]" />
-                  <span>File: </span>
+                <div className="flex items-center gap-2 min-w-0">
+                  <FileText className="h-4 w-4 text-[#1976D2] shrink-0" />
+                  <span className="shrink-0">File: </span>
                   {selectedReport.fileUrl ? (
-                    <a href={selectedReport.fileUrl} target="_blank" rel="noopener noreferrer" className="text-[#1976D2] hover:underline font-semibold">
+                    <a href={selectedReport.fileUrl} target="_blank" rel="noopener noreferrer" title={selectedReport.file} className="min-w-0 truncate text-[#1976D2] hover:underline font-semibold">
                       {selectedReport.file}
                     </a>
                   ) : (
-                    <span>{selectedReport.file}</span>
+                    <span className="min-w-0 truncate" title={selectedReport.file}>{selectedReport.file}</span>
                   )}
                 </div>
                 <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[#1976D2]" /> {selectedReport.status}</div>
@@ -266,131 +316,103 @@ export default function StudentReportsTTTNPage() {
           </section>
 
           <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
-            <div className="text-sm font-semibold text-slate-900">Ghi chú phản hồi</div>
-            <div className="mt-4 space-y-3 text-sm text-slate-600">
-              <div className="flex items-start gap-3 rounded-2xl bg-slate-50 p-4">
-                <MessageSquareQuote className="mt-0.5 h-4 w-4 text-[#1976D2]" />
-                <div>
-                  <div className="font-medium text-slate-900">Tuần 1</div>
-                  <div>Hoàn thành tốt phần giới thiệu, giữ đúng format.</div>
-                </div>
-              </div>
-              <div className="flex items-start gap-3 rounded-2xl bg-slate-50 p-4">
-                <MessageSquareQuote className="mt-0.5 h-4 w-4 text-[#1976D2]" />
-                <div>
-                  <div className="font-medium text-slate-900">Tuần 2</div>
-                  <div>Thêm rõ công nghệ sử dụng và kết quả thử nghiệm.</div>
-                </div>
-              </div>
-              <div className="flex items-start gap-3 rounded-2xl bg-slate-50 p-4">
-                <MessageSquareQuote className="mt-0.5 h-4 w-4 text-[#1976D2]" />
-                <div>
-                  <div className="font-medium text-slate-900">Tuần {selectedReport.week}</div>
-                  <div>{selectedReport.note}</div>
-                </div>
-              </div>
+            <div className="text-sm font-semibold text-slate-900">Ghi chú phản hồi của giảng viên</div>
+            <div className="mt-4 max-h-96 space-y-3 overflow-y-auto pr-1 text-sm text-slate-600">
+              {reports.filter((report) => report.teacherComment).length === 0 ? (
+                <div className="rounded-2xl bg-slate-50 p-4 text-slate-500">Chưa có nhận xét nào từ giảng viên.</div>
+              ) : (
+                reports
+                  .filter((report) => report.teacherComment)
+                  .map((report) => (
+                    <div key={report.week} className="flex items-start gap-3 rounded-2xl bg-slate-50 p-4">
+                      <MessageSquareQuote className="mt-0.5 h-4 w-4 text-[#1976D2]" />
+                      <div>
+                        <div className="font-medium text-slate-900">Tuần {report.week}</div>
+                        <div>{report.teacherComment}</div>
+                      </div>
+                    </div>
+                  ))
+              )}
             </div>
           </section>
         </div>
       </div>
 
-      {submitOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 py-8 backdrop-blur-sm">
-          <div className="relative w-full max-w-2xl overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_30px_120px_rgba(15,23,42,0.3)]">
-            <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-5 py-4">
-              <div>
-                <div className="text-sm font-semibold text-slate-900">Nộp nhật ký TTTN</div>
-                <div className="text-xs text-slate-500">Nhập tuần, tiêu đề, nội dung và tên file báo cáo</div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSubmitOpen(false)}
-                className="rounded-full p-2 text-slate-500 transition hover:bg-slate-200 hover:text-slate-700"
-                aria-label="Đóng popup"
-              >
-                <Plus className="h-4 w-4 rotate-45" />
-              </button>
-            </div>
-
-            <div className="max-h-[75vh] overflow-y-auto p-5">
-              <div className="grid gap-4 md:grid-cols-2">
-                <label className="block">
-                  <div className="text-sm font-medium text-slate-700">Tuần báo cáo</div>
-                  <input
-                    type="number"
-                    min={1}
-                    value={submitForm.week}
-                    onChange={(event) => setSubmitForm((current) => ({ ...current, week: event.target.value }))}
-                    className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white"
-                    placeholder="4"
-                  />
-                </label>
-                <label className="block">
-                  <div className="text-sm font-medium text-slate-700">Tên nhật ký</div>
-                  <input
-                    value={submitForm.title}
-                    onChange={(event) => setSubmitForm((current) => ({ ...current, title: event.target.value }))}
-                    className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white"
-                    placeholder="Ví dụ: Tích hợp API đăng ký"
-                  />
-                </label>
-                <label className="block md:col-span-2">
-                  <div className="text-sm font-medium text-slate-700">Nội dung báo cáo</div>
-                  <textarea
-                    rows={5}
-                    value={submitForm.note}
-                    onChange={(event) => setSubmitForm((current) => ({ ...current, note: event.target.value }))}
-                    className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white"
-                    placeholder="Mô tả công việc, kết quả, khó khăn và hướng xử lý..."
-                  />
-                </label>
-                <div className="block md:col-span-2">
-                  <div className="text-sm font-medium text-slate-700 mb-1">Tải file đính kèm lên</div>
-                  <div className="flex items-center justify-center w-full">
-                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer bg-slate-50 hover:bg-slate-100/50 transition">
-                      <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center">
-                        <Upload className="h-8 w-8 text-slate-400 mb-2" />
-                        <p className="text-sm text-slate-500 font-medium">
-                          {submitForm.file ? `Đã chọn: ${submitForm.file.name}` : 'Kéo thả hoặc nhấp để chọn file nhật ký'}
-                        </p>
-                        <p className="text-xs text-slate-400 mt-1">Hỗ trợ PDF, Word, ZIP (tối đa 20MB)</p>
-                      </div>
-                      <input
-                        type="file"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0]
-                          if (file) {
-                            setSubmitForm((current) => ({ ...current, file: file }))
-                          }
-                        }}
-                      />
-                    </label>
-                  </div>
+      <StudentModal
+        open={submitOpen}
+        title="Nộp nhật ký TTTN"
+        description="Nhập tuần, tiêu đề, nội dung và tệp đính kèm báo cáo"
+        onClose={() => setSubmitOpen(false)}
+        footer={
+          <>
+            <StudentButton variant="secondary" onClick={() => setSubmitOpen(false)}>{COMMON_LABELS.CANCEL}</StudentButton>
+            <StudentButton variant="primary" onClick={handleSubmitReport}>
+              <Upload className="h-4 w-4" />
+              Gửi nhật ký
+            </StudentButton>
+          </>
+        }
+      >
+        <div className="grid gap-4 md:grid-cols-2">
+          <StudentField label="Tuần báo cáo">
+            <input
+              type="number"
+              min={1}
+              value={submitForm.week}
+              onChange={(event) => setSubmitForm((current) => ({ ...current, week: event.target.value }))}
+              className={StudentInputClass()}
+              placeholder="4"
+            />
+          </StudentField>
+          <StudentField label="Tên nhật ký">
+            <input
+              value={submitForm.title}
+              onChange={(event) => setSubmitForm((current) => ({ ...current, title: event.target.value }))}
+              className={StudentInputClass()}
+              placeholder="Ví dụ: Tích hợp API đăng ký"
+            />
+          </StudentField>
+          <div className="md:col-span-2">
+            <StudentField label="Nội dung báo cáo">
+              <textarea
+                rows={5}
+                value={submitForm.note}
+                onChange={(event) => setSubmitForm((current) => ({ ...current, note: event.target.value }))}
+                className={StudentInputClass()}
+                placeholder="Mô tả công việc, kết quả, khó khăn và hướng xử lý..."
+              />
+            </StudentField>
+          </div>
+          <div className="md:col-span-2">
+            <div className="text-sm font-medium text-slate-700 mb-1">Tải file đính kèm lên</div>
+            <div className="flex items-center justify-center w-full">
+              <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer bg-slate-50 hover:bg-slate-100/50 transition">
+                <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center">
+                  <Upload className="h-8 w-8 text-slate-400 mb-2" />
+                  <p className="text-sm text-slate-500 font-medium">
+                    {uploadingFile
+                      ? 'Đang tải file lên...'
+                      : submitForm.fileName
+                      ? `Đã chọn: ${submitForm.fileName}`
+                      : 'Kéo thả hoặc nhấp để chọn file nhật ký'}
+                  </p>
+                  <p className="text-xs text-slate-400 mt-1">Hỗ trợ PDF, Word, ZIP (tối đa 20MB)</p>
                 </div>
-              </div>
-
-              <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-                Sau khi nộp, bản ghi sẽ được thêm vào danh sách với trạng thái <span className="font-semibold">Chờ duyệt</span>.
-              </div>
-
-              <div className="mt-5 flex items-center justify-end gap-3">
-                <button type="button" onClick={() => setSubmitOpen(false)} className="rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
-                  Hủy
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSubmitReport}
-                  className="inline-flex items-center gap-2 rounded-2xl bg-[#2196F3] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-blue-200 transition hover:bg-[#1976D2]"
-                >
-                  <Upload className="h-4 w-4" />
-                  Gửi nhật ký
-                </button>
-              </div>
+                <input
+                  type="file"
+                  className="hidden"
+                  disabled={uploadingFile}
+                  onChange={handleUploadFile}
+                />
+              </label>
             </div>
           </div>
         </div>
-      )}
+
+        <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          Sau khi nộp, bản ghi sẽ được thêm vào danh sách với trạng thái <span className="font-semibold">Chờ duyệt</span>.
+        </div>
+      </StudentModal>
     </>
   )
 }

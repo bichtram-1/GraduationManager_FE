@@ -3,11 +3,12 @@
 import { useMemo, useState, useEffect } from 'react'
 import { Edit2, Eye, Plus, Trash2 } from 'lucide-react'
 import { TeacherPill, TeacherSectionHeader } from '../_components/TeacherShell'
-import { TeacherButton, TeacherCard, TeacherToolbar, TeacherModal } from '../_components/TeacherUI'
+import { TeacherButton, TeacherCard, TeacherToolbar, TeacherModal, getTopicStatusTone } from '../_components/TeacherUI'
 import ModalCreateEditTopic from './components/ModalCreateEditTopic'
 import ModalDetailTopic from './components/ModalDetailTopic'
 import { usePeriod } from '@/lib/providers/PeriodProvider'
 import { topicApi } from '@/lib/api/topicApi'
+import { COMMON_LABELS } from '@/constants/commonLabels'
 
 const TOPICS = [
   {
@@ -382,7 +383,7 @@ export default function Page() {
                 <td className="px-5 py-4 text-slate-600">{topic.slots.split('/')[1] || topic.slots}</td>
                 <td className="px-5 py-4 text-slate-600 max-w-xs truncate" title={topic.summary}>{topic.summary}</td>
                 <td className="px-5 py-4">
-                  <TeacherPill tone={topic.status === 'Đã duyệt' ? 'green' : topic.status === 'Từ chối' ? 'red' : 'orange'}>
+                  <TeacherPill tone={getTopicStatusTone(topic.status)}>
                     {topic.status}
                   </TeacherPill>
                 </td>
@@ -456,7 +457,7 @@ export default function Page() {
         onClose={() => setDeletingTopic(null)}
         footer={
           <div className="flex justify-end gap-2">
-            <TeacherButton variant="secondary" onClick={() => setDeletingTopic(null)}>Hủy</TeacherButton>
+            <TeacherButton variant="secondary" onClick={() => setDeletingTopic(null)}>{COMMON_LABELS.CANCEL}</TeacherButton>
             <TeacherButton
               variant="primary"
               className="!bg-red-600 hover:!bg-red-700 text-white"

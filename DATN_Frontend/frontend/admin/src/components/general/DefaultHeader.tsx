@@ -46,6 +46,7 @@ const DefaultHeader = () => {
   const isThesisPage =
     pathname.pathname.startsWith('/groups') ||
     pathname.pathname.startsWith('/councils') ||
+    pathname.pathname.startsWith('/topics') ||
     (pathname.pathname === '/student-scores' && scoreMode === 'project');
 
   useEffect(() => {

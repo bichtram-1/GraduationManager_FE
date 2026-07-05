@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { Upload, FileText, Trash2 } from 'lucide-react'
-import { TeacherButton, TeacherField, TeacherInputClass, TeacherModal } from '../../_components/TeacherUI'
+import { TeacherButton, TeacherField, TeacherInputClass, TeacherModal, getTopicStatusTone } from '../../_components/TeacherUI'
 import { TeacherPill } from '../../_components/TeacherShell'
 import { topicApi } from '@/lib/api/topicApi'
+import { COMMON_LABELS } from '@/constants/commonLabels'
 
 type ModalCreateEditTopicProps = {
   open: boolean
@@ -93,7 +94,7 @@ export default function ModalCreateEditTopic(props: ModalCreateEditTopicProps) {
             </div>
             <div className="flex items-center gap-2">
               <span className="text-xs text-slate-500">Trạng thái hiện tại:</span>
-              <TeacherPill tone={status === 'Đã duyệt' ? 'green' : status === 'Từ chối' ? 'red' : 'orange'}>
+              <TeacherPill tone={getTopicStatusTone(status)}>
                 {status}
               </TeacherPill>
             </div>
@@ -194,7 +195,7 @@ export default function ModalCreateEditTopic(props: ModalCreateEditTopicProps) {
         </TeacherField>
 
         <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-          <TeacherButton variant="secondary" onClick={onClose}>Hủy</TeacherButton>
+          <TeacherButton variant="secondary" onClick={onClose}>{COMMON_LABELS.CANCEL}</TeacherButton>
           <TeacherButton variant="primary" onClick={handleSaveClick} disabled={submitting || uploadingFile}>
             {submitting ? 'Đang lưu...' : editingCode ? 'Lưu cập nhật' : 'Gửi yêu cầu duyệt'}
           </TeacherButton>

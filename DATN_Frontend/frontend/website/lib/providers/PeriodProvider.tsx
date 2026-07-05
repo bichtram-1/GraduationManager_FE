@@ -70,7 +70,7 @@ export const PeriodProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   useEffect(() => {
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
-    let lastEventId = '';
+    const lastEventId = '';
     let eventSource: EventSource | null = null;
 
     const connectSSE = () => {

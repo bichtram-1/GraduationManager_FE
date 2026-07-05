@@ -20,6 +20,13 @@ export function TeacherBadge({ type = 'info', children }: { type?: TeacherStatus
   )
 }
 
+/** Trạng thái duyệt đề tài ('Đã duyệt' | 'Từ chối' | 'Chờ duyệt') → tone cho TeacherPill. */
+export function getTopicStatusTone(status: string): 'green' | 'red' | 'orange' {
+  if (status === 'Đã duyệt') return 'green'
+  if (status === 'Từ chối') return 'red'
+  return 'orange'
+}
+
 export function TeacherCard({ children, className = '' }: { children: ReactNode; className?: string }) {
   return <div className={`overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.06)] ${className}`}>{children}</div>
 }

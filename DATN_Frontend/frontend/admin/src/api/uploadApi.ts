@@ -1,14 +1,10 @@
 import { FileUploadData, UploadProps } from '@shared/types/UploadType';
+import { buildUploadFormData } from '@shared/utils/uploadHelper';
 import axiosInstance from './axiosInstance';
 
 export const uploadApi = {
   upload(data: UploadProps): Promise<unknown> {
-    const formData = new FormData();
-    if (data?.files) {
-      data.files.map((item) => {
-        formData.append('file', item);
-      });
-    }
+    const formData = buildUploadFormData(data?.files ?? []);
 
     return axiosInstance.post('/v1/file-upload/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
