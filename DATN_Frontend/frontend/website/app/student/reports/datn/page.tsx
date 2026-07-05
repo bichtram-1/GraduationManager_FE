@@ -13,11 +13,12 @@ type StatusFilter = 'all' | 'Đã duyệt' | 'Bị từ chối' | 'Đang chấm 
 
 export default function StudentReportsDATNPage() {
   const [milestones, setMilestones] = useState<IDatnProgressReport[]>([])
-  const [selectedMilestone, setSelectedMilestone] = useState<string | null>(null)
+  const [selectedWeek, setSelectedWeek] = useState<number | null>(null)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [submitOpen, setSubmitOpen] = useState(false)
   const [uploadingFile, setUploadingFile] = useState(false)
   const [submitForm, setSubmitForm] = useState({
+    week: '1',
     name: '',
     fileName: '',
     fileUrl: '',
@@ -39,7 +40,7 @@ export default function StudentReportsDATNPage() {
         setMilestones(reportsData)
         setRegistration(regData)
         if (reportsData.length > 0) {
-          setSelectedMilestone(reportsData[0].name)
+          setSelectedWeek(reportsData[0].week)
         }
       } catch (_err) {
         if (!mounted) return
@@ -68,10 +69,10 @@ export default function StudentReportsDATNPage() {
   }, [])
 
   const selected = useMemo(() => {
-    return milestones.find((milestone) => milestone.name === selectedMilestone) 
-      ?? milestones[0] 
-      ?? { name: 'Chưa có bản thảo', status: 'Chưa nộp', file: 'Chưa có', note: 'Chưa có bản thảo nào được nộp.', updated: 'Chưa cập nhật' }
-  }, [selectedMilestone, milestones])
+    return milestones.find((milestone) => milestone.week === selectedWeek)
+      ?? milestones[0]
+      ?? { week: 1, name: 'Chưa có bản thảo', status: 'Chưa nộp', file: 'Chưa có', note: 'Chưa có bản thảo nào được nộp.', updated: 'Chưa cập nhật' }
+  }, [selectedWeek, milestones])
 
   const approvedCount = milestones.filter((milestone) => milestone.status === 'Đã duyệt').length
   const rejectedCount = milestones.filter((milestone) => milestone.status === 'Bị từ chối').length
@@ -83,7 +84,9 @@ export default function StudentReportsDATNPage() {
   }, [milestones, statusFilter])
 
   const openSubmitModal = () => {
+    const nextWeek = milestones.length > 0 ? Math.max(...milestones.map((milestone) => milestone.week)) + 1 : 1
     setSubmitForm({
+      week: String(nextWeek),
       name: '',
       fileName: '',
       fileUrl: '',
@@ -111,6 +114,13 @@ export default function StudentReportsDATNPage() {
   }
 
   const handleSubmitDraft = async () => {
+    const week = Number(submitForm.week)
+
+    if (!Number.isFinite(week) || week <= 0) {
+      alert('Vui lòng nhập số tuần hợp lệ.')
+      return
+    }
+
     if (!submitForm.name.trim() || !submitForm.note.trim()) {
       alert('Vui lòng nhập tên bản thảo và nội dung.')
       return
@@ -119,16 +129,18 @@ export default function StudentReportsDATNPage() {
     try {
       setLoading(true)
       const nextMilestone = await studentApi.submitDatnReport({
+        week,
         name: submitForm.name.trim(),
         note: submitForm.note.trim(),
-        file: submitForm.fileUrl || undefined
+        file: submitForm.fileUrl || undefined,
+        fileName: submitForm.fileName || undefined
       })
 
       setMilestones((current) => {
-        const withoutMilestone = current.filter((item) => item.name !== nextMilestone.name)
+        const withoutMilestone = current.filter((item) => item.week !== nextMilestone.week)
         return [nextMilestone, ...withoutMilestone]
       })
-      setSelectedMilestone(nextMilestone.name)
+      setSelectedWeek(nextMilestone.week)
       setSubmitOpen(false)
     } catch (err: any) {
       alert(err?.response?.data?.message || 'Có lỗi xảy ra khi gửi bản thảo.')
@@ -214,9 +226,9 @@ export default function StudentReportsDATNPage() {
 
       <div className="mb-5 grid gap-4 md:grid-cols-3">
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
-          <div className="text-xs text-slate-500">Mốc đang xem</div>
-          <div className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">{selected.name}</div>
-          <div className="mt-2 text-sm text-slate-500">{selected.note}</div>
+          <div className="text-xs text-slate-500">Tuần đang xem</div>
+          <div className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">W{selected.week}</div>
+          <div className="mt-2 text-sm text-slate-500">{selected.name}</div>
         </section>
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.05)] min-w-0">
           <div className="text-xs text-slate-500">File nộp</div>
@@ -243,6 +255,7 @@ export default function StudentReportsDATNPage() {
           <table className="w-full text-sm">
             <thead className="sticky top-0 z-10 bg-slate-50 text-slate-600">
               <tr>
+                <th className="px-5 py-3 text-left">Tuần</th>
                 <th className="px-5 py-3 text-left">Giai đoạn</th>
                 <th className="px-5 py-3 text-left">File</th>
                 <th className="px-5 py-3 text-left">Trạng thái</th>
@@ -252,13 +265,14 @@ export default function StudentReportsDATNPage() {
             <tbody>
               {filteredMilestones.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-5 py-8 text-center text-slate-500">Không có bản thảo nào phù hợp bộ lọc.</td>
+                  <td colSpan={5} className="px-5 py-8 text-center text-slate-500">Không có bản thảo nào phù hợp bộ lọc.</td>
                 </tr>
               )}
               {filteredMilestones.map((milestone) => {
-                const active = selectedMilestone === milestone.name
+                const active = selectedWeek === milestone.week
                 return (
-                  <tr key={milestone.name} className={`border-t border-slate-100 transition hover:bg-slate-50/80 ${active ? 'bg-blue-50/60' : ''}`}>
+                  <tr key={milestone.week} className={`border-t border-slate-100 transition hover:bg-slate-50/80 ${active ? 'bg-blue-50/60' : ''}`}>
+                    <td className="px-5 py-4 font-medium text-slate-900">W{milestone.week}</td>
                     <td className="px-5 py-4 text-slate-700">
                       <div className="space-y-1">
                         <div className="font-medium text-slate-900">{milestone.name}</div>
@@ -286,7 +300,7 @@ export default function StudentReportsDATNPage() {
                     <td className="px-5 py-4 text-right">
                       <button
                         type="button"
-                        onClick={() => setSelectedMilestone(milestone.name)}
+                        onClick={() => setSelectedWeek(milestone.week)}
                         className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
                       >
                         <Upload className="h-4 w-4" />
@@ -306,7 +320,7 @@ export default function StudentReportsDATNPage() {
             <div className="text-sm font-semibold text-slate-900">Xem nhanh mốc nộp</div>
             <div className="mt-4 rounded-[22px] bg-white/90 p-4">
               <div className="text-xs text-slate-500">Đang chọn</div>
-              <div className="mt-1 text-lg font-semibold text-slate-900">{selected.name}</div>
+              <div className="mt-1 text-lg font-semibold text-slate-900">Tuần {selected.week} · {selected.name}</div>
               <div className="mt-1 text-sm text-slate-600">{selected.note}</div>
               <div className="mt-4 space-y-2 text-sm text-slate-600">
                 <div className="flex items-center gap-2 min-w-0">
@@ -337,7 +351,7 @@ export default function StudentReportsDATNPage() {
                 <div className="flex items-start gap-3 rounded-2xl bg-slate-50 p-4">
                   <MessageSquareQuote className="mt-0.5 h-4 w-4 text-[#1976D2]" />
                   <div>
-                    <div className="font-medium text-slate-900">{selected.name}</div>
+                    <div className="font-medium text-slate-900">Tuần {selected.week}</div>
                     <div>{selected.teacherComment}</div>
                   </div>
                 </div>
@@ -365,16 +379,24 @@ export default function StudentReportsDATNPage() {
         }
       >
         <div className="grid gap-4 md:grid-cols-2">
-          <div className="md:col-span-2">
-            <StudentField label="Tên bản thảo">
-              <input
-                value={submitForm.name}
-                onChange={(event) => setSubmitForm((current) => ({ ...current, name: event.target.value }))}
-                className={StudentInputClass()}
-                placeholder="Ví dụ: Bản thảo Chương 3"
-              />
-            </StudentField>
-          </div>
+          <StudentField label="Tuần báo cáo">
+            <input
+              type="number"
+              min={1}
+              value={submitForm.week}
+              onChange={(event) => setSubmitForm((current) => ({ ...current, week: event.target.value }))}
+              className={StudentInputClass()}
+              placeholder="4"
+            />
+          </StudentField>
+          <StudentField label="Tên bản thảo">
+            <input
+              value={submitForm.name}
+              onChange={(event) => setSubmitForm((current) => ({ ...current, name: event.target.value }))}
+              className={StudentInputClass()}
+              placeholder="Ví dụ: Bản thảo Chương 3"
+            />
+          </StudentField>
           <div className="md:col-span-2">
             <div className="text-sm font-medium text-slate-700 mb-1">Tải file bản thảo lên</div>
             <div className="flex items-center justify-center w-full">
@@ -398,6 +420,19 @@ export default function StudentReportsDATNPage() {
                 />
               </label>
             </div>
+            {submitForm.fileUrl && (
+              <div className="mt-2 text-right">
+                <a
+                  href={submitForm.fileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs font-medium text-[#1976D2] hover:underline"
+                >
+                  <FileText className="h-3.5 w-3.5" />
+                  Xem file vừa tải lên
+                </a>
+              </div>
+            )}
           </div>
           <div className="md:col-span-2">
             <StudentField label="Nội dung bản thảo">

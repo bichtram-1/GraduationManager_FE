@@ -137,7 +137,8 @@ export default function StudentReportsTTTNPage() {
         week: nextWeek,
         title: submitForm.title.trim(),
         note: submitForm.note.trim(),
-        file: submitForm.fileUrl || undefined
+        file: submitForm.fileUrl || undefined,
+        fileName: submitForm.fileName || undefined
       })
 
       setReports((current) => {
@@ -413,6 +414,19 @@ export default function StudentReportsTTTNPage() {
                 />
               </label>
             </div>
+            {submitForm.fileUrl && (
+              <div className="mt-2 text-right">
+                <a
+                  href={submitForm.fileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs font-medium text-[#1976D2] hover:underline"
+                >
+                  <FileText className="h-3.5 w-3.5" />
+                  Xem file vừa tải lên
+                </a>
+              </div>
+            )}
           </div>
         </div>
 
