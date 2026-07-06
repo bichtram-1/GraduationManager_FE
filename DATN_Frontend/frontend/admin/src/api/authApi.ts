@@ -23,7 +23,7 @@ export const authApi = {
             refresh_token: backendData.refresh_token,
             user: {
               id: String(backendData.user?.giang_vien_id || backendData.user?.sinh_vien_id || 'u-unknown'),
-              full_name: backendData.user?.ho_ten || 'Người dùng',
+              name: backendData.user?.ho_ten || 'Người dùng',
               email: backendData.user?.email,
               role: mappedRole,
             },

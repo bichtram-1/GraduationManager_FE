@@ -66,9 +66,19 @@ const DefaultNavigate = ({ collapsed, onToggle }: IDefaultNavigate) => {
       icon: <DashboardOutlined style={{ fontSize: 20 }} />,
     },
     {
+      key: ROUTES.PERIODS,
+      label: t(getKey('period_management')),
+      icon: <DashboardOutlined style={{ fontSize: 20 }} />,
+    },
+    {
       key: ROUTES.USERS,
       label: t(getKey('user_management')),
       icon: <UserOutlined style={{ fontSize: 20 }} />,
+    },
+    {
+      key: ROUTES.CLASSES,
+      label: 'Quản lý lớp',
+      icon: <BookOutlined style={{ fontSize: 20 }} />,
     },
     {
       key: ROUTES.COMPANIES,
@@ -81,9 +91,23 @@ const DefaultNavigate = ({ collapsed, onToggle }: IDefaultNavigate) => {
       icon: <BookOutlined style={{ fontSize: 20 }} />,
     },
     {
-      key: ROUTES.CLASSES,
-      label: 'Quản lý lớp',
-      icon: <BookOutlined style={{ fontSize: 20 }} />,
+      key: ROUTES.ASSIGNMENTS,
+      label: t(getKey('assignment_management')),
+      icon: <CrownOutlined style={{ fontSize: 20 }} />,
+    },
+    {
+      key: ROUTES.COUNCILS,
+      label: t(getKey('council_management')),
+      icon: <TeamOutlined style={{ fontSize: 20 }} />,
+    },
+    {
+      key: ROUTES.INTERNSHIP_STUDENTS,
+      label: t(getKey('internship_students')),
+      icon: <SolutionOutlined style={{ fontSize: 20 }} />,
+      children: [
+        { key: ROUTES.INTERNSHIP_STUDENTS_DECLARATIONS, label: t(getKey('internship_students_declarations')) },
+        { key: ROUTES.INTERNSHIP_STUDENTS_NOCOMPANY, label: t(getKey('internship_students_nocompany')) },
+      ],
     },
     {
       key: 'group_management_parent',
@@ -96,33 +120,9 @@ const DefaultNavigate = ({ collapsed, onToggle }: IDefaultNavigate) => {
       ],
     },
     {
-      key: ROUTES.COUNCILS,
-      label: t(getKey('council_management')),
-      icon: <TeamOutlined style={{ fontSize: 20 }} />,
-    },
-    {
-      key: ROUTES.ASSIGNMENTS,
-      label: t(getKey('assignment_management')),
-      icon: <CrownOutlined style={{ fontSize: 20 }} />,
-    },
-    {
       key: ROUTES.STUDENT_SCORES,
       label: t(getKey('student_score_management')),
       icon: <FileDoneOutlined style={{ fontSize: 20 }} />,
-    },
-    {
-      key: ROUTES.INTERNSHIP_STUDENTS,
-      label: t(getKey('internship_students')),
-      icon: <SolutionOutlined style={{ fontSize: 20 }} />,
-      children: [
-        { key: ROUTES.INTERNSHIP_STUDENTS_DECLARATIONS, label: t(getKey('internship_students_declarations')) },
-        { key: ROUTES.INTERNSHIP_STUDENTS_NOCOMPANY, label: t(getKey('internship_students_nocompany')) },
-      ],
-    },
-    {
-      key: ROUTES.PERIODS,
-      label: t(getKey('period_management')),
-      icon: <DashboardOutlined style={{ fontSize: 20 }} />,
     },
     // Courses menu removed
     // Achievements menu removed
