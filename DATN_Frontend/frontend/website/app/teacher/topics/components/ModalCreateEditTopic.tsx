@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Upload, FileText, Trash2 } from 'lucide-react'
 import { TeacherButton, TeacherField, TeacherInputClass, TeacherModal, getTopicStatusTone } from '../../_components/TeacherUI'
 import { TeacherPill } from '../../_components/TeacherShell'
@@ -69,10 +69,65 @@ export default function ModalCreateEditTopic(props: ModalCreateEditTopicProps) {
     }
   }
 
+  const [hasTriedSave, setHasTriedSave] = useState(false)
+
+  useEffect(() => {
+    if (open) {
+      setHasTriedSave(false)
+    }
+  }, [open])
+
+  const nameError = useMemo(() => {
+    if (!open) return null
+    if (name.trim() === '') {
+      return 'Vui lòng nhập tên đề tài!'
+    }
+    if (name.length > 255) {
+      return 'Tên đề tài không được vượt quá 255 ký tự!'
+    }
+    return null
+  }, [name, open])
+
+  const slotsError = useMemo(() => {
+    if (!open) return null
+    if (slots.trim() === '') {
+      return 'Vui lòng nhập số lượng thành viên tối đa!'
+    }
+    const val = Number(slots)
+    if (!/^\d+$/.test(slots)) {
+      return 'Số lượng phải là số nguyên dương!'
+    }
+    if (val < 2) {
+      return 'Số lượng thành viên tối đa phải từ 2 trở lên!'
+    }
+    if (val % 2 !== 0) {
+      return 'Số lượng thành viên tối đa phải là số chẵn!'
+    }
+    return null
+  }, [slots, open])
+
+  const descriptionError = useMemo(() => {
+    if (!open) return null
+    if (description.trim() === '') {
+      return 'Vui lòng nhập mô tả đề tài!'
+    }
+    if (description.length > 5000) {
+      return 'Mô tả đề tài không được vượt quá 5000 ký tự!'
+    }
+    return null
+  }, [description, open])
+
+  const fileError = useMemo(() => {
+    if (!open) return null
+    if (!editingCode && !fileUrl) {
+      return 'Vui lòng tải lên file tài liệu mô tả đính kèm!'
+    }
+    return null
+  }, [fileUrl, editingCode, open])
+
   const handleSaveClick = () => {
-    const maxSlots = Number.parseInt(slots, 10)
-    if (Number.isNaN(maxSlots) || maxSlots <= 0) {
-      alert("Số lượng thành viên tối đa phải là số nguyên dương lớn hơn 0!")
+    setHasTriedSave(true)
+    if (nameError || slotsError || descriptionError || fileError) {
       return
     }
     onSave()
@@ -114,9 +169,16 @@ export default function ModalCreateEditTopic(props: ModalCreateEditTopicProps) {
           <input
             value={name}
             onChange={(e) => onChangeName(e.target.value)}
-            className={TeacherInputClass()}
+            className={TeacherInputClass(
+              nameError && (name.trim() !== '' || hasTriedSave)
+                ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                : ''
+            )}
             placeholder="VD: Hệ thống chatbot hỗ trợ tuyển sinh"
           />
+          {nameError && (name.trim() !== '' || hasTriedSave) && (
+            <div className="text-red-500 text-xs mt-1 font-medium">{nameError}</div>
+          )}
         </TeacherField>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -136,11 +198,18 @@ export default function ModalCreateEditTopic(props: ModalCreateEditTopicProps) {
               value={slots}
               onChange={(e) => onChangeSlots(e.target.value)}
               type="number"
-              min="1"
-              step="1"
-              className={TeacherInputClass()}
+              min="2"
+              step="2"
+              className={TeacherInputClass(
+                slotsError && (slots.trim() !== '' || hasTriedSave)
+                  ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                  : ''
+              )}
               placeholder="Nhập số lượng sinh viên"
             />
+            {slotsError && (slots.trim() !== '' || hasTriedSave) && (
+              <div className="text-red-500 text-xs mt-1 font-medium">{slotsError}</div>
+            )}
           </TeacherField>
         </div>
 
@@ -149,12 +218,21 @@ export default function ModalCreateEditTopic(props: ModalCreateEditTopicProps) {
             value={description}
             onChange={(e) => onChangeDescription(e.target.value)}
             rows={4}
-            className={TeacherInputClass('resize-none')}
+            className={TeacherInputClass(
+              'resize-none ' + (
+                descriptionError && (description.trim() !== '' || hasTriedSave)
+                  ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                  : ''
+              )
+            )}
             placeholder="Mô tả chi tiết mục tiêu, công nghệ và nội dung chính của đề tài"
           />
+          {descriptionError && (description.trim() !== '' || hasTriedSave) && (
+            <div className="text-red-500 text-xs mt-1 font-medium">{descriptionError}</div>
+          )}
         </TeacherField>
 
-        <TeacherField label="File mô tả đính kèm (.pdf, .docx, .doc, .zip)">
+        <TeacherField label="File mô tả đính kèm (.pdf, .docx, .doc, .zip)" required={!editingCode}>
           <div className="mt-1 space-y-2">
             {fileUrl ? (
               <div className="flex items-center justify-between rounded-2xl bg-blue-50/50 px-4 py-3 border border-blue-100">
@@ -179,7 +257,9 @@ export default function ModalCreateEditTopic(props: ModalCreateEditTopicProps) {
                 </button>
               </div>
             ) : (
-              <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-600 transition hover:bg-slate-100">
+              <label className={`flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed bg-slate-50 px-4 py-3 text-sm text-slate-600 transition hover:bg-slate-100 ${
+                fileError && hasTriedSave ? 'border-red-500 bg-red-50/10' : 'border-slate-300'
+              }`}>
                 <Upload className="h-4 w-4 text-[#1976D2]" />
                 <span>{uploadingFile ? 'Đang tải file lên...' : 'Chọn file tài liệu mô tả để tải lên'}</span>
                 <input
@@ -190,6 +270,9 @@ export default function ModalCreateEditTopic(props: ModalCreateEditTopicProps) {
                   disabled={uploadingFile}
                 />
               </label>
+            )}
+            {fileError && hasTriedSave && (
+              <div className="text-red-500 text-xs mt-1 font-medium">{fileError}</div>
             )}
           </div>
         </TeacherField>

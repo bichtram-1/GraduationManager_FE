@@ -171,73 +171,81 @@ export default function TeacherGroupsPage() {
               </tr>
             </thead>
             <tbody>
-              {filteredGroups.map((group, index) => {
-                const selected = selectedGroupId === group.id
-                return (
-                  <tr key={group.id} className={`border-t border-slate-100 transition hover:bg-slate-50/80 ${selected ? 'bg-blue-50/60' : ''}`}>
-                    <td className="px-5 py-4 font-semibold text-slate-600">
-                      {index + 1}
-                    </td>
-                    <td className="px-5 py-4 text-slate-900 max-w-md">
-                      <div className="font-semibold text-slate-800 leading-relaxed">{group.topicName}</div>
-                    </td>
-                    <td className="px-5 py-4 text-slate-700 font-medium">
-                      <div className="flex flex-col gap-1">
-                        {group.membersList?.map((member) => (
-                          <span key={member.code}>{member.code}</span>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="px-5 py-4 text-slate-800 font-medium">
-                      <div className="flex flex-col gap-1">
-                        {group.membersList?.map((member) => (
-                          <span key={member.code}>
-                            {member.name} {member.la_truong_nhom === 1 && <span className="text-xs font-semibold text-amber-500">(TN)</span>}
-                          </span>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="px-5 py-4 text-slate-600">
-                      <div className="flex flex-col gap-1">
-                        {group.membersList?.map((member) => (
-                          <span key={member.code}>{member.className || '—'}</span>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="px-5 py-4">
-                      <TeacherBadge type={APPROVAL_STATUS_META[group.status].badge}>
-                        {APPROVAL_STATUS_META[group.status].label}
-                      </TeacherBadge>
-                    </td>
-                    <td className="px-5 py-4">
-                      <div className="flex justify-end gap-2">
-                        <TeacherButton variant="secondary" className="px-3 py-1.5 text-xs" onClick={() => {
-                          setSelectedGroupId(group.id)
-                          setModalOpen(true)
-                        }}>
-                          Xem
-                        </TeacherButton>
-                        <TeacherButton
-                          variant="success"
-                          className="px-3 py-1.5 text-xs"
-                          disabled={group.status !== 'pending' || savingId === group.id}
-                          onClick={() => handleAction(group.id, 'accept')}
-                        >
-                          Nhận
-                        </TeacherButton>
-                        <TeacherButton
-                          variant="danger"
-                          className="px-3 py-1.5 text-xs"
-                          disabled={group.status !== 'pending' || savingId === group.id}
-                          onClick={() => handleAction(group.id, 'reject')}
-                        >
-                          Từ chối
-                        </TeacherButton>
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
+              {filteredGroups.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-5 py-8 text-center text-slate-400 italic bg-white">
+                    Danh sách trống
+                  </td>
+                </tr>
+              ) : (
+                filteredGroups.map((group, index) => {
+                  const selected = selectedGroupId === group.id
+                  return (
+                    <tr key={group.id} className={`border-t border-slate-100 transition hover:bg-slate-50/80 ${selected ? 'bg-blue-50/60' : ''}`}>
+                      <td className="px-5 py-4 font-semibold text-slate-600">
+                        {index + 1}
+                      </td>
+                      <td className="px-5 py-4 text-slate-900 max-w-md">
+                        <div className="font-semibold text-slate-800 leading-relaxed">{group.topicName}</div>
+                      </td>
+                      <td className="px-5 py-4 text-slate-700 font-medium">
+                        <div className="flex flex-col gap-1">
+                          {group.membersList?.map((member) => (
+                            <span key={member.code}>{member.code}</span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-5 py-4 text-slate-800 font-medium">
+                        <div className="flex flex-col gap-1">
+                          {group.membersList?.map((member) => (
+                            <span key={member.code}>
+                              {member.name} {member.la_truong_nhom === 1 && <span className="text-xs font-semibold text-amber-500">(TN)</span>}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-5 py-4 text-slate-600">
+                        <div className="flex flex-col gap-1">
+                          {group.membersList?.map((member) => (
+                            <span key={member.code}>{member.className || '—'}</span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-5 py-4">
+                        <TeacherBadge type={APPROVAL_STATUS_META[group.status].badge}>
+                          {APPROVAL_STATUS_META[group.status].label}
+                        </TeacherBadge>
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="flex justify-end gap-2">
+                          <TeacherButton variant="secondary" className="px-3 py-1.5 text-xs" onClick={() => {
+                            setSelectedGroupId(group.id)
+                            setModalOpen(true)
+                          }}>
+                            Xem
+                          </TeacherButton>
+                          <TeacherButton
+                            variant="success"
+                            className="px-3 py-1.5 text-xs"
+                            disabled={group.status !== 'pending' || savingId === group.id}
+                            onClick={() => handleAction(group.id, 'accept')}
+                          >
+                            Nhận
+                          </TeacherButton>
+                          <TeacherButton
+                            variant="danger"
+                            className="px-3 py-1.5 text-xs"
+                            disabled={group.status !== 'pending' || savingId === group.id}
+                            onClick={() => handleAction(group.id, 'reject')}
+                          >
+                            Từ chối
+                          </TeacherButton>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
             </tbody>
           </table>
         </div>
