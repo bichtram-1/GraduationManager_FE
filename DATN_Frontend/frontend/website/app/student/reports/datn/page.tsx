@@ -8,8 +8,9 @@ import { StudentButton, StudentField, StudentFilterTabs, StudentInputClass, Stud
 import { studentApi, IDatnProgressReport, IThesisRegistration } from '@/lib/api/studentApi'
 import { uploadApi } from '@/lib/api/uploadApi'
 import { COMMON_LABELS } from '@/constants/commonLabels'
+import { message } from 'antd'
 
-type StatusFilter = 'all' | 'Đã duyệt' | 'Bị từ chối' | 'Đang chấm điểm'
+type StatusFilter = 'all' | 'Đã nộp' | 'Thiếu' | 'Chưa nộp'
 
 export default function StudentReportsDATNPage() {
   const [milestones, setMilestones] = useState<IDatnProgressReport[]>([])
@@ -74,9 +75,9 @@ export default function StudentReportsDATNPage() {
       ?? { week: 1, name: 'Chưa có bản thảo', status: 'Chưa nộp', file: 'Chưa có', note: 'Chưa có bản thảo nào được nộp.', updated: 'Chưa cập nhật' }
   }, [selectedWeek, milestones])
 
-  const approvedCount = milestones.filter((milestone) => milestone.status === 'Đã duyệt').length
-  const rejectedCount = milestones.filter((milestone) => milestone.status === 'Bị từ chối').length
-  const reviewCount = milestones.filter((milestone) => milestone.status === 'Đang chấm điểm').length
+  const submittedCount = milestones.filter((milestone) => milestone.status === 'Đã nộp').length
+  const missingCount = milestones.filter((milestone) => milestone.status === 'Thiếu').length
+  const notSubmittedCount = milestones.filter((milestone) => milestone.status === 'Chưa nộp').length
 
   const filteredMilestones = useMemo(() => {
     if (statusFilter === 'all') return milestones
@@ -91,7 +92,10 @@ export default function StudentReportsDATNPage() {
   }, [milestones])
 
   const openSubmitModal = () => {
-    const nextWeek = milestones.length > 0 ? Math.max(...milestones.map((milestone) => milestone.week)) + 1 : 1
+    const unsubmitted = milestones.filter((m) => m.status === 'Chưa nộp')
+    const nextWeek = unsubmitted.length > 0 
+      ? Math.min(...unsubmitted.map((m) => m.week)) 
+      : (milestones.length > 0 ? Math.max(...milestones.map((milestone) => milestone.week)) + 1 : 1)
     setSubmitForm({
       week: String(nextWeek),
       name: '',
@@ -110,11 +114,13 @@ export default function StudentReportsDATNPage() {
       const res = await uploadApi.uploadFile(file)
       if (res?.cloudFrontUrl) {
         setSubmitForm((current) => ({ ...current, fileName: file.name, fileUrl: res.cloudFrontUrl }))
+        message.success('Tải file lên thành công!')
       } else {
-        alert('Tải file lên thất bại!')
+        message.error('Tải file lên thất bại!')
       }
-    } catch (err: any) {
-      alert(err?.response?.data?.message || 'Tải file lên thất bại!')
+    } catch (err: unknown) {
+      const errorMsg = (err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Tải file lên thất bại!'
+      message.error(errorMsg)
     } finally {
       setUploadingFile(false)
     }
@@ -122,14 +128,26 @@ export default function StudentReportsDATNPage() {
 
   const handleSubmitDraft = async () => {
     const week = Number(submitForm.week)
+    const name = submitForm.name.trim()
+    const note = submitForm.note.trim()
 
-    if (!Number.isFinite(week) || week <= 0) {
-      alert('Vui lòng nhập số tuần hợp lệ.')
+    if (!Number.isInteger(week) || week <= 0) {
+      message.error('Vui lòng nhập số tuần hợp lệ (số nguyên dương).')
       return
     }
 
-    if (!submitForm.name.trim() || !submitForm.note.trim()) {
-      alert('Vui lòng nhập tên bản thảo và nội dung.')
+    if (!name) {
+      message.error('Vui lòng nhập tên bản thảo.')
+      return
+    }
+
+    if (!note) {
+      message.error('Vui lòng nhập nội dung bản thảo.')
+      return
+    }
+
+    if (!submitForm.fileUrl) {
+      message.error('Vui lòng tải lên file đính kèm bản thảo!')
       return
     }
 
@@ -137,10 +155,10 @@ export default function StudentReportsDATNPage() {
       setLoading(true)
       const nextMilestone = await studentApi.submitDatnReport({
         week,
-        name: submitForm.name.trim(),
-        note: submitForm.note.trim(),
-        file: submitForm.fileUrl || undefined,
-        fileName: submitForm.fileName || undefined
+        name,
+        note,
+        file: submitForm.fileUrl,
+        fileName: submitForm.fileName
       })
 
       setMilestones((current) => {
@@ -149,8 +167,10 @@ export default function StudentReportsDATNPage() {
       })
       setSelectedWeek(nextMilestone.week)
       setSubmitOpen(false)
-    } catch (err: any) {
-      alert(err?.response?.data?.message || 'Có lỗi xảy ra khi gửi bản thảo.')
+      message.success('Gửi bản thảo thành công!')
+    } catch (err: unknown) {
+      const errorMsg = (err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Có lỗi xảy ra khi gửi bản thảo.'
+      message.error(errorMsg)
     } finally {
       setLoading(false)
     }
@@ -200,9 +220,9 @@ export default function StudentReportsDATNPage() {
       <StudentFilterTabs
         tabs={[
           { key: 'all', label: 'Tất cả', count: milestones.length },
-          { key: 'Đã duyệt', label: 'Đã duyệt', count: approvedCount },
-          { key: 'Bị từ chối', label: 'Bị từ chối', count: rejectedCount },
-          { key: 'Đang chấm điểm', label: 'Đang chấm', count: reviewCount },
+          { key: 'Đã nộp', label: 'Đã nộp', count: submittedCount },
+          { key: 'Thiếu', label: 'Thiếu', count: missingCount },
+          { key: 'Chưa nộp', label: 'Chưa nộp', count: notSubmittedCount },
         ]}
         activeKey={statusFilter}
         onChange={(key) => setStatusFilter(key as StatusFilter)}
@@ -477,7 +497,7 @@ export default function StudentReportsDATNPage() {
         </div>
 
         <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-          Bản thảo sau khi gửi sẽ chuyển sang trạng thái <span className="font-semibold">Đang chấm điểm</span> và được chọn ngay trên danh sách.
+          Bản thảo sau khi gửi sẽ chuyển sang trạng thái <span className="font-semibold">Đã nộp</span> và được chọn ngay trên danh sách.
         </div>
       </StudentModal>
     </>

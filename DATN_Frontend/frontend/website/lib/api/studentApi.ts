@@ -369,17 +369,25 @@ export const studentApi = {
     return response?.data;
   },
 
-  getTttnReports: async (): Promise<IProgressReport[]> => {
+  getTttnReports: async (): Promise<{ reports: IProgressReport[], hasGvhd?: boolean }> => {
     if (USE_MOCK) {
-      return [
-        { week: 1, title: 'Làm quen môi trường công ty', status: 'Đã duyệt', file: 'week1.pdf', note: 'Giới thiệu cấu trúc phòng ban', updated: '12/05/2026' },
-        { week: 2, title: 'Nghiên cứu công nghệ', status: 'Đã duyệt', file: 'week2.pdf', note: 'Khảo sát stack nội bộ', updated: '19/05/2026' },
-        { week: 3, title: 'Phát triển tính năng A', status: 'Nháp', file: '—', note: 'Đang viết dàn ý báo cáo', updated: '23/05/2026' },
-      ];
+      return {
+        reports: [
+          { week: 1, title: 'Làm quen môi trường công ty', status: 'Đã duyệt', file: 'week1.pdf', note: 'Giới thiệu cấu trúc phòng ban', updated: '12/05/2026' },
+          { week: 2, title: 'Nghiên cứu công nghệ', status: 'Đã duyệt', file: 'week2.pdf', note: 'Khảo sát stack nội bộ', updated: '19/05/2026' },
+          { week: 3, title: 'Phát triển tính năng A', status: 'Nháp', file: '—', note: 'Đang viết dàn ý báo cáo', updated: '23/05/2026' },
+        ],
+        hasGvhd: true
+      };
     }
 
     const response = await axiosInstance.get('/private/v1/student/reports/tttn');
-    return response?.data?.results?.objects || response?.data?.results?.object || [];
+    const objects = response?.data?.results?.objects || response?.data?.results?.object || [];
+    const hasGvhd = response?.data?.results?.hasGvhd !== false;
+    return {
+      reports: objects,
+      hasGvhd
+    };
   },
 
   submitTttnReport: async (data: { week: number; title: string; note: string; file?: string; fileName?: string }): Promise<IProgressReport> => {

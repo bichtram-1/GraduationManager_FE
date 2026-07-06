@@ -1,8 +1,9 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react';
-import { Button, Card, Input, Select, Tag, Modal, message } from 'antd';
+import { Button, Card, DatePicker, Input, Select, Tag, TimePicker, Modal, message } from 'antd';
+import dayjs from 'dayjs';
 import { ArrowLeftOutlined, MenuOutlined } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { cn, STATUS_CODE } from '../../../constants/commonConst';
+import { cn } from '../../../constants/commonConst';
 import { useTranslation } from 'react-i18next';
 import { groupHooks } from '../../../hooks/useGroups';
 import { assignmentHooks } from '../../../hooks/useAssignments';
@@ -11,6 +12,13 @@ import { periodHooks } from '../../../hooks/usePeriods';
 import { useGlobalVariable } from '../../../hooks/GlobalVariableProvider';
 import { getKey } from '@shared/types/I18nKeyType';
 import { formatNumber } from '@shared/utils/numberUtils';
+import type { IListPeriod } from '../../../type/PeriodType';
+import type { IListGroup, IGroupMember } from '../../../type/GroupType';
+import type { IAssignmentTeacher } from '../../../type/AssignmentType';
+import type { CouncilRow } from '../../../api/councilApi';
+
+type LocationState = { council?: CouncilRow };
+type CouncilTopicPayload = NonNullable<CouncilRow['topics']>[number];
 
 type AdvisorTopic = {
   id: string;
@@ -54,8 +62,8 @@ const CreateCouncilPage = () => {
   const { selectedPeriod } = useGlobalVariable();
   const { data: periodList } = periodHooks.useFetchListPeriods({ page: 1, limit: 100 });
   const datnPeriods = useMemo(() => {
-    const raw = (periodList?.rows ?? []) as any[];
-    return raw.filter((p: any) => p.type?.toLowerCase() === 'datn' || p.loai_dot?.toLowerCase() === 'datn');
+    const raw: IListPeriod[] = periodList?.rows ?? [];
+    return raw.filter((p) => p.type?.toLowerCase() === 'datn');
   }, [periodList]);
 
   const [form, setForm] = useState<CommitteeForm>({
@@ -69,7 +77,7 @@ const CreateCouncilPage = () => {
 
   useEffect(() => {
     if (datnPeriods.length > 0 && !form.batch) {
-      setForm((current) => ({ ...current, batch: datnPeriods[0].name ?? datnPeriods[0].ten_dot }));
+      setForm((current) => ({ ...current, batch: datnPeriods[0].name }));
     }
   }, [datnPeriods]);
   const [selectedTopics, setSelectedTopics] = useState<SelectedTopic[]>([]);
@@ -88,7 +96,7 @@ const CreateCouncilPage = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const isPrefilledRef = useRef(false);
   const isInitialLoadRef = useRef(true);
-  const stateFromLocation: any = (location && (location as any).state) || null;
+  const stateFromLocation = (location?.state as LocationState) || null;
   const originalBatch = stateFromLocation?.council?.batch || '';
 
   useEffect(() => {
@@ -116,7 +124,7 @@ const CreateCouncilPage = () => {
   useEffect(() => {
     if (groupList?.rows) {
       const bucketsMap: Record<string, SelectedTopic[]> = {};
-      groupList.rows.forEach((g: any) => {
+      (groupList.rows as IListGroup[]).forEach((g) => {
         // Lọc đề tài thuộc đợt đang chọn tạo hội đồng
         const periodName = form.batch || selectedPeriod?.name || '';
         if (periodName && g.registrationBatch && g.registrationBatch !== periodName) {
@@ -131,7 +139,7 @@ const CreateCouncilPage = () => {
           id: g.id,
           topicCode: g.code,
           topicName: g.title,
-          members: g.members.map((m: any) => `${m.code} - ${m.name}`),
+          members: g.members.map((m: IGroupMember) => `${m.code} - ${m.name}`),
           advisorId: findTeacherIdByName(supervisor),
           minutes: 40,
         });
@@ -148,20 +156,19 @@ const CreateCouncilPage = () => {
 
   const availableAdvisorOptions = useMemo(
     () =>
-      teacherList.map((t: any) => ({
-        value: t.id,
-        label: `${t.name} - Chuyên môn: ${t.major || 'Chưa rõ'}`,
+      teacherList.map((teacher: IAssignmentTeacher) => ({
+        value: teacher.id,
+        label: `${teacher.name} - Chuyên môn: ${teacher.major || 'Chưa rõ'}`,
       })),
     [teacherList],
   );
 
-  const availableAdvisorIds = useMemo(() => new Set(teacherList.map((t: any) => t.id)), [teacherList]);
   const memberIds = form.members;
 
   const teacherNameById = (id: string) => {
     if (!id) return '';
     const cleanId = id.replace(/^(ThS|TS|PGS|GS|PGS\.\s*TS|GS\.\s*TS|ThS\.|TS\.|PGS\.\s*TS\.|GS\.\s*TS\.)\s+/i, '').trim();
-    const found = teacherList.find((teacher: any) => {
+    const found = teacherList.find((teacher: IAssignmentTeacher) => {
       const cleanTName = teacher.name.replace(/^(ThS|TS|PGS|GS|PGS\.\s*TS|GS\.\s*TS|ThS\.|TS\.|PGS\.\s*TS\.|GS\.\s*TS\.)\s+/i, '').trim();
       return teacher.id === id || cleanTName.toLowerCase() === cleanId.toLowerCase();
     });
@@ -171,8 +178,8 @@ const CreateCouncilPage = () => {
   const findTeacherIdByName = (name: string) => {
     if (!name) return '';
     const cleanName = name.replace(/^(ThS|TS|PGS|GS|PGS\.\s*TS|GS\.\s*TS|ThS\.|TS\.|PGS\.\s*TS\.|GS\.\s*TS\.)\s+/i, '').trim();
-    const found = teacherList.find((t: any) => {
-      const cleanTName = t.name.replace(/^(ThS|TS|PGS|GS|PGS\.\s*TS|GS\.\s*TS|ThS\.|TS\.|PGS\.\s*TS\.|GS\.\s*TS\.)\s+/i, '').trim();
+    const found = teacherList.find((teacher: IAssignmentTeacher) => {
+      const cleanTName = teacher.name.replace(/^(ThS|TS|PGS|GS|PGS\.\s*TS|GS\.\s*TS|ThS\.|TS\.|PGS\.\s*TS\.|GS\.\s*TS\.)\s+/i, '').trim();
       return cleanTName.toLowerCase() === cleanName.toLowerCase();
     });
     return found ? found.id : name;
@@ -206,10 +213,6 @@ const CreateCouncilPage = () => {
 
   const updateExternalExaminersForTopic = (topicId: string, externalIds: string[] | null) => {
     setSelectedTopics((current) => current.map((topic) => (topic.id === topicId ? { ...topic, externalExaminers: externalIds ?? [] } : topic)));
-  };
-
-  const updateStartTimeForTopic = (topicId: string, startTime: string | null) => {
-    setSelectedTopics((current) => current.map((topic) => (topic.id === topicId ? { ...topic, startTime } : topic)));
   };
 
   const updateTopicMinutes = (topicId: string, minutes: number) => {
@@ -276,7 +279,7 @@ const CreateCouncilPage = () => {
       }
     }
 
-    const selectedPeriodId = periodList?.rows?.find((p: any) => p.name === form.batch)?.id || selectedPeriod?.id;
+    const selectedPeriodId = periodList?.rows?.find((p) => p.name === form.batch)?.id || selectedPeriod?.id;
 
     const payload = {
       title: form.name,
@@ -306,26 +309,26 @@ const CreateCouncilPage = () => {
           message.success(t(getKey('update_council_success_message')));
           navigate('/councils');
         },
-        onError: (err: any) => {
-          message.error(err?.response?.data?.message || err.message || t(getKey('config_error_message')));
+        onError: (err) => {
+          const data = err.response?.data as { message?: string } | undefined;
+          message.error(data?.message || err.message || t(getKey('config_error_message')));
         }
       });
     } else {
       createCouncilMutation.mutate(payload, {
         onSuccess: () => {
           setSaved(true);
-          message.success(t(getKey('create_council_success'), { count: selectedTopics.length } as any) as string);
+          message.success(t(getKey('create_council_success'), { count: selectedTopics.length }) as string);
           navigate('/councils');
         },
-        onError: (err: any) => {
-          message.error(err?.response?.data?.message || err.message || t(getKey('config_error_message')));
+        onError: (err) => {
+          const data = err.response?.data as { message?: string } | undefined;
+          message.error(data?.message || err.message || t(getKey('config_error_message')));
         }
       });
     }
   };
 
-  const selectedCountByAdvisor = (advisorId: string) => selectedTopics.filter((topic) => topic.advisorId === advisorId).length;
-  const visibleAdvisorBuckets = advisorBuckets.filter((bucket) => memberIds.includes(bucket.advisorId));
   const eligibleTopics = useMemo(() => {
     return advisorBuckets
       .filter((bucket) => memberIds.includes(bucket.advisorId))
@@ -362,7 +365,7 @@ const CreateCouncilPage = () => {
     if (isReviewer) return 'Phản biện';
     return 'Ủy viên';
   };
-  const committeeSummary = t(getKey('members_count_label'), { count: memberIds.length } as any) as string;
+  const committeeSummary = t(getKey('members_count_label'), { count: memberIds.length }) as string;
 
   const openSortTab = () => {
     if (selectedTopics.length > 0) setWorkflowTab('sort');
@@ -370,7 +373,7 @@ const CreateCouncilPage = () => {
 
   // If navigated here for editing, prefill form
   useEffect(() => {
-    const state: any = (location && (location as any).state) || null;
+    const state = (location?.state as LocationState) || null;
     const council = state?.council;
     if (!council) return;
 
@@ -401,23 +404,23 @@ const CreateCouncilPage = () => {
 
   // Prefill selectedTopics once advisorBuckets, teacherList and council are loaded
   useEffect(() => {
-    const state: any = (location && (location as any).state) || null;
+    const state = (location?.state as LocationState) || null;
     const council = state?.council;
     if (!council || advisorBuckets.length === 0 || teacherList.length === 0 || isPrefilledRef.current) return;
 
     const topicsFromCouncil: SelectedTopic[] = [];
-    const councilTopics = council.topics || council.topicGroups || [];
-    
-    councilTopics.forEach((t: any) => {
-      const found = advisorBuckets.flatMap((b) => b.topics).find((pt) => pt.topicCode === t.code);
+    const councilTopics: CouncilTopicPayload[] = council.topics || council.topicGroups || [];
+
+    councilTopics.forEach((topic) => {
+      const found = advisorBuckets.flatMap((b) => b.topics).find((pt) => pt.topicCode === topic.code);
       if (found) {
         const sel: SelectedTopic = {
           ...found,
-          reviewerId: t.reviewerId || (t.reviewer ? findTeacherIdByName(t.reviewer) : null),
-          examinerIds: t.examinerIds || (t.examiners || []).map((n: string) => findTeacherIdByName(n)).filter(Boolean) as string[],
-          externalExaminers: (t.externalExaminers || []).map((n: string) => findTeacherIdByName(n)).filter(Boolean) as string[],
-          startTime: t.startTime || null,
-          minutes: t.minutes || found.minutes,
+          reviewerId: topic.reviewerId || (topic.reviewer ? findTeacherIdByName(topic.reviewer) : null),
+          examinerIds: topic.examinerIds || (topic.examiners || []).map((n: string) => findTeacherIdByName(n)).filter(Boolean) as string[],
+          externalExaminers: (topic.externalExaminers || []).map((n: string) => findTeacherIdByName(n)).filter(Boolean) as string[],
+          startTime: topic.startTime || null,
+          minutes: topic.minutes || found.minutes,
         };
         topicsFromCouncil.push(sel);
       }
@@ -476,7 +479,7 @@ const CreateCouncilPage = () => {
                   placeholder="Chọn đợt hoạt động để lọc đề tài..."
                   disabled={!!editingId}
                 >
-                  {datnPeriods.map((p: any) => (
+                  {datnPeriods.map((p) => (
                     <Select.Option key={p.id} value={p.name}>
                       {p.name}
                     </Select.Option>
@@ -492,11 +495,21 @@ const CreateCouncilPage = () => {
               <div className="flex gap-2">
                 <div className="flex-1">
                   <div className="mb-1 text-xs text-gray-600">{t(getKey('defense_date'))}</div>
-                  <Input type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} />
+                  <DatePicker
+                    className="w-full"
+                    format="DD/MM/YYYY"
+                    value={form.date ? dayjs(form.date, 'YYYY-MM-DD', true) : null}
+                    onChange={(date) => setForm({ ...form, date: date ? date.format('YYYY-MM-DD') : '' })}
+                  />
                 </div>
                 <div className="flex-1">
                   <div className="mb-1 text-xs text-gray-600">{t(getKey('start_time'))}</div>
-                  <Input type="time" value={form.time} onChange={(event) => setForm({ ...form, time: event.target.value })} />
+                  <TimePicker
+                    className="w-full"
+                    format="HH:mm"
+                    value={form.time ? dayjs(form.time, 'HH:mm', true) : null}
+                    onChange={(time) => setForm({ ...form, time: time ? time.format('HH:mm') : '' })}
+                  />
                 </div>
               </div>
 
@@ -566,7 +579,7 @@ const CreateCouncilPage = () => {
                 <div className="font-medium">{t(getKey('step2_title'))}</div>
                 <div className="mt-1 text-xs text-gray-500">{t(getKey('step2_desc'))}</div>
               </div>
-              <div className="rounded-full bg-gray-100 px-3 py-1 text-[11px] text-gray-600">{(t(getKey('selected_topics_count'), { count: selectedTopics.length } as any) as string)}</div>
+              <div className="rounded-full bg-gray-100 px-3 py-1 text-[11px] text-gray-600">{(t(getKey('selected_topics_count'), { count: selectedTopics.length }) as string)}</div>
             </div>
 
             <div className="flex gap-2 border-b border-gray-200 px-5 pt-4">
@@ -718,7 +731,7 @@ const CreateCouncilPage = () => {
                             value={topic.externalExaminers || []}
                             onChange={(value) => updateExternalExaminersForTopic(topic.id, value ?? [])}
                             placeholder={t(getKey('select_external_placeholder'))}
-                            options={teacherList.filter((t: any) => !memberIds.includes(t.id)).map((t: any) => ({ value: t.id, label: `${t.name} - Chuyên môn: ${t.major || 'Chưa rõ'}` }))}
+                            options={teacherList.filter((teacher) => !memberIds.includes(teacher.id)).map((teacher) => ({ value: teacher.id, label: `${teacher.name} - Chuyên môn: ${teacher.major || 'Chưa rõ'}` }))}
                             className="w-full min-w-[220px]"
                             allowClear
                           />

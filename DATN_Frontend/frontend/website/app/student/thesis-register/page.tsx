@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react'
 import { StudentPill, StudentSectionHeader } from '../_components/StudentShell'
 import { StudentButton, StudentModal } from '../_components/StudentUI'
 import { COMMON_LABELS } from '@/constants/commonLabels'
+import { message } from 'antd'
 
 type Topic = { id: string; code?: string; title: string; module: string; published: boolean; slots?: string }
 
@@ -98,8 +99,9 @@ export default function ThesisRegisterPage() {
       // refresh topics to update slot status if needed
       const topicsData = await topicApi.getTopics({ periodId: selectedPeriod?.id })
       setTopics(topicsData)
-    } catch (err: any) {
-      alert(err?.response?.data?.message || 'Có lỗi xảy ra khi đăng ký đề tài.')
+      message.success('Đăng ký đề tài thành công!')
+    } catch (err: unknown) {
+      message.error((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Có lỗi xảy ra khi đăng ký đề tài.')
     } finally {
       setLoading(false)
     }
@@ -113,8 +115,9 @@ export default function ThesisRegisterPage() {
       // refresh topics to update slot status if needed
       const topicsData = await topicApi.getTopics({ periodId: selectedPeriod?.id })
       setTopics(topicsData)
-    } catch (err: any) {
-      alert(err?.response?.data?.message || 'Có lỗi xảy ra khi giải tán nhóm.')
+      message.success('Rời/giải tán nhóm thành công!')
+    } catch (err: unknown) {
+      message.error((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Có lỗi xảy ra khi giải tán nhóm.')
     } finally {
       setLoading(false)
     }
@@ -130,8 +133,9 @@ export default function ThesisRegisterPage() {
       ])
       setTopics(topicsData)
       setRegistration(regData)
-    } catch (err: any) {
-      alert(err?.response?.data?.message || 'Có lỗi xảy ra khi hủy đăng ký đề tài.')
+      message.success('Hủy đăng ký đề tài thành công!')
+    } catch (err: unknown) {
+      message.error((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Có lỗi xảy ra khi hủy đăng ký đề tài.')
     } finally {
       setLoading(false)
     }

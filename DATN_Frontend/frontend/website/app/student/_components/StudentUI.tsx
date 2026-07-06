@@ -12,9 +12,9 @@ export function StudentCard({ children, className = '' }: { children: ReactNode;
  * cùng ý nghĩa: đang chờ xử lý = orange).
  */
 export function getReportStatusTone(status: string): 'green' | 'orange' | 'red' | 'slate' {
-  if (status === 'Đã duyệt') return 'green'
-  if (status === 'Bị từ chối') return 'red'
-  if (status === 'Chờ duyệt' || status === 'Đang chấm điểm') return 'orange'
+  if (status === 'Đã duyệt' || status === 'Đã nộp') return 'green'
+  if (status === 'Bị từ chối' || status === 'Thiếu') return 'red'
+  if (status === 'Chờ duyệt' || status === 'Đang chấm điểm' || status === 'Chưa nộp') return 'orange'
   return 'slate'
 }
 

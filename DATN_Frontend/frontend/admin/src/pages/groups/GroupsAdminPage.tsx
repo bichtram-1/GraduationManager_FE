@@ -12,6 +12,7 @@ import { groupHooks } from '../../hooks/useGroups';
 import type { BaseListParams, ListResponseTypeObject } from '@shared/types/GeneralType';
 import type { UseQueryResult, UseMutationResult } from '@tanstack/react-query';
 import { AxiosError } from 'axios';
+import type { TFunction } from 'i18next';
 import { STATUS_CODE } from '../../constants/commonConst';
 import { formatNumber } from '@shared/utils/numberUtils';
 import { useGlobalVariable } from '../../hooks/GlobalVariableProvider';
@@ -36,7 +37,7 @@ const sampleStudents: Student[] = [
   { id: 's5', name: 'Hoàng Văn E', code: 'SV005', eligible: true },
 ];
 
-const getStatusMeta = (t: any) => ({
+const getStatusMeta = (t: TFunction) => ({
   [STATUS_CODE.PENDING_UP]: { label: t(getKey('status_pending')), color: 'default' },
   [STATUS_CODE.APPROVED_UP]: { label: t(getKey('status_approved_group')), color: 'green' },
   [STATUS_CODE.WARNING]: { label: t(getKey('status_warning_group')), color: 'orange' },
@@ -84,15 +85,6 @@ const GroupsAdminPage: React.FC = () => {
     });
     setAddModalGroup(null);
     message.success(t(getKey('add_member_sim_success')));
-  }
-
-  async function removeMemberFromGroup(groupId: string, memberId: string) {
-    const group = groups.find((item) => item.id === groupId);
-    if (!group) return;
-    const newMembers = group.members.filter((m) => m.id !== memberId);
-    const newStatus = newMembers.length < 2 ? STATUS_CODE.MISSING : group.status === STATUS_CODE.LOCKED ? STATUS_CODE.LOCKED : group.status;
-    await updateGroupMutation.mutateAsync({ id: groupId, body: { members: newMembers, status: newStatus }, index: 0, params: { page: 1, limit: 10 } });
-    message.success(t(getKey('remove_member_sim_success')));
   }
 
   async function doMergeWithMembers(moveMemberIds?: string[] | undefined) {
@@ -174,7 +166,7 @@ const GroupsAdminPage: React.FC = () => {
     {
       title: 'Điều kiện bảo vệ',
       key: 'defense_eligibility',
-      render: (_: unknown, record: any) => {
+      render: (_: unknown, record: IListGroup) => {
         const hdan = record.ket_qua_huong_dan;
         const pbien = record.ket_qua_phan_bien;
 
@@ -349,7 +341,7 @@ const GroupsAdminPage: React.FC = () => {
         detailInfo={{
           type: 'modal',
           modalInfo: {
-            modalContent: <GroupForm readOnly />,
+            modalContent: <GroupForm disabled />,
             modalProps: { centered: true, width: 720, title: 'Chi tiết nhóm', footer: null },
             modalFunc: groupHooks.useFetchDetailGroup as unknown as (id: string, enable: boolean) => UseQueryResult<IDetailGroup, Error>,
           }

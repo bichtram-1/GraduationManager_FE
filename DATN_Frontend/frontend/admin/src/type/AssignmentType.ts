@@ -32,3 +32,13 @@ export type ICreateAssignment = Omit<IBaseAssignment, 'status' | 'assignedAt'> &
 export type IUpdateAssignment = Partial<IBaseAssignment>;
 
 export type AssignmentRow = IListAssignment;
+
+export interface IAssignmentTeacher {
+  id: string;
+  name: string;
+  degree?: string;
+  major?: string;
+  status: 'available' | 'full';
+  assignedCount?: number;
+  maxSlots?: number;
+}

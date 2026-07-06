@@ -22,7 +22,7 @@ const RemindModal: React.FC<Props> = ({ open, onCancel, onOk, count = 0, showing
       open={!!open}
       title={t(getKey('remind_modal_title'))}
       onCancel={onCancel}
-      destroyOnClose
+      destroyOnHidden
       okText={t(getKey('send_remind_btn'))}
       onOk={onOk}
     >

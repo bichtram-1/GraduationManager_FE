@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState, useEffect } from 'react'
-import { BookOpen, Eye, Mail, MapPin, Phone, Search, ShieldCheck, Users, Building2 } from 'lucide-react'
+import { BookOpen, Eye, Mail, MapPin, Phone, Search, ShieldCheck, Users, Building2, Clock3 } from 'lucide-react'
 import { TeacherPill, TeacherSectionHeader } from '../_components/TeacherShell'
 import { TeacherButton, TeacherCard } from '../_components/TeacherUI'
 import { usePeriod } from '@/lib/providers/PeriodProvider'
@@ -86,6 +86,51 @@ export default function TeacherStudentsPage() {
   const [loading, setLoading] = useState(false)
   const [selectedReport, setSelectedReport] = useState<any>(null)
   const [reportCommentText, setReportCommentText] = useState('')
+
+  const [extendModal, setExtendModal] = useState<{ open: boolean; studentCode?: string; week?: number; type?: 'TTTN' | 'DATN' }>({ open: false, studentCode: undefined, week: undefined, type: undefined })
+  const [extendDeadline, setExtendDeadline] = useState('')
+  const [extending, setExtending] = useState(false)
+
+  const handleSaveExtend = async () => {
+    if (!extendDeadline) {
+      message.error('Vui lòng chọn thời gian gia hạn!')
+      return
+    }
+    setExtending(true)
+    try {
+      const formattedDeadline = new Date(extendDeadline).toISOString().slice(0, 19).replace('T', ' ')
+      const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'
+      const token = localStorage.getItem('token')
+      const response = await fetch(`${backendUrl}/api/private/v1/teacher/report-extend`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          studentCode: extendModal.studentCode,
+          periodId: selectedPeriod.id,
+          type: extendModal.type,
+          week: extendModal.week,
+          newDeadline: formattedDeadline
+        })
+      })
+      const result = await response.json()
+      if (result.success) {
+        message.success(result.message || 'Gia hạn nộp trễ thành công!')
+        setExtendModal({ open: false, studentCode: undefined, week: undefined, type: undefined })
+        setExtendDeadline('')
+        window.dispatchEvent(new Event('realtime-group-updated'))
+      } else {
+        message.error(result.message || 'Gia hạn thất bại!')
+      }
+    } catch (err) {
+      console.error(err)
+      message.error('Có lỗi xảy ra khi thực hiện gia hạn!')
+    } finally {
+      setExtending(false)
+    }
+  }
 
   const formatCompanyInfo = (val: any) => {
     if (!val || val === '—' || val === 'Chưa có' || val === 'chưa có' || val === 'Chưa cập nhật') {
@@ -443,24 +488,49 @@ export default function TeacherStudentsPage() {
                     <div className="max-h-[350px] overflow-y-auto pr-1 space-y-2">
                       {selectedTTTN.reports.map((rep: any) => (
                         <div
-                          key={rep.bao_cao_id}
+                          key={rep.bao_cao_id || rep.tuan_so}
                           onClick={() => {
-                            setSelectedReport(rep);
-                            setReportModal({ open: true, id: selectedTTTN.id, type: 'TTTN' });
+                            if (rep.trang_thai === 'Đã nộp') {
+                              setSelectedReport(rep);
+                              setReportModal({ open: true, id: selectedTTTN.id, type: 'TTTN' });
+                            } else {
+                              setExtendModal({ open: true, studentCode: selectedTTTN.studentCode || selectedTTTN.id, week: rep.tuan_so, type: 'TTTN' });
+                            }
                           }}
                           className="flex items-center justify-between p-3 rounded-2xl border border-slate-100 bg-white hover:bg-blue-50/40 hover:border-blue-200 transition cursor-pointer shadow-xs group"
                         >
                           <div>
-                            <div className="text-sm font-semibold text-slate-950 group-hover:text-blue-600 transition">
+                            <div className="text-sm font-semibold text-slate-950 group-hover:text-blue-600 transition flex items-center gap-1.5">
                               Tuần {rep.tuan_so}
+                              {rep.isExtended && <span className="text-[10px] text-blue-500 font-bold bg-blue-50 px-1.5 py-0.5 rounded-full">Đã gia hạn</span>}
                             </div>
                             <div className="text-xs text-slate-500 mt-0.5">
-                              Nộp ngày: {rep.thoi_gian_nop}
+                              {rep.trang_thai === 'Đã nộp' ? `Nộp ngày: ${rep.thoi_gian_nop}` : `Hạn nộp: ${new Date(rep.deadline).toLocaleDateString('vi-VN')}`}
                             </div>
                           </div>
-                          <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg ${rep.trang_thai === 'Đã nộp' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-                            {rep.trang_thai}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg ${
+                              rep.trang_thai === 'Đã nộp'
+                                ? 'bg-green-50 text-green-700'
+                                : rep.trang_thai === 'Thiếu'
+                                ? 'bg-red-50 text-red-700'
+                                : 'bg-orange-50 text-orange-700'
+                            }`}>
+                              {rep.trang_thai}
+                            </span>
+                            {(rep.trang_thai === 'Thiếu' || rep.trang_thai === 'Chưa nộp') && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setExtendModal({ open: true, studentCode: selectedTTTN.studentCode || selectedTTTN.id, week: rep.tuan_so, type: 'TTTN' });
+                                }}
+                                className="text-xs font-semibold px-2 py-1 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition"
+                              >
+                                Gia hạn
+                              </button>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -585,24 +655,49 @@ export default function TeacherStudentsPage() {
                     <div className="max-h-[350px] overflow-y-auto pr-1 space-y-2">
                       {selectedDATN.reports.map((rep: any) => (
                         <div
-                          key={rep.bao_cao_id}
+                          key={rep.bao_cao_id || rep.tuan_so}
                           onClick={() => {
-                            setSelectedReport(rep);
-                            setReportModal({ open: true, id: selectedDATN.group, type: 'DATN' });
+                            if (rep.trang_thai === 'Đã nộp') {
+                              setSelectedReport(rep);
+                              setReportModal({ open: true, id: selectedDATN.group, type: 'DATN' });
+                            } else {
+                              setExtendModal({ open: true, studentCode: selectedDATN.group, week: rep.tuan_so, type: 'DATN' });
+                            }
                           }}
                           className="flex items-center justify-between p-3 rounded-2xl border border-slate-100 bg-white hover:bg-emerald-50/40 hover:border-emerald-200 transition cursor-pointer shadow-xs group"
                         >
                           <div>
-                            <div className="text-sm font-semibold text-slate-950 group-hover:text-[#2e7d32] transition">
+                            <div className="text-sm font-semibold text-slate-950 group-hover:text-[#2e7d32] transition flex items-center gap-1.5">
                               Tuần {rep.tuan_so}
+                              {rep.isExtended && <span className="text-[10px] text-blue-500 font-bold bg-blue-50 px-1.5 py-0.5 rounded-full">Đã gia hạn</span>}
                             </div>
                             <div className="text-xs text-slate-500 mt-0.5">
-                              Nộp ngày: {rep.thoi_gian_nop}
+                              {rep.trang_thai === 'Đã nộp' ? `Nộp ngày: ${rep.thoi_gian_nop}` : `Hạn nộp: ${new Date(rep.deadline).toLocaleDateString('vi-VN')}`}
                             </div>
                           </div>
-                          <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg ${rep.trang_thai === 'Đã nộp' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-                            {rep.trang_thai}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg ${
+                              rep.trang_thai === 'Đã nộp'
+                                ? 'bg-green-50 text-green-700'
+                                : rep.trang_thai === 'Thiếu'
+                                ? 'bg-red-50 text-red-700'
+                                : 'bg-orange-50 text-orange-700'
+                            }`}>
+                              {rep.trang_thai}
+                            </span>
+                            {(rep.trang_thai === 'Thiếu' || rep.trang_thai === 'Chưa nộp') && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setExtendModal({ open: true, studentCode: selectedDATN.group, week: rep.tuan_so, type: 'DATN' });
+                                }}
+                                className="text-xs font-semibold px-2 py-1 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition"
+                              >
+                                Gia hạn
+                              </button>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -900,6 +995,54 @@ export default function TeacherStudentsPage() {
                   )}
                 </div>
               </div>
+            </div>
+            </div>
+          </div>
+        )}
+
+      {/* Extend Modal */}
+      {extendModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/45 backdrop-blur-xs" onClick={() => setExtendModal({ open: false, studentCode: undefined, week: undefined, type: undefined })} />
+          <div className="relative z-50 w-full max-w-md transform overflow-hidden rounded-3xl bg-white p-6 shadow-2xl transition-all border border-slate-100">
+            <h3 className="text-lg font-semibold font-sans text-slate-900 flex items-center gap-2">
+              <Clock3 className="h-5 w-5 text-blue-600" />
+              Cho phép nộp trễ báo cáo
+            </h3>
+            <p className="mt-2 text-xs text-slate-500 font-sans">
+              Gia hạn thời gian nộp hoặc cập nhật file báo cáo **Tuần {extendModal.week}** cho {extendModal.type === 'TTTN' ? 'sinh viên' : 'nhóm'} **{extendModal.studentCode}**.
+            </p>
+
+            <div className="mt-4 font-sans">
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Chọn hạn nộp mới</label>
+              <input
+                type="datetime-local"
+                value={extendDeadline}
+                onChange={(e) => setExtendDeadline(e.target.value)}
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white"
+              />
+            </div>
+
+            <div className="mt-6 flex justify-end gap-2 font-sans">
+              <button
+                type="button"
+                className="rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                onClick={() => {
+                  setExtendModal({ open: false, studentCode: undefined, week: undefined, type: undefined });
+                  setExtendDeadline('');
+                }}
+                disabled={extending}
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                className="rounded-2xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700 disabled:opacity-70"
+                onClick={handleSaveExtend}
+                disabled={extending}
+              >
+                {extending ? 'Đang xử lý...' : 'Xác nhận'}
+              </button>
             </div>
           </div>
         </div>

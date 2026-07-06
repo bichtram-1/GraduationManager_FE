@@ -36,7 +36,7 @@ const FileField: React.FC<FileFieldProps> = ({ value, onChange, disabled }) => {
       const parts = decoded.split('/');
       const lastPart = parts[parts.length - 1];
       return lastPart.replace(/^\d+_/, '');
-    } catch (e) {
+    } catch {
       return 'tailieu_detai';
     }
   };
@@ -215,7 +215,14 @@ const TopicForm: React.FC<Props> = ({ disabled = false }) => {
         <Input disabled={disabled} placeholder="VD: TS. Nguyễn Văn X" />
       </Form.Item>
 
-      <Form.Item label={t(getKey('slots'))} name="slots" rules={[{ required: true, message: t(getKey('please_enter_slots')) }]}>
+      <Form.Item
+        label={t(getKey('slots'))}
+        name="slots"
+        rules={[
+          { required: true, message: t(getKey('please_enter_slots')) },
+          { pattern: /^\d+\/\d+$/, message: 'Định dạng chỉ tiêu phải là số/số, VD: 0/3' },
+        ]}
+      >
         <Input disabled={disabled} placeholder="VD: 0/3" />
       </Form.Item>
 

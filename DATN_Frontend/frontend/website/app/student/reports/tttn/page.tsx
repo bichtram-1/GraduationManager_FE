@@ -1,17 +1,19 @@
 'use client'
 
 import { useMemo, useState, useEffect, ChangeEvent } from 'react'
-import { CalendarDays, CheckCircle2, FileText, Plus, Upload, Clock3, MessageSquareQuote, Building2, GraduationCap } from 'lucide-react'
+import { CalendarDays, CheckCircle2, FileText, Plus, Upload, Clock3, MessageSquareQuote, Building2, GraduationCap, ShieldCheck } from 'lucide-react'
 import { StudentPill, StudentSectionHeader } from '../../_components/StudentShell'
 import { StudentButton, StudentField, StudentFilterTabs, StudentInputClass, StudentModal, getReportStatusTone } from '../../_components/StudentUI'
 import { studentApi, IProgressReport, IStudentDashboardData } from '@/lib/api/studentApi'
 import { uploadApi } from '@/lib/api/uploadApi'
 import { COMMON_LABELS } from '@/constants/commonLabels'
+import { Spin, message } from 'antd'
 
-type StatusFilter = 'all' | 'Đã duyệt' | 'Bị từ chối' | 'Chờ duyệt'
+type StatusFilter = 'all' | 'Đã nộp' | 'Thiếu' | 'Chưa nộp'
 
 export default function StudentReportsTTTNPage() {
   const [reports, setReports] = useState<IProgressReport[]>([])
+  const [hasGvhd, setHasGvhd] = useState(true)
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [submitOpen, setSubmitOpen] = useState(false)
@@ -37,12 +39,15 @@ export default function StudentReportsTTTNPage() {
     setLoading(true)
     async function load() {
       try {
-        const [data, dashboard] = await Promise.all([
+        const [resReports, dashboard] = await Promise.all([
           studentApi.getTttnReports(),
           studentApi.getDashboard()
         ])
         if (!mounted) return
+        const data = resReports.reports || []
+        const okGvhd = resReports.hasGvhd !== false
         setReports(data)
+        setHasGvhd(okGvhd)
         setInternshipInfo(dashboard?.tttn ?? null)
         if (data.length > 0) {
           setSelectedWeek(data[0].week)
@@ -50,6 +55,7 @@ export default function StudentReportsTTTNPage() {
       } catch (_err) {
         if (!mounted) return
         setReports([])
+        setHasGvhd(true)
         setInternshipInfo(null)
       } finally {
         if (mounted) {
@@ -78,9 +84,9 @@ export default function StudentReportsTTTNPage() {
       ?? { week: 1, title: 'Không có dữ liệu', status: 'Chưa nộp', file: 'Chưa có', note: 'Chưa nộp nhật ký nào.', updated: 'Chưa cập nhật' }
   }, [selectedWeek, reports])
 
-  const approvedCount = reports.filter((report) => report.status === 'Đã duyệt').length
-  const rejectedCount = reports.filter((report) => report.status === 'Bị từ chối').length
-  const pendingCount = reports.filter((report) => report.status === 'Chờ duyệt').length
+  const submittedCount = reports.filter((report) => report.status === 'Đã nộp').length
+  const missingCount = reports.filter((report) => report.status === 'Thiếu').length
+  const notSubmittedCount = reports.filter((report) => report.status === 'Chưa nộp').length
 
   const filteredReports = useMemo(() => {
     if (statusFilter === 'all') return reports
@@ -95,7 +101,10 @@ export default function StudentReportsTTTNPage() {
   }, [reports])
 
   const openSubmitModal = () => {
-    const nextWeek = reports.length > 0 ? Math.max(...reports.map((report) => report.week)) + 1 : 1
+    const unsubmitted = reports.filter((r) => r.status === 'Chưa nộp')
+    const nextWeek = unsubmitted.length > 0 
+      ? Math.min(...unsubmitted.map((r) => r.week)) 
+      : (reports.length > 0 ? Math.max(...reports.map((report) => report.week)) + 1 : 1)
     setSubmitForm({
       week: String(nextWeek),
       title: '',
@@ -114,11 +123,13 @@ export default function StudentReportsTTTNPage() {
       const res = await uploadApi.uploadFile(file)
       if (res?.cloudFrontUrl) {
         setSubmitForm((current) => ({ ...current, fileName: file.name, fileUrl: res.cloudFrontUrl }))
+        message.success('Tải file lên thành công!')
       } else {
-        alert('Tải file lên thất bại!')
+        message.error('Tải file lên thất bại!')
       }
-    } catch (err: any) {
-      alert(err?.response?.data?.message || 'Tải file lên thất bại!')
+    } catch (err: unknown) {
+      const errorMsg = (err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Tải file lên thất bại!'
+      message.error(errorMsg)
     } finally {
       setUploadingFile(false)
     }
@@ -126,14 +137,21 @@ export default function StudentReportsTTTNPage() {
 
   const handleSubmitReport = async () => {
     const nextWeek = Number(submitForm.week)
+    const title = submitForm.title.trim()
+    const note = submitForm.note.trim()
 
-    if (!Number.isFinite(nextWeek) || nextWeek <= 0) {
-      alert('Vui lòng nhập số tuần hợp lệ.')
+    if (!Number.isInteger(nextWeek) || nextWeek <= 0) {
+      message.error('Vui lòng nhập số tuần hợp lệ (số nguyên dương).')
       return
     }
 
-    if (!submitForm.title.trim() || !submitForm.note.trim()) {
-      alert('Vui lòng nhập đầy đủ tiêu đề và nội dung nhật ký.')
+    if (!title) {
+      message.error('Vui lòng nhập tên nhật ký.')
+      return
+    }
+
+    if (!note) {
+      message.error('Vui lòng nhập nội dung báo cáo.')
       return
     }
 
@@ -141,8 +159,8 @@ export default function StudentReportsTTTNPage() {
       setLoading(true)
       const nextReport = await studentApi.submitTttnReport({
         week: nextWeek,
-        title: submitForm.title.trim(),
-        note: submitForm.note.trim(),
+        title,
+        note,
         file: submitForm.fileUrl || undefined,
         fileName: submitForm.fileName || undefined
       })
@@ -153,11 +171,22 @@ export default function StudentReportsTTTNPage() {
       })
       setSelectedWeek(nextReport.week)
       setSubmitOpen(false)
-    } catch (err: any) {
-      alert(err?.response?.data?.message || 'Có lỗi xảy ra khi nộp báo cáo.')
+      message.success('Nộp nhật ký thành công!')
+    } catch (err: unknown) {
+      const errorMsg = (err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Có lỗi xảy ra khi nộp báo cáo.'
+      message.error(errorMsg)
     } finally {
       setLoading(false)
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[400px] flex-col items-center justify-center gap-3">
+        <Spin size="large" />
+        <div className="text-sm text-slate-500">Đang tải thông tin báo cáo TTTN...</div>
+      </div>
+    )
   }
 
   return (
@@ -168,7 +197,13 @@ export default function StudentReportsTTTNPage() {
         actions={(
           <button
             type="button"
-            onClick={openSubmitModal}
+            onClick={() => {
+              if (!hasGvhd) {
+                message.error('Bạn chưa được phân công Giảng viên hướng dẫn cho đợt này. Bạn không thể thực hiện nộp báo cáo!')
+                return
+              }
+              openSubmitModal()
+            }}
             className="inline-flex items-center gap-2 rounded-2xl bg-[#2196F3] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-blue-200 transition hover:bg-[#1976D2]"
           >
             <Plus className="h-4 w-4" />
@@ -177,12 +212,26 @@ export default function StudentReportsTTTNPage() {
         )}
       />
 
+      {!hasGvhd && (
+        <div className="mb-6 flex gap-3 rounded-[28px] border border-amber-200 bg-amber-50/50 p-5 shadow-xs">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
+            <ShieldCheck className="h-5 w-5" />
+          </div>
+          <div>
+            <h4 className="text-sm font-semibold text-amber-900">Chưa được phân công giảng viên hướng dẫn</h4>
+            <p className="mt-1 text-xs leading-relaxed text-amber-700">
+              Bạn chưa được phân công Giảng viên hướng dẫn cho đợt này nên không thể thực hiện nộp báo cáo. Vui lòng liên hệ khoa hoặc quản trị viên để được hỗ trợ!
+            </p>
+          </div>
+        </div>
+      )}
+
       <StudentFilterTabs
         tabs={[
           { key: 'all', label: 'Tất cả', count: reports.length },
-          { key: 'Đã duyệt', label: 'Đã duyệt', count: approvedCount },
-          { key: 'Bị từ chối', label: 'Bị từ chối', count: rejectedCount },
-          { key: 'Chờ duyệt', label: 'Chờ duyệt', count: pendingCount },
+          { key: 'Đã nộp', label: 'Đã nộp', count: submittedCount },
+          { key: 'Thiếu', label: 'Thiếu', count: missingCount },
+          { key: 'Chưa nộp', label: 'Chưa nộp', count: notSubmittedCount },
         ]}
         activeKey={statusFilter}
         onChange={(key) => setStatusFilter(key as StatusFilter)}
@@ -449,7 +498,7 @@ export default function StudentReportsTTTNPage() {
         </div>
 
         <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-          Sau khi nộp, bản ghi sẽ được thêm vào danh sách với trạng thái <span className="font-semibold">Chờ duyệt</span>.
+          Sau khi nộp, bản ghi sẽ được thêm vào danh sách với trạng thái <span className="font-semibold">Đã nộp</span>.
         </div>
       </StudentModal>
     </>

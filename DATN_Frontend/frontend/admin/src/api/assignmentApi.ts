@@ -1,5 +1,5 @@
 import type { BaseListParams, ListResponseType } from '@shared/types/GeneralType';
-import type { AssignmentRow, AssignmentStatus, ICreateAssignment, IDetailAssignment, IUpdateAssignment } from '../type/AssignmentType';
+import type { AssignmentRow, AssignmentStatus, IAssignmentTeacher, ICreateAssignment, IDetailAssignment, IUpdateAssignment } from '../type/AssignmentType';
 import axiosInstance from './axiosInstance';
 
 export interface IAssignmentListParams extends BaseListParams {
@@ -44,8 +44,8 @@ export const assignmentApi = {
     return response?.data;
   },
 
-  getTeachers: async (periodId?: string) => {
+  getTeachers: async (periodId?: string): Promise<IAssignmentTeacher[]> => {
     const response = await axiosInstance.get('/private/v1/teachers', { params: { periodId } });
-    return response?.data?.results?.objects || response?.data?.results?.object;
+    return response?.data?.results?.objects || response?.data?.results?.object || [];
   },
 };

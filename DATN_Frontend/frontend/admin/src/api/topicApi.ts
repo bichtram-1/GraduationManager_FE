@@ -1,5 +1,5 @@
-import type { BaseListParams } from '@shared/types/GeneralType';
-import type { ICreateTopic, IDetailTopic, TopicStatus, IUpdateTopic } from '../type/TopicType';
+import type { BaseListParams, ListResponseType } from '@shared/types/GeneralType';
+import type { ICreateTopic, IDetailTopic, IListTopic, TopicStatus, IUpdateTopic } from '../type/TopicType';
 import axiosInstance from './axiosInstance';
 
 export interface ITopicListParams extends BaseListParams {
@@ -9,7 +9,7 @@ export interface ITopicListParams extends BaseListParams {
 
 export const topicApi = {
   getListTopic: async (params: ITopicListParams) => {
-    const response = await axiosInstance.get('/private/v1/topics', { params });
+    const response = await axiosInstance.get<ListResponseType<IListTopic>>('/private/v1/topics', { params });
     return response?.data?.results?.objects;
   },
 

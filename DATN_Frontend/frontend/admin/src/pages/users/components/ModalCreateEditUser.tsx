@@ -3,16 +3,15 @@
 // FilterTable inject prop `detail` qua React.cloneElement khi mở modal edit/detail.
 // Khi `detail` có id → edit mode; không có → create mode.
 
-import { AutoComplete, Button, Flex, Form, Input, Modal, Select } from 'antd';
+import { Flex, Form, Input, Select } from 'antd';
 import { useEffect, useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
-import { getKey } from '@shared/types/I18nKeyType';
 import CustomInput from '../../../components/shared/input/CustomInput';
-import { USER_ROLE, STATUS_CODE } from '../../../constants/commonConst';
+import CustomDatePicker from '../../../components/shared/input/CustomDatePicker';
+import { USER_ROLE, STATUS_CODE, DATE_FORMAT } from '../../../constants/commonConst';
 // SearchSelect (achievements) removed — not used
-import { userHooks } from '../../../hooks/useUsers';
 import { classHooks } from '../../../hooks/useClasses';
 import { IDetailUser, UserRoleType } from 'src/type/UserType';
+import type { IListClass } from '../../../type/ClassType';
 
 // I prefix cho interface (convention của dự án)
 interface IModalCreateEditUser {
@@ -22,8 +21,7 @@ interface IModalCreateEditUser {
   role: UserRoleType;
 }
 
-const ModalCreateEditUser = ({ detail, mode = 'create', role }: IModalCreateEditUser) => {
-  const { t } = useTranslation();
+const ModalCreateEditUser = ({ mode = 'create', role }: IModalCreateEditUser) => {
   const isDetailMode = mode === 'detail';
   const isEditMode = mode === 'edit';
   const isCreateMode = mode === 'create';
@@ -35,7 +33,7 @@ const ModalCreateEditUser = ({ detail, mode = 'create', role }: IModalCreateEdit
 
   const classOptions = useMemo(() => {
     if (!classesData?.rows) return [];
-    return classesData.rows.map((cls: any) => ({
+    return classesData.rows.map((cls: IListClass) => ({
       value: cls.name,
       label: cls.name,
     }));
@@ -193,10 +191,9 @@ const ModalCreateEditUser = ({ detail, mode = 'create', role }: IModalCreateEdit
                 }),
               ]}
             >
-              <CustomInput
-                type="date"
-                readOnly={isDetailMode}
-                placeholder="YYYY-MM-DD"
+              <CustomDatePicker
+                disabled={isDetailMode}
+                format={DATE_FORMAT}
               />
             </Form.Item>
 
@@ -336,7 +333,8 @@ const ModalCreateEditUser = ({ detail, mode = 'create', role }: IModalCreateEdit
               name="phone"
               className="flex-1"
               rules={[
-                { pattern: /^[0-9]*$/, message: 'Số điện thoại chỉ được chứa các chữ số!' }
+                { pattern: /^[0-9]*$/, message: 'Số điện thoại chỉ được chứa các chữ số!' },
+                { len: 10, message: 'Số điện thoại phải có đúng 10 chữ số!' }
               ]}
             >
               <CustomInput
@@ -380,10 +378,9 @@ const ModalCreateEditUser = ({ detail, mode = 'create', role }: IModalCreateEdit
                 }),
               ]}
             >
-              <CustomInput
-                type="date"
-                readOnly={isDetailMode}
-                placeholder="YYYY-MM-DD"
+              <CustomDatePicker
+                disabled={isDetailMode}
+                format={DATE_FORMAT}
               />
             </Form.Item>
 
