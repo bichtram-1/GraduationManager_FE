@@ -71,6 +71,8 @@ const RealtimeListener = () => {
             queryClientRef.current.invalidateQueries({ queryKey: [QueryKey.internships.confirmations.list] });
             queryClientRef.current.invalidateQueries({ queryKey: [QueryKey.internships.declarations.list] });
             queryClientRef.current.invalidateQueries({ queryKey: [QueryKey.companies.list] });
+          } else if (data.type === 'score_updated' || data.type === 'tttn_score_updated') {
+            queryClientRef.current.invalidateQueries({ queryKey: ['scores'] });
           }
         } catch (err) {
           console.error(err);
