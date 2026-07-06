@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { CheckCircle, Clock, Save, Trophy, Users, LayoutDashboard, FileText, BarChart3, Sparkles } from 'lucide-react'
+import { CheckCircle, Clock, Save, Trophy, Users, LayoutDashboard, FileText, BarChart3, Sparkles, CalendarDays, Building2 } from 'lucide-react'
 import { TeacherPill, TeacherSectionHeader, TeacherStatCard } from '../_components/TeacherShell'
 import { TeacherButton, TeacherCard, TeacherInputClass } from '../_components/TeacherUI'
 import ScoringTable from './ScoringTable'
@@ -11,10 +11,10 @@ import { COMMON_LABELS } from '@/constants/commonLabels'
 
 // Default fallbacks (used if mock API is unavailable)
 const defaultTttnRows = [
-  { id: '20520001', name: 'Nguyễn Văn A', company: 'FPT Software', score: '8.8' },
-  { id: '20520002', name: 'Trần Thị B', company: 'VNG Corp', score: '7.8' },
-  { id: '20520004', name: 'Phạm Thị D', company: 'Tiki', score: '' },
-  { id: '20520006', name: 'Vũ Thị F', company: 'MoMo', score: '9.2' },
+  { id: '20520001', name: 'Nguyễn Văn A', class: 'KTPM2022', dob: '15/01/2004', company: 'FPT Software', score: '8.8' },
+  { id: '20520002', name: 'Trần Thị B', class: 'KTPM2022', dob: '22/03/2004', company: 'VNG Corp', score: '7.8' },
+  { id: '20520004', name: 'Phạm Thị D', class: 'KHMT2022', dob: '10/07/2003', company: 'Chưa có công ty thực tập', score: '' },
+  { id: '20520006', name: 'Vũ Thị F', class: 'HTTT2022', dob: '12/12/2004', company: 'MoMo', score: '9.2' },
 ]
 
 const defaultCouncilGroups = [
@@ -59,18 +59,57 @@ const defaultScoreRows = [
   { id: '20520005', name: 'Trần Thị E', chair: '', secretary: '', member: '8.0', advisor: '', reviewer: '' },
 ]
 
+type CouncilMember = { id: string; name: string; role: string }
+type GroupStudent = { id: string; name: string; class?: string }
+interface CouncilGroupItem {
+  id?: string
+  groupCode: string
+  topic: string
+  advisorId?: string | null
+  advisorName?: string | null
+  reviewerId?: string | null
+  students: GroupStudent[]
+}
+interface Council {
+  code: string
+  name: string
+  date: string
+  room: string
+  role: string
+  done: number
+  total: number
+  members: CouncilMember[]
+  groups: CouncilGroupItem[]
+}
+
 export default function TeacherGradingPage() {
-  const { selectedPeriod } = usePeriod()
-  const [mode, setMode] = useState<'tttn' | 'council'>('tttn')
+  const formatVietnamTime = (date: Date) => {
+    const day = String(date.getDate()).padStart(2, '0')
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const year = date.getFullYear()
+    let hours = date.getHours()
+    const minutes = String(date.getMinutes()).padStart(2, '0')
+    const ampm = hours >= 12 ? 'PM' : 'AM'
+    hours = hours % 12
+    hours = hours ? hours : 12
+    const strHours = String(hours).padStart(2, '0')
+    return `${strHours}:${minutes} ${ampm} ${day}/${month}/${year}`
+  }
+
+  const { selectedPeriod, gradingTab, setGradingTab } = usePeriod()
   const [tttnScores, setTttnScores] = useState(defaultTttnRows)
   const [toast, setToast] = useState<string | null>(null)
-  const [selectedCouncil, setSelectedCouncil] = useState<typeof defaultCouncilGroups[0] | null>(defaultCouncilGroups[0])
-  const [selectedGroup, setSelectedGroup] = useState<null | { id?: string; groupCode: string; topic: string; students: { id: string; name: string }[] }>(null)
+  const [selectedCouncil, setSelectedCouncil] = useState<Council | null>(defaultCouncilGroups[0] as any)
+  const [selectedGroup, setSelectedGroup] = useState<CouncilGroupItem | null>(null)
   const [selectedTttnId, setSelectedTttnId] = useState(defaultTttnRows[0].id)
-  const [councilList, setCouncilList] = useState(defaultCouncilGroups)
+  const [councilList, setCouncilList] = useState<Council[]>(defaultCouncilGroups as any)
+  const [currentTeacherId, setCurrentTeacherId] = useState<string>('')
   const [scoreList, setScoreList] = useState(defaultScoreRows)
   const [_loading, setLoading] = useState(false)
   const [showScoringModal, setShowScoringModal] = useState(false)
+  const [lastUpdatedTime, setLastUpdatedTime] = useState<string>('Chưa cập nhật')
+  const [datnFilter, setDatnFilter] = useState<'all' | 'graded' | 'grading' | 'ungraded'>('all')
+  const [roleFilter, setRoleFilter] = useState<'all' | 'reviewer' | 'member' | 'advisor'>('all')
 
   const notify = (message: string) => {
     setToast(message)
@@ -86,6 +125,9 @@ export default function TeacherGradingPage() {
         if (!mounted) return
         console.log('grading data:', data)
         if (data) {
+          if (data.teacherId) {
+            setCurrentTeacherId(String(data.teacherId))
+          }
           const newTttnRows = data.tttnRows ?? defaultTttnRows
           setTttnScores(newTttnRows)
           if (newTttnRows.length > 0) {
@@ -105,6 +147,11 @@ export default function TeacherGradingPage() {
           }
 
           setScoreList(data.scoreRows ?? defaultScoreRows)
+          if (data.lastUpdatedAt) {
+            setLastUpdatedTime(formatVietnamTime(new Date(data.lastUpdatedAt.replace(/-/g, '/'))))
+          } else {
+            setLastUpdatedTime('Chưa cập nhật')
+          }
         }
       })
       .catch(() => {})
@@ -116,9 +163,100 @@ export default function TeacherGradingPage() {
     }
   }, [selectedPeriod?.id])
 
+  // Listen for realtime score updates to re-fetch
+  useEffect(() => {
+    const handleRealtimeUpdate = () => {
+      teacherApi.getGradingData({ periodId: selectedPeriod?.id })
+        .then((data) => {
+          if (data) {
+            setTttnScores(data.tttnRows ?? defaultTttnRows)
+            setCouncilList(data.councilGroups ?? defaultCouncilGroups)
+            setScoreList(data.scoreRows ?? defaultScoreRows)
+            if (data.lastUpdatedAt) {
+              setLastUpdatedTime(formatVietnamTime(new Date(data.lastUpdatedAt.replace(/-/g, '/'))))
+            } else {
+              setLastUpdatedTime('Chưa cập nhật')
+            }
+          }
+        })
+        .catch(() => {})
+    }
+
+    window.addEventListener('realtime-score-updated', handleRealtimeUpdate)
+    return () => {
+      window.removeEventListener('realtime-score-updated', handleRealtimeUpdate)
+    }
+  }, [selectedPeriod?.id])
+
+  const isPeriodEditable = () => {
+    if (!selectedPeriod) return false
+    if (selectedPeriod.status === 'closed') return false
+
+    if (selectedPeriod.endDate) {
+      const parts = selectedPeriod.endDate.split('/')
+      if (parts.length === 3) {
+        const day = parseInt(parts[0], 10)
+        const month = parseInt(parts[1], 10) - 1
+        const year = parseInt(parts[2], 10)
+        const endDateObj = new Date(year, month, day, 23, 59, 59)
+        return new Date() <= endDateObj
+      }
+      
+      const parsedDate = new Date(selectedPeriod.endDate)
+      if (!isNaN(parsedDate.getTime())) {
+        return new Date() <= parsedDate
+      }
+    }
+    return true
+  }
+
+  const editable = isPeriodEditable()
+
+  const formatGradingInput = (value: string) => {
+    let clean = value.replace(/[^0-9.]/g, '')
+    
+    if (clean.includes('.')) {
+      const parts = clean.split('.')
+      if (parts.length > 2) {
+        clean = parts[0] + '.' + parts.slice(1).join('')
+      }
+      const dec = parts[1] || ''
+      if (dec.length > 2) {
+        clean = parts[0] + '.' + dec.substring(0, 2)
+      }
+      return clean
+    }
+    
+    if (clean.length === 2) {
+      const val = parseInt(clean, 10)
+      if (val > 10 || clean[0] === '0') {
+        return clean[0] + '.' + clean[1]
+      }
+    } else if (clean.length === 3) {
+      const val = parseInt(clean, 10)
+      if (val === 100) {
+        return '10.0'
+      } else if (val > 100) {
+        return clean[0] + '.' + clean.substring(1)
+      }
+    } else if (clean.length >= 4) {
+      const val = parseInt(clean, 10)
+      if (val >= 1000) {
+        return '10.00'
+      }
+      return clean[0] + '.' + clean.substring(1, 3)
+    }
+    
+    return clean
+  }
+
   const updateTttn = (index: number, value: string) => {
-    if (value !== '' && !/^\d*\.?\d*$/.test(value)) return
-    setTttnScores((current) => current.map((row, rowIndex) => (rowIndex === index ? { ...row, score: value } : row)))
+    const formatted = formatGradingInput(value)
+    if (formatted !== '') {
+      const num = parseFloat(formatted)
+      if (!isNaN(num) && (num < 0 || num > 10)) return
+    }
+    setTttnScores((current) => current.map((row, rowIndex) => (rowIndex === index ? { ...row, score: formatted } : row)))
   }
 
   const [savingTttn, setSavingTttn] = useState(false)
@@ -126,16 +264,25 @@ export default function TeacherGradingPage() {
   const handleSaveTttn = async () => {
     setSavingTttn(true)
     try {
-      const payload = tttnScores.map(row => ({
-        id: row.id,
-        score: row.score
-      }))
+      const payload = tttnScores.map(row => {
+        let cleanScore = row.score;
+        if (cleanScore !== '') {
+          const parsed = parseFloat(cleanScore);
+          cleanScore = isNaN(parsed) ? '' : parsed.toFixed(2);
+        }
+        return {
+          id: row.id,
+          score: cleanScore
+        }
+      })
       const res = await teacherApi.saveTttnScores({
         periodId: selectedPeriod?.id,
         scores: payload
       })
       if (res?.success) {
         notify('Đã lưu điểm thực tập tốt nghiệp thành công!')
+        setLastUpdatedTime(formatVietnamTime(new Date()))
+        window.dispatchEvent(new CustomEvent('realtime-score-updated'))
       } else {
         alert('Lưu điểm thất bại!')
       }
@@ -151,94 +298,124 @@ export default function TeacherGradingPage() {
   const selectedTttn = tttnScores.find((row) => row.id === selectedTttnId) ?? tttnScores[0]
   const filledCount = tttnScores.filter((row) => row.score !== '').length
 
+  // Calculate statistics
+  const totalStudents = tttnScores.length
+  let countXuatSac = 0
+  let countGioi = 0
+  let countKha = 0
+  let countTrungBinh = 0
+  let countKem = 0
+
+  tttnScores.forEach(s => {
+    if (s.score !== '') {
+      const val = parseFloat(s.score)
+      if (!isNaN(val)) {
+        if (val >= 9.0) countXuatSac++
+        else if (val >= 8.0) countGioi++
+        else if (val >= 7.0) countKha++
+        else if (val >= 5.0) countTrungBinh++
+        else countKem++
+      }
+    }
+  })
+
+  const getPercent = (count: number) => {
+    if (totalStudents === 0) return '0%'
+    return `${((count / totalStudents) * 100).toFixed(0)}%`
+  }
+
+  // Calculate DATN statistics
+  const totalCouncils = councilList.length
+  let advisingGroupsCount = 0
+  let reviewingGroupsCount = 0
+
+  councilList.forEach((c) => {
+    (c.groups || []).forEach((g) => {
+      if (g.advisorId === currentTeacherId) {
+        advisingGroupsCount++
+      }
+      if (g.reviewerId === currentTeacherId) {
+        reviewingGroupsCount++
+      }
+    })
+  })
+
   return (
     <>
       <TeacherSectionHeader
         title="Chấm điểm"
-        description="Một màn hình gộp cả chấm điểm TTTN và chấm điểm hội đồng ĐATN theo kiểu trình bày của bộ giao diện tham chiếu."
+        description="Chấm điểm TTTN sinh viên hướng dẫn và chấm điểm sinh viên trong Hội động tham gia."
         actions={
           <TeacherPill tone="orange">Quy trình chấm điểm</TeacherPill>
         }
       />
 
-      <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <TeacherStatCard title="TTTN" value={`${tttnScores.length}`} hint="Sinh viên đang chờ chấm" accent="blue" />
-        <TeacherStatCard title="Hội đồng" value={`${councilList.length}`} hint="Phiên chấm đang mở" accent="green" />
-        <TeacherStatCard title="Đã lưu" value="04" hint="Bài đã ghi nhận kết quả" accent="orange" />
-        <TeacherStatCard title="Tiến độ" value="78%" hint="Khối lượng chấm của tuần" accent="violet" />
-      </div>
-
-      <section className="mb-5 rounded-[28px] border border-blue-100 bg-[linear-gradient(135deg,#eff6ff_0%,#ffffff_100%)] p-5 shadow-[0_12px_40px_rgba(15,23,42,0.04)]">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-xs font-medium text-[#1976D2] shadow-sm ring-1 ring-blue-100">
-              <Sparkles className="h-3.5 w-3.5" />
-              Bảng chấm tập trung
-            </div>
-            <div className="mt-3 text-sm leading-6 text-slate-600">
-              Chuyển giữa TTTN và ĐATN, nhập điểm trực tiếp trên bảng và giữ mọi thao tác trong một luồng duy nhất như thiết kế gốc.
-            </div>
+      {gradingTab === 'DATN' && (
+        <div className="mb-6 grid gap-4 grid-cols-1 sm:grid-cols-3">
+          <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-4 shadow-sm text-center flex flex-col justify-center items-center">
+            <div className="text-xs font-medium text-blue-600">Tổng hội đồng</div>
+            <div className="mt-2 text-2xl font-bold text-blue-900">{totalCouncils}</div>
           </div>
-          <div className="grid gap-3 sm:grid-cols-3 lg:min-w-105">
-            <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
-              <div className="text-xs text-slate-500">Chấm nhanh</div>
-              <div className="mt-2 text-lg font-semibold text-slate-900">1 click</div>
-            </div>
-            <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
-              <div className="text-xs text-slate-500">Điểm hợp lệ</div>
-              <div className="mt-2 text-lg font-semibold text-slate-900">0 - 10</div>
-            </div>
-            <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
-              <div className="text-xs text-slate-500">Tự động lưu</div>
-              <div className="mt-2 text-lg font-semibold text-slate-900">Khi bấm Lưu</div>
-            </div>
+          <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4 shadow-sm text-center flex flex-col justify-center items-center">
+            <div className="text-xs font-medium text-emerald-600">Nhóm Hướng dẫn</div>
+            <div className="mt-2 text-2xl font-bold text-emerald-900">{advisingGroupsCount}</div>
+          </div>
+          <div className="rounded-2xl border border-indigo-100 bg-indigo-50/50 p-4 shadow-sm text-center flex flex-col justify-center items-center">
+            <div className="text-xs font-medium text-indigo-600">Nhóm Phản biên</div>
+            <div className="mt-2 text-2xl font-bold text-indigo-900">{reviewingGroupsCount}</div>
           </div>
         </div>
-      </section>
+      )}
 
-      <div className="mb-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <TeacherCard className="p-5">
-          <div className="text-xs text-slate-500">TTTN đã nhập</div>
-          <div className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">{filledCount}/{tttnScores.length}</div>
-          <div className="mt-2 text-sm text-slate-500">Các dòng đã có điểm tổng</div>
-        </TeacherCard>
-        <TeacherCard className="p-5">
-          <div className="text-xs text-slate-500">Phiên hội đồng</div>
-          <div className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">{selectedCouncil?.code || '—'}</div>
-          <div className="mt-2 text-sm text-slate-500">{selectedCouncil?.room || '—'}</div>
-        </TeacherCard>
-        <TeacherCard className="p-5">
-          <div className="text-xs text-slate-500">Sinh viên đang xem</div>
-          <div className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">{selectedTttn?.id || '—'}</div>
-          <div className="mt-2 text-sm text-slate-500">{selectedTttn?.name || '—'}</div>
-        </TeacherCard>
-        <TeacherCard className="p-5">
-          <div className="text-xs text-slate-500">Trạng thái lưu</div>
-          <div className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">Tự động</div>
-          <div className="mt-2 text-sm text-slate-500">Khi bấm nút lưu</div>
-        </TeacherCard>
-      </div>
+      {gradingTab === 'TTTN' && (
+        <div className="mb-6 grid gap-4 grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
+          <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-4 shadow-sm text-center flex flex-col justify-center items-center">
+            <div className="text-xs font-medium text-blue-600">Tổng sinh viên</div>
+            <div className="mt-2 text-2xl font-bold text-blue-900">{totalStudents}</div>
+          </div>
+          <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm text-center flex flex-col justify-center items-center">
+            <div className="text-xs font-medium text-emerald-600">Xuất sắc (9.0 - 10.0)</div>
+            <div className="mt-2 text-xl font-bold text-emerald-700">{countXuatSac} ({getPercent(countXuatSac)})</div>
+          </div>
+          <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm text-center flex flex-col justify-center items-center">
+            <div className="text-xs font-medium text-teal-600">Giỏi (8.0 - 8.9)</div>
+            <div className="mt-2 text-xl font-bold text-teal-700">{countGioi} ({getPercent(countGioi)})</div>
+          </div>
+          <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm text-center flex flex-col justify-center items-center">
+            <div className="text-xs font-medium text-indigo-600">Khá (7.0 - 7.9)</div>
+            <div className="mt-2 text-xl font-bold text-indigo-700">{countKha} ({getPercent(countKha)})</div>
+          </div>
+          <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm text-center flex flex-col justify-center items-center">
+            <div className="text-xs font-medium text-orange-600">Trung bình (5.0 - 6.9)</div>
+            <div className="mt-2 text-xl font-bold text-orange-700">{countTrungBinh} ({getPercent(countTrungBinh)})</div>
+          </div>
+          <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm text-center flex flex-col justify-center items-center">
+            <div className="text-xs font-medium text-red-600">Kém (&lt; 5.0)</div>
+            <div className="mt-2 text-xl font-bold text-red-700">{countKem} ({getPercent(countKem)})</div>
+          </div>
+        </div>
+      )}
 
       <div className="mb-5 flex flex-wrap gap-2 rounded-[28px] border border-slate-200 bg-white p-2 shadow-[0_12px_40px_rgba(15,23,42,0.05)]">
         <button
           type="button"
-          onClick={() => setMode('tttn')}
-          className={`inline-flex items-center gap-2 rounded-[20px] px-4 py-2.5 text-sm font-medium transition ${mode === 'tttn' ? 'bg-[#2196F3] text-white shadow-lg shadow-blue-200' : 'text-slate-600 hover:bg-slate-50'}`}
+          onClick={() => setGradingTab('TTTN')}
+          className={`inline-flex items-center gap-2 rounded-[20px] px-4 py-2.5 text-sm font-medium transition ${gradingTab === 'TTTN' ? 'bg-[#2196F3] text-white shadow-lg shadow-blue-200' : 'text-slate-600 hover:bg-slate-50'}`}
         >
           <Trophy />
           Chấm điểm TTTN
         </button>
         <button
           type="button"
-          onClick={() => setMode('council')}
-          className={`inline-flex items-center gap-2 rounded-[20px] px-4 py-2.5 text-sm font-medium transition ${mode === 'council' ? 'bg-[#2196F3] text-white shadow-lg shadow-blue-200' : 'text-slate-600 hover:bg-slate-50'}`}
+          onClick={() => setGradingTab('DATN')}
+          className={`inline-flex items-center gap-2 rounded-[20px] px-4 py-2.5 text-sm font-medium transition ${gradingTab === 'DATN' ? 'bg-[#2196F3] text-white shadow-lg shadow-blue-200' : 'text-slate-600 hover:bg-slate-50'}`}
         >
           <Users />
           Chấm điểm Hội đồng ĐATN
         </button>
       </div>
 
-      {mode === 'tttn' ? (
+      {gradingTab === 'TTTN' ? (
         <div className="grid gap-6 xl:grid-cols-[1.45fr_0.85fr]">
           <TeacherCard>
             <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-5 py-4">
@@ -246,31 +423,64 @@ export default function TeacherGradingPage() {
                 <div className="text-sm font-semibold text-slate-900">Chấm điểm TTTN</div>
                 <div className="text-xs text-slate-500">Nhập điểm tổng trực tiếp trên bảng</div>
               </div>
-              <TeacherPill tone="blue">Đợt TTTN HK2/2025-2026</TeacherPill>
+              <div className="flex items-center gap-2">
+                <TeacherPill tone="blue">{selectedPeriod?.name || 'Đợt TTTN'}</TeacherPill>
+                {selectedPeriod?.status && (
+                  <TeacherPill
+                    tone={
+                      selectedPeriod.status === 'open'
+                        ? 'green'
+                        : selectedPeriod.status === 'grading'
+                        ? 'orange'
+                        : selectedPeriod.status === 'published'
+                        ? 'blue'
+                        : 'slate'
+                    }
+                  >
+                    {
+                      selectedPeriod.status === 'open'
+                        ? 'Mở đăng ký'
+                        : selectedPeriod.status === 'grading'
+                        ? 'Đang chấm điểm'
+                        : selectedPeriod.status === 'published'
+                        ? 'Đã công bố'
+                        : 'Đã đóng'
+                    }
+                  </TeacherPill>
+                )}
+              </div>
             </div>
+            {!editable && (
+              <div className="mx-5 mt-4 rounded-xl bg-amber-50 border border-amber-200 p-4 text-sm text-amber-800">
+                ⚠️ Đợt thực tập này đã kết thúc thời gian chấm điểm hoặc đã đóng. Bạn không thể chỉnh sửa điểm.
+              </div>
+            )}
             <table className="w-full text-sm">
               <thead className="bg-slate-50 text-slate-600">
                 <tr>
+                  <th className="px-5 py-3 text-left w-12">STT</th>
                   <th className="px-5 py-3 text-left">MSSV</th>
                   <th className="px-5 py-3 text-left">Họ tên</th>
-                  <th className="px-5 py-3 text-left">Công ty</th>
+                  <th className="px-5 py-3 text-left">Lớp</th>
                   <th className="px-5 py-3 text-left">Điểm tổng</th>
                 </tr>
               </thead>
               <tbody>
                 {tttnScores.map((row, index) => (
                   <tr key={row.id} className={`border-t border-slate-100 transition hover:bg-slate-50/80 ${selectedTttnId === row.id ? 'bg-blue-50/60' : ''}`}>
+                    <td className="px-5 py-4 text-slate-500 font-medium">{index + 1}</td>
                     <td className="px-5 py-4 font-medium text-[#1976D2]">{row.id}</td>
                     <td className="px-5 py-4 text-slate-900">{row.name}</td>
-                    <td className="px-5 py-4 text-slate-600">{row.company}</td>
+                    <td className="px-5 py-4 text-slate-600">{row.class}</td>
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-2">
                         <input
                           value={row.score}
                           onChange={(e) => updateTttn(index, e.target.value)}
                           onFocus={() => setSelectedTttnId(row.id)}
-                          placeholder="0.0 - 10.0"
+                          placeholder="0.00 - 10.00"
                           className={`${TeacherInputClass()} w-28`}
+                          disabled={!editable}
                         />
                         <TeacherButton variant="secondary" className="px-3 py-1.5 text-xs" onClick={() => setSelectedTttnId(row.id)}>
                           Xem
@@ -283,31 +493,32 @@ export default function TeacherGradingPage() {
             </table>
             <div className="flex items-center justify-between border-t border-slate-200 px-5 py-4">
               <div className="text-xs text-slate-500">Điểm chỉ được lưu khi hợp lệ từ 0 đến 10.</div>
-              <TeacherButton variant="primary" disabled={!anyValid || savingTttn} onClick={handleSaveTttn}>
+              <TeacherButton variant="primary" disabled={!anyValid || savingTttn || !editable} onClick={handleSaveTttn}>
                 <span className="inline-flex items-center gap-2"><Save className="h-4 w-4" /> {savingTttn ? 'Đang lưu...' : 'Lưu điểm'}</span>
               </TeacherButton>
             </div>
           </TeacherCard>
 
           <div className="space-y-6">
-            <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
-              <div className="text-sm font-semibold text-slate-900">Quy tắc chấm nhanh</div>
-              <div className="mt-4 space-y-3 text-sm text-slate-600">
-                <div className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-emerald-500" /> Điểm hợp lệ từ 0 đến 10</div>
-                <div className="flex items-center gap-2"><LayoutDashboard className="h-4 w-4 text-[#1976D2]" /> Nhập trực tiếp trên bảng</div>
-                <div className="flex items-center gap-2"><FileText className="h-4 w-4 text-[#1976D2]" /> Mỗi SV có một dòng dữ liệu</div>
-              </div>
-            </section>
-
             <section className="rounded-[28px] border border-slate-200 bg-[linear-gradient(135deg,#eff6ff_0%,#ffffff_100%)] p-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
               <div className="text-sm font-semibold text-slate-900">Sinh viên đang chọn</div>
               <div className="mt-4 rounded-[22px] bg-white/90 p-4">
                 <div className="text-xs text-slate-500">Hồ sơ nhanh</div>
                 <div className="mt-1 text-lg font-semibold text-slate-900">{selectedTttn?.name}</div>
-                <div className="mt-1 text-sm text-slate-600">{selectedTttn?.company}</div>
+                <div className="mt-1 text-sm text-slate-600">Lớp: {selectedTttn?.class}</div>
                 <div className="mt-4 space-y-2 text-sm text-slate-600">
-                  <div className="flex items-center gap-2"><FileText className="h-4 w-4 text-[#1976D2]" /> Điểm hiện tại: {selectedTttn?.score || 'Chưa nhập'}</div>
-                  <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-[#1976D2]" /> Chờ xác nhận hội đồng</div>
+                  <div className="flex items-center gap-2">
+                    <CalendarDays className="h-4 w-4 text-[#1976D2]" />
+                    <span>Ngày sinh: {selectedTttn?.dob || '—'}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Building2 className="h-4 w-4 text-[#1976D2]" />
+                    <span className="truncate" title={selectedTttn?.company}>Công ty: {selectedTttn?.company || 'Chưa có công ty thực tập'}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-[#1976D2]" />
+                    <span>Điểm hiện tại: {selectedTttn?.score || 'Chưa nhập'}</span>
+                  </div>
                 </div>
               </div>
             </section>
@@ -316,8 +527,7 @@ export default function TeacherGradingPage() {
               <div className="text-sm font-semibold text-slate-900">Trạng thái phiên</div>
               <div className="mt-4 space-y-3 text-sm text-slate-600">
                 <div className="flex items-center gap-2"><BarChart3 className="h-4 w-4 text-[#1976D2]" /> {tttnScores.filter((row) => row.score).length} / {tttnScores.length} sinh viên đã có điểm</div>
-                <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-[#1976D2]" /> Cập nhật lần cuối: vừa xong</div>
-                <div className="flex items-center gap-2"><Users className="h-4 w-4 text-[#1976D2]" /> Giao diện đang ở chế độ chấm nhanh</div>
+                <div className="flex items-center gap-2"><Clock className="h-4 w-4 text-[#1976D2]" /> Cập nhật lần cuối: {lastUpdatedTime}</div>
               </div>
             </section>
           </div>
@@ -354,11 +564,18 @@ export default function TeacherGradingPage() {
                           <div
                             key={g.groupCode}
                             role="button"
-                            onClick={() => { setSelectedCouncil(council); setSelectedGroup(g); setShowScoringModal(true) }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedCouncil(council);
+                              setSelectedGroup(g);
+                              setShowScoringModal(true);
+                            }}
                             className="flex items-center justify-between gap-3 rounded-md bg-white p-3 ring-1 ring-slate-100 hover:bg-slate-50 cursor-pointer"
                           >
                             <div>
-                              <div className="font-medium text-slate-800">Nhóm {g.groupCode}</div>
+                              <div className="font-medium text-slate-800">
+                                {(g.students || []).map((s) => s.name).join(', ')}
+                              </div>
                               <div className="text-xs text-slate-500">{g.topic}</div>
                             </div>
                             <div className="text-xs text-slate-500">{(g.students || []).length} SV</div>
@@ -375,16 +592,36 @@ export default function TeacherGradingPage() {
             <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-5 py-4">
               <div>
                 <div className="text-sm font-semibold text-slate-900">Chấm điểm hội đồng</div>
-                  <div className="text-xs text-slate-500">Thang điểm và vai trò được hiển thị như thiết kế mẫu</div>
-                  <div className="text-xs text-slate-400">debug: groups={selectedCouncil?.groups?.length ?? 0}</div>
               </div>
-              <TeacherPill tone="green">Đang chấm</TeacherPill>
+              <div className="flex items-center gap-3">
+                <select
+                  value={roleFilter}
+                  onChange={(e) => setRoleFilter(e.target.value as any)}
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="all">Tất cả vai trò</option>
+                  <option value="reviewer">Đề tài Phản biện</option>
+                  <option value="advisor">Đề tài Hướng dẫn</option>
+                  <option value="member">Đề tài Ủy viên/Chủ tịch</option>
+                </select>
+                <select
+                  value={datnFilter}
+                  onChange={(e) => setDatnFilter(e.target.value as any)}
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="all">Tất cả đề tài</option>
+                  <option value="graded">Đã chấm</option>
+                  <option value="grading">Đang chấm</option>
+                  <option value="ungraded">Chưa chấm</option>
+                </select>
+                <TeacherPill tone="green">Đang chấm</TeacherPill>
+              </div>
             </div>
-              <div className="p-4">
-                <table className="w-full text-sm">
+              <div className="p-4 overflow-x-auto">
+                <table className="w-full text-sm min-w-[800px]">
                   <thead className="bg-slate-50 text-slate-600">
                     <tr>
-                      <th className="px-5 py-3 text-left">Mã nhóm</th>
+                      <th className="px-5 py-3 text-left w-12">STT</th>
                       <th className="px-5 py-3 text-left">Tên đề tài</th>
                       <th className="px-5 py-3 text-left">Thành viên nhóm</th>
                       <th className="px-5 py-3 text-left">GVHD</th>
@@ -393,35 +630,90 @@ export default function TeacherGradingPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {(selectedCouncil?.groups || []).map((g) => {
-                      const membersStr = (g.students || []).map((s) => `${s.id} - ${s.name}`).join(', ')
-                      const hasScore = (g.students || []).some((s) => !!(scoreList.find((r) => r.id === s.id)?.member))
-                      return (
-                        <tr key={g.groupCode} className="border-t border-slate-100 transition hover:bg-slate-50/80">
-                          <td className="px-5 py-4">
-                            <button type="button" onClick={() => { setSelectedGroup(g); setSelectedCouncil(selectedCouncil); setShowScoringModal(true) }} className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-3 py-1 text-xs text-[#1976D2] hover:bg-slate-100">
-                              {g.groupCode}
-                            </button>
-                          </td>
-                          <td className="px-5 py-4 text-slate-900">
-                            <div className="text-sm text-[#1976D2]">{g.topic}</div>
-                            <div className="text-xs text-slate-500"></div>
-                          </td>
-                          <td className="px-5 py-4 text-slate-700 max-w-[320px] truncate">{membersStr}</td>
-                          <td className="px-5 py-4 text-slate-700">{selectedCouncil?.members?.[0]?.name ?? '—'}</td>
-                          <td className="px-5 py-4">
-                            {hasScore ? <span className="inline-flex items-center gap-2 rounded-md bg-emerald-50 px-2 py-1 text-emerald-700 text-xs">Đã chấm</span> : <span className="inline-flex items-center gap-2 rounded-md bg-amber-50 px-2 py-1 text-amber-700 text-xs">Chưa chấm</span>}
-                          </td>
-                          <td className="px-5 py-4">
-                            <div className="flex items-center gap-2">
-                              <TeacherButton variant={hasScore ? 'secondary' : 'primary'} onClick={() => { setSelectedGroup(g); setSelectedCouncil(selectedCouncil); setShowScoringModal(true) }}>
-                                {hasScore ? 'Chấm lại' : 'Vào chấm điểm'}
-                              </TeacherButton>
-                            </div>
-                          </td>
-                        </tr>
-                      )
-                    })}
+                    {(() => {
+                      const list = (selectedCouncil?.groups || []).filter((g) => {
+                        const gradedCount = (g.students || []).filter((s) => !!(scoreList.find((r) => r.id === s.id)?.member)).length;
+                        const totalMembers = (g.students || []).length;
+                        
+                        let currentStatus: 'ungraded' | 'grading' | 'graded' = 'ungraded';
+                        if (gradedCount === totalMembers && totalMembers > 0) {
+                          currentStatus = 'graded';
+                        } else if (gradedCount > 0) {
+                          currentStatus = 'grading';
+                        }
+
+                        if (datnFilter !== 'all' && datnFilter !== currentStatus) return false;
+                        
+                        const isReviewer = g.reviewerId === currentTeacherId;
+                        const isAdvisor = g.advisorId === currentTeacherId;
+                        const isMember = selectedCouncil?.role === 'Ủy viên' || selectedCouncil?.role === 'Chủ tịch';
+                        
+                        if (roleFilter === 'reviewer' && !isReviewer) return false;
+                        if (roleFilter === 'advisor' && !isAdvisor) return false;
+                        if (roleFilter === 'member' && !isMember) return false;
+                        return true;
+                      });
+
+                      if (list.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan={6} className="px-5 py-8 text-center text-slate-500">
+                              Không tìm thấy đề tài nào phù hợp với bộ lọc.
+                            </td>
+                          </tr>
+                        );
+                      }
+
+                      return list.map((g, index) => {
+                        const gradedCount = (g.students || []).filter((s) => !!(scoreList.find((r) => r.id === s.id)?.member)).length;
+                        const totalMembers = (g.students || []).length;
+                        
+                        let statusBadge = (
+                          <span className="inline-flex items-center gap-2 rounded-md bg-amber-50 px-2 py-1 text-amber-700 text-xs">Chưa chấm</span>
+                        );
+                        let hasScore = false;
+                        if (gradedCount === totalMembers && totalMembers > 0) {
+                          statusBadge = (
+                            <span className="inline-flex items-center gap-2 rounded-md bg-emerald-50 px-2 py-1 text-emerald-700 text-xs">Đã chấm</span>
+                          );
+                          hasScore = true;
+                        } else if (gradedCount > 0) {
+                          statusBadge = (
+                            <span className="inline-flex items-center gap-2 rounded-md bg-blue-50 px-2 py-1 text-blue-700 text-xs">Đang chấm</span>
+                          );
+                          hasScore = true;
+                        }
+
+                        return (
+                          <tr key={g.groupCode} className="border-t border-slate-100 transition hover:bg-slate-50/80">
+                            <td className="px-5 py-4 text-slate-500 font-medium">{index + 1}</td>
+                            <td className="px-5 py-4 text-slate-900">
+                              <div className="text-sm font-semibold text-[#1976D2]">{g.topic}</div>
+                            </td>
+                            <td className="px-5 py-4 text-slate-700">
+                              <div className="space-y-1">
+                                {(g.students || []).map((s) => (
+                                  <div key={s.id} className="text-xs">
+                                    <span className="font-semibold text-slate-600">{s.id}</span> - <span className="text-slate-900">{s.name}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </td>
+                            <td className="px-5 py-4 text-slate-700">{g.advisorName ?? '—'}</td>
+                            <td className="px-5 py-4">
+                              {statusBadge}
+                            </td>
+                            <td className="px-5 py-4">
+                              <div className="flex items-center gap-2">
+                                <TeacherButton variant={hasScore ? 'secondary' : 'primary'} onClick={() => { setSelectedGroup(g); setSelectedCouncil(selectedCouncil); setShowScoringModal(true) }}>
+                                  {hasScore ? 'Chấm lại' : 'Vào chấm điểm'}
+                                </TeacherButton>
+                              </div>
+                            </td>
+                          </tr>
+                        )
+                      });
+                    })()}
                   </tbody>
                 </table>
               </div>
@@ -435,7 +727,7 @@ export default function TeacherGradingPage() {
       )}
 
       {toast && (
-        <div className="fixed right-6 top-20 z-50 rounded-2xl bg-emerald-500 px-4 py-3 text-sm text-white shadow-lg">
+        <div className="fixed right-6 top-20 z-[9999] rounded-2xl bg-emerald-500 px-4 py-3 text-sm text-white shadow-lg">
           ✓ {toast}
         </div>
       )}
@@ -446,8 +738,7 @@ export default function TeacherGradingPage() {
           <div className="relative w-[95%] max-w-5xl rounded-2xl bg-white p-6 shadow-lg">
             <div className="mb-4 flex items-start justify-between">
               <div>
-                <div className="text-lg font-semibold text-slate-900">Chấm điểm hội đồng — Nhóm {selectedGroup.groupCode}</div>
-                <div className="text-sm text-slate-500">{selectedGroup.topic}</div>
+                <div className="text-lg font-semibold text-slate-900">Chấm điểm hội đồng</div>
               </div>
               <div className="flex items-center gap-3">
                 <button type="button" onClick={() => setShowScoringModal(false)} className="rounded-md px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">{COMMON_LABELS.CLOSE}</button>
@@ -455,8 +746,9 @@ export default function TeacherGradingPage() {
             </div>
             <ScoringTable
               groupId={selectedGroup.id || selectedGroup.groupCode}
-              students={(selectedGroup.students || []).map((s) => ({ id: s.id, name: s.name }))}
-              canEditReport={selectedCouncil?.members?.some((m) => m.role.toLowerCase().includes('hướng dẫn') || m.role.toLowerCase().includes('phản biện')) || selectedCouncil?.role === 'GVPB'}
+              students={(selectedGroup.students || []).map((s) => ({ id: s.id, name: s.name, class: s.class }))}
+              canEditReport={selectedGroup.reviewerId === currentTeacherId || selectedGroup.advisorId === currentTeacherId}
+              notify={(msg) => notify(msg)}
             />
           </div>
         </div>

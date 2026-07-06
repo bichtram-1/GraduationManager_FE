@@ -68,6 +68,45 @@ const scoreBand = (score: number) => {
 
 const StudentScoresPage: React.FC = () => {
   const { t } = useTranslation();
+
+  const formatGradingInput = (value: string) => {
+    let clean = value.replace(/[^0-9.]/g, '')
+    
+    if (clean.includes('.')) {
+      const parts = clean.split('.')
+      if (parts.length > 2) {
+        clean = parts[0] + '.' + parts.slice(1).join('')
+      }
+      const dec = parts[1] || ''
+      if (dec.length > 2) {
+        clean = parts[0] + '.' + dec.substring(0, 2)
+      }
+      return clean
+    }
+    
+    if (clean.length === 2) {
+      const val = parseInt(clean, 10)
+      if (val > 10 || clean[0] === '0') {
+        return clean[0] + '.' + clean[1]
+      }
+    } else if (clean.length === 3) {
+      const val = parseInt(clean, 10)
+      if (val === 100) {
+        return '10.0'
+      } else if (val > 100) {
+        return clean[0] + '.' + clean.substring(1)
+      }
+    } else if (clean.length >= 4) {
+      const val = parseInt(clean, 10)
+      if (val >= 1000) {
+        return '10.00'
+      }
+      return clean[0] + '.' + clean.substring(1, 3)
+    }
+    
+    return clean
+  };
+
   const { selectedPeriod } = useGlobalVariable();
   const [searchParams, setSearchParams] = useSearchParams();
   const mode = (searchParams.get('mode') as ScoreMode) || 'internship';
@@ -118,7 +157,11 @@ const StudentScoresPage: React.FC = () => {
     setEditingRecord(record);
     setEditOpen(true);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    editForm.setFieldsValue({ ...record } as any);
+    const formattedRecord = {
+      ...record,
+      finalScore: typeof record.finalScore === 'number' ? record.finalScore.toFixed(2) : record.finalScore
+    };
+    editForm.setFieldsValue(formattedRecord as any);
   };
 
   const handleSaveEdit = async () => {
@@ -157,7 +200,7 @@ const StudentScoresPage: React.FC = () => {
     { title: t(getKey('class_name')), dataIndex: 'className', key: 'className', width: 130 },
     { title: t(getKey('company_name')), dataIndex: 'companyName', key: 'companyName', width: 220, ellipsis: true },
     { title: t(getKey('mentor')), dataIndex: 'mentor', key: 'mentor', width: 180, ellipsis: true },
-    { title: t(getKey('final_score')), dataIndex: 'finalScore', key: 'finalScore', width: 120, render: (v) => <b>{formatNumber(v)}</b> },
+    { title: t(getKey('final_score')), dataIndex: 'finalScore', key: 'finalScore', width: 120, render: (v) => <b>{typeof v === 'number' ? v.toFixed(2) : (v !== null && v !== undefined && v !== '' ? Number(v).toFixed(2) : '—')}</b> },
     { title: t(getKey('score_band')), key: 'band', width: 130, render: (_v, r) => { const meta = scoreBand(r.finalScore); return <Tag className={cn('!m-0 !rounded-full !px-2.5 !py-[2px] !border-none', meta.className)}>{t(getKey(meta.labelKey))}</Tag>; } },
     { title: t(getKey('group_status')), dataIndex: 'status', key: 'status', width: 140, render: (s: ScoreStatus) => { const meta = statusMeta[s]; return <Tag className={cn('!m-0 !rounded-full !px-2.5 !py-[2px] !border-none', meta.className)}>{t(getKey(meta.labelKey))}</Tag>; } },
     { title: t(getKey('action')), key: 'actions', fixed: 'right', width: 160, render: (_,_r) => (<Space><Button type="link" onClick={() => openEditModal(_r as ScoreRow)}>{t(getKey('edit_score'))}</Button><Button type="link" onClick={() => openDetailModal(_r as ScoreRow)}>{t(getKey('detail'))}</Button></Space>) },
@@ -174,7 +217,7 @@ const StudentScoresPage: React.FC = () => {
     { title: t(getKey('score_qa')), dataIndex: 'qaScore', key: 'qaScore', width: 100, render: (v) => formatNumber(v) },
     { title: t(getKey('score_component_total')), key: 'componentTotal', width: 140, render: (_,_r) => formatNumber((_r.defenseScore ?? 0) + (_r.demoScore ?? 0) + (_r.qaScore ?? 0)) },
     { title: t(getKey('score_report')), dataIndex: 'reportScore', key: 'reportScore', width: 110, render: (v) => formatNumber(v) },
-    { title: t(getKey('project_final_score')), dataIndex: 'finalScore', key: 'finalScore', width: 110, render: (v) => <b>{formatNumber(v)}</b> },
+    { title: t(getKey('project_final_score')), dataIndex: 'finalScore', key: 'finalScore', width: 110, render: (v) => <b>{typeof v === 'number' ? v.toFixed(2) : (v !== null && v !== undefined && v !== '' ? Number(v).toFixed(2) : '—')}</b> },
     { title: t(getKey('score_band')), key: 'band', width: 130, render: (_v, r) => { const meta = scoreBand(r.finalScore); return <Tag className={cn('!m-0 !rounded-full !px-2.5 !py-[2px] !border-none', meta.className)}>{t(getKey(meta.labelKey))}</Tag>; } },
     { title: t(getKey('action')), key: 'actions', fixed: 'right', width: 160, render: (_,_r) => (<Space><Button type="link" onClick={() => openEditModal(_r as ScoreRow)}>{t(getKey('edit_score'))}</Button><Button type="link" onClick={() => openDetailModal(_r as ScoreRow)}>{t(getKey('detail'))}</Button></Space>) },
   ];
@@ -189,8 +232,30 @@ const StudentScoresPage: React.FC = () => {
         <Row gutter={16}>
           {isIntern ? (
             <Col span={24}>
-              <Form.Item name="finalScore" label={t(getKey('final_score'))} rules={[{ required: true }]}>
-                <InputNumber min={0} max={10} precision={1} className="w-full" />
+              <Form.Item 
+                name="finalScore" 
+                label={t(getKey('final_score'))} 
+                rules={[
+                  { required: true, message: 'Vui lòng nhập điểm số!' },
+                  {
+                    validator: (_, value) => {
+                      if (value === undefined || value === null || value === '') return Promise.resolve();
+                      const num = parseFloat(value);
+                      if (isNaN(num) || num < 0 || num > 10) {
+                        return Promise.reject(new Error('Điểm số phải từ 0 đến 10!'));
+                      }
+                      return Promise.resolve();
+                    }
+                  }
+                ]}
+              >
+                <Input
+                  placeholder="0.00 - 10.00"
+                  onChange={(e) => {
+                    const formatted = formatGradingInput(e.target.value);
+                    editForm.setFieldsValue({ finalScore: formatted });
+                  }}
+                />
               </Form.Item>
             </Col>
           ) : (
@@ -368,7 +433,7 @@ const StudentScoresPage: React.FC = () => {
                 <Descriptions.Item label={t(getKey('score_report'))}>{formatNumber((detailRecord as ProjectScoreRow).reportScore)}</Descriptions.Item>
               </>
             )}
-            <Descriptions.Item label={t(getKey('final_score'))}><b>{formatNumber(detailRecord.finalScore)}</b></Descriptions.Item>
+            <Descriptions.Item label={t(getKey('final_score'))}><b>{typeof detailRecord.finalScore === 'number' ? detailRecord.finalScore.toFixed(2) : (detailRecord.finalScore !== null && detailRecord.finalScore !== undefined && detailRecord.finalScore !== '' ? Number(detailRecord.finalScore).toFixed(2) : '—')}</b></Descriptions.Item>
             <Descriptions.Item label={t(getKey('score_band'))}>{t(getKey(scoreBand(detailRecord.finalScore).labelKey))}</Descriptions.Item>
             <Descriptions.Item label={t(getKey('group_status'))}>{t(getKey(statusMeta[detailRecord.status].labelKey))}</Descriptions.Item>
           </Descriptions>
