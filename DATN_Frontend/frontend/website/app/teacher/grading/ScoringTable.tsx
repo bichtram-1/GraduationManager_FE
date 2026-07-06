@@ -4,6 +4,18 @@ import { teacherApi } from '@/lib/api/teacherApi'
 
 type Student = { id: string; name: string; class?: string }
 type Score = { presentation: string; demo: string; qna: string; report: string }
+type OtherScore = {
+  teacherName: string
+  presentation: number
+  demo: number
+  qna: number
+  defense: number
+}
+interface RowType {
+  member: Student
+  score: Score
+  otherScores?: OtherScore[]
+}
 
 export default function ScoringTable({
   groupId,
@@ -18,10 +30,11 @@ export default function ScoringTable({
   notify: (msg: string) => void
   reportMax?: number
 }) {
-  const initial = students.map((m) => ({ member: m, score: { presentation: '', demo: '', qna: '', report: '' } as Score }))
-  const [rows, setRows] = useState(initial)
+  const initial = students.map((m) => ({ member: m, score: { presentation: '', demo: '', qna: '', report: '' } as Score, otherScores: [] } as RowType))
+  const [rows, setRows] = useState<RowType[]>(initial)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
+  const [isChair, setIsChair] = useState(false)
 
   const formatTotalScore = (val: number): string => {
     const parts = val.toFixed(2).split('.')
@@ -112,9 +125,9 @@ export default function ScoringTable({
   useEffect(() => {
     let mounted = true
     
-    // Initialize/reset rows
-    setRows(students.map((m) => ({ member: m, score: { presentation: '', demo: '', qna: '', report: '' } as Score })))
+    setRows(students.map((m) => ({ member: m, score: { presentation: '', demo: '', qna: '', report: '' } as Score, otherScores: [] } as RowType)))
     setErrors({})
+    setIsChair(false)
 
     async function load() {
       if (!groupId) return
@@ -122,10 +135,11 @@ export default function ScoringTable({
       try {
         const j = await teacherApi.getScores(groupId)
         if (!mounted) return
-        if (j?.data?.rows) {
-          const loaded = j.data.rows as { id: string; presentation?: number | null; demo?: number | null; qna?: number | null; report?: number | null }[]
+        if (j?.data) {
+          setIsChair(j.data.isChair || false)
+          const loaded = j.data.rows || []
           setRows((cur) => cur.map((r) => {
-            const found = loaded.find((x) => x.id === r.member.id)
+            const found = loaded.find((x: any) => x.id === r.member.id)
             if (!found) return r
             return {
               ...r,
@@ -134,7 +148,8 @@ export default function ScoringTable({
                 demo: found.demo !== null && found.demo !== undefined ? Number(found.demo).toFixed(2) : '',
                 qna: found.qna !== null && found.qna !== undefined ? Number(found.qna).toFixed(2) : '',
                 report: found.report !== null && found.report !== undefined ? Number(found.report).toFixed(2) : '',
-              }
+              },
+              otherScores: found.otherScores || []
             }
           }))
         }
@@ -218,79 +233,103 @@ export default function ScoringTable({
               const s = r.score
               const comp = computeTotalComp(s)
               return (
-                <tr key={r.member.id} className="border-t border-slate-100">
-                  <td className="px-5 py-4 font-medium text-[#1976D2]">{r.member.id}</td>
-                  <td className="px-5 py-4 text-slate-900">{r.member.name}</td>
-                  <td className="px-5 py-4 text-slate-700">{r.member.class ?? '—'}</td>
-                  <td className="px-5 py-4">
-                    <div className="flex flex-col">
-                      <input
-                        placeholder="0.00"
-                        className={`${TeacherInputClass('w-20')} ${errors[`${i}-presentation`] ? 'border-red-500 focus:border-red-500 focus:ring-red-500 ring-2 ring-red-100 bg-red-50/30 font-semibold text-red-600' : ''}`}
-                        value={s.presentation}
-                        onChange={(e) => handleScoreChange(i, 'presentation', e.target.value, 3, 'Thuyết trình')}
-                      />
-                      {errors[`${i}-presentation`] && (
-                        <span className="text-[10px] font-semibold text-red-500 mt-0.5 whitespace-nowrap">
-                          {errors[`${i}-presentation`]}
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-5 py-4">
-                    <div className="flex flex-col">
-                      <input
-                        placeholder="0.00"
-                        className={`${TeacherInputClass('w-20')} ${errors[`${i}-demo`] ? 'border-red-500 focus:border-red-500 focus:ring-red-500 ring-2 ring-red-100 bg-red-50/30 font-semibold text-red-600' : ''}`}
-                        value={s.demo}
-                        onChange={(e) => handleScoreChange(i, 'demo', e.target.value, 5, 'Demo')}
-                      />
-                      {errors[`${i}-demo`] && (
-                        <span className="text-[10px] font-semibold text-red-500 mt-0.5 whitespace-nowrap">
-                          {errors[`${i}-demo`]}
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-5 py-4">
-                    <div className="flex flex-col">
-                      <input
-                        placeholder="0.00"
-                        className={`${TeacherInputClass('w-20')} ${errors[`${i}-qna`] ? 'border-red-500 focus:border-red-500 focus:ring-red-500 ring-2 ring-red-100 bg-red-50/30 font-semibold text-red-600' : ''}`}
-                        value={s.qna}
-                        onChange={(e) => handleScoreChange(i, 'qna', e.target.value, 2, 'Vấn đáp')}
-                      />
-                      {errors[`${i}-qna`] && (
-                        <span className="text-[10px] font-semibold text-red-500 mt-0.5 whitespace-nowrap">
-                          {errors[`${i}-qna`]}
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-5 py-4 font-semibold text-slate-800">{formatTotalScore(comp)}</td>
-                  <td className="px-5 py-4">
-                    <div className="flex flex-col">
-                      <input
-                        placeholder="0.00"
-                        disabled={!canEditReport}
-                        title={!canEditReport ? 'Bạn chỉ được xem điểm báo cáo' : undefined}
-                        className={`${TeacherInputClass('w-20')} ${!canEditReport ? 'opacity-50 bg-slate-100 cursor-not-allowed select-none' : ''} ${errors[`${i}-report`] ? 'border-red-500 focus:border-red-500 focus:ring-red-500 ring-2 ring-red-100 bg-red-50/30 font-semibold text-red-600' : ''}`}
-                        value={s.report}
-                        onChange={(e) => handleScoreChange(i, 'report', e.target.value, reportMax, 'Báo cáo')}
-                      />
-                      {!canEditReport && (
-                        <span className="text-[10px] text-slate-500 mt-1 whitespace-nowrap">
-                          Chỉ xem
-                        </span>
-                      )}
-                      {errors[`${i}-report`] && (
-                        <span className="text-[10px] font-semibold text-red-500 mt-0.5 whitespace-nowrap">
-                          {errors[`${i}-report`]}
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                </tr>
+                <React.Fragment key={r.member.id}>
+                  <tr className="border-t border-slate-100">
+                    <td className="px-5 py-4 font-medium text-[#1976D2]">{r.member.id}</td>
+                    <td className="px-5 py-4 text-slate-900">{r.member.name}</td>
+                    <td className="px-5 py-4 text-slate-700">{r.member.class ?? '—'}</td>
+                    <td className="px-5 py-4">
+                      <div className="flex flex-col">
+                        <input
+                          placeholder="0.00"
+                          className={`${TeacherInputClass('w-20')} ${errors[`${i}-presentation`] ? 'border-red-500 focus:border-red-500 focus:ring-red-500 ring-2 ring-red-100 bg-red-50/30 font-semibold text-red-600' : ''}`}
+                          value={s.presentation}
+                          onChange={(e) => handleScoreChange(i, 'presentation', e.target.value, 3, 'Thuyết trình')}
+                        />
+                        {errors[`${i}-presentation`] && (
+                          <span className="text-[10px] font-semibold text-red-500 mt-0.5 whitespace-nowrap">
+                            {errors[`${i}-presentation`]}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-5 py-4">
+                      <div className="flex flex-col">
+                        <input
+                          placeholder="0.00"
+                          className={`${TeacherInputClass('w-20')} ${errors[`${i}-demo`] ? 'border-red-500 focus:border-red-500 focus:ring-red-500 ring-2 ring-red-100 bg-red-50/30 font-semibold text-red-600' : ''}`}
+                          value={s.demo}
+                          onChange={(e) => handleScoreChange(i, 'demo', e.target.value, 5, 'Demo')}
+                        />
+                        {errors[`${i}-demo`] && (
+                          <span className="text-[10px] font-semibold text-red-500 mt-0.5 whitespace-nowrap">
+                            {errors[`${i}-demo`]}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-5 py-4">
+                      <div className="flex flex-col">
+                        <input
+                          placeholder="0.00"
+                          className={`${TeacherInputClass('w-20')} ${errors[`${i}-qna`] ? 'border-red-500 focus:border-red-500 focus:ring-red-500 ring-2 ring-red-100 bg-red-50/30 font-semibold text-red-600' : ''}`}
+                          value={s.qna}
+                          onChange={(e) => handleScoreChange(i, 'qna', e.target.value, 2, 'Vấn đáp')}
+                        />
+                        {errors[`${i}-qna`] && (
+                          <span className="text-[10px] font-semibold text-red-500 mt-0.5 whitespace-nowrap">
+                            {errors[`${i}-qna`]}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-5 py-4 font-semibold text-slate-800">{formatTotalScore(comp)}</td>
+                    <td className="px-5 py-4">
+                      <div className="flex flex-col">
+                        <input
+                          placeholder="0.00"
+                          disabled={!canEditReport}
+                          title={!canEditReport ? 'Bạn chỉ được xem điểm báo cáo' : undefined}
+                          className={`${TeacherInputClass('w-20')} ${!canEditReport ? 'opacity-50 bg-slate-100 cursor-not-allowed select-none' : ''} ${errors[`${i}-report`] ? 'border-red-500 focus:border-red-500 focus:ring-red-500 ring-2 ring-red-100 bg-red-50/30 font-semibold text-red-600' : ''}`}
+                          value={s.report}
+                          onChange={(e) => handleScoreChange(i, 'report', e.target.value, reportMax, 'Báo cáo')}
+                        />
+                        {!canEditReport && (
+                          <span className="text-[10px] text-slate-500 mt-1 whitespace-nowrap">
+                            Chỉ xem
+                          </span>
+                        )}
+                        {errors[`${i}-report`] && (
+                          <span className="text-[10px] font-semibold text-red-500 mt-0.5 whitespace-nowrap">
+                            {errors[`${i}-report`]}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                  {isChair && r.otherScores && r.otherScores.length > 0 && (
+                    <tr className="bg-slate-50/50">
+                      <td colSpan={8} className="px-5 py-3">
+                        <div className="text-xs space-y-1.5 border-l-2 border-[#1976D2] pl-4 py-0.5">
+                          <div className="font-semibold text-slate-700">Điểm chi tiết từ các thành viên khác trong hội đồng:</div>
+                          <div className="grid gap-2 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
+                            {r.otherScores.map((os, idx) => (
+                              <div key={idx} className="rounded-xl border border-slate-100 bg-white p-3 text-slate-600 shadow-sm">
+                                <div className="font-semibold text-slate-800 truncate" title={os.teacherName}>{os.teacherName}</div>
+                                <div className="mt-1 text-[11px] grid grid-cols-2 gap-x-2 gap-y-0.5">
+                                  <div>Thuyết trình: <span className="font-semibold text-slate-700">{os.presentation.toFixed(2)}</span></div>
+                                  <div>Demo: <span className="font-semibold text-slate-700">{os.demo.toFixed(2)}</span></div>
+                                  <div>Vấn đáp: <span className="font-semibold text-slate-700">{os.qna.toFixed(2)}</span></div>
+                                  <div className="col-span-2 text-blue-600 font-bold mt-1">Tổng bảo vệ: {os.defense.toFixed(2)}</div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
               )
             })}
           </tbody>

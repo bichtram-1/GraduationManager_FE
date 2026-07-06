@@ -65,6 +65,7 @@ interface CouncilGroupItem {
   groupCode: string
   topic: string
   advisorId?: string | null
+  advisorName?: string | null
   reviewerId?: string | null
   students: GroupStudent[]
 }
@@ -697,7 +698,7 @@ export default function TeacherGradingPage() {
                                 ))}
                               </div>
                             </td>
-                            <td className="px-5 py-4 text-slate-700">{selectedCouncil?.members?.[0]?.name ?? '—'}</td>
+                            <td className="px-5 py-4 text-slate-700">{g.advisorName ?? '—'}</td>
                             <td className="px-5 py-4">
                               {statusBadge}
                             </td>

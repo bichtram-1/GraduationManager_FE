@@ -11,7 +11,6 @@ type Council = {
   name: string
   period: string
   chair: string
-  secretary: string
   studentsCount: number
   avgScore: number
 }
@@ -30,7 +29,6 @@ export default function CouncilsPage() {
         if (data?.councilGroups) {
           const list = data.councilGroups.map((c: any) => {
             const chair = c.members?.find((m: any) => m.role.includes('Chủ tịch'))?.name || c.members?.[0]?.name || 'Chưa phân công'
-            const secretary = c.members?.find((m: any) => m.role.includes('Thư ký') || m.role.includes('thư ký'))?.name || c.members?.[1]?.name || '—'
             const studentsCount = c.groups?.reduce((acc: number, g: any) => acc + (g.students?.length || 0), 0) || 0
 
             return {
@@ -38,7 +36,6 @@ export default function CouncilsPage() {
               name: c.name,
               period: selectedPeriod?.name || 'Học kỳ hiện tại',
               chair,
-              secretary,
               studentsCount,
               avgScore: 8.0
             }
@@ -63,7 +60,7 @@ export default function CouncilsPage() {
     <div className="p-0">
       <TeacherSectionHeader
         title="Danh sách Hội đồng"
-        description="Quản lý và xem điểm theo từng hội đồng chấm đồ án tốt nghiệp kết nối thực tế tới Back-End."
+        description="Xem điểm các nhóm đề tài trong Hội đồng của bạn"
       />
       
       {loading ? (
@@ -77,8 +74,7 @@ export default function CouncilsPage() {
                   <h2 className="text-lg font-semibold text-slate-900">{c.name}</h2>
                   <p className="text-sm text-slate-500 mt-1">{c.period}</p>
                   <div className="mt-3 space-y-1 text-sm text-slate-600">
-                    <p>Trưởng hội đồng: <strong className="text-slate-800">{c.chair}</strong></p>
-                    <p>Thư ký: <strong className="text-slate-800">{c.secretary}</strong></p>
+                    <p>Chủ tịch hội đồng: <strong className="text-slate-800">{c.chair}</strong></p>
                   </div>
                 </div>
                 <div className="text-right rounded-2xl bg-blue-50 px-3 py-2">
@@ -87,8 +83,7 @@ export default function CouncilsPage() {
                 </div>
               </div>
 
-              <div className="mt-6 flex items-center justify-between border-t border-slate-100 pt-4">
-                <div className="text-xs text-slate-500">Mã hội đồng: <span className="font-semibold text-slate-700">{c.id}</span></div>
+              <div className="mt-6 flex items-center justify-end border-t border-slate-100 pt-4">
                 <Link href={`/teacher/councils/${c.id}/grades`} className="inline-flex items-center justify-center rounded-2xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-blue-200 transition hover:bg-blue-700 hover:shadow-lg">
                   Xem bảng điểm
                 </Link>
