@@ -1,4 +1,4 @@
-'use client'
+"use client"
 
 import { useState, useEffect } from 'react'
 import { CalendarDays, CheckCircle2, Clock3, Trophy, TrendingUp, Users } from 'lucide-react'
@@ -6,60 +6,70 @@ import { TeacherPill, TeacherSectionHeader, TeacherStatCard } from './_component
 import { usePeriod } from '@/lib/providers/PeriodProvider'
 import { teacherApi } from '@/lib/api/teacherApi'
 
-const reminders = [
-  'Duyệt đề tài mới gửi lên trong tuần này.',
-  'Xác nhận lịch phản biện cho hội đồng ĐATN.',
-  'Kiểm tra báo cáo tuần của SV TTTN.',
-]
-
-const weeklyTimeline = [
-  ['Thứ 2', 'Họp nhóm TTTN', '08:30'],
-  ['Thứ 4', 'Duyệt đề tài mới', '14:00'],
-  ['Thứ 6', 'Chấm hội đồng ĐATN', '09:00'],
-]
-
 export default function TeacherIndexPage() {
   const { selectedPeriod } = usePeriod()
   const [stats, setStats] = useState({ topics: 0, tttn: 0, datn: 0, councils: 0 })
   const [topics, setTopics] = useState<any[]>([])
+  const [tttnList, setTttnList] = useState<any[]>([])
+  const [datnList, setDatnList] = useState<any[]>([])
+  const [councilsList, setCouncilsList] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
 
-  useEffect(() => {
+  const load = () => {
     let mounted = true
     setLoading(true)
-    const load = () => {
-      teacherApi.getDashboardData({ periodId: selectedPeriod?.id })
-        .then((res) => {
-          if (!mounted) return
-          if (res?.success) {
-            setStats(res.stats)
-            setTopics(res.topics || [])
-          } else {
-            // fallback mock values if backend is empty
-            setStats({ topics: 3, tttn: 4, datn: 2, councils: 1 })
-            setTopics([
-              { code: 'DA001', name: 'Hệ thống IoT giám sát nông nghiệp', slot: '3/4', status: 'Đã duyệt', students: 2, note: 'Đã có 2 nhóm đăng ký' },
-              { code: 'DA007', name: 'Blockchain cho quản lý chuỗi cung ứng', slot: '0/3', status: 'Chờ duyệt', students: 0, note: 'Chờ phê duyệt từ Khoa' },
-              { code: 'DA012', name: 'Ứng dụng ML dự đoán giá chứng khoán', slot: '0/4', status: 'Chờ duyệt', students: 0, note: 'Mới tạo trong tuần' },
-            ])
-          }
-        })
-        .catch(() => {
-          if (mounted) {
-            setStats({ topics: 3, tttn: 4, datn: 2, councils: 1 })
-            setTopics([
-              { code: 'DA001', name: 'Hệ thống IoT giám sát nông nghiệp', slot: '3/4', status: 'Đã duyệt', students: 2, note: 'Đã có 2 nhóm đăng ký' },
-              { code: 'DA007', name: 'Blockchain cho quản lý chuỗi cung ứng', slot: '0/3', status: 'Chờ duyệt', students: 0, note: 'Chờ phê duyệt từ Khoa' },
-              { code: 'DA012', name: 'Ứng dụng ML dự đoán giá chứng khoán', slot: '0/4', status: 'Chờ duyệt', students: 0, note: 'Mới tạo trong tuần' },
-            ])
-          }
-        })
-        .finally(() => {
-          if (mounted) setLoading(false)
-        })
-    }
+    
+    Promise.all([
+      teacherApi.getDashboardData({ periodId: selectedPeriod?.id }),
+      teacherApi.getStudents({ periodId: selectedPeriod?.id }),
+      teacherApi.getGradingData({ periodId: selectedPeriod?.id })
+    ])
+      .then(([dashRes, studentsRes, gradingRes]) => {
+        if (!mounted) return
+        
+        if (dashRes?.success) {
+          setStats(dashRes.stats)
+          setTopics(dashRes.topics || [])
+        } else {
+          setStats({ topics: 0, tttn: 0, datn: 0, councils: 0 })
+          setTopics([])
+        }
+        
+        if (studentsRes?.success) {
+          setTttnList(studentsRes.tttn || [])
+          setDatnList(studentsRes.datn || [])
+        } else {
+          setTttnList([])
+          setDatnList([])
+        }
+        
+        if (gradingRes?.councilGroups) {
+          setCouncilsList(gradingRes.councilGroups || [])
+        } else {
+          setCouncilsList([])
+        }
+      })
+      .catch((err) => {
+        console.error('Error loading dashboard data:', err)
+        if (mounted) {
+          setStats({ topics: 0, tttn: 0, datn: 0, councils: 0 })
+          setTopics([])
+          setTttnList([])
+          setDatnList([])
+          setCouncilsList([])
+        }
+      })
+      .finally(() => {
+        if (mounted) setLoading(false)
+      })
 
-    load()
+    return () => {
+      mounted = false
+    }
+  }
+
+  useEffect(() => {
+    const cleanup = load()
 
     const handleSync = () => {
       load()
@@ -69,12 +79,85 @@ export default function TeacherIndexPage() {
     window.addEventListener('realtime-assignment-published', handleSync)
 
     return () => {
-      mounted = false
+      cleanup()
       window.removeEventListener('realtime-group-updated', handleSync)
       window.removeEventListener('realtime-topic-updated', handleSync)
       window.removeEventListener('realtime-assignment-published', handleSync)
     }
   }, [selectedPeriod?.id])
+
+  // Tự động sinh danh sách việc cần xử lý dựa trên dữ liệu thực tế
+  const getDynamicReminders = () => {
+    const list: string[] = []
+
+    // 1. Duyệt báo cáo thực tập (nếu có báo cáo 'Đã nộp' mà giảng viên chưa có nhận xét)
+    const pendingTttn = tttnList.filter(s => s.status === 'Đã nộp' && (!s.comment || s.comment.trim() === ''))
+    if (pendingTttn.length > 0) {
+      list.push(`Đánh giá báo cáo thực tập của sinh viên ${pendingTttn[0].name} (${pendingTttn[0].studentCode}) - báo cáo ${pendingTttn[0].report || 'tuần mới nhất'}.`)
+    }
+
+    // 2. Nhận xét tiến độ đồ án (nếu có nhóm 'Đã nộp' mà giảng viên chưa nhận xét)
+    const pendingDatn = datnList.filter(g => g.status === 'Đã nộp' && (!g.comment || g.comment.trim() === ''))
+    if (pendingDatn.length > 0) {
+      list.push(`Nhận xét báo cáo tiến độ ĐATN của nhóm ${pendingDatn[0].group} (Đề tài: ${pendingDatn[0].topic}).`)
+    }
+
+    // 3. Đề tài đang ở trạng thái chờ duyệt của Khoa
+    const pendingTopics = topics.filter(t => t.status === 'Chờ duyệt')
+    if (pendingTopics.length > 0) {
+      list.push(`Đề xuất "${pendingTopics[0].name.substring(0, 30)}..." của bạn hiện đang chờ phê duyệt.`)
+    }
+
+    // Nếu không có công việc nào tồn đọng
+    if (list.length === 0) {
+      list.push('Đã hoàn thành đánh giá toàn bộ báo cáo tiến độ tuần này.')
+      list.push('Kiểm tra và đôn đốc các sinh viên hoàn thiện tiến độ đúng thời hạn.')
+    }
+
+    return list
+  }
+
+  // Tự động sinh lịch làm việc dựa trên dữ liệu hội đồng chấm và lịch hướng dẫn
+  const getDynamicTimeline = () => {
+    const list: [string, string, string][] = []
+
+    // 1. Lấy lịch từ hội đồng chấm điểm
+    councilsList.forEach((council: any) => {
+      const [datePart, timePart] = (council.date || '').split('•')
+      const dayStr = datePart ? datePart.trim() : 'Lịch chấm'
+      const timeStr = timePart ? timePart.trim() : '08:00'
+      list.push([
+        dayStr,
+        `Chấm Hội đồng: ${council.name}`,
+        `${timeStr} tại phòng ${council.room || 'Phòng hội đồng'}`
+      ])
+    })
+
+    // 2. Lịch hướng dẫn nhóm đồ án tốt nghiệp
+    datnList.forEach((g: any) => {
+      list.push([
+        'Đợt này',
+        `Hướng dẫn ĐATN nhóm ${g.group}`,
+        `Đề tài: ${g.topic} (${g.members_list?.length || g.members || 0} SV)`
+      ])
+    })
+
+    if (list.length === 0) {
+      list.push(['Hôm nay', 'Không có lịch chấm hội đồng hoặc hướng dẫn nào được thiết lập.', '—'])
+    }
+
+    return list.slice(0, 4) // Giới hạn hiển thị tối đa 4 mục gần nhất
+  }
+
+  const dynamicReminders = getDynamicReminders()
+  const dynamicTimeline = getDynamicTimeline()
+
+  // Tính toán các chỉ số tức thì dựa trên dữ liệu thực tế
+  const totalTttnStudents = tttnList.length
+  const submittedTttn = tttnList.filter(s => s.status === 'Đã nộp').length
+  const tttnSubmissionRate = totalTttnStudents > 0 ? Math.round((submittedTttn / totalTttnStudents) * 100) : 0
+
+  const totalDatnStudents = datnList.reduce((acc, g) => acc + (g.members_list?.length || g.members || 0), 0)
 
   return (
     <>
@@ -103,18 +186,22 @@ export default function TeacherIndexPage() {
             <table className="w-full text-sm">
               <thead className="bg-slate-50 text-slate-600">
                 <tr>
-                  <th className="px-5 py-3 text-left">Mã</th>
+                  <th className="px-5 py-3 text-left w-16">STT</th>
                   <th className="px-5 py-3 text-left">Tên đề tài</th>
-                  <th className="px-5 py-3 text-left">Slot</th>
+                  <th className="px-5 py-3 text-left">SLTV</th>
                   <th className="px-5 py-3 text-left">SV đăng ký</th>
                   <th className="px-5 py-3 text-left">Trạng thái</th>
                 </tr>
               </thead>
               <tbody>
-                {topics.length > 0 ? (
-                  topics.map((topic) => (
+                {loading ? (
+                  <tr>
+                    <td colSpan={5} className="px-5 py-8 text-center text-slate-500">Đang tải danh sách đề tài...</td>
+                  </tr>
+                ) : topics.length > 0 ? (
+                  topics.map((topic, index) => (
                     <tr key={topic.code} className="border-t border-slate-100 transition hover:bg-slate-50/80">
-                      <td className="px-5 py-4 font-medium text-[#1976D2]">{topic.code}</td>
+                      <td className="px-5 py-4 font-medium text-slate-500">{index + 1}</td>
                       <td className="px-5 py-4 text-slate-900">
                         <div className="font-medium">{topic.name}</div>
                         {topic.note && <div className="mt-1 text-xs text-slate-500">{topic.note}</div>}
@@ -139,19 +226,21 @@ export default function TeacherIndexPage() {
             <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-5 py-4">
               <div>
                 <div className="text-sm font-semibold text-slate-900">Việc cần xử lý</div>
-                <div className="text-xs text-slate-500">Các đầu việc quan trọng trong tuần</div>
+                <div className="text-xs text-slate-500">Các công việc cần lưu ý dựa trên dữ liệu thực tế</div>
               </div>
-              <TeacherPill tone="orange">Ưu tiên cao</TeacherPill>
+              <TeacherPill tone="orange">Tự động tổng hợp</TeacherPill>
             </div>
             <div className="space-y-3 p-5">
-              {reminders.map((item, index) => (
+              {loading ? (
+                <div className="py-4 text-center text-slate-500 text-sm">Đang tải danh sách công việc cần xử lý...</div>
+              ) : dynamicReminders.map((item, index) => (
                 <div key={item} className="flex gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-full bg-[#eff6ff] text-[#1976D2]">
+                  <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-full bg-[#eff6ff] text-[#1976D2] font-semibold text-sm">
                     {index + 1}
                   </div>
-                  <div>
+                  <div className="flex-1">
                     <div className="text-sm font-medium text-slate-900">{item}</div>
-                    <div className="mt-1 text-xs text-slate-500">Tự động tổng hợp từ đề tài, sinh viên và lịch hội đồng.</div>
+                    <div className="mt-1 text-xs text-slate-500">Được tổng hợp tự động từ trạng thái báo cáo của sinh viên.</div>
                   </div>
                 </div>
               ))}
@@ -164,15 +253,17 @@ export default function TeacherIndexPage() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-sm font-semibold text-slate-900">Lịch tuần này</div>
-                <div className="text-xs text-slate-500">Các mốc làm việc gần nhất</div>
+                <div className="text-xs text-slate-500">Mốc lịch chấm hội đồng & hướng dẫn</div>
               </div>
               <CalendarDays className="text-[#1976D2]" />
             </div>
             <div className="mt-4 space-y-3">
-              {weeklyTimeline.map(([day, title, time]) => (
+              {loading ? (
+                <div className="py-4 text-center text-slate-500 text-sm">Đang tải lịch tuần...</div>
+              ) : dynamicTimeline.map(([day, title, time]) => (
                 <div key={title} className="rounded-2xl bg-slate-50 p-4">
                   <div className="flex items-center justify-between text-xs text-slate-500">
-                    <span>{day}</span>
+                    <span className="font-semibold text-[#1976D2]">{day}</span>
                     <span>{time}</span>
                   </div>
                   <div className="mt-2 text-sm font-medium text-slate-900">{title}</div>
@@ -184,9 +275,18 @@ export default function TeacherIndexPage() {
           <section className="rounded-[28px] border border-slate-200 bg-[linear-gradient(135deg,#eff6ff_0%,#ffffff_100%)] p-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
             <div className="text-sm font-semibold text-slate-900">Tổng quan nhanh</div>
             <div className="mt-4 space-y-3 text-sm text-slate-600">
-              <div className="flex items-center gap-2"><CheckCircle2 className="text-emerald-500" /> {stats.topics} đề tài sẵn sàng công bố</div>
-              <div className="flex items-center gap-2"><Users className="text-blue-500" /> {stats.tttn} sinh viên đang theo dõi</div>
-              <div className="flex items-center gap-2"><Trophy className="text-orange-500" /> {stats.datn} nhóm ĐATN phản biện</div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="text-emerald-500" />
+                <span>{stats.topics} đề tài giảng viên đã đăng ký</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Users className="text-blue-500" />
+                <span>{totalTttnStudents} sinh viên thực tập đang quản lý</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Trophy className="text-orange-500" />
+                <span>{datnList.length} nhóm đồ án tốt nghiệp hướng dẫn</span>
+              </div>
             </div>
           </section>
 
@@ -194,14 +294,20 @@ export default function TeacherIndexPage() {
             <div className="text-sm font-semibold text-slate-900">Chỉ số tức thì</div>
             <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
               <div className="rounded-2xl bg-slate-50 p-4">
-                <div className="flex items-center gap-2 text-xs text-slate-500"><Clock3 className="h-4 w-4 text-[#1976D2]" /> Tuần này</div>
-                <div className="mt-2 text-2xl font-semibold text-slate-900">12</div>
-                <div className="text-xs text-slate-500">cuộc hẹn hướng dẫn</div>
+                <div className="flex items-center gap-2 text-xs text-slate-500">
+                  <Clock3 className="h-4 w-4 text-[#1976D2]" />
+                  <span>Tiến độ thực tập</span>
+                </div>
+                <div className="mt-2 text-2xl font-semibold text-slate-900">{tttnSubmissionRate}%</div>
+                <div className="text-xs text-slate-500">sinh viên đã nộp báo cáo tuần này</div>
               </div>
               <div className="rounded-2xl bg-slate-50 p-4">
-                <div className="flex items-center gap-2 text-xs text-slate-500"><TrendingUp className="h-4 w-4 text-[#1976D2]" /> Hiệu suất</div>
-                <div className="mt-2 text-2xl font-semibold text-slate-900">92%</div>
-                <div className="text-xs text-slate-500">báo cáo đúng hạn</div>
+                <div className="flex items-center gap-2 text-xs text-slate-500">
+                  <TrendingUp className="h-4 w-4 text-[#1976D2]" />
+                  <span>Quy mô hướng dẫn</span>
+                </div>
+                <div className="mt-2 text-2xl font-semibold text-slate-900">{totalDatnStudents}</div>
+                <div className="text-xs text-slate-500">sinh viên làm ĐATN đợt này</div>
               </div>
             </div>
           </section>
