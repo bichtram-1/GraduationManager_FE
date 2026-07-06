@@ -421,7 +421,7 @@ const AssignmentsPage = () => {
                             ? "bg-[var(--color-green-light)] text-[var(--color-green-medium)]"
                             : "bg-[var(--color-red-light)] text-[var(--color-red-medium)]"
                         )}>
-                          {teacher.status === STATUS_CODE.AVAILABLE ? t(getKey('available_slots')) : t(getKey('full_slots'))}
+                          {teacher.assignedCount ?? 0}/{teacher.maxSlots ?? '—'} sinh viên
                         </Tag>
                       </div>
                     </div>

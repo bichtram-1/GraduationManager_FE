@@ -26,6 +26,7 @@ export async function POST(req: Request) {
     )
   }
 
+  // Admin có quyền hạn cao nhất (bao gồm cả quyền giảng viên) nên vẫn được vào website với vai trò giảng viên
   const token = json.data.access_token as string
   const resolvedRole = json.data.role === 'SINH_VIEN' ? 'student' : 'teacher'
   const redirectTo = resolvedRole === 'student' ? '/student' : '/teacher'
