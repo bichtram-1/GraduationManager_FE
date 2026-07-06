@@ -273,10 +273,16 @@ export default function ScoringTable({
                       <input
                         placeholder="0.00"
                         disabled={!canEditReport}
-                        className={`${TeacherInputClass('w-20')} ${!canEditReport ? 'opacity-60 bg-slate-50' : ''} ${errors[`${i}-report`] ? 'border-red-500 focus:border-red-500 focus:ring-red-500 ring-2 ring-red-100 bg-red-50/30 font-semibold text-red-600' : ''}`}
+                        title={!canEditReport ? 'Bạn chỉ được xem điểm báo cáo' : undefined}
+                        className={`${TeacherInputClass('w-20')} ${!canEditReport ? 'opacity-50 bg-slate-100 cursor-not-allowed select-none' : ''} ${errors[`${i}-report`] ? 'border-red-500 focus:border-red-500 focus:ring-red-500 ring-2 ring-red-100 bg-red-50/30 font-semibold text-red-600' : ''}`}
                         value={s.report}
                         onChange={(e) => handleScoreChange(i, 'report', e.target.value, reportMax, 'Báo cáo')}
                       />
+                      {!canEditReport && (
+                        <span className="text-[10px] text-slate-500 mt-1 whitespace-nowrap">
+                          Chỉ xem
+                        </span>
+                      )}
                       {errors[`${i}-report`] && (
                         <span className="text-[10px] font-semibold text-red-500 mt-0.5 whitespace-nowrap">
                           {errors[`${i}-report`]}

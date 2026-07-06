@@ -138,6 +138,16 @@ export const PeriodProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         }
       });
 
+      eventSource.addEventListener('score_updated', (e: MessageEvent) => {
+        try {
+          const data = JSON.parse(e.data);
+          console.log('Realtime score updated:', data);
+          window.dispatchEvent(new CustomEvent('realtime-score-updated', { detail: data }));
+        } catch (err) {
+          console.error(err);
+        }
+      });
+
       eventSource.onerror = () => {
         // Silently let EventSource handle native reconnects
       };

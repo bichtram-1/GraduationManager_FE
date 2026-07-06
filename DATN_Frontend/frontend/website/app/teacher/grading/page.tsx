@@ -58,6 +58,28 @@ const defaultScoreRows = [
   { id: '20520005', name: 'Trần Thị E', chair: '', secretary: '', member: '8.0', advisor: '', reviewer: '' },
 ]
 
+type CouncilMember = { id: string; name: string; role: string }
+type GroupStudent = { id: string; name: string; class?: string }
+interface CouncilGroupItem {
+  id?: string
+  groupCode: string
+  topic: string
+  advisorId?: string | null
+  reviewerId?: string | null
+  students: GroupStudent[]
+}
+interface Council {
+  code: string
+  name: string
+  date: string
+  room: string
+  role: string
+  done: number
+  total: number
+  members: CouncilMember[]
+  groups: CouncilGroupItem[]
+}
+
 export default function TeacherGradingPage() {
   const formatVietnamTime = (date: Date) => {
     const day = String(date.getDate()).padStart(2, '0')
@@ -75,17 +97,17 @@ export default function TeacherGradingPage() {
   const { selectedPeriod, gradingTab, setGradingTab } = usePeriod()
   const [tttnScores, setTttnScores] = useState(defaultTttnRows)
   const [toast, setToast] = useState<string | null>(null)
-  const [selectedCouncil, setSelectedCouncil] = useState<typeof defaultCouncilGroups[0] | null>(defaultCouncilGroups[0])
-  const [selectedGroup, setSelectedGroup] = useState<null | { id?: string; groupCode: string; topic: string; advisorId?: string; students: { id: string; name: string; class?: string }[] }>(null)
+  const [selectedCouncil, setSelectedCouncil] = useState<Council | null>(defaultCouncilGroups[0] as any)
+  const [selectedGroup, setSelectedGroup] = useState<CouncilGroupItem | null>(null)
   const [selectedTttnId, setSelectedTttnId] = useState(defaultTttnRows[0].id)
-  const [councilList, setCouncilList] = useState(defaultCouncilGroups)
+  const [councilList, setCouncilList] = useState<Council[]>(defaultCouncilGroups as any)
   const [currentTeacherId, setCurrentTeacherId] = useState<string>('')
   const [scoreList, setScoreList] = useState(defaultScoreRows)
   const [_loading, setLoading] = useState(false)
   const [showScoringModal, setShowScoringModal] = useState(false)
   const [lastUpdatedTime, setLastUpdatedTime] = useState<string>('Chưa cập nhật')
   const [datnFilter, setDatnFilter] = useState<'all' | 'graded' | 'grading' | 'ungraded'>('all')
-  const [roleFilter, setRoleFilter] = useState<'all' | 'reviewer' | 'member'>('all')
+  const [roleFilter, setRoleFilter] = useState<'all' | 'reviewer' | 'member' | 'advisor'>('all')
 
   const notify = (message: string) => {
     setToast(message)
@@ -300,15 +322,48 @@ export default function TeacherGradingPage() {
     return `${((count / totalStudents) * 100).toFixed(0)}%`
   }
 
+  // Calculate DATN statistics
+  const totalCouncils = councilList.length
+  let advisingGroupsCount = 0
+  let reviewingGroupsCount = 0
+
+  councilList.forEach((c) => {
+    (c.groups || []).forEach((g) => {
+      if (g.advisorId === currentTeacherId) {
+        advisingGroupsCount++
+      }
+      if (g.reviewerId === currentTeacherId) {
+        reviewingGroupsCount++
+      }
+    })
+  })
+
   return (
     <>
       <TeacherSectionHeader
         title="Chấm điểm"
-        description="Chấm điểm TTTN sinh viên hướng dẫn và chấm điểm sih viên trong Hội động tham gia."
+        description="Chấm điểm TTTN sinh viên hướng dẫn và chấm điểm sinh viên trong Hội động tham gia."
         actions={
           <TeacherPill tone="orange">Quy trình chấm điểm</TeacherPill>
         }
       />
+
+      {gradingTab === 'DATN' && (
+        <div className="mb-6 grid gap-4 grid-cols-1 sm:grid-cols-3">
+          <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-4 shadow-sm text-center flex flex-col justify-center items-center">
+            <div className="text-xs font-medium text-blue-600">Tổng hội đồng</div>
+            <div className="mt-2 text-2xl font-bold text-blue-900">{totalCouncils}</div>
+          </div>
+          <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4 shadow-sm text-center flex flex-col justify-center items-center">
+            <div className="text-xs font-medium text-emerald-600">Nhóm Hướng dẫn</div>
+            <div className="mt-2 text-2xl font-bold text-emerald-900">{advisingGroupsCount}</div>
+          </div>
+          <div className="rounded-2xl border border-indigo-100 bg-indigo-50/50 p-4 shadow-sm text-center flex flex-col justify-center items-center">
+            <div className="text-xs font-medium text-indigo-600">Nhóm Phản biên</div>
+            <div className="mt-2 text-2xl font-bold text-indigo-900">{reviewingGroupsCount}</div>
+          </div>
+        </div>
+      )}
 
       {gradingTab === 'TTTN' && (
         <div className="mb-6 grid gap-4 grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
@@ -507,11 +562,18 @@ export default function TeacherGradingPage() {
                           <div
                             key={g.groupCode}
                             role="button"
-                            onClick={() => { setSelectedCouncil(council); setSelectedGroup(g); setShowScoringModal(true) }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedCouncil(council);
+                              setSelectedGroup(g);
+                              setShowScoringModal(true);
+                            }}
                             className="flex items-center justify-between gap-3 rounded-md bg-white p-3 ring-1 ring-slate-100 hover:bg-slate-50 cursor-pointer"
                           >
                             <div>
-                              <div className="font-medium text-slate-800">Nhóm {g.groupCode}</div>
+                              <div className="font-medium text-slate-800">
+                                {(g.students || []).map((s) => s.name).join(', ')}
+                              </div>
                               <div className="text-xs text-slate-500">{g.topic}</div>
                             </div>
                             <div className="text-xs text-slate-500">{(g.students || []).length} SV</div>
@@ -537,6 +599,7 @@ export default function TeacherGradingPage() {
                 >
                   <option value="all">Tất cả vai trò</option>
                   <option value="reviewer">Đề tài Phản biện</option>
+                  <option value="advisor">Đề tài Hướng dẫn</option>
                   <option value="member">Đề tài Ủy viên/Chủ tịch</option>
                 </select>
                 <select
@@ -579,10 +642,12 @@ export default function TeacherGradingPage() {
 
                         if (datnFilter !== 'all' && datnFilter !== currentStatus) return false;
                         
-                        const isReviewer = selectedCouncil?.role === 'GVPB';
+                        const isReviewer = g.reviewerId === currentTeacherId;
+                        const isAdvisor = g.advisorId === currentTeacherId;
                         const isMember = selectedCouncil?.role === 'Ủy viên' || selectedCouncil?.role === 'Chủ tịch';
                         
                         if (roleFilter === 'reviewer' && !isReviewer) return false;
+                        if (roleFilter === 'advisor' && !isAdvisor) return false;
                         if (roleFilter === 'member' && !isMember) return false;
                         return true;
                       });
@@ -622,7 +687,6 @@ export default function TeacherGradingPage() {
                             <td className="px-5 py-4 text-slate-500 font-medium">{index + 1}</td>
                             <td className="px-5 py-4 text-slate-900">
                               <div className="text-sm font-semibold text-[#1976D2]">{g.topic}</div>
-                              <div className="text-xs text-slate-500 mt-1">Nhóm: {g.groupCode}</div>
                             </td>
                             <td className="px-5 py-4 text-slate-700">
                               <div className="space-y-1">
@@ -672,7 +736,7 @@ export default function TeacherGradingPage() {
           <div className="relative w-[95%] max-w-5xl rounded-2xl bg-white p-6 shadow-lg">
             <div className="mb-4 flex items-start justify-between">
               <div>
-                <div className="text-lg font-semibold text-slate-900">Chấm điểm hội đồng — Nhóm {selectedGroup.groupCode}</div>
+                <div className="text-lg font-semibold text-slate-900">Chấm điểm hội đồng</div>
               </div>
               <div className="flex items-center gap-3">
                 <button type="button" onClick={() => setShowScoringModal(false)} className="rounded-md px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">Đóng</button>
@@ -681,7 +745,7 @@ export default function TeacherGradingPage() {
             <ScoringTable
               groupId={selectedGroup.id || selectedGroup.groupCode}
               students={(selectedGroup.students || []).map((s) => ({ id: s.id, name: s.name, class: s.class }))}
-              canEditReport={selectedCouncil?.role === 'GVPB' || selectedGroup.advisorId === currentTeacherId}
+              canEditReport={selectedGroup.reviewerId === currentTeacherId || selectedGroup.advisorId === currentTeacherId}
               notify={(msg) => notify(msg)}
             />
           </div>
