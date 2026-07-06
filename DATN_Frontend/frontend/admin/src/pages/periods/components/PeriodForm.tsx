@@ -1,5 +1,6 @@
 import React from 'react';
-import { Form, Input, InputNumber, Select, Button, Table, Space, Card, Alert, Tag, Divider, Tooltip } from 'antd';
+import { Form, Input, Select, Button, Table, Alert, Tag, Divider } from 'antd';
+import dayjs from 'dayjs';
 import { UserAddOutlined, DeleteOutlined, InfoCircleOutlined, SearchOutlined, UserOutlined, PlusOutlined } from '@ant-design/icons';
 import type { BatchType } from '../../../type/PeriodType';
 import { useTranslation } from 'react-i18next';
@@ -7,19 +8,23 @@ import { getKey } from '@shared/types/I18nKeyType';
 import { STATUS_CODE, DATE_DISPLAY_FORMAT } from '../../../constants/commonConst';
 import { classHooks } from '../../../hooks/useClasses';
 import { userHooks } from '../../../hooks/useUsers';
+import CustomDatePicker from '../../../components/shared/input/CustomDatePicker';
+import type { IListClass } from '../../../type/ClassType';
+import type { IListUser } from 'src/type/UserType';
+
+type ExternalStudent = IListUser & { reason?: string };
 
 type Props = {
   tab: BatchType;
   disabled?: boolean;
-  allowStudentListUpload?: boolean;
 };
 
-const PeriodForm: React.FC<Props> = ({ tab, disabled, allowStudentListUpload }) => {
+const PeriodForm: React.FC<Props> = ({ tab, disabled }) => {
   const { t } = useTranslation();
   const form = Form.useFormInstance();
 
   const [searchKeyword, setSearchKeyword] = React.useState('');
-  const [selectedStudent, setSelectedStudent] = React.useState<any>(null);
+  const [selectedStudent, setSelectedStudent] = React.useState<IListUser | null>(null);
 
   // Fetch students for search dropdown
   const { data: studentsData, isLoading: isStudentsLoading } = userHooks.useFetchListUsers({
@@ -29,12 +34,7 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled, allowStudentListUpload }) 
     limit: 15,
   });
 
-  const studentsList = React.useMemo(() => {
-    if (!studentsData) return [];
-    if (Array.isArray(studentsData)) return studentsData;
-    if (Array.isArray((studentsData as any).rows)) return (studentsData as any).rows;
-    return [];
-  }, [studentsData]);
+  const studentsList = studentsData?.rows ?? [];
 
   React.useEffect(() => {
     if (form) {
@@ -43,40 +43,35 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled, allowStudentListUpload }) 
   }, [form, tab]);
 
   const { data: classesData, isLoading: isClassesLoading } = classHooks.useFetchListClasses();
-  const classesList = React.useMemo(() => {
-    if (!classesData) return [];
-    if (Array.isArray(classesData)) return classesData;
-    if (Array.isArray((classesData as any).rows)) return (classesData as any).rows;
-    return [];
-  }, [classesData]);
+  const classesList: IListClass[] = classesData?.rows ?? [];
 
   const classOptions = React.useMemo(() => {
-    return classesList.map((c: any) => ({
+    return classesList.map((c) => ({
       value: c.id,
       label: `${c.code} - ${c.name}`,
     }));
   }, [classesList]);
 
   // Watch fields reactively from Ant Design Form
-  const externalStudents = Form.useWatch('externalStudents', form) || [];
-  const externalStudentIds = Form.useWatch('externalStudentIds', form) || [];
-  const selectedClassIds = Form.useWatch('classIds', form) || [];
+  const externalStudents: ExternalStudent[] = Form.useWatch('externalStudents', form) || [];
+  const externalStudentIds: string[] = Form.useWatch('externalStudentIds', form) || [];
+  const selectedClassIds: string[] = Form.useWatch('classIds', form) || [];
 
   // Filter selected classes to check if student is already in them
   const selectedClasses = React.useMemo(() => {
-    return classesList.filter((c: any) => selectedClassIds.includes(c.id));
+    return classesList.filter((c) => selectedClassIds.includes(c.id));
   }, [classesList, selectedClassIds]);
 
-  const isStudentInSelectedClasses = (student: any) => {
+  const isStudentInSelectedClasses = (student: IListUser | null) => {
     if (!student) return false;
-    return selectedClasses.some((c: any) => c.name === student.className);
+    return selectedClasses.some((c) => c.name === student.className);
   };
 
   const handleAddStudent = () => {
     if (!selectedStudent) return;
-    
+
     // Check if already in the external list
-    const isAlreadyExternal = externalStudents.some((s: any) => s.id === selectedStudent.id);
+    const isAlreadyExternal = externalStudents.some((s) => s.id === selectedStudent.id);
     if (isAlreadyExternal) return;
 
     const updatedStudents = [...externalStudents, { ...selectedStudent, reason: 'Rớt đợt trước' }];
@@ -86,14 +81,14 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled, allowStudentListUpload }) 
       externalStudents: updatedStudents,
       externalStudentIds: updatedIds,
     });
-    
+
     setSelectedStudent(null);
     setSearchKeyword('');
   };
 
   const handleRemoveStudent = (studentId: string) => {
-    const updatedStudents = externalStudents.filter((s: any) => s.id !== studentId);
-    const updatedIds = externalStudentIds.filter((id: string) => id !== studentId);
+    const updatedStudents = externalStudents.filter((s) => s.id !== studentId);
+    const updatedIds = externalStudentIds.filter((id) => id !== studentId);
 
     form.setFieldsValue({
       externalStudents: updatedStudents,
@@ -132,7 +127,7 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled, allowStudentListUpload }) 
       key: 'action',
       width: '80px',
       align: 'center' as const,
-      render: (_: any, record: any) => (
+      render: (_: unknown, record: ExternalStudent) => (
         <Button 
           type="text" 
           danger 
@@ -145,7 +140,7 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled, allowStudentListUpload }) 
   ];
 
   const studentOptions = React.useMemo(() => {
-    return studentsList.map((sv: any) => ({
+    return studentsList.map((sv) => ({
       value: sv.id,
       label: `${sv.id} - ${sv.name} (${sv.className || 'Không lớp'})`,
       raw: sv
@@ -214,8 +209,9 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled, allowStudentListUpload }) 
                 suffixIcon={<SearchOutlined />}
                 filterOption={false}
                 onSearch={(val) => setSearchKeyword(val)}
-                onChange={(val, option: any) => {
-                  setSelectedStudent(option ? option.raw : null);
+                onChange={(_val, option) => {
+                  const picked = Array.isArray(option) ? option[0] : option;
+                  setSelectedStudent(picked ? (picked as unknown as { raw: IListUser }).raw : null);
                 }}
                 notFoundContent={isStudentsLoading ? 'Đang tìm...' : 'Không tìm thấy sinh viên'}
                 className="w-full"
@@ -263,7 +259,7 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled, allowStudentListUpload }) 
       </Form.Item>
 
       <div className="grid grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-2">
-        <Form.Item name="semester" label="Học kỳ">
+        <Form.Item name="semester" label="Học kỳ" rules={[{ required: true, message: 'Vui lòng chọn học kỳ' }]}>
           <Select
             disabled={disabled}
             placeholder="Chọn học kỳ"
@@ -274,23 +270,46 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled, allowStudentListUpload }) 
             ]}
           />
         </Form.Item>
-        <Form.Item name="schoolYear" label="Năm học">
+        <Form.Item
+          name="schoolYear"
+          label="Năm học"
+          rules={[
+            { required: true, message: 'Vui lòng nhập năm học' },
+            { pattern: /^\d{4}-\d{4}$/, message: 'Định dạng năm học phải là YYYY-YYYY, VD: 2026-2027' },
+          ]}
+        >
           <Input disabled={disabled} placeholder="VD: 2026-2027" />
         </Form.Item>
       </div>
 
       <div className="grid grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-2">
         <Form.Item name="startDate" label={t(getKey('start_date'))} rules={[{ required: true, message: t(getKey('start_date_required')) }]}>
-          <Input disabled={disabled} placeholder={DATE_DISPLAY_FORMAT} />
+          <CustomDatePicker disabled={disabled} />
         </Form.Item>
-        <Form.Item name="endDate" label={t(getKey('end_date'))} rules={[{ required: true, message: t(getKey('end_date_required')) }]}>
-          <Input disabled={disabled} placeholder={DATE_DISPLAY_FORMAT} />
+        <Form.Item
+          name="endDate"
+          label={t(getKey('end_date'))}
+          dependencies={['startDate']}
+          rules={[
+            { required: true, message: t(getKey('end_date_required')) },
+            ({ getFieldValue }) => ({
+              validator(_, value) {
+                const start = getFieldValue('startDate');
+                if (!value || !start || dayjs(value, DATE_DISPLAY_FORMAT, true).isAfter(dayjs(start, DATE_DISPLAY_FORMAT, true))) {
+                  return Promise.resolve();
+                }
+                return Promise.reject(new Error('Ngày kết thúc phải sau ngày bắt đầu'));
+              },
+            }),
+          ]}
+        >
+          <CustomDatePicker disabled={disabled} />
         </Form.Item>
-        <Form.Item name="regOpenDate" label="Mở đăng ký">
-          <Input disabled={disabled} placeholder={DATE_DISPLAY_FORMAT} />
+        <Form.Item name="regOpenDate" label="Mở đăng ký" rules={[{ required: true, message: 'Vui lòng chọn ngày mở đăng ký' }]}>
+          <CustomDatePicker disabled={disabled} />
         </Form.Item>
         <Form.Item name="regDeadline" label={t(getKey('reg_deadline_label'))} rules={[{ required: true, message: t(getKey('reg_deadline_required')) }]}>
-          <Input disabled={disabled} placeholder={DATE_DISPLAY_FORMAT} />
+          <CustomDatePicker disabled={disabled} />
         </Form.Item>
         <Form.Item name="status" label={t(getKey('status'))} rules={[{ required: true, message: t(getKey('please_select_status')) }]}>
           <Select disabled={disabled} options={[
@@ -306,13 +325,28 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled, allowStudentListUpload }) 
 
       <div className="grid grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-2">
         <Form.Item name="reportDeadline" label="Hạn nộp báo cáo tiến độ">
-          <Input disabled={disabled} placeholder={DATE_DISPLAY_FORMAT} />
+          <CustomDatePicker disabled={disabled} />
         </Form.Item>
         <Form.Item name="gradingStartDate" label="Bắt đầu chấm điểm">
-          <Input disabled={disabled} placeholder={DATE_DISPLAY_FORMAT} />
+          <CustomDatePicker disabled={disabled} />
         </Form.Item>
-        <Form.Item name="gradingEndDate" label="Kết thúc chấm điểm">
-          <Input disabled={disabled} placeholder={DATE_DISPLAY_FORMAT} />
+        <Form.Item
+          name="gradingEndDate"
+          label="Kết thúc chấm điểm"
+          dependencies={['gradingStartDate']}
+          rules={[
+            ({ getFieldValue }) => ({
+              validator(_, value) {
+                const start = getFieldValue('gradingStartDate');
+                if (!value || !start || dayjs(value, DATE_DISPLAY_FORMAT, true).isAfter(dayjs(start, DATE_DISPLAY_FORMAT, true))) {
+                  return Promise.resolve();
+                }
+                return Promise.reject(new Error('Ngày kết thúc chấm điểm phải sau ngày bắt đầu chấm điểm'));
+              },
+            }),
+          ]}
+        >
+          <CustomDatePicker disabled={disabled} />
         </Form.Item>
       </div>
     </>

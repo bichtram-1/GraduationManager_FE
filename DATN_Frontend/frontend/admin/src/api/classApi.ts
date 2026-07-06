@@ -1,10 +1,10 @@
-import type { BaseListParams } from '@shared/types/GeneralType';
+import type { BaseListParams, ListResponseType } from '@shared/types/GeneralType';
 import type { ICreateClass, IDetailClass, IListClass, IUpdateClass } from '../type/ClassType';
 import axiosInstance from './axiosInstance';
 
 export const classApi = {
   getListClass: async (params?: { periodId?: string }) => {
-    const response = await axiosInstance.get('/private/v1/classes', { params });
+    const response = await axiosInstance.get<ListResponseType<IListClass>>('/private/v1/classes', { params });
     return response?.data?.results?.objects;
   },
 

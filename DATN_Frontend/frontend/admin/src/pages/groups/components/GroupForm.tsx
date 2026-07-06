@@ -1,7 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { Form, Input, InputNumber, Select, Button, Modal, Table, Tag, Tooltip } from 'antd';
+import { Form, Input, InputNumber, Button, Modal, Table, Tag, Tooltip } from 'antd';
+import type { FormListFieldData } from 'antd';
 import { ExclamationCircleOutlined } from '@ant-design/icons';
 import type { IDetailGroup, IGroupMember } from '../../../type/GroupType';
+import type { AssignmentRow } from '../../../type/AssignmentType';
 import { useTranslation } from 'react-i18next';
 import { getKey } from '@shared/types/I18nKeyType';
 import { STATUS_CODE } from '../../../constants/commonConst';
@@ -13,10 +15,10 @@ import { groupHooks } from '../../../hooks/useGroups';
 interface Props {
   detail?: IDetailGroup;
   sampleStudents?: IGroupMember[];
-  readOnly?: boolean;
+  disabled?: boolean;
 }
 
-const GroupForm: React.FC<Props> = ({ detail, readOnly }) => {
+const GroupForm: React.FC<Props> = ({ detail, disabled }) => {
   const { t } = useTranslation();
   const { selectedPeriod } = useGlobalVariable();
   const [adding, setAdding] = useState(false);
@@ -38,7 +40,7 @@ const GroupForm: React.FC<Props> = ({ detail, readOnly }) => {
   });
 
   const dbStudents = useMemo(() => {
-    const rows = (assignmentList?.rows ?? []) as any[];
+    const rows = (assignmentList?.rows ?? []) as AssignmentRow[];
     return rows.map((r) => {
       // Mock eligibility for specific student codes for demo
       const ineligibleCodes = ['0306231007', '0306231033', 'SV003', 'SV004'];
@@ -81,7 +83,7 @@ const GroupForm: React.FC<Props> = ({ detail, readOnly }) => {
     });
   };
 
-  if (readOnly) {
+  if (disabled) {
     const statusMeta = statusOptions.find((o) => o.value === detail?.status);
     return (
       <div className="space-y-8">
@@ -171,11 +173,11 @@ const GroupForm: React.FC<Props> = ({ detail, readOnly }) => {
         <Input />
       </Form.Item>
 
-      <Form.Item name="maxMembers" label="Số lượng thành viên" rules={[{ required: true }]}>
-        <InputNumber min={1} className="w-full" />
+      <Form.Item name="maxMembers" label="Số lượng thành viên" rules={[{ required: true, message: 'Vui lòng nhập số lượng thành viên' }]}>
+        <InputNumber min={1} max={10} className="w-full" />
       </Form.Item>
 
-      <Form.Item name="registrationBatch" label={t(getKey('registration_period'))}>
+      <Form.Item name="registrationBatch" label={t(getKey('registration_period'))} rules={[{ required: true, message: 'Vui lòng nhập đợt đăng ký' }]}>
         <Input />
       </Form.Item>
 
@@ -189,13 +191,13 @@ const GroupForm: React.FC<Props> = ({ detail, readOnly }) => {
 
       <div className="mt-5">
         <Form.List name="members">
-          {(fields, { add, remove }) => {
+          {(fields, { remove }) => {
             const columns = [
               {
                 title: 'MSSV',
                 key: 'code',
                 width: 150,
-                render: (_: any, field: any) => {
+                render: (_: unknown, field: FormListFieldData) => {
                   const code = formInstance.getFieldValue(['members', field.name, 'code']);
                   return (
                     <div>
@@ -213,7 +215,7 @@ const GroupForm: React.FC<Props> = ({ detail, readOnly }) => {
               {
                 title: 'Họ tên',
                 key: 'name',
-                render: (_: any, field: any) => {
+                render: (_: unknown, field: FormListFieldData) => {
                   const name = formInstance.getFieldValue(['members', field.name, 'name']);
                   return (
                     <div>
@@ -229,7 +231,7 @@ const GroupForm: React.FC<Props> = ({ detail, readOnly }) => {
                 title: 'Lớp',
                 key: 'class',
                 width: 150,
-                render: (_: any, field: any) => {
+                render: (_: unknown, field: FormListFieldData) => {
                   const cls = formInstance.getFieldValue(['members', field.name, 'class']);
                   return (
                     <div>
@@ -245,7 +247,7 @@ const GroupForm: React.FC<Props> = ({ detail, readOnly }) => {
                 title: 'Hành động',
                 key: 'action',
                 width: 100,
-                render: (_: any, field: any) => (
+                render: (_: unknown, field: FormListFieldData) => (
                   <Button
                     type="link"
                     danger
@@ -281,7 +283,7 @@ const GroupForm: React.FC<Props> = ({ detail, readOnly }) => {
         </Form.List>
       </div>
 
-      {!readOnly && (
+      {!disabled && (
         <AddMemberModal
           open={adding}
           onCancel={() => setAdding(false)}

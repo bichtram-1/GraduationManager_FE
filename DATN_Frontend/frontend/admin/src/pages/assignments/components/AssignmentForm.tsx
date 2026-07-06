@@ -2,19 +2,22 @@ import React from 'react';
 import { Form, Input, Select } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { getKey } from '@shared/types/I18nKeyType';
-import { STATUS_CODE, DATE_DISPLAY_FORMAT } from '../../../constants/commonConst';
+import { STATUS_CODE } from '../../../constants/commonConst';
+import CustomDatePicker from '../../../components/shared/input/CustomDatePicker';
 
 type Props = {
-  disabled?: boolean;
+  mode?: 'create' | 'edit' | 'detail';
 };
 
-const AssignmentForm: React.FC<Props> = ({ disabled }) => {
+const AssignmentForm: React.FC<Props> = ({ mode = 'edit' }) => {
   const { t } = useTranslation();
+  const disabled = mode === 'detail';
+  const studentIdDisabled = mode !== 'create';
   return (
     <>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <Form.Item label={t(getKey('student_id'))} name="studentId" rules={[{ required: true, message: t(getKey('please_enter_student_id')) }]}>
-          <Input disabled={disabled} />
+          <Input disabled={studentIdDisabled} />
         </Form.Item>
         <Form.Item label={t(getKey('student_name'))} name="name" rules={[{ required: true, message: t(getKey('please_enter_fullname')) }]}>
           <Input disabled={disabled} />
@@ -39,7 +42,7 @@ const AssignmentForm: React.FC<Props> = ({ disabled }) => {
           <Input disabled={disabled} />
         </Form.Item>
         <Form.Item label={t(getKey('assigned_date_label'))} name="assignedAt">
-          <Input disabled={disabled} placeholder={DATE_DISPLAY_FORMAT} />
+          <CustomDatePicker disabled={disabled} />
         </Form.Item>
       </div>
     </>

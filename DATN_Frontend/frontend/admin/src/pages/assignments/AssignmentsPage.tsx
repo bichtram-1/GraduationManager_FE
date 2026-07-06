@@ -1,5 +1,5 @@
-import { TeamOutlined, SearchOutlined, DownloadOutlined, SendOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
-import { Button, Card, Checkbox, Form, Input, Modal, Pagination, Radio, Select, Space, Tag, Tabs, Typography, message } from 'antd';
+import { TeamOutlined, SearchOutlined, DownloadOutlined, SendOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Button, Card, Checkbox, Form, Input, Modal, Pagination, Radio, Select, Tag, Tabs, Typography, message } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import * as XLSX from 'xlsx';
 import AssignmentModal from './components/AssignmentModal';
@@ -10,7 +10,14 @@ import { useGlobalVariable } from '../../hooks/GlobalVariableProvider';
 import { useTranslation } from 'react-i18next';
 import { cn, STATUS_CODE } from '../../constants/commonConst';
 import { getKey } from '@shared/types/I18nKeyType';
-import type { AssignmentRow as AssignmentRowType } from '../../type/AssignmentType';
+import type {
+  AssignmentRow as AssignmentRowType,
+  IDetailAssignment,
+  ICreateAssignment,
+  IUpdateAssignment,
+} from '../../type/AssignmentType';
+import type { IAssignmentListParams } from '../../api/assignmentApi';
+import type { BaseListParams } from '@shared/types/GeneralType';
 import { formatNumber } from '@shared/utils/numberUtils';
 
 type AssignmentModalMode = 'create' | 'edit' | 'detail';
@@ -22,13 +29,10 @@ const AssignmentsPage = () => {
   const [modeTab, setModeTab] = useState<'manual' | 'list'>('manual');
   const [teacherQuery, setTeacherQuery] = useState('');
   const [teacherStatusFilter, setTeacherStatusFilter] = useState<'all' | 'available' | 'full'>('all');
-  const [listQuery, setListQuery] = useState('');
-  const [listClassFilter, setListClassFilter] = useState('all');
-  const [listTeacherFilter, setListTeacherFilter] = useState('all');
   const [selectedStudents, setSelectedStudents] = useState<Record<string, boolean>>({});
   const [selectedTeacher, setSelectedTeacher] = useState<string | null>(null);
   const [assignmentModalOpen, setAssignmentModalOpen] = useState(false);
-  const [assignmentModalMode, setAssignmentModalMode] = useState<AssignmentModalMode>('create');
+  const [assignmentModalMode] = useState<AssignmentModalMode>('create');
   const [selectedAssignment, setSelectedAssignment] = useState<AssignmentRow | null>(null);
   const [manualClassFilter, setManualClassFilter] = useState('all');
   const [studentPage, setStudentPage] = useState(1);
@@ -83,7 +87,7 @@ const AssignmentsPage = () => {
   );
 
   const filteredTeachers = useMemo(
-    () => teachers.filter((teacher: any) => {
+    () => teachers.filter((teacher) => {
       const normalizedKeyword = teacherQuery.trim().toLowerCase();
       const byKeyword =
         !normalizedKeyword ||
@@ -110,20 +114,6 @@ const AssignmentsPage = () => {
     setTeacherPage(1);
   }, [teacherQuery, teacherStatusFilter]);
 
-  const openEditAssignment = (record: AssignmentRow) => {
-    setAssignmentModalMode('edit');
-    setSelectedAssignment(record);
-    form.setFieldsValue(record);
-    setAssignmentModalOpen(true);
-  };
-
-  const openDetailAssignment = (record: AssignmentRow) => {
-    setAssignmentModalMode('detail');
-    setSelectedAssignment(record);
-    form.setFieldsValue(record);
-    setAssignmentModalOpen(true);
-  };
-
   const submitAssignment = async () => {
     try {
       const values = await form.validateFields();
@@ -132,13 +122,13 @@ const AssignmentsPage = () => {
           id: selectedAssignment.studentId,
           body: values,
           index: 0,
-          params: { page: 1, limit: 1000, periodId: selectedPeriod?.id || '' } as any,
+          params: { page: 1, limit: 1000, periodId: selectedPeriod?.id || '' } as IAssignmentListParams,
         });
         message.success(t(getKey('update_assignment_success')));
       } else {
         await createAssignmentMutation.mutateAsync({
           body: values,
-          params: { page: 1, limit: 1000, periodId: selectedPeriod?.id || '' } as any,
+          params: { page: 1, limit: 1000, periodId: selectedPeriod?.id || '' } as IAssignmentListParams,
         });
         message.success(t(getKey('create_assignment_success')));
       }
@@ -168,10 +158,10 @@ const AssignmentsPage = () => {
     const studentIds = Object.keys(selectedStudents).filter((k) => selectedStudents[k]);
     if (studentIds.length === 0) return message.warning(t(getKey('please_select_student')));
     if (!selectedTeacher) return message.warning(t(getKey('please_select_teacher')));
-    const teacher = teachers.find((teacherItem: any) => teacherItem.id === selectedTeacher)!;
+    const teacher = teachers.find((teacherItem) => teacherItem.id === selectedTeacher)!;
     Modal.confirm({
       title: t(getKey('confirm_assignment_title')),
-      content: (t(getKey('confirm_assignment_content'), { count: studentIds.length, teacher: teacher.name } as any) as string),
+      content: (t(getKey('confirm_assignment_content'), { count: studentIds.length, teacher: teacher.name }) as string),
       okText: t(getKey('confirm_btn')),
       cancelText: t(getKey('cancel_btn')),
       onOk: async () => {
@@ -185,7 +175,7 @@ const AssignmentsPage = () => {
               id: studentId,
               body: { supervisor: teacher.name, status: STATUS_CODE.ASSIGNED },
               index: 0,
-              params: { page: 1, limit: 1000, periodId: selectedPeriod?.id || '' } as any,
+              params: { page: 1, limit: 1000, periodId: selectedPeriod?.id || '' } as IAssignmentListParams,
             });
             successCount += 1;
           } catch (err) {
@@ -195,7 +185,7 @@ const AssignmentsPage = () => {
           }
         }
         if (successCount > 0) {
-          message.success(t(getKey('assign_teacher_success_msg'), { teacher: teacher.name, count: successCount } as any) as string);
+          message.success(t(getKey('assign_teacher_success_msg'), { teacher: teacher.name, count: successCount }) as string);
         }
         if (lastError) {
           message.error(lastError);
@@ -218,7 +208,7 @@ const AssignmentsPage = () => {
         deleteAssignmentMutation.mutate(
           {
             id: studentId,
-            params: { page: 1, limit: 1000, periodId: selectedPeriod?.id || '' } as any,
+            params: { page: 1, limit: 1000, periodId: selectedPeriod?.id || '' } as IAssignmentListParams,
           },
           {
             onSuccess: () => message.success(t(getKey('unassign_success_msg'))),
@@ -307,7 +297,7 @@ const AssignmentsPage = () => {
                   <div className="text-xs text-slate-500">{t(getKey('step1_sub_desc'))}</div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Tag className="rounded-full m-0">{(t(getKey('selected_count_label'), { count: Object.values(selectedStudents).filter(Boolean).length } as any) as string)}</Tag>
+                  <Tag className="rounded-full m-0">{(t(getKey('selected_count_label'), { count: Object.values(selectedStudents).filter(Boolean).length }) as string)}</Tag>
                   <Select
                     value={manualClassFilter}
                     onChange={(value) => setManualClassFilter(value)}
@@ -366,7 +356,7 @@ const AssignmentsPage = () => {
                 </div>
               )}
 
-              <div className="border-t border-slate-100 bg-slate-50 px-5 py-3 text-xs text-slate-600">{(t(getKey('showing_students_count'), { count: filtered.length } as any) as string)}</div>
+              <div className="border-t border-slate-100 bg-slate-50 px-5 py-3 text-xs text-slate-600">{(t(getKey('showing_students_count'), { count: filtered.length }) as string)}</div>
             </Card>
           </div>
 
@@ -401,7 +391,7 @@ const AssignmentsPage = () => {
 
               <Radio.Group value={selectedTeacher} onChange={(e) => setSelectedTeacher(e.target.value)} className="w-full">
                 <div className="space-y-3">
-                  {paginatedTeachers.map((teacher: any) => (
+                  {paginatedTeachers.map((teacher) => (
                     <div key={teacher.id} className={cn(
                       "flex items-center justify-between gap-3 border border-slate-100 p-3 rounded-md",
                       teacher.status !== STATUS_CODE.AVAILABLE && "opacity-60"
@@ -455,7 +445,7 @@ const AssignmentsPage = () => {
         </div>
       ) : (
         <div className="px-4 py-4">
-          <FilterTable
+          <FilterTable<AssignmentRow, IDetailAssignment, ICreateAssignment, IUpdateAssignment>
             title={`${t(getKey('assigned_list'))} (${formatNumber(assignedCount)})`}
             columns={[
               { title: t(getKey('student_id')), dataIndex: 'studentId', key: 'studentId', render: (v: string) => <span className="text-[var(--color-primary)] font-medium">{v}</span> },
@@ -466,7 +456,7 @@ const AssignmentsPage = () => {
               {
                 title: 'Trạng thái',
                 key: 'published',
-                render: (_: unknown, record: any) => (
+                render: (_: unknown, record: AssignmentRow) => (
                   <Tag className={cn(
                     'rounded-full px-[10px] py-0 border-none m-0',
                     record.published
@@ -478,26 +468,26 @@ const AssignmentsPage = () => {
                 ),
               },
             ]}
-            useQueryHook={(params: any) => {
-              const typed = params as import('../../api/assignmentApi').IAssignmentListParams;
+            useQueryHook={(params: BaseListParams) => {
+              const typed = params as IAssignmentListParams;
               const query = assignmentHooks.useFetchListAssignments(typed);
               const keyword = (typed.keyword ?? '').trim().toLowerCase();
               const classFilter = typed.className || 'all';
               const teacherFilter = typed.supervisor || 'all';
               const source = query.data?.rows ?? [];
               const filteredRows = source
-                .filter((r: any) => r.status === STATUS_CODE.ASSIGNED)
-                .filter((r: any) => {
+                .filter((r) => r.status === STATUS_CODE.ASSIGNED)
+                .filter((r) => {
                   const byKeyword = !keyword || [r.studentId, r.name, r.className, r.topic, r.supervisor || ''].join(' ').toLowerCase().includes(keyword);
                   const byClass = classFilter === 'all' || r.className === classFilter;
                   const byTeacher = teacherFilter === 'all' || (r.supervisor || '') === teacherFilter;
                   return byKeyword && byClass && byTeacher;
                 });
               const data = { rows: filteredRows, total: filteredRows.length };
-              return {
-                ...(query as unknown as import('@tanstack/react-query').UseQueryResult<any, Error>),
-                data,
-              } as import('@tanstack/react-query').UseQueryResult<import('../../type/AssignmentType').IListAssignment extends infer T ? import('@shared/types/GeneralType').ListResponseTypeObject<T> : never, Error>;
+              return { ...query, data } as import('@tanstack/react-query').UseQueryResult<
+                import('@shared/types/GeneralType').ListResponseTypeObject<AssignmentRow>,
+                Error
+              >;
             }}
             paramVariables={filterTableParams}
             filterRender={() => (
@@ -506,7 +496,7 @@ const AssignmentsPage = () => {
                   <Select allowClear className="min-w-[180px]" options={[{ value: 'all', label: t(getKey('all_classes')) }, ...classOptions.map((c) => ({ value: c, label: c }))]} />
                 </Form.Item>
                 <Form.Item name="supervisor" className="m-0">
-                  <Select allowClear className="min-w-[180px]" options={[{ value: 'all', label: t(getKey('all_teachers')) }, ...teachers.map((teacherObj: any) => ({ value: teacherObj.name, label: teacherObj.name }))]} />
+                  <Select allowClear className="min-w-[180px]" options={[{ value: 'all', label: t(getKey('all_teachers')) }, ...teachers.map((teacherObj) => ({ value: teacherObj.name, label: teacherObj.name }))]} />
                 </Form.Item>
                 <Form.Item name="keyword" className="m-0">
                   <Input allowClear placeholder={t(getKey('search_student_placeholder'))} className="min-w-[200px]" />
@@ -527,7 +517,7 @@ const AssignmentsPage = () => {
             actions={{
               isEdit: true,
               isDetail: true,
-              customAction: (record: unknown) => {
+              customAction: (record) => {
                 const r = record as AssignmentRow;
                 return (
                   <div className="pointer-events-auto">
@@ -545,9 +535,9 @@ const AssignmentsPage = () => {
                 );
               },
             }}
-            updateInfo={{ type: 'modal', modalInfo: { modalContent: <AssignmentForm />, modalProps: { centered: true, width: 760, title: t(getKey('edit_assignment_title')) }, modalFunc: updateAssignmentMutation } }}
-            detailInfo={{ type: 'modal', modalInfo: { modalContent: <AssignmentForm disabled />, modalProps: { centered: true, width: 760, title: t(getKey('detail_assignment_title')), footer: null }, modalFunc: assignmentHooks.useFetchDetailAssignment } }}
-            formatInitialValues={(d: any) => d || {}}
+            updateInfo={{ type: 'modal', modalInfo: { modalContent: <AssignmentForm mode="edit" />, modalProps: { centered: true, width: 760, title: t(getKey('edit_assignment_title')) }, modalFunc: updateAssignmentMutation } }}
+            detailInfo={{ type: 'modal', modalInfo: { modalContent: <AssignmentForm mode="detail" />, modalProps: { centered: true, width: 760, title: t(getKey('detail_assignment_title')), footer: null }, modalFunc: assignmentHooks.useFetchDetailAssignment as unknown as (id: string, enable: boolean) => import('@tanstack/react-query').UseQueryResult<IDetailAssignment, Error> } }}
+            formatInitialValues={(d) => ({ ...d })}
             formatFormValues={(v: Record<string, unknown>) => v}
           />
         </div>

@@ -17,6 +17,8 @@ import { topicHooks } from '../../hooks/useTopics';
 import { groupHooks } from '../../hooks/useGroups';
 import { Link } from 'react-router-dom';
 import { ROUTES } from '../../constants/routers';
+import type { IListTopic } from '../../type/TopicType';
+import type { IListGroup, IGroupMember, IUpdateGroup, ICreateGroup } from '../../type/GroupType';
 
 const ThesisStudentsPage = () => {
   const { t } = useTranslation();
@@ -39,8 +41,8 @@ const ThesisStudentsPage = () => {
     periodId: isDatnPeriod ? selectedPeriod?.id : 'none'
   });
   const topics = useMemo(() => {
-    const rawList = (topicList?.rows ?? []) as any[];
-    return rawList.filter((t: any) => {
+    const rawList: IListTopic[] = topicList?.rows ?? [];
+    return rawList.filter((t) => {
       if (!t.slots) return true;
       const parts = t.slots.split('/');
       if (parts.length === 2) {
@@ -54,7 +56,7 @@ const ThesisStudentsPage = () => {
   const updateGroup = groupHooks.useUpdateGroup();
   const createGroup = groupHooks.useCreateGroup();
   const { data: groupList } = groupHooks.useFetchListGroups();
-  const groups = useMemo(() => (groupList?.rows ?? []) as any[], [groupList]);
+  const groups = useMemo(() => (groupList?.rows ?? []) as IListGroup[], [groupList]);
 
   const [allocationStudent, setAllocationStudent] = useState<AssignmentRow | null>(null);
   const [allocationType, setAllocationType] = useState<'existing' | 'new'>('existing');
@@ -64,9 +66,9 @@ const ThesisStudentsPage = () => {
   const [submittingAllocation, setSubmittingAllocation] = useState<boolean>(false);
 
   const warningGroups = useMemo(() => {
-    return groups.filter((g: any) => {
+    return groups.filter((g) => {
       const isSamePeriod = g.registrationBatch === selectedPeriod?.name;
-      const isWarning = g.status === 'WARNING' || g.status === STATUS_CODE.WARNING;
+      const isWarning = g.status === STATUS_CODE.WARNING;
       return isSamePeriod && isWarning;
     });
   }, [groups, selectedPeriod]);
@@ -85,20 +87,22 @@ const ThesisStudentsPage = () => {
         return;
       }
       
-      const targetGroup = groups.find((g: any) => g.id === selectedGroupId);
+      const targetGroup = groups.find((g) => g.id === selectedGroupId);
       if (!targetGroup) return;
-      
-      const eligibleMembers = targetGroup.members.filter((m: any) => m.eligible !== false);
+
+      const eligibleMembers = targetGroup.members.filter((m) => m.eligible !== false);
       const newMembers = [
-        ...eligibleMembers.slice(0, 1).map((m: any) => m.id),
+        ...eligibleMembers.slice(0, 1).map((m) => m.id),
         allocationStudent.studentId
       ];
-      
+
       setSubmittingAllocation(true);
       try {
-        await (updateGroup.mutateAsync as any)({
+        await updateGroup.mutateAsync({
           id: selectedGroupId,
-          body: { members: newMembers }
+          body: { members: newMembers } as unknown as IUpdateGroup,
+          index: 0,
+          params: { page: 1, limit: 10 },
         });
         message.success('Ghép vào nhóm thành công!');
         queryClient.invalidateQueries({ queryKey: [QueryKey.assignments.list] });
@@ -107,31 +111,32 @@ const ThesisStudentsPage = () => {
         setSelectedGroupId('');
         setSelectedPartnerStudentId('');
         setSelectedAllocationTopicId('');
-      } catch (e) {
+      } catch {
         message.error('Có lỗi xảy ra khi ghép nhóm!');
       } finally {
         setSubmittingAllocation(false);
       }
-      
+
     } else {
       if (!selectedPartnerStudentId) {
         message.error('Vui lòng chọn 1 sinh viên khác để ghép nhóm!');
         return;
       }
-      
+
       const newMembers = [
         allocationStudent.studentId,
         selectedPartnerStudentId
       ];
-      
+
       setSubmittingAllocation(true);
       try {
-        await (createGroup.mutateAsync as any)({
-          body: { 
+        await createGroup.mutateAsync({
+          body: {
             members: newMembers,
             dot_id: selectedPeriod?.id,
             de_tai_id: selectedAllocationTopicId || null
-          }
+          } as unknown as ICreateGroup,
+          params: { page: 1, limit: 10 },
         });
         message.success('Tạo nhóm mới thành công!');
         queryClient.invalidateQueries({ queryKey: [QueryKey.assignments.list] });
@@ -140,7 +145,7 @@ const ThesisStudentsPage = () => {
         setSelectedGroupId('');
         setSelectedPartnerStudentId('');
         setSelectedAllocationTopicId('');
-      } catch (e) {
+      } catch {
         message.error('Có lỗi xảy ra khi tạo nhóm!');
       } finally {
         setSubmittingAllocation(false);
@@ -164,9 +169,9 @@ const ThesisStudentsPage = () => {
             onChange={(v) => {
               selectedTopicId = v;
             }}
-            options={topics.map((t: any) => ({
+            options={topics.map((t) => ({
               value: t.id,
-              label: `${t.name} (${t.supervisor})`
+              label: `${t.name} (${t.teacher})`
             }))}
           />
         </div>
@@ -179,10 +184,15 @@ const ThesisStudentsPage = () => {
           return Promise.reject();
         }
         try {
-          await (updateGroup.mutateAsync as any)({ id: groupId, body: { de_tai_id: selectedTopicId } });
+          await updateGroup.mutateAsync({
+            id: groupId,
+            body: { de_tai_id: selectedTopicId } as unknown as IUpdateGroup,
+            index: 0,
+            params: { page: 1, limit: 10 },
+          });
           message.success('Gán đề tài thành công!');
           queryClient.invalidateQueries({ queryKey: [QueryKey.assignments.list] });
-        } catch (e) {
+        } catch {
           message.error('Có lỗi xảy ra khi gán đề tài!');
         }
       }
@@ -500,7 +510,7 @@ const ThesisStudentsPage = () => {
         okText="Xác nhận"
         cancelText="Hủy"
         width={560}
-        destroyOnClose
+        destroyOnHidden
       >
         <div className="flex flex-col gap-4 py-3">
           <div>
@@ -511,7 +521,7 @@ const ThesisStudentsPage = () => {
               className="flex flex-col gap-2"
             >
               <Radio value="existing">
-                <span className="font-semibold text-slate-700">Ghép vào nhóm có thành viên "Chưa đạt"</span>
+                <span className="font-semibold text-slate-700">Ghép vào nhóm có thành viên &quot;Chưa đạt&quot;</span>
                 <p className="m-0 text-slate-400 text-xs ml-6">
                   Thay thế hoặc bổ sung sinh viên này vào một nhóm hiện có thành viên không đủ điều kiện làm đồ án.
                 </p>
@@ -534,10 +544,10 @@ const ThesisStudentsPage = () => {
                 className="w-full"
                 value={selectedGroupId}
                 onChange={(v) => setSelectedGroupId(v)}
-                options={warningGroups.map((g: any) => {
+                options={warningGroups.map((g) => {
                   const ineligibleMemberNames = g.members
-                    .filter((m: any) => m.eligible === false)
-                    .map((m: any) => `${m.name} (${m.code})`)
+                    .filter((m: IGroupMember) => m.eligible === false)
+                    .map((m: IGroupMember) => `${m.name} (${m.code})`)
                     .join(', ');
                   return {
                     value: g.id,
@@ -573,9 +583,9 @@ const ThesisStudentsPage = () => {
                   className="w-full"
                   value={selectedAllocationTopicId}
                   onChange={(v) => setSelectedAllocationTopicId(v)}
-                  options={topics.map((t: any) => ({
+                  options={topics.map((t) => ({
                     value: t.id,
-                    label: `${t.name} (${t.supervisor})`
+                    label: `${t.name} (${t.teacher})`
                   }))}
                   optionFilterProp="label"
                 />

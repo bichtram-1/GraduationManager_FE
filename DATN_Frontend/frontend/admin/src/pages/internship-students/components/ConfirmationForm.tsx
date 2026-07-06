@@ -2,7 +2,8 @@ import { Form, Input, Select } from 'antd';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { getKey } from '@shared/types/I18nKeyType';
-import { STATUS_CODE, DATE_DISPLAY_FORMAT } from '../../../constants/commonConst';
+import { STATUS_CODE } from '../../../constants/commonConst';
+import CustomDatePicker from '../../../components/shared/input/CustomDatePicker';
 
 type Props = { disabled?: boolean };
 
@@ -21,7 +22,7 @@ const ConfirmationForm: React.FC<Props> = ({ disabled = false }) => {
         <Input disabled={disabled} />
       </Form.Item>
       <Form.Item label={t(getKey('registration_date'))} name="regDate" rules={[{ required: true, message: t(getKey('please_enter_registration_date')) }]}>
-        <Input disabled={disabled} placeholder={DATE_DISPLAY_FORMAT} />
+        <CustomDatePicker disabled={disabled} />
       </Form.Item>
 
       <Form.Item label={t(getKey('company_label'))} name="companyName" rules={[{ required: true, message: t(getKey('please_enter_company_name')) }]} className="md:col-span-2">

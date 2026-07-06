@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { BarChart3, Building2, ChevronLeft, ChevronRight, MapPin, Search, Users, CalendarDays, Phone, Mail, Plus } from 'lucide-react'
 import { StudentPill, StudentSectionHeader } from '../_components/StudentShell'
 import { StudentButton, StudentField, StudentInputClass, StudentModal } from '../_components/StudentUI'
@@ -9,10 +9,36 @@ import { Spin, message } from 'antd'
 import { usePeriod } from '@/lib/providers/PeriodProvider'
 import { COMMON_LABELS } from '@/constants/commonLabels'
 
+interface IInternshipRequest {
+  status: string
+  confirmPaper: boolean
+  companyName: string
+  position?: string
+  internshipAddress?: string
+  mentor?: string
+  phone?: string
+  duration?: string
+}
+
+const DEFAULT_FIELDS = [
+  'Phần mềm',
+  'Mạng máy tính',
+  'An toàn thông tin',
+  'Hệ thống thông tin',
+  'Trí tuệ nhân tạo',
+  'Thiết kế đồ họa / UI-UX',
+  'Thương mại điện tử',
+  'Phần cứng & Nhúng',
+  'Fintech',
+  'Internet',
+  'Viễn thông',
+  'Khác'
+]
+
 export default function StudentInternshipPage() {
   const { selectedPeriod } = usePeriod()
   const [companies, setCompanies] = useState<ICompany[]>([])
-  const [myRequest, setMyRequest] = useState<any>(null)
+  const [myRequest, setMyRequest] = useState<IInternshipRequest | null>(null)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [query, setQuery] = useState('')
@@ -34,6 +60,15 @@ export default function StudentInternshipPage() {
   })
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [suggestions, setSuggestions] = useState<ICompany[]>([])
+
+  const fieldOptions = useMemo(() => {
+    const fromCompanies = companies
+      .map((c) => c.field)
+      .filter(Boolean)
+      .flatMap((f) => f.split(',').map((s) => s.trim()))
+    const all = Array.from(new Set([...DEFAULT_FIELDS, ...fromCompanies]))
+    return all.sort((a, b) => a.localeCompare(b, 'vi'))
+  }, [companies])
 
   const handleCompanyNameChange = (value: string) => {
     setDeclareForm((current) => ({ ...current, companyName: value }));
@@ -66,7 +101,7 @@ export default function StudentInternshipPage() {
     setShowSuggestions(false);
   };
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!selectedPeriod?.id) {
       setLoading(false);
       return;
@@ -77,19 +112,19 @@ export default function StudentInternshipPage() {
         studentApi.getMyInternshipRequest(selectedPeriod.id)
       ])
       setCompanies(compList)
-      setMyRequest(request)
+      setMyRequest(request as IInternshipRequest)
     } catch (err) {
       console.error('Failed to load internship data:', err)
       message.error('Không thể tải thông tin thực tập từ máy chủ!')
     } finally {
       setLoading(false)
     }
-  }
+  }, [selectedPeriod?.id])
 
   useEffect(() => {
     setLoading(true)
     loadData()
-  }, [selectedPeriod?.id])
+  }, [loadData])
 
   const filtered = useMemo(() => {
     return companies.filter((company) => {
@@ -110,29 +145,61 @@ export default function StudentInternshipPage() {
   }, [filtered, currentPage])
 
   const handleDeclareSubmit = async () => {
-    if (!declareForm.companyName) {
+    const companyName = declareForm.companyName.trim()
+    const taxId = declareForm.taxId.trim()
+    const field = declareForm.field.trim()
+    const position = declareForm.position.trim()
+    const address = declareForm.address.trim()
+    const mentor = declareForm.mentor.trim()
+    const phone = declareForm.phone.trim()
+    const email = declareForm.email.trim()
+    const duration = declareForm.duration.trim()
+    const internshipAddress = declareForm.internshipAddress.trim()
+
+    if (!companyName) {
       message.error('Vui lòng nhập tên công ty!')
       return
     }
-    if (!declareForm.taxId.trim()) {
+    if (!taxId) {
       message.error('Vui lòng nhập mã số thuế công ty!')
+      return
+    }
+    if (!field) {
+      message.error('Vui lòng chọn lĩnh vực hoạt động!')
+      return
+    }
+
+    // Vietnam tax ID regex validation: 10 digits, or 13 digits, or 10 digits followed by - and 3 digits
+    const taxIdRegex = /^[0-9]{10}$|^[0-9]{13}$|^[0-9]{10}-[0-9]{3}$/
+    if (!taxIdRegex.test(taxId)) {
+      message.error('Mã số thuế không hợp lệ (phải gồm 10 hoặc 13 chữ số, ví dụ: 0101243150)!')
+      return
+    }
+
+    if (phone && !/^(0|\+84)[3|5|7|8|9][0-9]{8}$/.test(phone)) {
+      message.error('Số điện thoại liên hệ không hợp lệ (phải gồm 10 chữ số bắt đầu bằng 0 hoặc +84)!')
+      return
+    }
+
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      message.error('Email người liên hệ không đúng định dạng!')
       return
     }
 
     setSubmitting(true)
     try {
       await studentApi.declareInternship({
-        companyName: declareForm.companyName,
-        taxId: declareForm.taxId,
-        field: declareForm.field,
-        position: declareForm.position,
-        address: declareForm.address,
-        mentor: declareForm.mentor,
-        phone: declareForm.phone,
-        email: declareForm.email,
-        duration: declareForm.duration,
+        companyName,
+        taxId,
+        field,
+        position,
+        address,
+        mentor,
+        phone,
+        email,
+        duration,
         confirmPaper: declareForm.confirmPaper,
-        internshipAddress: declareForm.internshipAddress
+        internshipAddress: declareForm.confirmPaper ? (internshipAddress || address) : undefined
       }, selectedPeriod?.id)
 
       message.success('Gửi hồ sơ khai báo nơi thực tập thành công!')
@@ -153,9 +220,9 @@ export default function StudentInternshipPage() {
       })
       // Reload updated status
       loadData()
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Declaration failed:', err)
-      const errorMsg = err.response?.data?.message || 'Gửi khai báo thất bại. Vui lòng thử lại!'
+      const errorMsg = (err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Gửi khai báo thất bại. Vui lòng thử lại!'
       message.error(errorMsg)
     } finally {
       setSubmitting(false)
@@ -417,14 +484,20 @@ export default function StudentInternshipPage() {
               disabled={submitting}
             />
           </StudentField>
-          <StudentField label="Lĩnh vực">
-            <input
+          <StudentField label="Lĩnh vực" required>
+            <select
               value={declareForm.field}
               onChange={(event) => setDeclareForm((current) => ({ ...current, field: event.target.value }))}
-              className={StudentInputClass()}
-              placeholder="Phần mềm, fintech, phần cứng..."
+              className={StudentInputClass('appearance-none bg-[url("data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E")] bg-[length:1.25rem] bg-[right_1rem_center] bg-no-repeat pr-10')}
               disabled={submitting}
-            />
+            >
+              <option value="">-- Chọn lĩnh vực hoạt động --</option>
+              {fieldOptions.map((f) => (
+                <option key={f} value={f}>
+                  {f}
+                </option>
+              ))}
+            </select>
           </StudentField>
           <StudentField label="Vị trí thực tập">
             <input

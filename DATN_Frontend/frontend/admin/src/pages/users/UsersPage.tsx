@@ -1,4 +1,5 @@
-import { Form, Input, Select, Tag, Tabs, Button, Modal, Upload, Alert, Space, Typography, message } from 'antd';
+import { Form, Input, Select, Tag, Tabs, Button, Modal, Upload, Alert, Space, message } from 'antd';
+import type { UploadFile } from 'antd';
 import {
   FilterOutlined,
   SearchOutlined,
@@ -6,7 +7,6 @@ import {
   UserOutlined,
   FileExcelOutlined,
   UploadOutlined,
-  DownloadOutlined,
   ExclamationCircleFilled,
 } from '@ant-design/icons';
 import { useMemo, useState } from 'react';
@@ -22,6 +22,7 @@ import {
   UserRoleType,
   UserStatusType,
 } from '../../type/UserType';
+import type { IListClass } from '../../type/ClassType';
 import ModalCreateEditUser from './components/ModalCreateEditUser';
 import { cn, STATUS_CODE, USER_ROLE } from '../../constants/commonConst';
 import { getKey } from '@shared/types/I18nKeyType';
@@ -46,7 +47,7 @@ const UsersPage = () => {
 
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState<string | undefined>(undefined);
-  const [fileList, setFileList] = useState<any[]>([]);
+  const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [importErrors, setImportErrors] = useState<string[]>([]);
   const [importSuccessMessage, setImportSuccessMessage] = useState<string | null>(null);
 
@@ -61,7 +62,7 @@ const UsersPage = () => {
     }
 
     const formData = new FormData();
-    formData.append('file', fileList[0]);
+    formData.append('file', fileList[0] as unknown as Blob);
     formData.append('className', selectedClass);
 
     setImportErrors([]);
@@ -82,17 +83,22 @@ const UsersPage = () => {
           }
         }
       },
-      onError: (error: any) => {
-        const errorData = error?.response?.data;
-        if (errorData?.errors && Array.isArray(errorData.errors)) {
-          setImportErrors(errorData.errors);
-          message.error(errorData.message || 'Import thất bại, vui lòng kiểm tra lại file.');
-        } else if (errorData?.errors && typeof errorData.errors === 'object') {
-          const firstErrorKey = Object.keys(errorData.errors)[0];
-          const firstError = errorData.errors[firstErrorKey][0];
+      onError: (error: unknown) => {
+        const axiosError = error as {
+          response?: { data?: { message?: string; errors?: string[] | Record<string, string[]> } };
+          message?: string;
+        };
+        const errorData = axiosError?.response?.data;
+        const errors = errorData?.errors;
+        if (Array.isArray(errors)) {
+          setImportErrors(errors);
+          message.error(errorData?.message || 'Import thất bại, vui lòng kiểm tra lại file.');
+        } else if (errors && typeof errors === 'object') {
+          const firstErrorKey = Object.keys(errors)[0];
+          const firstError = errors[firstErrorKey][0];
           message.error(firstError);
         } else {
-          message.error(errorData?.message || error?.message || 'Có lỗi xảy ra khi import.');
+          message.error(errorData?.message || axiosError?.message || 'Có lỗi xảy ra khi import.');
         }
       },
     });
@@ -110,7 +116,7 @@ const UsersPage = () => {
 
   const classFilterOptions = useMemo(() => {
     if (!classesData?.rows) return [];
-    return classesData.rows.map((cls: any) => ({
+    return classesData.rows.map((cls: IListClass) => ({
       value: cls.name,
       label: cls.name,
     }));
@@ -389,7 +395,7 @@ const UsersPage = () => {
           </Button>,
         ]}
         width={600}
-        destroyOnClose
+        destroyOnHidden
         centered
         maskClosable={false}
       >

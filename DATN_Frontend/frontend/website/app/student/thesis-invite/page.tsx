@@ -8,6 +8,7 @@ import { StudentButton, StudentModal } from '../_components/StudentUI'
 import { studentApi, IThesisRegistration } from '@/lib/api/studentApi'
 import { usePeriod } from '@/lib/providers/PeriodProvider'
 import { COMMON_LABELS } from '@/constants/commonLabels'
+import { Spin, message } from 'antd'
 
 type Invite = {
   id: string
@@ -26,7 +27,6 @@ const INVITE_STATUS_META: Record<Invite['status'], { label: string; tone: 'green
 export default function InvitePage() {
   const router = useRouter()
   const params = useSearchParams()
-  const topic = params?.get('topic') ?? 'DT001'
   const { selectedPeriod } = usePeriod()
 
   const [newId, setNewId] = useState('')
@@ -74,8 +74,16 @@ export default function InvitePage() {
 
   const addInvite = async () => {
     const id = newId.trim()
-    if (!id) return
+    if (!id) {
+      message.error('Vui lòng nhập mã số sinh viên!')
+      return
+    }
+    if (!/^[a-zA-Z0-9]{5,15}$/.test(id)) {
+      message.error('Mã số sinh viên không hợp lệ (chỉ chứa chữ và số, độ dài từ 5-15 ký tự)!')
+      return
+    }
     if (outgoingInvites.some((item) => item.id === id)) {
+      message.warning('Sinh viên này đã được mời!')
       setNewId('')
       return
     }
@@ -85,8 +93,9 @@ export default function InvitePage() {
       const res = await studentApi.sendInvitation(id, topicIdToSend)
       setOutgoingInvites((current) => [...current, res])
       setNewId('')
-    } catch (err: any) {
-      alert(err?.response?.data?.message || 'Có lỗi xảy ra khi gửi lời mời.')
+      message.success('Gửi lời mời thành công!')
+    } catch (err: unknown) {
+      message.error((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Có lỗi xảy ra khi gửi lời mời.')
     } finally {
       setLoading(false)
     }
@@ -99,8 +108,9 @@ export default function InvitePage() {
       setIncomingInvites((current) =>
         current.map((invite) => (invite.id === inviteId ? { ...invite, status: 'accepted' } : invite))
       )
-    } catch (err: any) {
-      alert(err?.response?.data?.message || 'Có lỗi xảy ra khi đồng ý lời mời.')
+      message.success('Đồng ý lời mời thành công!')
+    } catch (err: unknown) {
+      message.error((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Có lỗi xảy ra khi đồng ý lời mời.')
     } finally {
       setLoading(false)
     }
@@ -113,8 +123,9 @@ export default function InvitePage() {
       setIncomingInvites((current) =>
         current.map((invite) => (invite.id === inviteId ? { ...invite, status: 'rejected' } : invite))
       )
-    } catch (err: any) {
-      alert(err?.response?.data?.message || 'Có lỗi xảy ra khi từ chối lời mời.')
+      message.success('Từ chối lời mời thành công!')
+    } catch (err: unknown) {
+      message.error((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Có lỗi xảy ra khi từ chối lời mời.')
     } finally {
       setLoading(false)
     }
@@ -127,11 +138,21 @@ export default function InvitePage() {
       await studentApi.cancelInvitation(cancelInviteId)
       setOutgoingInvites((current) => current.filter((item) => item.inviteId !== cancelInviteId))
       setCancelInviteId(null)
-    } catch (err: any) {
-      alert(err?.response?.data?.message || 'Có lỗi xảy ra khi hủy lời mời.')
+      message.success('Hủy lời mời thành công!')
+    } catch (err: unknown) {
+      message.error((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Có lỗi xảy ra khi hủy lời mời.')
     } finally {
       setCancelling(false)
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[400px] flex-col items-center justify-center gap-3">
+        <Spin size="large" />
+        <div className="text-sm text-slate-500">Đang tải thông tin nhóm đồ án tốt nghiệp...</div>
+      </div>
+    )
   }
 
   return (

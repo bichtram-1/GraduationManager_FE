@@ -2,6 +2,7 @@ import { Form, Input, Select } from 'antd';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { getKey } from '@shared/types/I18nKeyType';
+import type { I18nKey } from '@shared/types/I18nKeyType';
 import { STATUS_CODE } from '../../../constants/commonConst';
 
 type Props = {
@@ -15,13 +16,13 @@ const companyFieldOptions = [
   { value: 'Công nghệ số', label: 'Công nghệ số' },
 ];
 
-const companyStatusOptions = [
+const companyStatusOptions: { value: string; label: keyof I18nKey }[] = [
   { value: STATUS_CODE.ACTIVE, label: 'company_active' },
   { value: STATUS_CODE.PENDING, label: 'company_pending' },
   { value: STATUS_CODE.PAUSED, label: 'company_paused' },
 ];
 
-const reviewStatusOptions = [
+const reviewStatusOptions: { value: string; label: keyof I18nKey }[] = [
   { value: STATUS_CODE.PENDING, label: 'pending_status' },
   { value: STATUS_CODE.APPROVED, label: 'approved_status' },
   { value: STATUS_CODE.REJECTED, label: 'status_rejected' },
@@ -35,7 +36,11 @@ const CompanyForm: React.FC<Props> = ({ disabled = false }) => {
       <Form.Item label={t(getKey('company_name'))} name="name" rules={[{ required: true, message: t(getKey('please_enter_company_name')) }]}>
           <Input disabled={disabled} placeholder="VD: FPT Software" />
       </Form.Item>
-      <Form.Item label={t(getKey('company_tax_id'))} name="taxId">
+      <Form.Item
+        label={t(getKey('company_tax_id'))}
+        name="taxId"
+        rules={[{ pattern: /^\d{10}(\d{3})?$/, message: 'Mã số thuế phải gồm 10 hoặc 13 chữ số' }]}
+      >
           <Input disabled={disabled} placeholder="VD: 0101243150" />
       </Form.Item>
       <Form.Item label={t(getKey('company_field'))} name="field" rules={[{ required: true, message: t(getKey('please_select_field')) }]}>
@@ -46,14 +51,18 @@ const CompanyForm: React.FC<Props> = ({ disabled = false }) => {
             disabled={disabled}
             options={companyStatusOptions.map((option) => ({
               value: option.value,
-              label: t(getKey(option.label as any)),
+              label: t(getKey(option.label)),
             }))}
           />
       </Form.Item>
       <Form.Item label={t(getKey('company_contact'))} name="contact">
           <Input disabled={disabled} placeholder="VD: Nguyễn Văn Hùng" />
       </Form.Item>
-      <Form.Item label={t(getKey('phone_number'))} name="phone">
+      <Form.Item
+        label={t(getKey('phone_number'))}
+        name="phone"
+        rules={[{ pattern: /^0\d{9}$/, message: 'Số điện thoại phải gồm đúng 10 chữ số và bắt đầu bằng 0' }]}
+      >
           <Input disabled={disabled} placeholder="0901234567" />
       </Form.Item>
       <Form.Item label={t(getKey('email'))} name="email" rules={[{ type: 'email', message: t(getKey('email_invalid')) }]}>
@@ -64,7 +73,7 @@ const CompanyForm: React.FC<Props> = ({ disabled = false }) => {
             disabled={disabled}
             options={reviewStatusOptions.map((option) => ({
               value: option.value,
-              label: t(getKey(option.label as any)),
+              label: t(getKey(option.label)),
             }))}
           />
       </Form.Item>
