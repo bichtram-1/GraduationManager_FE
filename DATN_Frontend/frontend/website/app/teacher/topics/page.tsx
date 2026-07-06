@@ -58,6 +58,7 @@ type Topic = {
   code: string
   name: string
   slots: string
+  approvedStudents?: string
   status: 'Đã duyệt' | 'Chờ duyệt' | 'Từ chối'
   note: string
   semester: string
@@ -122,6 +123,12 @@ export default function Page() {
   const [direction, setDirection] = useState('Phát triển phần mềm')
   const [fileUrl, setFileUrl] = useState('')
   const [loading, setLoading] = useState(false)
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+
+  const showNotification = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type })
+    setTimeout(() => setToast(null), 3000)
+  }
 
   useEffect(() => {
     let mounted = true
@@ -233,9 +240,10 @@ export default function Page() {
       }
       setViewingTopic(null);
       setDeletingTopic(null);
+      showNotification('Xóa đề tài thành công!', 'success');
     } catch (e) {
       console.error(e);
-      alert('Không thể xóa đề tài!');
+      showNotification('Không thể xóa đề tài!', 'error');
     } finally {
       setDeletingCode(null)
     }
@@ -248,7 +256,7 @@ export default function Page() {
     try {
       const res = await topicApi.importTopics(file, selectedPeriod?.id)
       if (res?.success) {
-        alert(res.message || 'Import đề tài thành công!')
+        showNotification(res.message || 'Import đề tài thành công!', 'success')
         const data = await topicApi.getTeacherTopics({ periodId: selectedPeriod?.id })
         setTopicList(data)
         if (data.length > 0) {
@@ -256,11 +264,11 @@ export default function Page() {
         }
         setOpenCreate(false)
       } else {
-        alert(res?.message || 'Import đề tài thất bại!')
+        showNotification(res?.message || 'Import đề tài thất bại!', 'error')
       }
     } catch (e: any) {
       console.error(e)
-      alert(e?.response?.data?.message || 'Có lỗi xảy ra khi import file!')
+      showNotification(e?.response?.data?.message || 'Có lỗi xảy ra khi import file!', 'error')
     } finally {
       setSubmitting(false)
     }
@@ -271,7 +279,11 @@ export default function Page() {
     const trimmedSummary = description.trim()
     const maxSlots = Number.parseInt(slots, 10)
 
-    if (!trimmedName || !trimmedSummary || Number.isNaN(maxSlots) || maxSlots <= 0) {
+    if (!trimmedName || trimmedName.length > 255 || !trimmedSummary || trimmedSummary.length > 5000 || Number.isNaN(maxSlots) || maxSlots < 2 || maxSlots % 2 !== 0) {
+      return
+    }
+
+    if (!editingCode && !fileUrl) {
       return
     }
 
@@ -317,9 +329,10 @@ export default function Page() {
         setSelectedTopic(null);
         setViewingTopic(null);
       }
+      showNotification(editingCode ? 'Cập nhật đề tài thành công!' : 'Đề xuất đề tài thành công!', 'success');
     } catch (e) {
       console.error(e);
-      alert('Không thể lưu đề tài!');
+      showNotification('Không thể lưu đề tài!', 'error');
     } finally {
       setSubmitting(false)
       setOpenCreate(false)
@@ -369,7 +382,8 @@ export default function Page() {
             <tr>
               <th className="px-5 py-3 text-left w-16">STT</th>
               <th className="px-5 py-3 text-left">Tên đề tài</th>
-              <th className="px-5 py-3 text-left w-48">Số lượng thành viên</th>
+              <th className="px-5 py-3 text-left w-28">Số lượng</th>
+              <th className="px-5 py-3 text-left w-32">Đã đăng kí</th>
               <th className="px-5 py-3 text-left w-1/3">Mô tả</th>
               <th className="px-5 py-3 text-left w-36">Trạng thái</th>
               <th className="px-5 py-3 text-right w-36">Hành động</th>
@@ -381,6 +395,7 @@ export default function Page() {
                 <td className="px-5 py-4 font-medium text-slate-500">{index + 1}</td>
                 <td className="px-5 py-4 text-slate-900 font-medium">{topic.name}</td>
                 <td className="px-5 py-4 text-slate-600">{topic.slots.split('/')[1] || topic.slots}</td>
+                <td className="px-5 py-4 text-slate-600">{topic.approvedStudents || 'chưa có'}</td>
                 <td className="px-5 py-4 text-slate-600 max-w-xs truncate" title={topic.summary}>{topic.summary}</td>
                 <td className="px-5 py-4">
                   <TeacherPill tone={getTopicStatusTone(topic.status)}>
@@ -414,7 +429,7 @@ export default function Page() {
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-5 py-8 text-center text-slate-500">Không có đề tài nào phù hợp bộ lọc.</td>
+                <td colSpan={7} className="px-5 py-8 text-center text-slate-500">Không có đề tài nào phù hợp bộ lọc.</td>
               </tr>
             )}
           </tbody>
@@ -473,6 +488,17 @@ export default function Page() {
           Bạn có chắc chắn muốn xóa đề tài <span className="font-semibold text-slate-900">&quot;{deletingTopic?.name}&quot;</span>? Hành động này không thể hoàn tác.
         </div>
       </TeacherModal>
+
+      {toast && (
+        <div
+          className={`fixed right-6 top-20 z-[9999] rounded-2xl px-4 py-3 text-sm text-white shadow-lg transition-all duration-300 flex items-center gap-2 ${
+            toast.type === 'success' ? 'bg-emerald-500' : 'bg-red-500'
+          }`}
+        >
+          <span>{toast.type === 'success' ? '✓' : '✗'}</span>
+          <span>{toast.message}</span>
+        </div>
+      )}
     </>
   )
 }

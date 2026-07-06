@@ -27,7 +27,7 @@ export default function ScoringTable({
   groupId: string
   students: Student[]
   canEditReport: boolean
-  notify: (msg: string) => void
+  notify: (msg: string, type?: 'success' | 'error') => void
   reportMax?: number
 }) {
   const initial = students.map((m) => ({ member: m, score: { presentation: '', demo: '', qna: '', report: '' } as Score, otherScores: [] } as RowType))
@@ -168,7 +168,7 @@ export default function ScoringTable({
 
   async function save() {
     if (Object.keys(errors).length > 0) {
-      notify('Vui lòng sửa các điểm số chưa hợp lệ (ô màu đỏ) trước khi lưu!')
+      notify('Vui lòng sửa các điểm số chưa hợp lệ (ô màu đỏ) trước khi lưu!', 'error')
       return
     }
     const payload = rows.map((r) => ({
@@ -182,13 +182,13 @@ export default function ScoringTable({
     try {
       const res = await teacherApi.saveScores(groupId, payload)
       if (res?.ok || res?.success) {
-        notify('Lưu điểm hội đồng thành công!')
+        notify('Lưu điểm hội đồng thành công!', 'success')
         window.dispatchEvent(new CustomEvent('realtime-score-updated'))
       } else {
-        notify('Lưu điểm thất bại!')
+        notify('Lưu điểm thất bại!', 'error')
       }
     } catch (_) {
-      notify('Lưu điểm thất bại!')
+      notify('Lưu điểm thất bại!', 'error')
     } finally {
       setLoading(false)
     }

@@ -101,6 +101,12 @@ export function TeacherShell({ children }: { children: ReactNode }) {
           setSelectedPeriod(activePeriod);
         }
       }
+    } else if (pathname.startsWith('/teacher/councils')) {
+      const datnPeriods = periods.filter(p => p.type === 'datn');
+      if (datnPeriods.length > 0 && (!selectedPeriod || selectedPeriod.type !== 'datn')) {
+        const activePeriod = datnPeriods.find(p => p.status === 'open' || p.status === 'published' || p.status === 'grading') || datnPeriods[0];
+        setSelectedPeriod(activePeriod);
+      }
     }
   }, [pathname, periods, selectedPeriod, setSelectedPeriod, studentsTab, gradingTab]);
 
@@ -148,7 +154,7 @@ export function TeacherShell({ children }: { children: ReactNode }) {
                 styles={{ popup: { root: { minWidth: 'max-content' } } }}
                 classNames={{ popup: { root: 'rounded-xl shadow-lg' } }}
               >
-                {periods.filter(p => p.type === 'tttn').length > 0 && !pathname.startsWith('/teacher/topics') && !pathname.startsWith('/teacher/groups') && !pathname.startsWith('/teacher/review-groups') && (!pathname.startsWith('/teacher/students') || studentsTab === 'TTTN') && (!pathname.startsWith('/teacher/grading') || gradingTab === 'TTTN') && (
+                {periods.filter(p => p.type === 'tttn').length > 0 && !pathname.startsWith('/teacher/topics') && !pathname.startsWith('/teacher/groups') && !pathname.startsWith('/teacher/review-groups') && !pathname.startsWith('/teacher/councils') && (!pathname.startsWith('/teacher/students') || studentsTab === 'TTTN') && (!pathname.startsWith('/teacher/grading') || gradingTab === 'TTTN') && (
                   <Select.OptGroup label="Đợt Thực tập tốt nghiệp (TTTN)">
                     {periods.filter(p => p.type === 'tttn').map(p => (
                       <Select.Option key={p.id} value={p.id}>

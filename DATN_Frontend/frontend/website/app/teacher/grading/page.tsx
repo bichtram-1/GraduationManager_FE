@@ -98,7 +98,7 @@ export default function TeacherGradingPage() {
 
   const { selectedPeriod, gradingTab, setGradingTab } = usePeriod()
   const [tttnScores, setTttnScores] = useState(defaultTttnRows)
-  const [toast, setToast] = useState<string | null>(null)
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const [selectedCouncil, setSelectedCouncil] = useState<Council | null>(defaultCouncilGroups[0] as any)
   const [selectedGroup, setSelectedGroup] = useState<CouncilGroupItem | null>(null)
   const [selectedTttnId, setSelectedTttnId] = useState(defaultTttnRows[0].id)
@@ -111,8 +111,8 @@ export default function TeacherGradingPage() {
   const [datnFilter, setDatnFilter] = useState<'all' | 'graded' | 'grading' | 'ungraded'>('all')
   const [roleFilter, setRoleFilter] = useState<'all' | 'reviewer' | 'member' | 'advisor'>('all')
 
-  const notify = (message: string) => {
-    setToast(message)
+  const notify = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type })
     setTimeout(() => setToast(null), 2500)
   }
 
@@ -280,15 +280,15 @@ export default function TeacherGradingPage() {
         scores: payload
       })
       if (res?.success) {
-        notify('Đã lưu điểm thực tập tốt nghiệp thành công!')
+        notify('Đã lưu điểm thực tập tốt nghiệp thành công!', 'success')
         setLastUpdatedTime(formatVietnamTime(new Date()))
         window.dispatchEvent(new CustomEvent('realtime-score-updated'))
       } else {
-        alert('Lưu điểm thất bại!')
+        notify('Lưu điểm thất bại!', 'error')
       }
     } catch (e) {
       console.error(e)
-      alert('Lưu điểm thất bại!')
+      notify('Lưu điểm thất bại!', 'error')
     } finally {
       setSavingTttn(false)
     }
@@ -727,8 +727,13 @@ export default function TeacherGradingPage() {
       )}
 
       {toast && (
-        <div className="fixed right-6 top-20 z-[9999] rounded-2xl bg-emerald-500 px-4 py-3 text-sm text-white shadow-lg">
-          ✓ {toast}
+        <div
+          className={`fixed right-6 top-20 z-[9999] rounded-2xl px-4 py-3 text-sm text-white shadow-lg flex items-center gap-2 ${
+            toast.type === 'success' ? 'bg-emerald-500' : 'bg-red-500'
+          }`}
+        >
+          <span>{toast.type === 'success' ? '✓' : '✗'}</span>
+          <span>{toast.message}</span>
         </div>
       )}
 
@@ -748,7 +753,7 @@ export default function TeacherGradingPage() {
               groupId={selectedGroup.id || selectedGroup.groupCode}
               students={(selectedGroup.students || []).map((s) => ({ id: s.id, name: s.name, class: s.class }))}
               canEditReport={selectedGroup.reviewerId === currentTeacherId || selectedGroup.advisorId === currentTeacherId}
-              notify={(msg) => notify(msg)}
+              notify={(msg, type) => notify(msg, type)}
             />
           </div>
         </div>
