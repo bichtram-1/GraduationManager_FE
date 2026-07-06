@@ -12,25 +12,46 @@ import { DataLoginType, UserLoginType } from '../type/UserLoginType';
 import { clearCookie, getCookie, setCookie } from '@shared/utils/cookie';
 import { useGlobalVariable } from './GlobalVariableProvider';
 
+const applyLoginSession = (
+  data: DetailResponseType<UserLoginType>,
+  setUser: (user: UserLoginType['user'] | undefined) => void,
+  navigate: (route: string) => void
+) => {
+  const newData: UserLoginType = data?.results?.object;
+
+  const userClone = { ...newData?.user };
+  setUser(userClone);
+  setCookie(STORAGES.USER_LOGIN, userClone);
+  setCookie(STORAGES.ACCESS_TOKEN, newData?.access_token);
+  // setCookie(STORAGES.REFRESH_TOKEN, newData?.refreshToken);
+  navigate(ROUTES.DASHBOARD);
+};
+
 export const useLogin = () => {
   const navigate = useNavigate();
   const { setUser } = useGlobalVariable();
+
   return useMutation<
     DetailResponseType<UserLoginType>,
     AxiosError<GeneralErrorType>,
     DataLoginType
   >({
     mutationFn: authApi.signIn,
-    onSuccess: (data) => {
-      const newData: UserLoginType = data?.results?.object;
+    onSuccess: (data) => applyLoginSession(data, setUser, navigate),
+  });
+};
 
-      const userClone = { ...newData?.user };
-      setUser(userClone);
-      setCookie(STORAGES.USER_LOGIN, userClone);
-      setCookie(STORAGES.ACCESS_TOKEN, newData?.access_token);
-      // setCookie(STORAGES.REFRESH_TOKEN, newData?.refreshToken);
-      navigate(ROUTES.DASHBOARD);
-    },
+export const useGoogleLogin = () => {
+  const navigate = useNavigate();
+  const { setUser } = useGlobalVariable();
+
+  return useMutation<
+    DetailResponseType<UserLoginType>,
+    AxiosError<GeneralErrorType>,
+    string
+  >({
+    mutationFn: authApi.signInWithGoogle,
+    onSuccess: (data) => applyLoginSession(data, setUser, navigate),
   });
 };
 
