@@ -30,6 +30,8 @@ type Student = {
   diemTongKet?: number | null
   diemBaoVe?: number | null
   lecturerScores?: Record<string, number>
+  advisorId?: string
+  reviewerId?: string
 }
 
 function groupBy<T, K extends string | number>(items: T[], keyFn: (t: T) => K) {
@@ -64,6 +66,7 @@ export default function GradesClient({ councilId }: { councilId: string }) {
   const [councilName, setCouncilName] = useState('')
   const [selectedGroups, setSelectedGroups] = useState<Record<string, boolean>>({})
   const [toast, setToast] = useState<string | null>(null)
+  const [currentTeacherId, setCurrentTeacherId] = useState<string>('')
 
   const showToast = (message: string) => {
     setToast(message)
@@ -77,6 +80,10 @@ export default function GradesClient({ councilId }: { councilId: string }) {
       try {
         const data = await teacherApi.getGradingData({ periodId: selectedPeriod?.id })
         if (!mounted) return
+        
+        if (data?.teacherId) {
+          setCurrentTeacherId(String(data.teacherId))
+        }
         
         if (data?.councilGroups) {
           const matchedCouncil = data.councilGroups.find((c: any) => c.code === councilId)
@@ -112,6 +119,8 @@ export default function GradesClient({ councilId }: { councilId: string }) {
                     diemTongKet: row.diemTongKet,
                     diemBaoVe: row.diemBaoVe,
                     lecturerScores: row.lecturerScores || {},
+                    advisorId: g.advisorId ? String(g.advisorId) : undefined,
+                    reviewerId: g.reviewerId ? String(g.reviewerId) : undefined,
                   }))
                 }
               } catch (err) {
@@ -138,6 +147,8 @@ export default function GradesClient({ councilId }: { councilId: string }) {
                 diemTongKet: null,
                 diemBaoVe: null,
                 lecturerScores: {},
+                advisorId: g.advisorId ? String(g.advisorId) : undefined,
+                reviewerId: g.reviewerId ? String(g.reviewerId) : undefined,
               }))
             })
             
@@ -218,67 +229,128 @@ export default function GradesClient({ councilId }: { councilId: string }) {
 
       const isChair = topicStudents[0]?.isChair || false
       const councilMembers = topicStudents[0]?.councilMembers || []
+      const chairMember = councilMembers.find((m: any) => m.role.includes('Chủ tịch'))
+      const chairStr = chairMember ? `${chairMember.role}: ${chairMember.name}` : 'Chưa phân công'
       
-      const membersStr = councilMembers.map((m: any) => `${m.role}: ${m.name}`).join('; ')
-      
-      // Header thiết kế riêng theo yêu cầu của hội đồng
-      const headerLines = [
-        ['BẢNG ĐIỂM THÀNH PHẦN ĐỒ ÁN TỐT NGHIỆP'],
-        [`Hội đồng: ${councilName || '—'}`],
-        [`Đề tài: ${topicName}`],
-        [`Thành viên hội đồng: ${membersStr}`],
-        [] // Dòng trống ngăn cách
-      ]
-      
-      let headers: string[] = []
-      let rows: any[][] = []
-      
+      let headerCols: string[] = []
       if (isChair) {
-        headers = [
+        headerCols = [
           'Mã SV', 'Họ tên', 'Lớp', 'GVHD', 'GVPB',
           ...councilMembers.map((m: any) => shortenName(m.name)),
           'TB bảo vệ', 'BC-GVHD', 'BC-GVPB', 'TK'
         ]
-        rows = topicStudents.map((s) => [
-          '\t' + s.studentId,
-          s.name,
-          s.clazz,
-          s.gvhdName,
-          s.gvpbName,
-          ...councilMembers.map((m: any) => {
-            const score = s.lecturerScores?.[m.id];
-            return score !== undefined && score !== null ? score.toFixed(2) : '';
-          }),
-          s.diemTbBaoVe !== null && s.diemTbBaoVe !== undefined ? s.diemTbBaoVe.toFixed(2) : '',
-          s.diemGvhd !== null && s.diemGvhd !== undefined ? s.diemGvhd.toFixed(2) : '',
-          s.diemGvpb !== null && s.diemGvpb !== undefined ? s.diemGvpb.toFixed(2) : '',
-          s.diemTongKet !== null && s.diemTongKet !== undefined ? s.diemTongKet.toFixed(2) : ''
-        ])
       } else {
-        headers = ['Mã SV', 'Họ tên', 'Lớp', 'GVHD', 'GVPB', 'Thuyết trình', 'Demo', 'Vấn đáp', 'TB bảo vệ']
-        rows = topicStudents.map((s) => [
-          '\t' + s.studentId,
-          s.name,
-          s.clazz,
-          s.gvhdName,
-          s.gvpbName,
-          s.scores.presentation !== null ? s.scores.presentation.toFixed(2) : '',
-          s.scores.demo !== null ? s.scores.demo.toFixed(2) : '',
-          s.scores.defense !== null ? s.scores.defense.toFixed(2) : '',
-          s.diemBaoVe !== null && s.diemBaoVe !== undefined ? s.diemBaoVe.toFixed(2) : '',
-        ])
+        const isAdvisor = topicStudents[0]?.advisorId === currentTeacherId
+        const isReviewer = topicStudents[0]?.reviewerId === currentTeacherId
+        
+        headerCols = ['Mã SV', 'Họ tên', 'Lớp', 'GVHD', 'GVPB', 'Thuyết trình', 'Demo', 'Vấn đáp']
+        if (isAdvisor) headerCols.push('BC-GVHD')
+        if (isReviewer) headerCols.push('BC-GVPB')
       }
       
-      const csv = [...headerLines, headers, ...rows].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
-      // Thêm ký tự BOM (\uFEFF) để Excel hiển thị đúng tiếng Việt có dấu
-      const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+      const colCount = headerCols.length
+      const headersHtml = headerCols.map((col) => `<th style="border: 0.5pt solid #a0aec0; padding: 6px; font-weight: bold; background-color: #f1f5f9; text-align: center;">${col}</th>`).join('')
+      
+      const rowsHtml = topicStudents.map((s) => {
+        let cells: string[] = []
+        if (isChair) {
+          cells = [
+            `<td style="border: 0.5pt solid #a0aec0; padding: 6px; text-align: center; mso-number-format:'\\@';">${s.studentId}</td>`,
+            `<td style="border: 0.5pt solid #a0aec0; padding: 6px; text-align: left;">${s.name}</td>`,
+            `<td style="border: 0.5pt solid #a0aec0; padding: 6px; text-align: center;">${s.clazz}</td>`,
+            `<td style="border: 0.5pt solid #a0aec0; padding: 6px; text-align: left;">${s.gvhdName}</td>`,
+            `<td style="border: 0.5pt solid #a0aec0; padding: 6px; text-align: left;">${s.gvpbName}</td>`,
+            ...councilMembers.map((m: any) => {
+              const score = s.lecturerScores?.[m.id];
+              const scoreStr = score !== undefined && score !== null ? score.toFixed(2) : '—';
+              return `<td style="border: 0.5pt solid #a0aec0; padding: 6px; text-align: right;">${scoreStr}</td>`;
+            }),
+            `<td style="border: 0.5pt solid #a0aec0; padding: 6px; text-align: right; font-weight: bold; background-color: #f8fafc;">${s.diemTbBaoVe !== null && s.diemTbBaoVe !== undefined ? s.diemTbBaoVe.toFixed(2) : '—'}</td>`,
+            `<td style="border: 0.5pt solid #a0aec0; padding: 6px; text-align: right;">${s.diemGvhd !== null && s.diemGvhd !== undefined ? s.diemGvhd.toFixed(2) : '—'}</td>`,
+            `<td style="border: 0.5pt solid #a0aec0; padding: 6px; text-align: right;">${s.diemGvpb !== null && s.diemGvpb !== undefined ? s.diemGvpb.toFixed(2) : '—'}</td>`,
+            `<td style="border: 0.5pt solid #a0aec0; padding: 6px; text-align: right; font-weight: bold; color: #1e3a8a; background-color: #dbeafe;">${s.diemTongKet !== null && s.diemTongKet !== undefined ? s.diemTongKet.toFixed(2) : '—'}</td>`
+          ]
+        } else {
+          const isAdvisor = s.advisorId === currentTeacherId
+          const isReviewer = s.reviewerId === currentTeacherId
+          cells = [
+            `<td style="border: 0.5pt solid #a0aec0; padding: 6px; text-align: center; mso-number-format:'\\@';">${s.studentId}</td>`,
+            `<td style="border: 0.5pt solid #a0aec0; padding: 6px; text-align: left;">${s.name}</td>`,
+            `<td style="border: 0.5pt solid #a0aec0; padding: 6px; text-align: center;">${s.clazz}</td>`,
+            `<td style="border: 0.5pt solid #a0aec0; padding: 6px; text-align: left;">${s.gvhdName}</td>`,
+            `<td style="border: 0.5pt solid #a0aec0; padding: 6px; text-align: left;">${s.gvpbName}</td>`,
+            `<td style="border: 0.5pt solid #a0aec0; padding: 6px; text-align: right;">${s.scores.presentation !== null ? s.scores.presentation.toFixed(2) : '—'}</td>`,
+            `<td style="border: 0.5pt solid #a0aec0; padding: 6px; text-align: right;">${s.scores.demo !== null ? s.scores.demo.toFixed(2) : '—'}</td>`,
+            `<td style="border: 0.5pt solid #a0aec0; padding: 6px; text-align: right;">${s.scores.defense !== null ? s.scores.defense.toFixed(2) : '—'}</td>`,
+          ]
+          if (isAdvisor) {
+            cells.push(`<td style="border: 0.5pt solid #a0aec0; padding: 6px; text-align: right;">${s.diemGvhd !== null && s.diemGvhd !== undefined ? s.diemGvhd.toFixed(2) : '—'}</td>`)
+          }
+          if (isReviewer) {
+            cells.push(`<td style="border: 0.5pt solid #a0aec0; padding: 6px; text-align: right;">${s.diemGvpb !== null && s.diemGvpb !== undefined ? s.diemGvpb.toFixed(2) : '—'}</td>`)
+          }
+        }
+        return `<tr>${cells.join('')}</tr>`
+      }).join('')
+
+      const htmlContent = `
+        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+        <head>
+          <meta http-equiv="content-type" content="text/plain; charset=UTF-8"/>
+          <!--[if gte mso 9]>
+          <xml>
+            <x:ExcelWorkbook>
+              <x:ExcelWorksheets>
+                <x:ExcelWorksheet>
+                  <x:Name>Bang Diem</x:Name>
+                  <x:WorksheetOptions>
+                    <x:DisplayGridlines/>
+                  </x:WorksheetOptions>
+                </x:ExcelWorksheet>
+              </x:ExcelWorksheets>
+            </x:ExcelWorkbook>
+          </xml>
+          <![endif]-->
+          <style>
+            body { font-family: 'Times New Roman', Times, serif; }
+            table { border-collapse: collapse; }
+            th { font-weight: bold; background-color: #f1f5f9; text-align: center; }
+            td, th { padding: 6px; font-size: 11pt; vertical-align: middle; }
+          </style>
+        </head>
+        <body>
+          <table>
+            <tr>
+              <td colspan="${colCount}" style="text-align: center; font-size: 16pt; font-weight: bold; height: 35px;">BẢNG ĐIỂM THÀNH PHẦN ĐỒ ÁN TỐT NGHIỆP</td>
+            </tr>
+            <tr>
+              <td colspan="${colCount}" style="text-align: left; font-size: 11pt; font-weight: bold; height: 20px;">Hội đồng: ${councilName || '—'}</td>
+            </tr>
+            <tr>
+              <td colspan="${colCount}" style="text-align: left; font-size: 11pt; font-weight: bold; height: 20px;">Đề tài: ${topicName}</td>
+            </tr>
+            <tr>
+              <td colspan="${colCount}" style="text-align: left; font-size: 11pt; height: 20px;">Chủ tịch hội đồng: ${chairStr}</td>
+            </tr>
+            <tr>
+              <td colspan="${colCount}" style="height: 10px;"></td>
+            </tr>
+            <tr>
+              ${headersHtml}
+            </tr>
+            ${rowsHtml}
+          </table>
+        </body>
+        </html>
+      `
+
+      const blob = new Blob([htmlContent], { type: 'application/vnd.ms-excel;charset=utf-8;' })
       const url = URL.createObjectURL(blob)
       
-      // Tạo tên file an toàn kết hợp tên hội đồng và tên đề tài (rút gọn)
       const cleanCouncilName = (councilName || 'Hoi_dong').replace(/[\\/:*?"<>|]/g, '').trim()
       const shortTopic = topicName.length > 25 ? topicName.substring(0, 22) + '...' : topicName
       const cleanTopic = shortTopic.replace(/[\\/:*?"<>|]/g, '').trim()
-      const filename = `${cleanCouncilName} - ${cleanTopic}.csv`
+      const filename = `${cleanCouncilName} - ${cleanTopic}.xls`
 
       const a = document.createElement('a')
       a.href = url
@@ -292,11 +364,11 @@ export default function GradesClient({ councilId }: { councilId: string }) {
     <div>
       <TeacherSectionHeader
         title={councilName || 'Bảng điểm Hội đồng'}
-        description="Sắp xếp theo đề tài; tích chọn các đề tài mong muốn để xuất CSV hàng loạt."
+        description="Sắp xếp theo đề tài; tích chọn các đề tài mong muốn để xuất Excel hàng loạt."
         actions={
           <div className="flex items-center gap-2">
             <button onClick={() => router.back()} className="px-4 py-2 border rounded-2xl bg-white hover:bg-slate-50 transition text-sm font-medium">Quay lại</button>
-            <button onClick={exportCSV} className="px-4 py-2 bg-[#10b981] hover:bg-[#059669] text-white rounded-2xl shadow-md shadow-emerald-100 transition text-sm font-medium">Xuất CSV ({selectedCount})</button>
+            <button onClick={exportCSV} className="px-4 py-2 bg-[#10b981] hover:bg-[#059669] text-white rounded-2xl shadow-md shadow-emerald-100 transition text-sm font-medium">Xuất Excel ({selectedCount})</button>
           </div>
         }
       />
@@ -445,50 +517,68 @@ export default function GradesClient({ councilId }: { councilId: string }) {
                           </tbody>
                         </table>
                       ) : (
-                        <table className="min-w-full w-full text-sm">
-                          <thead className="bg-slate-50 text-slate-600 font-medium">
-                            <tr className="border-b border-slate-100">
-                              <th className="px-4 py-3 text-left">Mã SV</th>
-                              <th className="px-4 py-3 text-left">Họ tên</th>
-                              <th className="px-4 py-3 text-left">Lớp</th>
-                              <th className="px-4 py-3 text-left">GVHD</th>
-                              <th className="px-4 py-3 text-left">GVPB</th>
-                              <th className="px-4 py-3 text-right">Thuyết trình</th>
-                              <th className="px-4 py-3 text-right">Demo</th>
-                              <th className="px-4 py-3 text-right">Vấn đáp</th>
-                              <th className="px-4 py-3 text-right">TB bảo vệ</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {items.map((s) => (
-                              <tr key={s.id} className="border-t border-slate-100 transition hover:bg-slate-50/80">
-                                <td className="px-4 py-4 font-semibold text-slate-800">{s.studentId}</td>
-                                <td className="px-4 py-4 text-slate-900 font-medium">{s.name}</td>
-                                <td className="px-4 py-4 text-slate-700">{s.clazz}</td>
-                                <td className="px-4 py-4 text-slate-600 text-xs">{s.gvhdName}</td>
-                                <td className="px-4 py-4 text-slate-600 text-xs">{s.gvpbName}</td>
-                                <td className="px-4 py-4 text-right">
-                                  <div className="inline-flex w-16 items-center justify-center rounded-md border px-2 py-1 text-sm bg-slate-50 text-slate-700 font-medium">
-                                    {s.scores.presentation !== null && s.scores.presentation !== undefined ? s.scores.presentation.toFixed(2) : '—'}
-                                  </div>
-                                </td>
-                                <td className="px-4 py-4 text-right">
-                                  <div className="inline-flex w-16 items-center justify-center rounded-md border px-2 py-1 text-sm bg-slate-50 text-slate-700 font-medium">
-                                    {s.scores.demo !== null && s.scores.demo !== undefined ? s.scores.demo.toFixed(2) : '—'}
-                                  </div>
-                                </td>
-                                <td className="px-4 py-4 text-right">
-                                  <div className="inline-flex w-16 items-center justify-center rounded-md border px-2 py-1 text-sm bg-slate-50 text-slate-700 font-medium">
-                                    {s.scores.defense !== null && s.scores.defense !== undefined ? s.scores.defense.toFixed(2) : '—'}
-                                  </div>
-                                </td>
-                                <td className="px-4 py-4 text-right font-bold text-slate-800">
-                                  {s.diemBaoVe !== null && s.diemBaoVe !== undefined ? s.diemBaoVe.toFixed(2) : '—'}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                        (() => {
+                          const isAdvisor = items[0]?.advisorId === currentTeacherId;
+                          const isReviewer = items[0]?.reviewerId === currentTeacherId;
+                          return (
+                            <table className="min-w-full w-full text-sm">
+                              <thead className="bg-slate-50 text-slate-600 font-medium">
+                                <tr className="border-b border-slate-100">
+                                  <th className="px-4 py-3 text-left">Mã SV</th>
+                                  <th className="px-4 py-3 text-left">Họ tên</th>
+                                  <th className="px-4 py-3 text-left">Lớp</th>
+                                  <th className="px-4 py-3 text-left">GVHD</th>
+                                  <th className="px-4 py-3 text-left">GVPB</th>
+                                  <th className="px-4 py-3 text-right">Thuyết trình</th>
+                                  <th className="px-4 py-3 text-right">Demo</th>
+                                  <th className="px-4 py-3 text-right">Vấn đáp</th>
+                                  {isAdvisor && <th className="px-4 py-3 text-right">BC-GVHD</th>}
+                                  {isReviewer && <th className="px-4 py-3 text-right">BC-GVPB</th>}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {items.map((s) => (
+                                  <tr key={s.id} className="border-t border-slate-100 transition hover:bg-slate-50/80">
+                                    <td className="px-4 py-4 font-semibold text-slate-800">{s.studentId}</td>
+                                    <td className="px-4 py-4 text-slate-900 font-medium">{s.name}</td>
+                                    <td className="px-4 py-4 text-slate-700">{s.clazz}</td>
+                                    <td className="px-4 py-4 text-slate-600 text-xs">{s.gvhdName}</td>
+                                    <td className="px-4 py-4 text-slate-600 text-xs">{s.gvpbName}</td>
+                                    <td className="px-4 py-4 text-right">
+                                      <div className="inline-flex w-16 items-center justify-center rounded-md border px-2 py-1 text-sm bg-slate-50 text-slate-700 font-medium">
+                                        {s.scores.presentation !== null && s.scores.presentation !== undefined ? s.scores.presentation.toFixed(2) : '—'}
+                                      </div>
+                                    </td>
+                                    <td className="px-4 py-4 text-right">
+                                      <div className="inline-flex w-16 items-center justify-center rounded-md border px-2 py-1 text-sm bg-slate-50 text-slate-700 font-medium">
+                                        {s.scores.demo !== null && s.scores.demo !== undefined ? s.scores.demo.toFixed(2) : '—'}
+                                      </div>
+                                    </td>
+                                    <td className="px-4 py-4 text-right">
+                                      <div className="inline-flex w-16 items-center justify-center rounded-md border px-2 py-1 text-sm bg-slate-50 text-slate-700 font-medium">
+                                        {s.scores.defense !== null && s.scores.defense !== undefined ? s.scores.defense.toFixed(2) : '—'}
+                                      </div>
+                                    </td>
+                                    {isAdvisor && (
+                                      <td className="px-4 py-4 text-right">
+                                        <div className="inline-flex w-16 items-center justify-center rounded-md border px-2 py-1 text-sm bg-slate-50 text-slate-700 font-medium">
+                                          {s.diemGvhd !== null && s.diemGvhd !== undefined ? s.diemGvhd.toFixed(2) : '—'}
+                                        </div>
+                                      </td>
+                                    )}
+                                    {isReviewer && (
+                                      <td className="px-4 py-4 text-right">
+                                        <div className="inline-flex w-16 items-center justify-center rounded-md border px-2 py-1 text-sm bg-slate-50 text-slate-700 font-medium">
+                                          {s.diemGvpb !== null && s.diemGvpb !== undefined ? s.diemGvpb.toFixed(2) : '—'}
+                                        </div>
+                                      </td>
+                                    )}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          );
+                        })()
                       )}
                     </div>
                   </div>

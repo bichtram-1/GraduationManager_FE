@@ -207,13 +207,6 @@ export default function ScoringTable({
         </div>
       </div>
 
-      {!canEditReport && (
-        <div className="rounded-xl bg-slate-50 border border-slate-200 p-3 text-xs text-slate-600 flex items-center gap-2">
-          <span>⚠️</span>
-          <span>Bạn chỉ được xem điểm báo cáo</span>
-        </div>
-      )}
-
       <div className="overflow-auto rounded-md border border-slate-100 bg-white">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-slate-600">
@@ -225,7 +218,7 @@ export default function ScoringTable({
               <th className="px-5 py-3 text-left">Demo (0-5)</th>
               <th className="px-5 py-3 text-left">Vấn đáp (0-2)</th>
               <th className="px-5 py-3 text-left">Tổng thành phần</th>
-              <th className="px-5 py-3 text-left">Điểm báo cáo (0-10)</th>
+              {canEditReport && <th className="px-5 py-3 text-left">Điểm báo cáo (0-10)</th>}
             </tr>
           </thead>
           <tbody>
@@ -284,32 +277,34 @@ export default function ScoringTable({
                       </div>
                     </td>
                     <td className="px-5 py-4 font-semibold text-slate-800">{formatTotalScore(comp)}</td>
-                    <td className="px-5 py-4">
-                      <div className="flex flex-col">
-                        <input
-                          placeholder="0.00"
-                          disabled={!canEditReport}
-                          title={!canEditReport ? 'Bạn chỉ được xem điểm báo cáo' : undefined}
-                          className={`${TeacherInputClass('w-20')} ${!canEditReport ? 'opacity-50 bg-slate-100 cursor-not-allowed select-none' : ''} ${errors[`${i}-report`] ? 'border-red-500 focus:border-red-500 focus:ring-red-500 ring-2 ring-red-100 bg-red-50/30 font-semibold text-red-600' : ''}`}
-                          value={s.report}
-                          onChange={(e) => handleScoreChange(i, 'report', e.target.value, reportMax, 'Báo cáo')}
-                        />
-                        {!canEditReport && (
-                          <span className="text-[10px] text-slate-500 mt-1 whitespace-nowrap">
-                            Chỉ xem
-                          </span>
-                        )}
-                        {errors[`${i}-report`] && (
-                          <span className="text-[10px] font-semibold text-red-500 mt-0.5 whitespace-nowrap">
-                            {errors[`${i}-report`]}
-                          </span>
-                        )}
-                      </div>
-                    </td>
+                    {canEditReport && (
+                      <td className="px-5 py-4">
+                        <div className="flex flex-col">
+                          <input
+                            placeholder="0.00"
+                            disabled={!canEditReport}
+                            title={!canEditReport ? 'Bạn chỉ được xem điểm báo cáo' : undefined}
+                            className={`${TeacherInputClass('w-20')} ${!canEditReport ? 'opacity-50 bg-slate-100 cursor-not-allowed select-none' : ''} ${errors[`${i}-report`] ? 'border-red-500 focus:border-red-500 focus:ring-red-500 ring-2 ring-red-100 bg-red-50/30 font-semibold text-red-600' : ''}`}
+                            value={s.report}
+                            onChange={(e) => handleScoreChange(i, 'report', e.target.value, reportMax, 'Báo cáo')}
+                          />
+                          {!canEditReport && (
+                            <span className="text-[10px] text-slate-500 mt-1 whitespace-nowrap">
+                              Chỉ xem
+                            </span>
+                          )}
+                          {errors[`${i}-report`] && (
+                            <span className="text-[10px] font-semibold text-red-500 mt-0.5 whitespace-nowrap">
+                              {errors[`${i}-report`]}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    )}
                   </tr>
                   {isChair && r.otherScores && r.otherScores.length > 0 && (
                     <tr className="bg-slate-50/50">
-                      <td colSpan={8} className="px-5 py-3">
+                      <td colSpan={canEditReport ? 8 : 7} className="px-5 py-3">
                         <div className="text-xs space-y-1.5 border-l-2 border-[#1976D2] pl-4 py-0.5">
                           <div className="font-semibold text-slate-700">Điểm chi tiết từ các thành viên khác trong hội đồng:</div>
                           <div className="grid gap-2 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
@@ -336,7 +331,7 @@ export default function ScoringTable({
         </table>
       </div>
       <div className="mt-3 text-sm text-slate-700">
-        Trung bình thành phần: <strong>{formatTotalScore(avg.avgComp)}</strong> — Avg báo cáo: <strong>{formatTotalScore(avg.avgReport)}</strong> — Điểm tổng nhóm: <strong>{formatTotalScore(finalGroup)}</strong>
+        Trung bình thành phần: <strong>{formatTotalScore(avg.avgComp)}</strong>{canEditReport && <> — Avg báo cáo: <strong>{formatTotalScore(avg.avgReport)}</strong> — Điểm tổng nhóm: <strong>{formatTotalScore(finalGroup)}</strong></>}
       </div>
     </div>
   )
