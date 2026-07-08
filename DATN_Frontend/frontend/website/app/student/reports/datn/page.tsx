@@ -2,18 +2,41 @@
 
 import { useMemo, useState, useEffect, ChangeEvent } from 'react'
 import Link from 'next/link'
-import { CheckCircle2, FileText, Plus, Upload, Clock3, MessageSquareQuote, Rocket, Users, GraduationCap } from 'lucide-react'
+import { CheckCircle2, FileText, Plus, Upload, Clock3, MessageSquareQuote, Rocket, Users, GraduationCap, ShieldCheck } from 'lucide-react'
 import { StudentPill, StudentSectionHeader } from '../../_components/StudentShell'
 import { StudentButton, StudentField, StudentFilterTabs, StudentInputClass, StudentModal, getReportStatusTone } from '../../_components/StudentUI'
 import { studentApi, IDatnProgressReport, IThesisRegistration } from '@/lib/api/studentApi'
 import { uploadApi } from '@/lib/api/uploadApi'
+import { usePeriod } from '@/lib/providers/PeriodProvider'
 import { COMMON_LABELS } from '@/constants/commonLabels'
 import { message } from 'antd'
 
 type StatusFilter = 'all' | 'Đã nộp' | 'Thiếu' | 'Chưa nộp'
 
+const getFileUrl = (url: string | null | undefined) => {
+  if (!url || url === '—') return null;
+  const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+  if (url.startsWith('http')) {
+    try {
+      const urlObj = new URL(url);
+      const backendUrlObj = new URL(backendUrl);
+      if (urlObj.hostname === 'localhost' || urlObj.hostname === '127.0.0.1') {
+        urlObj.protocol = backendUrlObj.protocol;
+        urlObj.host = backendUrlObj.host;
+      }
+      return urlObj.toString();
+    } catch (_) {
+      return url;
+    }
+  }
+  return `${backendUrl.replace(/\/$/, '')}/storage/${url}`;
+};
+
 export default function StudentReportsDATNPage() {
+  const { selectedPeriod } = usePeriod()
+  const isPeriodLocked = selectedPeriod?.status === 'grading' || selectedPeriod?.status === 'closed'
   const [milestones, setMilestones] = useState<IDatnProgressReport[]>([])
+  const [isTopicApproved, setIsTopicApproved] = useState(true)
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [submitOpen, setSubmitOpen] = useState(false)
@@ -38,14 +61,16 @@ export default function StudentReportsDATNPage() {
           studentApi.getMyThesisRegistration()
         ])
         if (!mounted) return
-        setMilestones(reportsData)
+        setMilestones(reportsData.reports || [])
+        setIsTopicApproved(reportsData.isTopicApproved !== false)
         setRegistration(regData)
-        if (reportsData.length > 0) {
-          setSelectedWeek(reportsData[0].week)
+        if (reportsData.reports && reportsData.reports.length > 0) {
+          setSelectedWeek(reportsData.reports[0].week)
         }
       } catch (_err) {
         if (!mounted) return
         setMilestones([])
+        setIsTopicApproved(true)
         setRegistration(null)
       } finally {
         if (mounted) {
@@ -69,6 +94,31 @@ export default function StudentReportsDATNPage() {
     }
   }, [])
 
+  // Prefill form when week changes (for editing/updating existing reports)
+  useEffect(() => {
+    if (!submitOpen) return
+    const wNum = Number(submitForm.week)
+    if (!wNum) return
+    const existing = milestones.find((m) => m.week === wNum)
+    if (existing && existing.status === 'Đã nộp') {
+      setSubmitForm((current) => ({
+        ...current,
+        name: existing.name || '',
+        note: existing.note || '',
+        fileName: existing.file && existing.file !== '—' ? existing.file : '',
+        fileUrl: existing.fileUrl || '',
+      }))
+    } else {
+      setSubmitForm((current) => ({
+        ...current,
+        name: '',
+        note: '',
+        fileName: '',
+        fileUrl: '',
+      }))
+    }
+  }, [submitForm.week, submitOpen, milestones])
+
   const selected = useMemo(() => {
     return milestones.find((milestone) => milestone.week === selectedWeek)
       ?? milestones[0]
@@ -84,6 +134,10 @@ export default function StudentReportsDATNPage() {
     return milestones.filter((milestone) => milestone.status === statusFilter)
   }, [milestones, statusFilter])
 
+  const sortedWeeks = useMemo(() => {
+    return [...milestones].sort((a, b) => a.week - b.week)
+  }, [milestones])
+
   const latestTeacherComment = useMemo(() => {
     const withComment = milestones.filter((milestone) => milestone.teacherComment)
     if (withComment.length === 0) return 'Chưa có nhận xét từ giảng viên.'
@@ -93,9 +147,15 @@ export default function StudentReportsDATNPage() {
 
   const openSubmitModal = () => {
     const unsubmitted = milestones.filter((m) => m.status === 'Chưa nộp')
-    const nextWeek = unsubmitted.length > 0 
-      ? Math.min(...unsubmitted.map((m) => m.week)) 
-      : (milestones.length > 0 ? Math.max(...milestones.map((milestone) => milestone.week)) + 1 : 1)
+    const missing = milestones.filter((m) => m.status === 'Thiếu')
+    let nextWeek = 1
+    if (unsubmitted.length > 0) {
+      nextWeek = Math.min(...unsubmitted.map((m) => m.week))
+    } else if (missing.length > 0) {
+      nextWeek = Math.min(...missing.map((m) => m.week))
+    } else if (milestones.length > 0) {
+      nextWeek = Math.min(...milestones.map((m) => m.week))
+    }
     setSubmitForm({
       week: String(nextWeek),
       name: '',
@@ -181,7 +241,7 @@ export default function StudentReportsDATNPage() {
       <StudentSectionHeader
         title="Báo cáo ĐATN"
         description="Nộp bản thảo từng giai đoạn, theo dõi phản hồi và trạng thái chấm của giảng viên theo bố cục chi tiết hơn."
-        actions={registration?.status === 'accepted' ? (
+        actions={registration?.status === 'accepted' && isTopicApproved && !isPeriodLocked ? (
           <button
             type="button"
             onClick={openSubmitModal}
@@ -192,6 +252,28 @@ export default function StudentReportsDATNPage() {
           </button>
         ) : undefined}
       />
+
+      {isPeriodLocked && (
+        <div className="mb-6 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {selectedPeriod?.status === 'closed'
+            ? 'Đợt đồ án tốt nghiệp này đã đóng, bạn không thể nộp bản thảo nữa.'
+            : 'Đợt đồ án tốt nghiệp đã bắt đầu chấm điểm, bạn không thể nộp bản thảo nữa.'}
+        </div>
+      )}
+
+      {!isTopicApproved && (
+        <div className="mb-6 flex gap-3 rounded-[28px] border border-amber-200 bg-amber-50/50 p-5 shadow-xs">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
+            <ShieldCheck className="h-5 w-5" />
+          </div>
+          <div>
+            <h4 className="text-sm font-semibold text-amber-900">Đề tài tốt nghiệp chưa được duyệt</h4>
+            <p className="mt-1 text-xs leading-relaxed text-amber-700">
+              Đề tài tốt nghiệp của bạn chưa được duyệt hoặc đã bị từ chối. Bạn không thể thực hiện nộp báo cáo tiến độ! Vui lòng đăng ký đề tài hoặc liên hệ khoa/giảng viên hướng dẫn!
+            </p>
+          </div>
+        </div>
+      )}
 
       {!loading && registration?.status !== 'accepted' && (
         <div className="mb-5 p-5 rounded-[22px] border border-amber-200 bg-amber-50 text-amber-900 shadow-sm flex flex-col gap-2">
@@ -329,8 +411,8 @@ export default function StudentReportsDATNPage() {
                       </div>
                     </td>
                     <td className="px-5 py-4 text-[#1976D2] max-w-40">
-                      {milestone.fileUrl ? (
-                        <a href={milestone.fileUrl} target="_blank" rel="noopener noreferrer" title={milestone.file} className="flex min-w-0 items-center gap-1 hover:underline">
+                      {getFileUrl(milestone.fileUrl || milestone.file) ? (
+                        <a href={getFileUrl(milestone.fileUrl || milestone.file) || undefined} target="_blank" rel="noopener noreferrer" title={milestone.file} className="flex min-w-0 items-center gap-1 hover:underline">
                           <FileText className="h-4 w-4 shrink-0" />
                           <span className="min-w-0 truncate">{milestone.file}</span>
                         </a>
@@ -349,7 +431,10 @@ export default function StudentReportsDATNPage() {
                     <td className="px-5 py-4 text-right">
                       <button
                         type="button"
-                        onClick={() => setSelectedWeek(milestone.week)}
+                        onClick={() => {
+                          setSelectedWeek(milestone.week)
+                          document.getElementById('quick-view-datn')?.scrollIntoView({ behavior: 'smooth' })
+                        }}
                         className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
                       >
                         <Upload className="h-4 w-4" />
@@ -365,8 +450,8 @@ export default function StudentReportsDATNPage() {
         </section>
 
         <div className="space-y-6">
-          <section className="rounded-[28px] border border-slate-200 bg-[linear-gradient(135deg,#eff6ff_0%,#ffffff_100%)] p-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
-            <div className="text-sm font-semibold text-slate-900">Xem nhanh mốc nộp</div>
+          <section id="quick-view-datn" className="rounded-[28px] border border-slate-200 bg-[linear-gradient(135deg,#eff6ff_0%,#ffffff_100%)] p-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
+            <div className="text-sm font-semibold text-slate-900">Xem nhanh báo cáo</div>
             <div className="mt-4 rounded-[22px] bg-white/90 p-4">
               <div className="text-xs text-slate-500">Đang chọn</div>
               <div className="mt-1 text-lg font-semibold text-slate-900">Tuần {selected.week} · {selected.name}</div>
@@ -375,8 +460,8 @@ export default function StudentReportsDATNPage() {
                 <div className="flex items-center gap-2 min-w-0">
                   <FileText className="h-4 w-4 text-[#1976D2] shrink-0" />
                   <span className="shrink-0">File: </span>
-                  {selected.fileUrl ? (
-                    <a href={selected.fileUrl} target="_blank" rel="noopener noreferrer" title={selected.file} className="min-w-0 truncate text-[#1976D2] hover:underline font-semibold">
+                  {getFileUrl(selected.fileUrl || selected.file) ? (
+                    <a href={getFileUrl(selected.fileUrl || selected.file) || undefined} target="_blank" rel="noopener noreferrer" title={selected.file} className="min-w-0 truncate text-[#1976D2] hover:underline font-semibold">
                       {selected.file}
                     </a>
                   ) : (
@@ -429,14 +514,17 @@ export default function StudentReportsDATNPage() {
       >
         <div className="grid gap-4 md:grid-cols-2">
           <StudentField label="Tuần báo cáo">
-            <input
-              type="number"
-              min={1}
+            <select
               value={submitForm.week}
               onChange={(event) => setSubmitForm((current) => ({ ...current, week: event.target.value }))}
               className={StudentInputClass()}
-              placeholder="4"
-            />
+            >
+              {sortedWeeks.map((w) => (
+                <option key={w.week} value={String(w.week)}>
+                  Tuần {w.week} ({w.status})
+                </option>
+              ))}
+            </select>
           </StudentField>
           <StudentField label="Tên bản thảo">
             <input
@@ -497,7 +585,7 @@ export default function StudentReportsDATNPage() {
         </div>
 
         <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-          Bản thảo sau khi gửi sẽ chuyển sang trạng thái <span className="font-semibold">Đã nộp</span> và được chọn ngay trên danh sách.
+          Bạn có thể gửi lại nhiều lần để cập nhật bản thảo cho đến khi hết hạn nộp của tuần đó.
         </div>
       </StudentModal>
     </>

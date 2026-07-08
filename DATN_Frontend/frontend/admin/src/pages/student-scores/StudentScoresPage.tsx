@@ -3,17 +3,12 @@ import {
   Button,
   Card,
   Descriptions,
-  Form,
   Input,
-  InputNumber,
   Modal,
   Select,
-  Space,
   Table,
   Tag,
   Tabs,
-  Row,
-  Col,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { FileDoneOutlined, SearchOutlined, TrophyOutlined } from '@ant-design/icons';
@@ -69,60 +64,17 @@ const scoreBand = (score: number) => {
 const StudentScoresPage: React.FC = () => {
   const { t } = useTranslation();
 
-  const formatGradingInput = (value: string) => {
-    let clean = value.replace(/[^0-9.]/g, '')
-    
-    if (clean.includes('.')) {
-      const parts = clean.split('.')
-      if (parts.length > 2) {
-        clean = parts[0] + '.' + parts.slice(1).join('')
-      }
-      const dec = parts[1] || ''
-      if (dec.length > 2) {
-        clean = parts[0] + '.' + dec.substring(0, 2)
-      }
-      return clean
-    }
-    
-    if (clean.length === 2) {
-      const val = parseInt(clean, 10)
-      if (val > 10 || clean[0] === '0') {
-        return clean[0] + '.' + clean[1]
-      }
-    } else if (clean.length === 3) {
-      const val = parseInt(clean, 10)
-      if (val === 100) {
-        return '10.0'
-      } else if (val > 100) {
-        return clean[0] + '.' + clean.substring(1)
-      }
-    } else if (clean.length >= 4) {
-      const val = parseInt(clean, 10)
-      if (val >= 1000) {
-        return '10.00'
-      }
-      return clean[0] + '.' + clean.substring(1, 3)
-    }
-    
-    return clean
-  };
-
   const { selectedPeriod } = useGlobalVariable();
   const [searchParams, setSearchParams] = useSearchParams();
   const mode = (searchParams.get('mode') as ScoreMode) || 'internship';
   const setMode = (newMode: ScoreMode) => {
     setSearchParams({ mode: newMode });
   };
-  const [editOpen, setEditOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
-  const [editingRecord, setEditingRecord] = useState<ScoreRow | null>(null);
   const [detailRecord, setDetailRecord] = useState<ScoreRow | null>(null);
-  const [editForm] = Form.useForm();
   const [keyword, setKeyword] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | ScoreStatus>('all');
   const [classFilter, setClassFilter] = useState<string | undefined>(undefined);
-
-  const updateScoreMutation = scoreHooks.useUpdateScore();
 
   // Fetch score data from API
   const { data: scoresData, isLoading } = scoreHooks.useFetchListScores({
@@ -153,45 +105,6 @@ const StudentScoresPage: React.FC = () => {
     return Array.from(s);
   }, [sourceRows]);
 
-  const openEditModal = (record: ScoreRow) => {
-    setEditingRecord(record);
-    setEditOpen(true);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const formattedRecord = {
-      ...record,
-      finalScore: typeof record.finalScore === 'number' ? record.finalScore.toFixed(2) : record.finalScore
-    };
-    editForm.setFieldsValue(formattedRecord as any);
-  };
-
-  const handleSaveEdit = async () => {
-    const values = await editForm.validateFields();
-    if (!editingRecord) return;
-
-    updateScoreMutation.mutate(
-      {
-        id: editingRecord.id,
-        body: {
-          mode,
-          status: values.status,
-          finalScore: values.finalScore,
-          defenseScore: values.defenseScore,
-          demoScore: values.demoScore,
-          qaScore: values.qaScore,
-          reportScore: values.reportScore,
-          dot_id: selectedPeriod?.id ? Number(selectedPeriod.id) : undefined,
-        },
-      },
-      {
-        onSuccess: () => {
-          setEditOpen(false);
-          setEditingRecord(null);
-          editForm.resetFields();
-        },
-      }
-    );
-  };
-
   const openDetailModal = (record: ScoreRow) => { setDetailRecord(record); setDetailOpen(true); };
 
   const internshipColumns: ColumnsType<InternshipScoreRow> = [
@@ -203,7 +116,7 @@ const StudentScoresPage: React.FC = () => {
     { title: t(getKey('final_score')), dataIndex: 'finalScore', key: 'finalScore', width: 120, render: (v) => <b>{typeof v === 'number' ? v.toFixed(2) : (v !== null && v !== undefined && v !== '' ? Number(v).toFixed(2) : '—')}</b> },
     { title: t(getKey('score_band')), key: 'band', width: 130, render: (_v, r) => { const meta = scoreBand(r.finalScore); return <Tag className={cn('!m-0 !rounded-full !px-2.5 !py-[2px] !border-none', meta.className)}>{t(getKey(meta.labelKey))}</Tag>; } },
     { title: t(getKey('group_status')), dataIndex: 'status', key: 'status', width: 140, render: (s: ScoreStatus) => { const meta = statusMeta[s]; return <Tag className={cn('!m-0 !rounded-full !px-2.5 !py-[2px] !border-none', meta.className)}>{t(getKey(meta.labelKey))}</Tag>; } },
-    { title: t(getKey('action')), key: 'actions', fixed: 'right', width: 160, render: (_,_r) => (<Space><Button type="link" onClick={() => openEditModal(_r as ScoreRow)}>{t(getKey('edit_score'))}</Button><Button type="link" onClick={() => openDetailModal(_r as ScoreRow)}>{t(getKey('detail'))}</Button></Space>) },
+    { title: t(getKey('action')), key: 'actions', fixed: 'right', width: 100, render: (_,_r) => (<Button type="link" onClick={() => openDetailModal(_r as ScoreRow)}>{t(getKey('detail'))}</Button>) },
   ];
 
   const projectColumns: ColumnsType<ProjectScoreRow> = [
@@ -219,78 +132,10 @@ const StudentScoresPage: React.FC = () => {
     { title: t(getKey('score_report')), dataIndex: 'reportScore', key: 'reportScore', width: 110, render: (v) => formatNumber(v) },
     { title: t(getKey('project_final_score')), dataIndex: 'finalScore', key: 'finalScore', width: 110, render: (v) => <b>{typeof v === 'number' ? v.toFixed(2) : (v !== null && v !== undefined && v !== '' ? Number(v).toFixed(2) : '—')}</b> },
     { title: t(getKey('score_band')), key: 'band', width: 130, render: (_v, r) => { const meta = scoreBand(r.finalScore); return <Tag className={cn('!m-0 !rounded-full !px-2.5 !py-[2px] !border-none', meta.className)}>{t(getKey(meta.labelKey))}</Tag>; } },
-    { title: t(getKey('action')), key: 'actions', fixed: 'right', width: 160, render: (_,_r) => (<Space><Button type="link" onClick={() => openEditModal(_r as ScoreRow)}>{t(getKey('edit_score'))}</Button><Button type="link" onClick={() => openDetailModal(_r as ScoreRow)}>{t(getKey('detail'))}</Button></Space>) },
+    { title: t(getKey('action')), key: 'actions', fixed: 'right', width: 100, render: (_,_r) => (<Button type="link" onClick={() => openDetailModal(_r as ScoreRow)}>{t(getKey('detail'))}</Button>) },
   ];
 
   const columns = (mode === 'internship' ? internshipColumns : projectColumns) as any;
-
-  const renderScoreModalContent = () => {
-    if (!editingRecord) return null;
-    const isIntern = 'companyName' in editingRecord;
-    return (
-      <Form form={editForm} layout="vertical" initialValues={editingRecord}>
-        <Row gutter={16}>
-          {isIntern ? (
-            <Col span={24}>
-              <Form.Item 
-                name="finalScore" 
-                label={t(getKey('final_score'))} 
-                rules={[
-                  { required: true, message: 'Vui lòng nhập điểm số!' },
-                  {
-                    validator: (_, value) => {
-                      if (value === undefined || value === null || value === '') return Promise.resolve();
-                      const num = parseFloat(value);
-                      if (isNaN(num) || num < 0 || num > 10) {
-                        return Promise.reject(new Error('Điểm số phải từ 0 đến 10!'));
-                      }
-                      return Promise.resolve();
-                    }
-                  }
-                ]}
-              >
-                <Input
-                  placeholder="0.00 - 10.00"
-                  onChange={(e) => {
-                    const formatted = formatGradingInput(e.target.value);
-                    editForm.setFieldsValue({ finalScore: formatted });
-                  }}
-                />
-              </Form.Item>
-            </Col>
-          ) : (
-            <>
-              <Col span={12}>
-                <Form.Item name="defenseScore" label={t(getKey('score_defense'))} rules={[{ required: true }]}>
-                  <InputNumber min={0} max={3} precision={1} className="w-full" />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item name="demoScore" label={t(getKey('score_demo'))} rules={[{ required: true }]}>
-                  <InputNumber min={0} max={5} precision={1} className="w-full" />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item name="qaScore" label={t(getKey('score_qa'))} rules={[{ required: true }]}>
-                  <InputNumber min={0} max={2} precision={1} className="w-full" />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item name="reportScore" label={t(getKey('score_report'))} rules={[{ required: true }]}>
-                  <InputNumber min={0} max={10} precision={1} className="w-full" />
-                </Form.Item>
-              </Col>
-            </>
-          )}
-          <Col span={24}>
-            <Form.Item name="status" label={t(getKey('group_status'))} rules={[{ required: true }]}>
-              <Select options={Object.keys(statusMeta).map((k) => ({ value: k, label: t(getKey(statusMeta[k as ScoreStatus].labelKey)) }))} />
-            </Form.Item>
-          </Col>
-        </Row>
-      </Form>
-    );
-  };
 
   return (
     <div className="text-gray-800 pb-4">
@@ -404,10 +249,6 @@ const StudentScoresPage: React.FC = () => {
           <Table rowKey="id" dataSource={filteredRows} columns={columns} scroll={{ x: 1300 }} loading={isLoading} />
         </div>
       </div>
-
-      <Modal title={t(getKey('edit_score'))} open={editOpen} onOk={handleSaveEdit} onCancel={() => { setEditOpen(false); setEditingRecord(null); }} centered width={540}>
-        {renderScoreModalContent()}
-      </Modal>
 
       <Modal title={t(getKey('detail'))} open={detailOpen} onCancel={() => { setDetailOpen(false); setDetailRecord(null); }} footer={null} centered width={540}>
         {detailRecord && (

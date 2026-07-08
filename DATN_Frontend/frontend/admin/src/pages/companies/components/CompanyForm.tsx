@@ -1,9 +1,10 @@
-import { Form, Input, Select } from 'antd';
+import { Form, Input, Select, message } from 'antd';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { getKey } from '@shared/types/I18nKeyType';
 import type { I18nKey } from '@shared/types/I18nKeyType';
 import { STATUS_CODE } from '../../../constants/commonConst';
+import { companyApi } from '../../../api/companyApi';
 
 type Props = {
   disabled?: boolean;
@@ -30,6 +31,30 @@ const reviewStatusOptions: { value: string; label: keyof I18nKey }[] = [
 
 const CompanyForm: React.FC<Props> = ({ disabled = false }) => {
   const { t } = useTranslation();
+  const form = Form.useFormInstance();
+  const [lookingUpTax, setLookingUpTax] = React.useState(false);
+
+  const handleLookupTax = async (value: string) => {
+    const taxId = value.trim().replace(/-/g, '');
+    if (!/^[0-9]{10}([0-9]{3})?$/.test(taxId)) {
+      message.error('Mã số thuế phải gồm 10 hoặc 13 chữ số để tra cứu!');
+      return;
+    }
+    setLookingUpTax(true);
+    try {
+      const result = await companyApi.lookupCompanyByTaxId(taxId);
+      if (result) {
+        form.setFieldsValue({
+          name: result.name || undefined,
+        });
+        message.success('Đã tự động điền tên công ty từ mã số thuế!');
+      }
+    } catch (err) {
+      message.error((err as Error).message || 'Tra cứu mã số thuế thất bại, vui lòng nhập thủ công.');
+    } finally {
+      setLookingUpTax(false);
+    }
+  };
 
   return (
     <div className="grid grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-2">
@@ -41,7 +66,13 @@ const CompanyForm: React.FC<Props> = ({ disabled = false }) => {
         name="taxId"
         rules={[{ pattern: /^\d{10}(\d{3})?$/, message: 'Mã số thuế phải gồm 10 hoặc 13 chữ số' }]}
       >
-          <Input disabled={disabled} placeholder="VD: 0101243150" />
+          <Input.Search
+            disabled={disabled}
+            placeholder="VD: 0101243150"
+            enterButton="Tra cứu"
+            loading={lookingUpTax}
+            onSearch={handleLookupTax}
+          />
       </Form.Item>
       <Form.Item label={t(getKey('company_field'))} name="field" rules={[{ required: true, message: t(getKey('please_select_field')) }]}>
           <Select disabled={disabled} options={companyFieldOptions} />

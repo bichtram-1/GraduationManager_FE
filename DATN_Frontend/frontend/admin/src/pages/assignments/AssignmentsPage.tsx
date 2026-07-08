@@ -62,6 +62,7 @@ const AssignmentsPage = () => {
   const publishAssignmentsMutation = assignmentHooks.usePublishAssignments();
 
   const rows = assignmentList?.rows ?? [];
+  const isPeriodClosed = selectedPeriod?.status === STATUS_CODE.CLOSED;
   const classOptions = useMemo(
     () => Array.from(new Set(rows.map((r) => r.className))),
     [rows]
@@ -155,6 +156,7 @@ const AssignmentsPage = () => {
   const toggleSelectStudent = (id: string, checked: boolean) => setSelectedStudents((p) => ({ ...p, [id]: checked }));
 
   const confirmAssignSelected = () => {
+    if (isPeriodClosed) return;
     const studentIds = Object.keys(selectedStudents).filter((k) => selectedStudents[k]);
     if (studentIds.length === 0) return message.warning(t(getKey('please_select_student')));
     if (!selectedTeacher) return message.warning(t(getKey('please_select_teacher')));
@@ -198,6 +200,7 @@ const AssignmentsPage = () => {
   };
 
   const unassign = (studentId: string) => {
+    if (isPeriodClosed) return;
     Modal.confirm({
       title: t(getKey('unassign_confirm_title')),
       content: t(getKey('unassign_confirm_content')),
@@ -220,6 +223,7 @@ const AssignmentsPage = () => {
   };
 
   const handlePublishAssignments = () => {
+    if (isPeriodClosed) return;
     const unpublishedCount = filteredAssignedRows.filter((r) => !r.published).length;
     Modal.confirm({
       title: t(getKey('publish_assignment_btn')),
@@ -272,6 +276,18 @@ const AssignmentsPage = () => {
           </div>
         </div>
       </div>
+
+      {selectedPeriod && (
+        <div className={cn('mb-5 p-4 rounded-[18px] border flex items-center justify-between shadow-[0_12px_28px_rgba(15,23,42,0.02)]',
+          isPeriodClosed ? 'bg-red-50 border-red-200 text-red-700' : 'bg-blue-50 border-blue-200 text-blue-700'
+        )}>
+          <div>
+            {t(getKey('showing'))} {t(getKey('assignment_management'))} {t(getKey('of'))}: <strong className="underline">{selectedPeriod.name}</strong>
+            {isPeriodClosed && ` (${t(getKey('read_only_data_locked'))})`}
+          </div>
+          {isPeriodClosed && <Tag color="error">{t(getKey('read_only_tag'))}</Tag>}
+        </div>
+      )}
 
       <div className="mb-5 rounded-[20px] border border-slate-100 bg-white px-4 pt-3 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
         <Tabs activeKey={modeTab} onChange={(k) => setModeTab(k as 'manual' | 'list')} items={[{ key: 'manual', label: t(getKey('manual_assignment')) }, { key: 'list', label: `${t(getKey('assigned_list'))} (${formatNumber(assignedCount)})` }]} />
@@ -436,7 +452,7 @@ const AssignmentsPage = () => {
               )}
 
               <div className="mt-4 flex flex-col gap-2">
-                <Button type="primary" onClick={confirmAssignSelected}>{t(getKey('assign_teacher_btn'))}</Button>
+                <Button type="primary" disabled={isPeriodClosed} onClick={confirmAssignSelected}>{t(getKey('assign_teacher_btn'))}</Button>
                 <Button onClick={() => setSelectedStudents({})}>{t(getKey('cancel_select_btn'))}</Button>
               </div>
             </Card>
@@ -507,6 +523,7 @@ const AssignmentsPage = () => {
                     type="primary"
                     icon={<SendOutlined />}
                     loading={publishAssignmentsMutation.isPending}
+                    disabled={isPeriodClosed}
                     onClick={handlePublishAssignments}
                   >
                     {t(getKey('publish_assignment_btn'))}
@@ -515,9 +532,9 @@ const AssignmentsPage = () => {
               </div>
             )}
             actions={{
-              isEdit: true,
+              isEdit: !isPeriodClosed,
               isDetail: true,
-              customAction: (record) => {
+              customAction: isPeriodClosed ? undefined : (record) => {
                 const r = record as AssignmentRow;
                 return (
                   <div className="pointer-events-auto">
@@ -535,7 +552,7 @@ const AssignmentsPage = () => {
                 );
               },
             }}
-            updateInfo={{ type: 'modal', modalInfo: { modalContent: <AssignmentForm mode="edit" />, modalProps: { centered: true, width: 760, title: t(getKey('edit_assignment_title')) }, modalFunc: updateAssignmentMutation } }}
+            updateInfo={isPeriodClosed ? undefined : { type: 'modal', modalInfo: { modalContent: <AssignmentForm mode="edit" />, modalProps: { centered: true, width: 760, title: t(getKey('edit_assignment_title')) }, modalFunc: updateAssignmentMutation } }}
             detailInfo={{ type: 'modal', modalInfo: { modalContent: <AssignmentForm mode="detail" />, modalProps: { centered: true, width: 760, title: t(getKey('detail_assignment_title')), footer: null }, modalFunc: assignmentHooks.useFetchDetailAssignment as unknown as (id: string, enable: boolean) => import('@tanstack/react-query').UseQueryResult<IDetailAssignment, Error> } }}
             formatInitialValues={(d) => ({ ...d })}
             formatFormValues={(v: Record<string, unknown>) => v}

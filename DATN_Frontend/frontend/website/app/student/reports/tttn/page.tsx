@@ -6,14 +6,37 @@ import { StudentPill, StudentSectionHeader } from '../../_components/StudentShel
 import { StudentButton, StudentField, StudentFilterTabs, StudentInputClass, StudentModal, getReportStatusTone } from '../../_components/StudentUI'
 import { studentApi, IProgressReport, IStudentDashboardData } from '@/lib/api/studentApi'
 import { uploadApi } from '@/lib/api/uploadApi'
+import { usePeriod } from '@/lib/providers/PeriodProvider'
 import { COMMON_LABELS } from '@/constants/commonLabels'
 import { Spin, message } from 'antd'
 
 type StatusFilter = 'all' | 'Đã nộp' | 'Thiếu' | 'Chưa nộp'
 
+const getFileUrl = (url: string | null | undefined) => {
+  if (!url || url === '—') return null;
+  const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+  if (url.startsWith('http')) {
+    try {
+      const urlObj = new URL(url);
+      const backendUrlObj = new URL(backendUrl);
+      if (urlObj.hostname === 'localhost' || urlObj.hostname === '127.0.0.1') {
+        urlObj.protocol = backendUrlObj.protocol;
+        urlObj.host = backendUrlObj.host;
+      }
+      return urlObj.toString();
+    } catch (_) {
+      return url;
+    }
+  }
+  return `${backendUrl.replace(/\/$/, '')}/storage/${url}`;
+};
+
 export default function StudentReportsTTTNPage() {
+  const { selectedPeriod } = usePeriod()
+  const isPeriodLocked = selectedPeriod?.status === 'grading' || selectedPeriod?.status === 'closed'
   const [reports, setReports] = useState<IProgressReport[]>([])
   const [hasGvhd, setHasGvhd] = useState(true)
+  const [isInternshipApproved, setIsInternshipApproved] = useState(true)
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [submitOpen, setSubmitOpen] = useState(false)
@@ -46,8 +69,10 @@ export default function StudentReportsTTTNPage() {
         if (!mounted) return
         const data = resReports.reports || []
         const okGvhd = resReports.hasGvhd !== false
+        const okInternship = resReports.isInternshipApproved !== false
         setReports(data)
         setHasGvhd(okGvhd)
+        setIsInternshipApproved(okInternship)
         setInternshipInfo(dashboard?.tttn ?? null)
         if (data.length > 0) {
           setSelectedWeek(data[0].week)
@@ -56,6 +81,7 @@ export default function StudentReportsTTTNPage() {
         if (!mounted) return
         setReports([])
         setHasGvhd(true)
+        setIsInternshipApproved(true)
         setInternshipInfo(null)
       } finally {
         if (mounted) {
@@ -78,6 +104,31 @@ export default function StudentReportsTTTNPage() {
     }
   }, [])
 
+  // Prefill form when week changes (for editing/updating existing reports)
+  useEffect(() => {
+    if (!submitOpen) return
+    const wNum = Number(submitForm.week)
+    if (!wNum) return
+    const existing = reports.find((r) => r.week === wNum)
+    if (existing && existing.status === 'Đã nộp') {
+      setSubmitForm((current) => ({
+        ...current,
+        title: existing.title || '',
+        note: existing.note || '',
+        fileName: existing.file && existing.file !== '—' ? existing.file : '',
+        fileUrl: existing.fileUrl || '',
+      }))
+    } else {
+      setSubmitForm((current) => ({
+        ...current,
+        title: '',
+        note: '',
+        fileName: '',
+        fileUrl: '',
+      }))
+    }
+  }, [submitForm.week, submitOpen, reports])
+
   const selectedReport = useMemo(() => {
     return reports.find((report) => report.week === selectedWeek) 
       ?? reports[0] 
@@ -93,6 +144,10 @@ export default function StudentReportsTTTNPage() {
     return reports.filter((report) => report.status === statusFilter)
   }, [reports, statusFilter])
 
+  const sortedWeeks = useMemo(() => {
+    return [...reports].sort((a, b) => a.week - b.week)
+  }, [reports])
+
   const latestTeacherComment = useMemo(() => {
     const withComment = reports.filter((report) => report.teacherComment)
     if (withComment.length === 0) return 'Chưa có nhận xét từ giảng viên.'
@@ -102,9 +157,15 @@ export default function StudentReportsTTTNPage() {
 
   const openSubmitModal = () => {
     const unsubmitted = reports.filter((r) => r.status === 'Chưa nộp')
-    const nextWeek = unsubmitted.length > 0 
-      ? Math.min(...unsubmitted.map((r) => r.week)) 
-      : (reports.length > 0 ? Math.max(...reports.map((report) => report.week)) + 1 : 1)
+    const missing = reports.filter((r) => r.status === 'Thiếu')
+    let nextWeek = 1
+    if (unsubmitted.length > 0) {
+      nextWeek = Math.min(...unsubmitted.map((r) => r.week))
+    } else if (missing.length > 0) {
+      nextWeek = Math.min(...missing.map((r) => r.week))
+    } else if (reports.length > 0) {
+      nextWeek = Math.min(...reports.map((r) => r.week))
+    }
     setSubmitForm({
       week: String(nextWeek),
       title: '',
@@ -198,8 +259,20 @@ export default function StudentReportsTTTNPage() {
           <button
             type="button"
             onClick={() => {
+              if (isPeriodLocked) {
+                message.error(
+                  selectedPeriod?.status === 'closed'
+                    ? 'Đợt thực tập này đã đóng, bạn không thể nộp báo cáo nữa.'
+                    : 'Đợt thực tập đã bắt đầu chấm điểm, bạn không thể nộp báo cáo nữa.'
+                )
+                return
+              }
               if (!hasGvhd) {
                 message.error('Bạn chưa được phân công Giảng viên hướng dẫn cho đợt này. Bạn không thể thực hiện nộp báo cáo!')
+                return
+              }
+              if (!isInternshipApproved) {
+                message.error('Thông tin đăng ký thực tập tốt nghiệp của bạn chưa được duyệt hoặc chưa khai báo. Bạn không thể thực hiện nộp báo cáo!')
                 return
               }
               openSubmitModal()
@@ -212,6 +285,14 @@ export default function StudentReportsTTTNPage() {
         )}
       />
 
+      {isPeriodLocked && (
+        <div className="mb-6 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {selectedPeriod?.status === 'closed'
+            ? 'Đợt thực tập này đã đóng, bạn không thể nộp báo cáo nữa.'
+            : 'Đợt thực tập đã bắt đầu chấm điểm, bạn không thể nộp báo cáo nữa.'}
+        </div>
+      )}
+
       {!hasGvhd && (
         <div className="mb-6 flex gap-3 rounded-[28px] border border-amber-200 bg-amber-50/50 p-5 shadow-xs">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
@@ -221,6 +302,20 @@ export default function StudentReportsTTTNPage() {
             <h4 className="text-sm font-semibold text-amber-900">Chưa được phân công giảng viên hướng dẫn</h4>
             <p className="mt-1 text-xs leading-relaxed text-amber-700">
               Bạn chưa được phân công Giảng viên hướng dẫn cho đợt này nên không thể thực hiện nộp báo cáo. Vui lòng liên hệ khoa hoặc quản trị viên để được hỗ trợ!
+            </p>
+          </div>
+        </div>
+      )}
+
+      {!isInternshipApproved && (
+        <div className="mb-6 flex gap-3 rounded-[28px] border border-amber-200 bg-amber-50/50 p-5 shadow-xs">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
+            <ShieldCheck className="h-5 w-5" />
+          </div>
+          <div>
+            <h4 className="text-sm font-semibold text-amber-900">Đăng ký thực tập tốt nghiệp chưa được duyệt</h4>
+            <p className="mt-1 text-xs leading-relaxed text-amber-700">
+              Thông tin đăng ký thực tập tốt nghiệp của bạn chưa được duyệt hoặc chưa khai báo. Bạn không thể thực hiện nộp báo cáo tiến độ. Vui lòng khai báo thông tin thực tập hoặc đợi giảng viên phê duyệt!
             </p>
           </div>
         </div>
@@ -332,8 +427,8 @@ export default function StudentReportsTTTNPage() {
                       </div>
                     </td>
                     <td className="px-5 py-4 text-[#1976D2] max-w-40">
-                      {report.fileUrl ? (
-                        <a href={report.fileUrl} target="_blank" rel="noopener noreferrer" title={report.file} className="flex min-w-0 items-center gap-1 hover:underline">
+                      {getFileUrl(report.fileUrl || report.file) ? (
+                        <a href={getFileUrl(report.fileUrl || report.file) || undefined} target="_blank" rel="noopener noreferrer" title={report.file} className="flex min-w-0 items-center gap-1 hover:underline">
                           <FileText className="h-4 w-4 shrink-0" />
                           <span className="min-w-0 truncate">{report.file}</span>
                         </a>
@@ -350,7 +445,10 @@ export default function StudentReportsTTTNPage() {
                     <td className="px-5 py-4 text-right">
                       <button
                         type="button"
-                        onClick={() => setSelectedWeek(report.week)}
+                        onClick={() => {
+                          setSelectedWeek(report.week)
+                          document.getElementById('quick-view-tttn')?.scrollIntoView({ behavior: 'smooth' })
+                        }}
                         className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
                       >
                         <Upload className="h-4 w-4" />
@@ -366,7 +464,7 @@ export default function StudentReportsTTTNPage() {
         </section>
 
         <div className="space-y-6">
-          <section className="rounded-[28px] border border-slate-200 bg-[linear-gradient(135deg,#eff6ff_0%,#ffffff_100%)] p-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
+          <section id="quick-view-tttn" className="rounded-[28px] border border-slate-200 bg-[linear-gradient(135deg,#eff6ff_0%,#ffffff_100%)] p-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
             <div className="text-sm font-semibold text-slate-900">Xem nhanh báo cáo</div>
             <div className="mt-4 rounded-[22px] bg-white/90 p-4">
               <div className="text-xs text-slate-500">Đang chọn</div>
@@ -376,8 +474,8 @@ export default function StudentReportsTTTNPage() {
                 <div className="flex items-center gap-2 min-w-0">
                   <FileText className="h-4 w-4 text-[#1976D2] shrink-0" />
                   <span className="shrink-0">File: </span>
-                  {selectedReport.fileUrl ? (
-                    <a href={selectedReport.fileUrl} target="_blank" rel="noopener noreferrer" title={selectedReport.file} className="min-w-0 truncate text-[#1976D2] hover:underline font-semibold">
+                  {getFileUrl(selectedReport.fileUrl || selectedReport.file) ? (
+                    <a href={getFileUrl(selectedReport.fileUrl || selectedReport.file) || undefined} target="_blank" rel="noopener noreferrer" title={selectedReport.file} className="min-w-0 truncate text-[#1976D2] hover:underline font-semibold">
                       {selectedReport.file}
                     </a>
                   ) : (
@@ -430,14 +528,17 @@ export default function StudentReportsTTTNPage() {
       >
         <div className="grid gap-4 md:grid-cols-2">
           <StudentField label="Tuần báo cáo">
-            <input
-              type="number"
-              min={1}
+            <select
               value={submitForm.week}
               onChange={(event) => setSubmitForm((current) => ({ ...current, week: event.target.value }))}
               className={StudentInputClass()}
-              placeholder="4"
-            />
+            >
+              {sortedWeeks.map((w) => (
+                <option key={w.week} value={String(w.week)}>
+                  Tuần {w.week} ({w.status})
+                </option>
+              ))}
+            </select>
           </StudentField>
           <StudentField label="Tên nhật ký">
             <input
@@ -498,7 +599,7 @@ export default function StudentReportsTTTNPage() {
         </div>
 
         <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-          Sau khi nộp, bản ghi sẽ được thêm vào danh sách với trạng thái <span className="font-semibold">Đã nộp</span>.
+          Bạn có thể nộp lại nhiều lần để cập nhật báo cáo cho đến khi hết hạn nộp của tuần đó.
         </div>
       </StudentModal>
     </>

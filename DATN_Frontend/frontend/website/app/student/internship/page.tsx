@@ -35,8 +35,160 @@ const DEFAULT_FIELDS = [
   'Khác'
 ]
 
+const DISTRICT_WARDS: Record<string, string[]> = {
+  'quận 1': [
+    'Phường Bến Nghé', 'Phường Bến Thành', 'Phường Cầu Kho', 'Phường Cầu Ông Lãnh', 
+    'Phường Cô Giang', 'Phường Đa Kao', 'Phường Nguyễn Thái Bình', 'Phường Nguyễn Cư Trinh', 
+    'Phường Phạm Ngũ Lão', 'Phường Tân Định'
+  ],
+  'quận 2': [
+    'Phường An Phú', 'Phường Thảo Điền', 'Phường An Khánh', 'Phường Bình An', 
+    'Phường Bình Khánh', 'Phường Bình Trưng Đông', 'Phường Bình Trưng Tây', 'Phường Cát Lái', 
+    'Phường Thạnh Mỹ Lợi', 'Phường Thủ Thiêm'
+  ],
+  'quận 3': [
+    'Phường Võ Thị Sáu', 'Phường 1', 'Phường 2', 'Phường 3', 'Phường 4', 
+    'Phường 5', 'Phường 9', 'Phường 10', 'Phường 11', 'Phường 12', 'Phường 13', 'Phường 14'
+  ],
+  'quận 4': [
+    'Phường 1', 'Phường 2', 'Phường 3', 'Phường 4', 'Phường 6', 'Phường 8', 
+    'Phường 9', 'Phường 10', 'Phường 13', 'Phường 14', 'Phường 15', 'Phường 16'
+  ],
+  'quận 5': [
+    'Phường 1', 'Phường 2', 'Phường 3', 'Phường 4', 'Phường 5', 'Phường 6', 
+    'Phường 7', 'Phường 8', 'Phường 9', 'Phường 10', 'Phường 11', 'Phường 12', 
+    'Phường 13', 'Phường 14'
+  ],
+  'quận 6': [
+    'Phường 1', 'Phường 2', 'Phường 3', 'Phường 4', 'Phường 5', 'Phường 6', 
+    'Phường 7', 'Phường 8', 'Phường 9', 'Phường 10', 'Phường 11', 'Phường 12', 
+    'Phường 13', 'Phường 14'
+  ],
+  'quận 7': [
+    'Phường Bình Thuận', 'Phường Phú Mỹ', 'Phường Phú Thuận', 'Phường Tân Hưng', 
+    'Phường Tân Kiểng', 'Phường Tân Phong', 'Phường Tân Phú', 'Phường Tân Quy', 
+    'Phường Tân Thuận Đông', 'Phường Tân Thuận Tây'
+  ],
+  'quận 8': [
+    'Phường 1', 'Phường 2', 'Phường 3', 'Phường 4', 'Phường 5', 'Phường 6', 
+    'Phường 7', 'Phường 8', 'Phường 9', 'Phường 10', 'Phường 11', 'Phường 12', 
+    'Phường 13', 'Phường 14', 'Phường 15', 'Phường 16'
+  ],
+  'quận 9': [
+    'Phường Hiệp Phú', 'Phường Long Bình', 'Phường Long Phước', 'Phường Long Thạnh Mỹ', 
+    'Phường Long Trường', 'Phường Phú Hữu', 'Phường Phước Bình', 'Phường Phước Long A', 
+    'Phường Phước Long B', 'Phường Tân Phú', 'Phường Tăng Nhơn Phú A', 'Phường Tăng Nhơn Phú B', 
+    'Phường Trường Thạnh'
+  ],
+  'quận 10': [
+    'Phường 1', 'Phường 2', 'Phường 4', 'Phường 5', 'Phường 6', 'Phường 7', 
+    'Phường 8', 'Phường 9', 'Phường 11', 'Phường 12', 'Phường 13', 'Phường 14', 'Phường 15'
+  ],
+  'quận 11': [
+    'Phường 1', 'Phường 2', 'Phường 3', 'Phường 4', 'Phường 5', 'Phường 6', 
+    'Phường 7', 'Phường 8', 'Phường 9', 'Phường 10', 'Phường 11', 'Phường 12', 
+    'Phường 13', 'Phường 14', 'Phường 15', 'Phường 16'
+  ],
+  'quận 12': [
+    'Phường An Phú Đông', 'Phường Đông Hưng Thuận', 'Phường Hiệp Thành', 'Phường Tân Chánh Hiệp', 
+    'Phường Tân Hưng Thuận', 'Phường Tân Thới Hiệp', 'Phường Tân Thới Nhất', 'Phường Thạnh Lộc', 
+    'Phường Thạnh Xuân', 'Phường Thới An', 'Phường Trung Mỹ Tây'
+  ],
+  'quận bình thạnh': [
+    'Phường 1', 'Phường 2', 'Phường 3', 'Phường 5', 'Phường 6', 'Phường 7', 
+    'Phường 11', 'Phường 12', 'Phường 13', 'Phường 14', 'Phường 15', 'Phường 17', 
+    'Phường 19', 'Phường 21', 'Phường 22', 'Phường 24', 'Phường 25', 'Phường 26', 
+    'Phường 27', 'Phường 28'
+  ],
+  'quận thủ đức': [
+    'Phường Bình Chiểu', 'Phường Bình Thọ', 'Phường Hiệp Bình Chánh', 'Phường Hiệp Bình Phước', 
+    'Phường Linh Chiểu', 'Phường Linh Đông', 'Phường Linh Tây', 'Phường Linh Trung', 
+    'Phường Linh Xuân', 'Phường Tam Bình', 'Phường Tam Phú', 'Phường Trường Thọ'
+  ],
+  'quận gò vấp': [
+    'Phường 1', 'Phường 3', 'Phường 4', 'Phường 5', 'Phường 6', 'Phường 7', 
+    'Phường 8', 'Phường 9', 'Phường 10', 'Phường 11', 'Phường 12', 'Phường 13', 
+    'Phường 14', 'Phường 15', 'Phường 16', 'Phường 17'
+  ],
+  'quận phú nhuận': [
+    'Phường 1', 'Phường 2', 'Phường 3', 'Phường 4', 'Phường 5', 'Phường 7', 
+    'Phường 8', 'Phường 9', 'Phường 10', 'Phường 11', 'Phường 13', 'Phường 15', 'Phường 17'
+  ],
+  'quận tân bình': [
+    'Phường 1', 'Phường 2', 'Phường 3', 'Phường 4', 'Phường 5', 'Phường 6', 
+    'Phường 7', 'Phường 8', 'Phường 9', 'Phường 10', 'Phường 11', 'Phường 12', 
+    'Phường 13', 'Phường 14', 'Phường 15'
+  ],
+  'quận tân phú': [
+    'Phường Hiệp Tân', 'Phường Hòa Thạnh', 'Phường Phú Thạnh', 'Phường Phú Thọ Hòa', 
+    'Phường Phú Trung', 'Phường Sơn Kỳ', 'Phường Tân Quý', 'Phường Tân Sơn Nhì', 
+    'Phường Tân Thành', 'Phường Tân Thới Hòa', 'Phường Tây Thạnh'
+  ],
+  'quận bình tân': [
+    'Phường An Lạc', 'Phường An Lạc A', 'Phường Bình Hưng Hòa', 'Phường Bình Hưng Hòa A', 
+    'Phường Bình Hưng Hòa B', 'Phường Bình Trị Đông', 'Phường Bình Trị Đông A', 
+    'Phường Bình Trị Đông B', 'Phường Tân Tạo', 'Phường Tân Tạo A'
+  ],
+  'thành phố thủ đức': [
+    'Phường An Khánh', 'Phường An Lợi Đông', 'Phường An Phú', 'Phường Bình Chiểu', 
+    'Phường Bình Thọ', 'Phường Cát Lái', 'Phường Hiệp Bình Chánh', 'Phường Hiệp Bình Phước', 
+    'Phường Hiệp Phú', 'Phường Linh Chiểu', 'Phường Linh Đông', 'Phường Linh Tây', 
+    'Phường Linh Trung', 'Phường Linh Xuân', 'Phường Long Bình', 'Phường Long Phước', 
+    'Phường Long Thạnh Mỹ', 'Phường Long Trường', 'Phường Phú Hữu', 'Phường Phước Bình', 
+    'Phường Phước Long A', 'Phường Phước Long B', 'Phường Tam Bình', 'Phường Tam Phú', 
+    'Phường Tân Phú', 'Phường Tăng Nhơn Phú A', 'Phường Tăng Nhơn Phú B', 'Phường Thạnh Mỹ Lợi', 
+    'Phường Thảo Điền', 'Phường Thủ Thiêm', 'Phường Trường Thạnh', 'Phường Trường Thọ'
+  ]
+};
+
+const findDistrictByWard = (wardName: string) => {
+  if (!wardName) return '';
+  const search = wardName.toLowerCase().trim();
+  
+  for (const [district, wards] of Object.entries(DISTRICT_WARDS)) {
+    for (const w of wards) {
+      if (w.toLowerCase().includes(search) || search.includes(w.toLowerCase())) {
+        return district;
+      }
+    }
+  }
+  return '';
+};
+
+const parseAddressInfo = (address: string) => {
+  if (!address) return { ward: '', district: '' };
+  const cleaned = address.trim();
+  
+  let ward = '';
+  const wardMatch = cleaned.match(/(?:Phường|P\.)\s+([^,]+)/i);
+  if (wardMatch) {
+    ward = wardMatch[0].trim();
+  }
+  
+  let district = '';
+  const districtMatch = cleaned.match(/(?:Quận|Q\.|Huyện|H\.)\s+([^,]+)/i);
+  if (districtMatch) {
+    district = districtMatch[0].trim();
+  } else {
+    if (/Thủ Đức/i.test(cleaned) && /Thành phố|TP/i.test(cleaned)) {
+      district = 'Thành phố Thủ Đức';
+    }
+  }
+
+  // Fallback: If district is not found, search by ward name
+  if (!district && ward) {
+    const foundDistrict = findDistrictByWard(ward);
+    if (foundDistrict) {
+      district = foundDistrict;
+    }
+  }
+  
+  return { ward, district };
+};
+
 export default function StudentInternshipPage() {
   const { selectedPeriod } = usePeriod()
+  const isPeriodLocked = selectedPeriod?.status === 'grading' || selectedPeriod?.status === 'closed'
   const [companies, setCompanies] = useState<ICompany[]>([])
   const [myRequest, setMyRequest] = useState<IInternshipRequest | null>(null)
   const [loading, setLoading] = useState(true)
@@ -60,6 +212,38 @@ export default function StudentInternshipPage() {
   })
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [suggestions, setSuggestions] = useState<ICompany[]>([])
+  const [lookingUpTax, setLookingUpTax] = useState(false)
+  const [selectedWardOption, setSelectedWardOption] = useState('')
+  const [customWardText, setCustomWardText] = useState('')
+
+  const { ward: mainWard, district: mainDistrict } = useMemo(() => {
+    return parseAddressInfo(declareForm.address);
+  }, [declareForm.address]);
+
+  const wardsOptions = useMemo(() => {
+    if (!mainDistrict) return [];
+    let key = mainDistrict.toLowerCase().trim();
+    key = key.replace(/^q\./, 'quận');
+    key = key.replace(/^h\./, 'huyện');
+    key = key.replace(/\s+/g, ' ');
+    return DISTRICT_WARDS[key] || [];
+  }, [mainDistrict]);
+
+  const finalWardsList = useMemo(() => {
+    const list = [...wardsOptions];
+    if (mainWard && !list.includes(mainWard)) {
+      list.unshift(mainWard);
+    }
+    return list;
+  }, [mainWard, wardsOptions]);
+
+  // Sync selectedWardOption and internshipAddress when mainWard changes
+  useEffect(() => {
+    if (mainWard) {
+      setSelectedWardOption(mainWard);
+      setDeclareForm(current => ({ ...current, internshipAddress: mainWard }));
+    }
+  }, [mainWard]);
 
   const fieldOptions = useMemo(() => {
     const fromCompanies = companies
@@ -83,6 +267,30 @@ export default function StudentInternshipPage() {
       setShowSuggestions(false);
     }
   };
+
+  const handleLookupTax = async () => {
+    const taxId = declareForm.taxId.trim().replace(/-/g, '')
+    if (!/^[0-9]{10}([0-9]{3})?$/.test(taxId)) {
+      message.error('Mã số thuế phải gồm 10 hoặc 13 chữ số để tra cứu!')
+      return
+    }
+    setLookingUpTax(true)
+    try {
+      const result = await studentApi.lookupCompanyByTaxId(taxId)
+      if (result) {
+        setDeclareForm((current) => ({
+          ...current,
+          companyName: result.name || current.companyName,
+          address: result.address || current.address,
+        }))
+        message.success('Đã tự động điền thông tin công ty từ mã số thuế!')
+      }
+    } catch (err) {
+      message.error((err as Error).message || 'Tra cứu mã số thuế thất bại, vui lòng nhập thủ công.')
+    } finally {
+      setLookingUpTax(false)
+    }
+  }
 
   const handleSelectSuggestion = (c: ICompany) => {
     setDeclareForm({
@@ -168,6 +376,10 @@ export default function StudentInternshipPage() {
       message.error('Vui lòng chọn lĩnh vực hoạt động!')
       return
     }
+    if (!position) {
+      message.error('Vui lòng nhập vị trí thực tập!')
+      return
+    }
 
     // Vietnam tax ID regex validation: 10 digits, or 13 digits, or 10 digits followed by - and 3 digits
     const taxIdRegex = /^[0-9]{10}$|^[0-9]{13}$|^[0-9]{10}-[0-9]{3}$/
@@ -183,6 +395,11 @@ export default function StudentInternshipPage() {
 
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       message.error('Email người liên hệ không đúng định dạng!')
+      return
+    }
+
+    if (declareForm.confirmPaper && !internshipAddress) {
+      message.error('Vui lòng chọn hoặc nhập phường/xã nơi thực tập!')
       return
     }
 
@@ -218,6 +435,8 @@ export default function StudentInternshipPage() {
         duration: '',
         confirmPaper: false,
       })
+      setSelectedWardOption('')
+      setCustomWardText('')
       // Reload updated status
       loadData()
     } catch (err: unknown) {
@@ -260,8 +479,14 @@ export default function StudentInternshipPage() {
         description="Tìm kiếm công ty đối tác đã được duyệt hoặc tự khai báo thông tin nơi thực tập của bạn."
         actions={
           <>
-            <StudentPill tone="green">Đang mở đăng ký</StudentPill>
-            {myRequest?.status !== 'approved' && (
+            {isPeriodLocked ? (
+              <StudentPill tone="red">
+                {selectedPeriod?.status === 'closed' ? 'Đợt đã đóng' : 'Đã bắt đầu chấm điểm'}
+              </StudentPill>
+            ) : (
+              <StudentPill tone="green">Đang mở đăng ký</StudentPill>
+            )}
+            {myRequest?.status !== 'approved' && !isPeriodLocked && (
               <button
                 type="button"
                 onClick={() => setDeclareOpen(true)}
@@ -274,6 +499,13 @@ export default function StudentInternshipPage() {
           </>
         }
       />
+      {isPeriodLocked && (
+        <div className="mb-5 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {selectedPeriod?.status === 'closed'
+            ? 'Đợt thực tập này đã đóng, bạn không thể khai báo hoặc chỉnh sửa thông tin thực tập nữa.'
+            : 'Đợt thực tập đã bắt đầu chấm điểm, bạn không thể khai báo hoặc chỉnh sửa thông tin thực tập nữa.'}
+        </div>
+      )}
 
       <div className="mb-5 grid gap-4 md:grid-cols-2">
         {summary.map((item) => (
@@ -476,13 +708,25 @@ export default function StudentInternshipPage() {
             )}
           </div>
           <StudentField label="Mã số thuế công ty" required>
-            <input
-              value={declareForm.taxId}
-              onChange={(event) => setDeclareForm((current) => ({ ...current, taxId: event.target.value }))}
-              className={StudentInputClass()}
-              placeholder="VD: 0101243150"
-              disabled={submitting}
-            />
+            <div className="flex gap-2">
+              <input
+                value={declareForm.taxId}
+                onChange={(event) => setDeclareForm((current) => ({ ...current, taxId: event.target.value }))}
+                className={StudentInputClass()}
+                placeholder="VD: 0101243150"
+                disabled={submitting}
+              />
+              <button
+                type="button"
+                onClick={handleLookupTax}
+                disabled={submitting || lookingUpTax || !declareForm.taxId.trim()}
+                className="flex shrink-0 items-center gap-1.5 rounded-2xl border border-blue-200 bg-blue-50 px-3 text-xs font-medium text-[#1976D2] transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+                title="Tự động điền tên công ty và địa chỉ từ mã số thuế"
+              >
+                {lookingUpTax ? <Spin size="small" /> : <Search className="h-3.5 w-3.5" />}
+                Tra cứu
+              </button>
+            </div>
           </StudentField>
           <StudentField label="Lĩnh vực" required>
             <select
@@ -499,7 +743,7 @@ export default function StudentInternshipPage() {
               ))}
             </select>
           </StudentField>
-          <StudentField label="Vị trí thực tập">
+          <StudentField label="Vị trí thực tập" required>
             <input
               value={declareForm.position}
               onChange={(event) => setDeclareForm((current) => ({ ...current, position: event.target.value }))}
@@ -572,16 +816,50 @@ export default function StudentInternshipPage() {
         </label>
 
         {declareForm.confirmPaper && (
-          <div className="mt-4">
-            <StudentField label="Địa chỉ cụ thể nơi thực tập (nếu khác trụ sở chính)">
-              <input
-                value={declareForm.internshipAddress}
-                onChange={(event) => setDeclareForm((current) => ({ ...current, internshipAddress: event.target.value }))}
-                className={StudentInputClass()}
-                placeholder="Nhập địa chỉ chi nhánh, văn phòng làm việc"
+          <div className="mt-4 space-y-3">
+            <StudentField label="Phường/Xã nơi thực tập (Chọn phường của trụ sở hoặc chi nhánh)" required>
+              <select
+                value={selectedWardOption}
+                onChange={(event) => {
+                  const val = event.target.value;
+                  setSelectedWardOption(val);
+                  if (val === 'custom') {
+                    setDeclareForm((current) => ({ ...current, internshipAddress: customWardText }));
+                  } else {
+                    setDeclareForm((current) => ({ ...current, internshipAddress: val }));
+                  }
+                }}
+                className={StudentInputClass('appearance-none bg-[url("data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E")] bg-[length:1.25rem] bg-[right_1rem_center] bg-no-repeat pr-10')}
                 disabled={submitting}
-              />
+              >
+                {finalWardsList.length > 0 ? (
+                  finalWardsList.map((w) => (
+                    <option key={w} value={w}>
+                      {w} {w === mainWard ? '(Trụ sở chính)' : ''}
+                    </option>
+                  ))
+                ) : (
+                  <option value="">-- Chọn phường/xã --</option>
+                )}
+                <option value="custom">Khác (Nhập thủ công)...</option>
+              </select>
             </StudentField>
+
+            {selectedWardOption === 'custom' && (
+              <StudentField label="Nhập Phường/Xã cụ thể">
+                <input
+                  value={customWardText}
+                  onChange={(event) => {
+                    const val = event.target.value;
+                    setCustomWardText(val);
+                    setDeclareForm((current) => ({ ...current, internshipAddress: val }));
+                  }}
+                  className={StudentInputClass()}
+                  placeholder="Nhập tên phường/xã chi nhánh thực tập"
+                  disabled={submitting}
+                />
+              </StudentField>
+            )}
           </div>
         )}
       </StudentModal>

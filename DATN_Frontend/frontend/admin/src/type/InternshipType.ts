@@ -5,6 +5,7 @@ export interface IConfirmationRequest {
   id: string;
   studentId: string;
   studentName: string;
+  studentPhone?: string;
   className: string;
   companyName: string;
   companyAddress: string;
@@ -12,6 +13,7 @@ export interface IConfirmationRequest {
   position: string;
   taxId: string;
   mentor: string;
+  gvhdName?: string;
   regDate: string;
   status: ConfirmationStatus;
 }

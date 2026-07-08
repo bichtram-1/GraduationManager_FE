@@ -29,22 +29,35 @@ const ConfirmationForm: React.FC<Props> = ({ disabled = false }) => {
         <Input disabled={disabled} />
       </Form.Item>
 
-      <Form.Item label={t(getKey('company_address'))} name="companyAddress" rules={[{ required: true, message: t(getKey('please_enter_company_address')) }]} className="md:col-span-2">
+      <Form.Item label={t(getKey('company_address'))} name="companyAddress" className="md:col-span-2">
         <Input disabled={disabled} />
       </Form.Item>
 
-      <Form.Item label={t(getKey('internship_location'))} name="internshipLocation" rules={[{ required: true, message: t(getKey('please_enter_internship_location')) }]} className="md:col-span-2">
-        <Input disabled={disabled} />
+      <Form.Item noStyle shouldUpdate={(prevValues, currentValues) => prevValues.internshipLocation !== currentValues.internshipLocation}>
+        {({ getFieldValue }) => {
+          const location = getFieldValue('internshipLocation');
+          if (!location) return null;
+          return (
+            <Form.Item
+              label={t(getKey('internship_location'))}
+              name="internshipLocation"
+              rules={[{ required: true, message: t(getKey('please_enter_internship_location')) }]}
+              className="md:col-span-2"
+            >
+              <Input disabled={disabled} />
+            </Form.Item>
+          );
+        }}
       </Form.Item>
 
-      <Form.Item label={t(getKey('internship_position'))} name="position" className="md:col-span-2">
+      <Form.Item label={t(getKey('internship_position'))} name="position" rules={[{ required: true, message: 'Vui lòng nhập vị trí thực tập' }]} className="md:col-span-2">
         <Input disabled={disabled} placeholder="VD: Thực tập sinh Backend Developer" />
       </Form.Item>
 
       <Form.Item label={t(getKey('company_tax_id'))} name="taxId" rules={[{ required: true, message: t(getKey('please_enter_tax_id')) }]}>
         <Input disabled={disabled} />
       </Form.Item>
-      <Form.Item label={t(getKey('mentor_label'))} name="mentor" rules={[{ required: true, message: t(getKey('please_enter_mentor')) }]}>
+      <Form.Item label={t(getKey('mentor_label'))} name="mentor">
         <Input disabled={disabled} />
       </Form.Item>
       <Form.Item label={t(getKey('status'))} name="status" rules={[{ required: true, message: t(getKey('please_select_status')) }]}>
