@@ -617,13 +617,27 @@ export default function TeacherGradingPage() {
                   <tbody>
                     {(() => {
                       const list = (selectedCouncil?.groups || []).filter((g) => {
-                        const gradedCount = (g.students || []).filter((s) => !!(scoreList.find((r) => r.id === s.id)?.member)).length;
                         const totalMembers = (g.students || []).length;
-                        
+                        const studentStatuses = (g.students || []).map((s) => {
+                          const r = scoreList.find((row) => row.id === s.id);
+                          if (!r) return 'ungraded';
+                          const isAdvOrRev = r.isAdvisor || r.isReviewer;
+                          if (isAdvOrRev) {
+                            if (r.hasDefense && r.hasReport) return 'graded';
+                            if (r.hasDefense || r.hasReport) return 'grading';
+                            return 'ungraded';
+                          } else {
+                            return r.hasDefense ? 'graded' : 'ungraded';
+                          }
+                        });
+
+                        const gradedCount = studentStatuses.filter(st => st === 'graded').length;
+                        const gradingCount = studentStatuses.filter(st => st === 'grading').length;
+
                         let currentStatus: 'ungraded' | 'grading' | 'graded' = 'ungraded';
                         if (gradedCount === totalMembers && totalMembers > 0) {
                           currentStatus = 'graded';
-                        } else if (gradedCount > 0) {
+                        } else if (gradingCount > 0 || (gradedCount > 0 && gradedCount < totalMembers)) {
                           currentStatus = 'grading';
                         }
 
@@ -650,19 +664,40 @@ export default function TeacherGradingPage() {
                       }
 
                       return list.map((g, index) => {
-                        const gradedCount = (g.students || []).filter((s) => !!(scoreList.find((r) => r.id === s.id)?.member)).length;
                         const totalMembers = (g.students || []).length;
+                        const studentStatuses = (g.students || []).map((s) => {
+                          const r = scoreList.find((row) => row.id === s.id);
+                          if (!r) return 'ungraded';
+                          const isAdvOrRev = r.isAdvisor || r.isReviewer;
+                          if (isAdvOrRev) {
+                            if (r.hasDefense && r.hasReport) return 'graded';
+                            if (r.hasDefense || r.hasReport) return 'grading';
+                            return 'ungraded';
+                          } else {
+                            return r.hasDefense ? 'graded' : 'ungraded';
+                          }
+                        });
+
+                        const gradedCount = studentStatuses.filter(st => st === 'graded').length;
+                        const gradingCount = studentStatuses.filter(st => st === 'grading').length;
+
+                        let currentStatus: 'ungraded' | 'grading' | 'graded' = 'ungraded';
+                        if (gradedCount === totalMembers && totalMembers > 0) {
+                          currentStatus = 'graded';
+                        } else if (gradingCount > 0 || (gradedCount > 0 && gradedCount < totalMembers)) {
+                          currentStatus = 'grading';
+                        }
                         
                         let statusBadge = (
                           <span className="inline-flex items-center gap-2 rounded-md bg-amber-50 px-2 py-1 text-amber-700 text-xs">Chưa chấm</span>
                         );
                         let hasScore = false;
-                        if (gradedCount === totalMembers && totalMembers > 0) {
+                        if (currentStatus === 'graded') {
                           statusBadge = (
                             <span className="inline-flex items-center gap-2 rounded-md bg-emerald-50 px-2 py-1 text-emerald-700 text-xs">Đã chấm</span>
                           );
                           hasScore = true;
-                        } else if (gradedCount > 0) {
+                        } else if (currentStatus === 'grading') {
                           statusBadge = (
                             <span className="inline-flex items-center gap-2 rounded-md bg-blue-50 px-2 py-1 text-blue-700 text-xs">Đang chấm</span>
                           );
