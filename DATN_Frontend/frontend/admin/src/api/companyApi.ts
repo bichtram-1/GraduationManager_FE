@@ -32,4 +32,14 @@ export const companyApi = {
     const response = await axiosInstance.post('/private/v1/companies/publish');
     return response?.data;
   },
+
+  lookupCompanyByTaxId: async (taxId: string): Promise<{ name: string; address: string } | null> => {
+    try {
+      const response = await axiosInstance.get('/private/v1/companies/lookup-tax', { params: { taxId } });
+      return response?.data?.results?.object || null;
+    } catch (err) {
+      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      throw new Error(message || 'Tra cứu mã số thuế thất bại.');
+    }
+  },
 };

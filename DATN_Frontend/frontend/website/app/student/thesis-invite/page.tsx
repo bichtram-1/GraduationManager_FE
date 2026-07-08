@@ -28,6 +28,7 @@ export default function InvitePage() {
   const router = useRouter()
   const params = useSearchParams()
   const { selectedPeriod } = usePeriod()
+  const isPeriodLocked = selectedPeriod?.status === 'grading' || selectedPeriod?.status === 'closed'
 
   const [newId, setNewId] = useState('')
   const [outgoingInvites, setOutgoingInvites] = useState<Invite[]>([])
@@ -166,6 +167,14 @@ export default function InvitePage() {
         }
       />
 
+      {isPeriodLocked && (
+        <div className="mb-5 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {selectedPeriod?.status === 'closed'
+            ? 'Đợt đồ án tốt nghiệp này đã đóng, bạn không thể gửi/hủy lời mời hoặc phản hồi lời mời nữa.'
+            : 'Đợt đồ án tốt nghiệp đã bắt đầu chấm điểm, bạn không thể gửi/hủy lời mời hoặc phản hồi lời mời nữa.'}
+        </div>
+      )}
+
       <div className="mb-6 rounded-[28px] border border-blue-100 bg-[linear-gradient(135deg,#eff6ff_0%,#ffffff_100%)] p-5 shadow-[0_12px_40px_rgba(15,23,42,0.05)]">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="max-w-3xl">
@@ -233,9 +242,14 @@ export default function InvitePage() {
                 value={newId}
                 onChange={(event) => setNewId(event.target.value)}
                 placeholder="Nhập MSSV thành viên, ví dụ 20520005"
-                className="flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-white"
+                disabled={isPeriodLocked}
+                className="flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-white disabled:cursor-not-allowed disabled:opacity-60"
               />
-              <button onClick={addInvite} className="inline-flex items-center gap-2 rounded-2xl bg-[#2196F3] px-4 py-2 text-white shadow-lg shadow-blue-200 transition hover:bg-[#1976D2]">
+              <button
+                onClick={addInvite}
+                disabled={isPeriodLocked}
+                className="inline-flex items-center gap-2 rounded-2xl bg-[#2196F3] px-4 py-2 text-white shadow-lg shadow-blue-200 transition hover:bg-[#1976D2] disabled:cursor-not-allowed disabled:bg-slate-300"
+              >
                 <Plus className="h-4 w-4" />
                 Thêm
               </button>
@@ -252,7 +266,7 @@ export default function InvitePage() {
                     <StudentPill tone={INVITE_STATUS_META[invite.status].tone}>
                       {INVITE_STATUS_META[invite.status].label}
                     </StudentPill>
-                    {invite.status === 'pending' && invite.inviteId && (
+                    {invite.status === 'pending' && invite.inviteId && !isPeriodLocked && (
                       <button
                         type="button"
                         onClick={() => setCancelInviteId(invite.inviteId!)}
@@ -294,7 +308,7 @@ export default function InvitePage() {
                     <button
                       type="button"
                       onClick={() => handleReject(invite.id)}
-                      disabled={invite.status !== 'pending'}
+                      disabled={invite.status !== 'pending' || isPeriodLocked}
                       className="inline-flex items-center gap-2 rounded-2xl border border-red-200 px-4 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <XCircle className="h-4 w-4" />
@@ -303,7 +317,7 @@ export default function InvitePage() {
                     <button
                       type="button"
                       onClick={() => handleAccept(invite.id)}
-                      disabled={invite.status !== 'pending'}
+                      disabled={invite.status !== 'pending' || isPeriodLocked}
                       className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:bg-slate-300"
                     >
                       <CheckCircle2 className="h-4 w-4" />

@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { getKey } from '@shared/types/I18nKeyType';
 import { formatNumber } from '@shared/utils/numberUtils';
 import { useGlobalVariable } from '../../hooks/GlobalVariableProvider';
+import { STATUS_CODE } from '../../constants/commonConst';
 
 type CouncilCard = {
   id: string;
@@ -46,8 +47,10 @@ const CouncilsPage: React.FC = () => {
   const [roomFilter, setRoomFilter] = useState('all');
   const [sessionFilter, setSessionFilter] = useState<'all' | 'morning' | 'afternoon'>('all');
   const navigate = useNavigate();
+  const isPeriodClosed = selectedPeriod?.status === STATUS_CODE.CLOSED;
 
   const handleUpdateStatus = (councilId: string, status: string, statusName: string) => {
+    if (isPeriodClosed) return;
     Modal.confirm({
       centered: true,
       title: null,
@@ -117,6 +120,7 @@ const CouncilsPage: React.FC = () => {
   };
 
   const handleDeleteCouncil = (councilId: string) => {
+    if (isPeriodClosed) return;
     const council = councilsInPeriod.find((item) => item.id === councilId);
     if (!council) return;
 
@@ -159,6 +163,7 @@ const CouncilsPage: React.FC = () => {
   };
 
   const handleEditCouncil = (councilId: string) => {
+    if (isPeriodClosed) return;
     const council = councilsInPeriod.find((c) => c.id === councilId);
     // navigate to create page with state for editing (CreateCouncilPage can read history.state later)
     navigate(ROUTES.COUNCILS_CREATE, { state: { council } });
@@ -226,9 +231,10 @@ const CouncilsPage: React.FC = () => {
             <p className="mt-2 mb-0 text-[18px] leading-[26px] text-grayDark">{t(getKey('council_management_desc'))}</p>
           </div>
           <div>
-            <Button 
-              type="primary" 
-              icon={<PlusOutlined />} 
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              disabled={isPeriodClosed}
               onClick={() => navigate(ROUTES.COUNCILS_CREATE)}
               className="rounded-xl h-[46px] px-6 font-semibold shadow-md flex items-center gap-1.5 bg-[var(--color-primary)] border-none text-white hover:opacity-90"
             >
@@ -236,6 +242,18 @@ const CouncilsPage: React.FC = () => {
             </Button>
           </div>
         </div>
+
+        {selectedPeriod && (
+          <div className={`mb-5 p-4 rounded-[18px] border flex items-center justify-between shadow-[0_12px_28px_rgba(15,23,42,0.02)] ${
+            isPeriodClosed ? 'bg-red-50 border-red-200 text-red-700' : 'bg-blue-50 border-blue-200 text-blue-700'
+          }`}>
+            <div>
+              {t(getKey('showing'))} {t(getKey('council_management'))} {t(getKey('of'))}: <strong className="underline">{selectedPeriod.name}</strong>
+              {isPeriodClosed && ` (${t(getKey('read_only_data_locked'))})`}
+            </div>
+            {isPeriodClosed && <Tag color="error">{t(getKey('read_only_tag'))}</Tag>}
+          </div>
+        )}
 
         <div className="tabs">
           <button className={`tab ${activeTab === 'list' ? 'on' : ''}`} onClick={() => setActiveTab('list')}>{t(getKey('council_list_tab'))}</button>
@@ -348,12 +366,12 @@ const CouncilsPage: React.FC = () => {
                     <span className="chip">{(t(getKey('groups_rejected'), { count: c.rejected } as any) as string)}</span>
                   </div>
                   <div className="action-row">
-                    {(!c.status || c.status === 'NHAP') && (
+                    {!isPeriodClosed && (!c.status || c.status === 'NHAP') && (
                       <button className="btn btns btn-icon text-emerald-600 hover:text-emerald-700 font-semibold" onClick={() => handleUpdateStatus(c.id, 'DA_CONG_BO', 'Đã công bố')}>
                         <SendOutlined /> Công bố
                       </button>
                     )}
-                    {c.status === 'DA_CONG_BO' && (
+                    {!isPeriodClosed && c.status === 'DA_CONG_BO' && (
                       <>
                         <button className="btn btns btn-icon text-sky-600 hover:text-sky-700 font-semibold" onClick={() => handleUpdateStatus(c.id, 'DA_KET_THUC', 'Đã kết thúc')}>
                           <LockOutlined /> Kết thúc
@@ -363,7 +381,7 @@ const CouncilsPage: React.FC = () => {
                         </button>
                       </>
                     )}
-                    {c.status === 'DA_KET_THUC' && (
+                    {!isPeriodClosed && c.status === 'DA_KET_THUC' && (
                       <button className="btn btns btn-icon text-amber-600 hover:text-amber-700 font-semibold" onClick={() => handleUpdateStatus(c.id, 'DA_CONG_BO', 'Đã công bố')}>
                         <UndoOutlined /> Mở lại
                       </button>
@@ -371,12 +389,16 @@ const CouncilsPage: React.FC = () => {
                     <button className="btn btns btn-icon" onClick={() => handleViewCouncil(c.id)}>
                       <EyeOutlined /> {t(getKey('view_btn'))}
                     </button>
-                    <button className="btn btns btn-icon" onClick={() => handleEditCouncil(c.id)}>
-                      <EditOutlined /> {t(getKey('edit_btn'))}
-                    </button>
-                    <button className="btn btns btn-icon" onClick={() => handleDeleteCouncil(c.id)}>
-                      <DeleteOutlined /> {t(getKey('delete_btn'))}
-                    </button>
+                    {!isPeriodClosed && (
+                      <button className="btn btns btn-icon" onClick={() => handleEditCouncil(c.id)}>
+                        <EditOutlined /> {t(getKey('edit_btn'))}
+                      </button>
+                    )}
+                    {!isPeriodClosed && (
+                      <button className="btn btns btn-icon" onClick={() => handleDeleteCouncil(c.id)}>
+                        <DeleteOutlined /> {t(getKey('delete_btn'))}
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

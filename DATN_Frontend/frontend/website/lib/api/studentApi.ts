@@ -193,6 +193,16 @@ export const studentApi = {
     return response?.data?.results?.object || response?.data;
   },
 
+  lookupCompanyByTaxId: async (taxId: string): Promise<{ name: string; address: string } | null> => {
+    try {
+      const response = await axiosInstance.get('/private/v1/student/companies/lookup-tax', { params: { taxId } });
+      return response?.data?.results?.object || null;
+    } catch (err) {
+      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      throw new Error(message || 'Tra cứu mã số thuế thất bại.');
+    }
+  },
+
   getCompanies: async (periodId?: number | string): Promise<ICompany[]> => {
     if (USE_MOCK) {
       return [
@@ -369,7 +379,7 @@ export const studentApi = {
     return response?.data;
   },
 
-  getTttnReports: async (): Promise<{ reports: IProgressReport[], hasGvhd?: boolean }> => {
+  getTttnReports: async (): Promise<{ reports: IProgressReport[], hasGvhd?: boolean, isInternshipApproved?: boolean }> => {
     if (USE_MOCK) {
       return {
         reports: [
@@ -377,16 +387,19 @@ export const studentApi = {
           { week: 2, title: 'Nghiên cứu công nghệ', status: 'Đã duyệt', file: 'week2.pdf', note: 'Khảo sát stack nội bộ', updated: '19/05/2026' },
           { week: 3, title: 'Phát triển tính năng A', status: 'Nháp', file: '—', note: 'Đang viết dàn ý báo cáo', updated: '23/05/2026' },
         ],
-        hasGvhd: true
+        hasGvhd: true,
+        isInternshipApproved: true
       };
     }
 
     const response = await axiosInstance.get('/private/v1/student/reports/tttn');
     const objects = response?.data?.results?.objects || response?.data?.results?.object || [];
     const hasGvhd = response?.data?.results?.hasGvhd !== false;
+    const isInternshipApproved = response?.data?.results?.isInternshipApproved !== false;
     return {
       reports: objects,
-      hasGvhd
+      hasGvhd,
+      isInternshipApproved
     };
   },
 
@@ -406,17 +419,25 @@ export const studentApi = {
     return response?.data?.results?.object || response?.data;
   },
 
-  getDatnReports: async (): Promise<IDatnProgressReport[]> => {
+  getDatnReports: async (): Promise<{ reports: IDatnProgressReport[], isTopicApproved?: boolean }> => {
     if (USE_MOCK) {
-      return [
-        { week: 1, name: 'Bản thảo Chương 1', status: 'Đã duyệt', file: 'chuong1.pdf', note: 'Phạm vi đề tài và tổng quan', updated: '05/05/2026' },
-        { week: 2, name: 'Bản thảo Chương 2', status: 'Đang chấm điểm', file: 'chuong2.pdf', note: 'Thiết kế và cơ sở lý thuyết', updated: '14/05/2026' },
-        { week: 3, name: 'Báo cáo chính thức', status: 'Nháp', file: '—', note: 'Hoàn thiện kết luận và phụ lục', updated: '23/05/2026' },
-      ];
+      return {
+        reports: [
+          { week: 1, name: 'Bản thảo Chương 1', status: 'Đã duyệt', file: 'chuong1.pdf', note: 'Phạm vi đề tài và tổng quan', updated: '05/05/2026' },
+          { week: 2, name: 'Bản thảo Chương 2', status: 'Đang chấm điểm', file: 'chuong2.pdf', note: 'Thiết kế và cơ sở lý thuyết', updated: '14/05/2026' },
+          { week: 3, name: 'Báo cáo chính thức', status: 'Nháp', file: '—', note: 'Hoàn thiện kết luận và phụ lục', updated: '23/05/2026' },
+        ],
+        isTopicApproved: true
+      };
     }
 
     const response = await axiosInstance.get('/private/v1/student/reports/datn');
-    return response?.data?.results?.objects || response?.data?.results?.object || [];
+    const objects = response?.data?.results?.objects || response?.data?.results?.object || [];
+    const isTopicApproved = response?.data?.results?.isTopicApproved !== false;
+    return {
+      reports: objects,
+      isTopicApproved
+    };
   },
 
   submitDatnReport: async (data: { week: number; name: string; note: string; file?: string; fileName?: string }): Promise<IDatnProgressReport> => {

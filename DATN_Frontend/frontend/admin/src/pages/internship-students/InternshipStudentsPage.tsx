@@ -1,5 +1,5 @@
 import { BankOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, DownloadOutlined, FileTextOutlined, SearchOutlined, SolutionOutlined } from '@ant-design/icons';
-import { Button, Card, Form, Input, Select, Space, Tag, Tabs, Typography, message } from 'antd';
+import { Button, Card, Form, Input, Select, Space, Tag, Tabs, Typography, Table, message } from 'antd';
 import * as XLSX from 'xlsx';
 import RemindModal from './components/RemindModal';
 import { useMemo, useState } from 'react';
@@ -23,7 +23,7 @@ import { formatNumber } from '@shared/utils/numberUtils';
 import { useGlobalVariable } from '../../hooks/GlobalVariableProvider';
 
 type ModeKey = 'confirmations' | 'no-company' | 'declarations';
-type ConfirmationTab = 'all' | ConfirmationStatus;
+type ConfirmationTab = 'all' | ConfirmationStatus | 'grouped';
 type NoCompanyTab = 'all' | NoCompanyStatus;
 
 const INITIAL_CONFIRMATIONS: IConfirmationRequest[] = [];
@@ -41,6 +41,84 @@ const getNoCompanyStatusMeta = (t: TFunction) => ({
   [STATUS_CODE.HAS_COMPANY]: { label: t(getKey('has_company_list')), className: 'bg-[var(--color-green-light)] text-[var(--color-green-medium)]' },
 } as const);
 
+const useFilteredConfirmationListQuery = (params: BaseListParams) => {
+  const typedParams = params as BaseListParams & { keyword?: string; companyName?: string; className?: string; periodId?: string; confirmationTab?: string };
+  const periodId = typedParams.periodId;
+  const confirmationTab = typedParams.confirmationTab || 'all';
+
+  const query = internshipHooks.useFetchListConfirmationRequests({ periodId });
+  const keyword = (typedParams.keyword ?? '').trim().toLowerCase();
+  const companyName = typedParams.companyName || 'all';
+  const className = typedParams.className || 'all';
+
+  const sourceRows = (query.data?.rows ?? INITIAL_CONFIRMATIONS) as IConfirmationRequest[];
+  const filteredRows = sourceRows
+    .filter((r: IConfirmationRequest) => (confirmationTab === 'all' ? true : r.status === confirmationTab))
+    .filter((r: IConfirmationRequest) => (className === 'all' ? true : r.className === className))
+    .filter((r: IConfirmationRequest) => (companyName === 'all' || !companyName ? true : r.companyName.toLowerCase() === companyName.toLowerCase()))
+    .filter((r: IConfirmationRequest) => !keyword || [r.studentId, r.studentName, r.className, r.companyName, r.taxId].join(' ').toLowerCase().includes(keyword));
+
+  return {
+    ...query,
+    data: query.data
+      ? ({ ...query.data, rows: filteredRows, total: filteredRows.length } as ListResponseTypeObject<IConfirmationRequest>)
+      : query.data,
+  } as UseQueryResult<ListResponseTypeObject<IConfirmationRequest>, Error>;
+};
+
+const useFilteredDeclarationListQuery = (params: BaseListParams) => {
+  const typedParams = params as BaseListParams & { keyword?: string; companyName?: string; className?: string; periodId?: string; declarationTab?: string };
+  const periodId = typedParams.periodId;
+  const declarationTab = typedParams.declarationTab || 'all';
+
+  const query = internshipHooks.useFetchListDeclarations({ periodId });
+  const keyword = (typedParams.keyword ?? '').trim().toLowerCase();
+  const companyName = typedParams.companyName || 'all';
+  const className = typedParams.className || 'all';
+
+  const sourceRows = (query.data?.rows ?? INITIAL_CONFIRMATIONS) as IConfirmationRequest[];
+  const filteredRows = sourceRows
+    .filter((r: IConfirmationRequest) => (declarationTab === 'all' ? true : r.status === declarationTab))
+    .filter((r: IConfirmationRequest) => (className === 'all' ? true : r.className === className))
+    .filter((r: IConfirmationRequest) => (companyName === 'all' || !companyName ? true : r.companyName.toLowerCase() === companyName.toLowerCase()))
+    .filter((r: IConfirmationRequest) => !keyword || [r.studentId, r.studentName, r.className, r.companyName, r.taxId].join(' ').toLowerCase().includes(keyword));
+
+  return {
+    ...query,
+    data: query.data
+      ? ({ ...query.data, rows: filteredRows, total: filteredRows.length } as ListResponseTypeObject<IConfirmationRequest>)
+      : query.data,
+  } as UseQueryResult<ListResponseTypeObject<IConfirmationRequest>, Error>;
+};
+
+const useFilteredNoCompanyListQuery = (params: BaseListParams) => {
+  const typedParams = params as BaseListParams & { keyword?: string; className?: string; assignmentStatus?: string; periodId?: string; noCompanyTab?: string };
+  const periodId = typedParams.periodId;
+  const noCompanyTab = typedParams.noCompanyTab || 'all';
+
+  const query = internshipHooks.useFetchListNoCompanyStudents({ periodId });
+  const keyword = (typedParams.keyword ?? '').trim().toLowerCase();
+  const className = typedParams.className || 'all';
+  const assignmentStatus = typedParams.assignmentStatus || 'all';
+
+  const sourceRows2 = (query.data?.rows ?? INITIAL_NO_COMPANY_STUDENTS) as INoCompanyStudent[];
+  const filteredRows = sourceRows2
+    .filter((r: INoCompanyStudent) => (noCompanyTab === 'all' || noCompanyTab === undefined ? true : r.status === noCompanyTab))
+    .filter((r: INoCompanyStudent) => (className === 'all' ? true : r.className === className))
+    .filter((r: INoCompanyStudent) => {
+      if (assignmentStatus === 'all') return true;
+      return r.assignmentStatus === assignmentStatus;
+    })
+    .filter((r: INoCompanyStudent) => !keyword || [r.studentId, r.studentName, r.phone, r.supervisor || ''].join(' ').toLowerCase().includes(keyword));
+
+  return {
+    ...query,
+    data: query.data
+      ? ({ ...query.data, rows: filteredRows, total: filteredRows.length } as ListResponseTypeObject<INoCompanyStudent>)
+      : query.data,
+  } as UseQueryResult<ListResponseTypeObject<INoCompanyStudent>, Error>;
+};
+
 const InternshipStudentsPage = () => {
   const { t } = useTranslation();
   const location = useLocation();
@@ -54,6 +132,8 @@ const InternshipStudentsPage = () => {
   const [declarationTab, setDeclarationTab] = useState<ConfirmationTab>('pending');
   const [noCompanyTab, setNoCompanyTab] = useState<NoCompanyTab>('all');
   const [remindOpen, setRemindOpen] = useState(false);
+  const [groupedKeyword, setGroupedKeyword] = useState('');
+  const [groupedStatusFilter, setGroupedStatusFilter] = useState<'all' | 'cho_cap_giay' | 'approved' | 'pending'>('all');
 
   const { data: confirmationList } = internshipHooks.useFetchListConfirmationRequests({ periodId: selectedPeriod?.id });
   const { data: declarationsList } = internshipHooks.useFetchListDeclarations({ periodId: selectedPeriod?.id });
@@ -107,13 +187,38 @@ const InternshipStudentsPage = () => {
     rejected: confirmationRows.filter((item: IConfirmationRequest) => item.status === STATUS_CODE.REJECTED).length,
   }), [confirmationRows]);
 
-  const declarationTabCounts = useMemo(() => ({
-    total: declarationsRows.length,
-    pending: declarationsRows.filter((item: IConfirmationRequest) => item.status === STATUS_CODE.PENDING).length,
-    cho_cap_giay: declarationsRows.filter((item: IConfirmationRequest) => item.status === STATUS_CODE.CHO_CAP_GIAY).length,
-    approved: declarationsRows.filter((item: IConfirmationRequest) => item.status === STATUS_CODE.APPROVED).length,
-    rejected: declarationsRows.filter((item: IConfirmationRequest) => item.status === STATUS_CODE.REJECTED).length,
-  }), [declarationsRows]);
+  const declarationTabCounts = useMemo(() => {
+    const validRowsForGroups = declarationsRows.filter((r: IConfirmationRequest) => {
+      const isApproved = r.status === STATUS_CODE.APPROVED || r.status === STATUS_CODE.CHO_CAP_GIAY;
+      const hasLocation = !!(r.internshipLocation || '').trim();
+      return isApproved && hasLocation;
+    });
+    
+    const groupsMap = new Map<string, boolean>();
+    validRowsForGroups.forEach((row: IConfirmationRequest) => {
+      const company = (row.companyName || '').trim();
+      const locClean = (row.internshipLocation || '').trim();
+      
+      const getNormalizedWard = (w: string) => {
+        let name = w.toLowerCase().trim();
+        name = name.replace(/^p\./, 'phường');
+        name = name.replace(/\s+/g, ' ');
+        return name;
+      };
+
+      const key = `${company.toLowerCase()}_${getNormalizedWard(locClean)}`;
+      groupsMap.set(key, true);
+    });
+
+    return {
+      total: declarationsRows.length,
+      pending: declarationsRows.filter((item: IConfirmationRequest) => item.status === STATUS_CODE.PENDING).length,
+      cho_cap_giay: declarationsRows.filter((item: IConfirmationRequest) => item.status === STATUS_CODE.CHO_CAP_GIAY).length,
+      approved: declarationsRows.filter((item: IConfirmationRequest) => item.status === STATUS_CODE.APPROVED).length,
+      rejected: declarationsRows.filter((item: IConfirmationRequest) => item.status === STATUS_CODE.REJECTED).length,
+      grouped: groupsMap.size,
+    };
+  }, [declarationsRows]);
 
   const noCompanyTabCounts = useMemo(() => ({
     total: noCompanyRows.length,
@@ -121,77 +226,341 @@ const InternshipStudentsPage = () => {
     has_company: noCompanyRows.filter((item: INoCompanyStudent) => item.status === STATUS_CODE.HAS_COMPANY).length,
   }), [noCompanyRows]);
 
-  const useFilteredConfirmationListQuery = (params: BaseListParams) => {
-    const query = internshipHooks.useFetchListConfirmationRequests({ periodId: selectedPeriod?.id });
-    const typedParams = params as BaseListParams & { keyword?: string; companyName?: string; className?: string };
-    const keyword = (typedParams.keyword ?? '').trim().toLowerCase();
-    const companyName = typedParams.companyName || 'all';
-    const className = typedParams.className || 'all';
-    const status = confirmationTab || 'all';
+  // Hook luôn phải gọi vô điều kiện ở mọi lần render (Rules of Hooks) — không được đặt
+  // useMemo bên trong nhánh ternary của JSX, vì số lượng hook gọi sẽ khác nhau giữa các
+  // lần render (VD: đổi tab "Gộp theo nơi thực tập") và React sẽ báo lỗi "Rendered fewer
+  // hooks than expected".
+  const confirmationOrDeclarationParamVariables = useMemo(() => ({
+    page: 1,
+    limit: 10,
+    periodId: selectedPeriod?.id || '',
+    confirmationTab,
+    declarationTab
+  }), [selectedPeriod?.id, confirmationTab, declarationTab]);
 
-    const sourceRows = (query.data?.rows ?? confirmationList ?? INITIAL_CONFIRMATIONS) as IConfirmationRequest[];
-    const filteredRows = sourceRows
-      .filter((r) => (status === 'all' ? true : r.status === status))
-      .filter((r) => (className === 'all' ? true : r.className === className))
-      .filter((r) => (companyName === 'all' || !companyName ? true : r.companyName.toLowerCase() === companyName.toLowerCase()))
-      .filter((r) => !keyword || [r.studentId, r.studentName, r.className, r.companyName, r.taxId].join(' ').toLowerCase().includes(keyword));
+  const confirmationOrDeclarationActions = useMemo(() => ({
+    isDetail: true,
+    isEdit: !isPeriodClosed,
+    isDelete: !isPeriodClosed
+  }), [isPeriodClosed]);
 
-    return {
-      ...query,
-      data: query.data
-        ? ({ ...query.data, rows: filteredRows, total: filteredRows.length } as ListResponseTypeObject<IConfirmationRequest>)
-        : query.data,
-    } as UseQueryResult<ListResponseTypeObject<IConfirmationRequest>, Error>;
+  const noCompanyParamVariables = useMemo(() => ({
+    page: 1,
+    limit: 10,
+    periodId: selectedPeriod?.id || '',
+    noCompanyTab
+  }), [selectedPeriod?.id, noCompanyTab]);
+
+  interface IGroupedDeclaration {
+    key: string;
+    companyName: string;
+    companyAddress: string;
+    internshipLocation: string;
+    taxId: string;
+    mentor: string;
+    students: IConfirmationRequest[];
+  }
+
+  const groupedDeclarations = useMemo(() => {
+    let rows = declarationsRows.filter((r: IConfirmationRequest) => {
+      const isApproved = r.status === STATUS_CODE.APPROVED || r.status === STATUS_CODE.CHO_CAP_GIAY;
+      const hasLocation = !!(r.internshipLocation || '').trim();
+      return isApproved && hasLocation;
+    });
+    if (groupedStatusFilter !== 'all') {
+      rows = rows.filter((r: IConfirmationRequest) => r.status === groupedStatusFilter);
+    }
+
+    const groupsMap = new Map<string, IGroupedDeclaration>();
+    rows.forEach((row: IConfirmationRequest) => {
+      const company = (row.companyName || '').trim();
+      const address = (row.companyAddress || '').trim();
+      const locClean = (row.internshipLocation || '').trim();
+      
+      const getNormalizedWard = (w: string) => {
+        let name = w.toLowerCase().trim();
+        name = name.replace(/^p\./, 'phường');
+        name = name.replace(/\s+/g, ' ');
+        return name;
+      };
+
+      const key = `${company.toLowerCase()}_${getNormalizedWard(locClean)}`;
+
+      if (!groupsMap.has(key)) {
+        groupsMap.set(key, {
+          key,
+          companyName: company,
+          companyAddress: address,
+          internshipLocation: locClean,
+          taxId: row.taxId || '—',
+          mentor: row.mentor || '—',
+          students: [],
+        });
+      }
+      groupsMap.get(key)!.students.push(row);
+    });
+
+    const kw = groupedKeyword.trim().toLowerCase();
+    return Array.from(groupsMap.values()).filter((g) => {
+      if (!kw) return true;
+      const matchCompany = g.companyName.toLowerCase().includes(kw) || g.companyAddress.toLowerCase().includes(kw);
+      const matchStudents = g.students.some((s) => s.studentName.toLowerCase().includes(kw) || s.studentId.toLowerCase().includes(kw));
+      return matchCompany || matchStudents;
+    });
+  }, [declarationsRows, groupedStatusFilter, groupedKeyword]);
+
+  const handlePrintGroupedPDF = (group: IGroupedDeclaration) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      message.error('Không thể mở cửa sổ in. Vui lòng tắt trình chặn popup của trình duyệt!');
+      return;
+    }
+
+    const studentsHtml = group.students
+      .map(
+        (s, idx) => `
+      <tr style="page-break-inside: avoid;">
+        <td style="border: 1px solid black; padding: 6px; text-align: center;">${idx + 1}</td>
+        <td style="border: 1px solid black; padding: 6px; font-weight: bold;">${s.studentId}</td>
+        <td style="border: 1px solid black; padding: 6px;">${s.studentName}</td>
+        <td style="border: 1px solid black; padding: 6px; text-align: center;">${s.className}</td>
+        <td style="border: 1px solid black; padding: 6px; text-align: center;">${s.studentPhone || '—'}</td>
+      </tr>
+    `
+      )
+      .join('');
+
+    const today = new Date();
+    const dayStr = today.getDate().toString().padStart(2, '0');
+    const monthStr = (today.getMonth() + 1).toString().padStart(2, '0');
+    const yearStr = today.getFullYear();
+
+    const gvhdNames = Array.from(new Set(group.students.map((s) => s.gvhdName).filter(Boolean)));
+    const gvhdText = gvhdNames.length > 0 ? gvhdNames.join(', ') : '(Nhà trường sẽ phân công sau)';
+    const startDate = selectedPeriod?.startDate || '.../.../....';
+    const endDate = selectedPeriod?.endDate || '.../.../....';
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Công văn liên hệ thực tập tốt nghiệp</title>
+        <meta charset="utf-8">
+        <style>
+          @media print {
+            @page {
+              size: A4;
+              margin: 15mm 15mm 15mm 20mm;
+            }
+            body {
+              font-family: "Times New Roman", Times, serif;
+              font-size: 13pt;
+              line-height: 1.4;
+              color: #000;
+              background: #fff;
+            }
+          }
+          body {
+            font-family: "Times New Roman", Times, serif;
+            font-size: 13pt;
+            line-height: 1.4;
+            margin: 20px;
+            color: #000;
+          }
+          .page-break {
+            page-break-before: always;
+          }
+          .header-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+          }
+          .header-table td {
+            vertical-align: top;
+          }
+          .header-left {
+            text-align: center;
+          }
+          .header-right {
+            text-align: center;
+          }
+          .content-text {
+            text-align: justify;
+            margin-bottom: 14px;
+          }
+          .content-text.indent {
+            text-indent: 1cm;
+          }
+          .title {
+            text-align: center;
+            margin-top: 20px;
+            margin-bottom: 20px;
+          }
+          .title h1 {
+            font-size: 14pt;
+            font-weight: bold;
+            margin: 0;
+            text-transform: uppercase;
+          }
+          .student-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            margin-bottom: 20px;
+          }
+          .student-table th, .student-table td {
+            border: 1px solid black;
+          }
+          .student-table th {
+            padding: 8px 6px;
+            font-weight: bold;
+            background-color: #f2f2f2;
+            font-size: 12pt;
+          }
+          .footer-section {
+            width: 100%;
+            margin-top: 20px;
+            border-collapse: collapse;
+          }
+          .footer-section td {
+            width: 50%;
+            text-align: center;
+            vertical-align: top;
+          }
+          .footer-title {
+            font-weight: bold;
+            margin-bottom: 60px;
+          }
+        </style>
+      </head>
+      <body>
+        <table class="header-table">
+          <tr>
+            <td style="width: 50%;" class="header-left">
+              <strong>BỘ CÔNG THƯƠNG</strong><br>
+              <strong>TRƯỜNG CĐ KỸ THUẬT CAO THẮNG</strong>
+            </td>
+            <td style="width: 50%;" class="header-right">
+              <strong>CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM</strong><br>
+              <strong style="text-decoration: underline;">Độc lập – Tự do – Hạnh phúc</strong>
+            </td>
+          </tr>
+          <tr>
+            <td style="width: 50%;" class="header-left">
+              <span style="font-style: italic;">Số:     &nbsp;/CĐKTCT-CTCT HSSV</span><br>
+              <span style="font-style: italic;">V/v: Liên hệ thực tập tốt nghiệp</span>
+            </td>
+            <td style="width: 50%;" class="header-right">
+              <span style="font-style: italic;">TP.Hồ Chí Minh, ngày ${dayStr} tháng ${monthStr} năm ${yearStr}</span>
+            </td>
+          </tr>
+        </table>
+
+        <p style="text-align: center; font-weight: bold; margin-top: 20px;">Kính gửi:</p>
+        <p style="text-align: center; font-weight: bold;">CÔNG TY ${group.companyName}</p>
+
+        <p class="content-text indent">
+          Để thực hiện tốt nhiệm vụ đào tạo của trường, giúp cho sinh viên học tập trong nhà trường phối hợp thực hành, sản xuất nâng cao tay nghề từ thực tiễn tại nhà máy, công ty, cơ sở sản xuất.
+        </p>
+        <p class="content-text indent">
+          Trường Cao đẳng Kỹ thuật Cao Thắng kính đề nghị Quý đơn vị:
+        </p>
+        <p class="content-text">* Tạo điều kiện cho: ${group.students.length} sinh viên (danh sách đính kèm)</p>
+        <p class="content-text">* Đến thực tập sản xuất tại đơn vị theo ngành, nghề đào tạo: Quản trị mạng máy tính; Sửa chữa lắp ráp và cài đặt máy tính; Công nghệ thông tin.</p>
+        <p class="content-text">* Với giảng viên hướng dẫn là Thầy/Cô: ${gvhdText}</p>
+        <p class="content-text">* Thời gian thực tập từ ngày: ${startDate} đến ngày: ${endDate}</p>
+        <p class="content-text">* Nội dung thực tập: theo đề cương thực tập (gửi kèm).</p>
+
+        <p class="content-text indent">
+          Nhà trường cùng với giảng viên hướng dẫn có trách nhiệm giáo dục, nhắc nhở sinh viên thuộc trường chấp hành nghiêm túc nội quy, quy định thực tập, sản xuất tại Quý đơn vị.
+        </p>
+        <p class="content-text indent">Rất mong được xem xét giải quyết.</p>
+        <p class="content-text indent">Trân trọng kính chào./.</p>
+
+        <table class="footer-section">
+          <tr>
+            <td></td>
+            <td>
+              <div class="footer-title">TL. HIỆU TRƯỞNG<br>TRƯỞNG PHÒNG CTCT-HSSV</div>
+            </td>
+          </tr>
+        </table>
+
+        <div class="page-break">
+          <div class="title">
+            <h1>Danh sách sinh viên thực tập tốt nghiệp</h1>
+          </div>
+
+          <table class="student-table">
+            <thead>
+              <tr>
+                <th style="width: 8%;">STT</th>
+                <th style="width: 18%;">MSSV</th>
+                <th style="width: 34%;">Họ và tên</th>
+                <th style="width: 20%;">Lớp</th>
+                <th style="width: 20%;">SĐT</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${studentsHtml}
+            </tbody>
+          </table>
+
+          <table class="footer-section">
+            <tr>
+              <td></td>
+              <td>
+                <div class="footer-title">TL. HIỆU TRƯỞNG<br>TRƯỞNG PHÒNG CTCT-HS</div>
+              </td>
+            </tr>
+          </table>
+        </div>
+
+        <script>
+          window.onload = function() {
+            window.print();
+            setTimeout(function() { window.close(); }, 500);
+          }
+        </script>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
-  const useFilteredDeclarationListQuery = (params: BaseListParams) => {
-    const query = internshipHooks.useFetchListDeclarations({ periodId: selectedPeriod?.id });
-    const typedParams = params as BaseListParams & { keyword?: string; companyName?: string; className?: string };
-    const keyword = (typedParams.keyword ?? '').trim().toLowerCase();
-    const companyName = typedParams.companyName || 'all';
-    const className = typedParams.className || 'all';
-    const status = declarationTab || 'all';
-
-    const sourceRows = (query.data?.rows ?? declarationsList ?? INITIAL_CONFIRMATIONS) as IConfirmationRequest[];
-    const filteredRows = sourceRows
-      .filter((r) => (status === 'all' ? true : r.status === status))
-      .filter((r) => (className === 'all' ? true : r.className === className))
-      .filter((r) => (companyName === 'all' || !companyName ? true : r.companyName.toLowerCase() === companyName.toLowerCase()))
-      .filter((r) => !keyword || [r.studentId, r.studentName, r.className, r.companyName, r.taxId].join(' ').toLowerCase().includes(keyword));
-
-    return {
-      ...query,
-      data: query.data
-        ? ({ ...query.data, rows: filteredRows, total: filteredRows.length } as ListResponseTypeObject<IConfirmationRequest>)
-        : query.data,
-    } as UseQueryResult<ListResponseTypeObject<IConfirmationRequest>, Error>;
-  };
-
-  const useFilteredNoCompanyListQuery = (params: BaseListParams) => {
-    const query = internshipHooks.useFetchListNoCompanyStudents({ periodId: selectedPeriod?.id });
-    const typedParams = params as BaseListParams & { keyword?: string; className?: string; assignmentStatus?: string };
-    const keyword = (typedParams.keyword ?? '').trim().toLowerCase();
-    const status = noCompanyTab || 'all';
-    const className = typedParams.className || 'all';
-    const assignmentStatus = typedParams.assignmentStatus || 'all';
-
-    const sourceRows2 = (query.data?.rows ?? noCompanyList ?? INITIAL_NO_COMPANY_STUDENTS) as INoCompanyStudent[];
-    const filteredRows = sourceRows2
-      .filter((r) => (status === 'all' || status === undefined ? true : r.status === status))
-      .filter((r) => (className === 'all' ? true : r.className === className))
-      .filter((r) => {
-        if (assignmentStatus === 'all') return true;
-        return r.assignmentStatus === assignmentStatus;
-      })
-      .filter((r) => !keyword || [r.studentId, r.studentName, r.phone, r.supervisor || ''].join(' ').toLowerCase().includes(keyword));
-
-    return {
-      ...query,
-      data: query.data
-        ? ({ ...query.data, rows: filteredRows, total: filteredRows.length } as ListResponseTypeObject<INoCompanyStudent>)
-        : query.data,
-    } as UseQueryResult<ListResponseTypeObject<INoCompanyStudent>, Error>;
-  };
+  const groupedColumns = [
+    { title: 'STT', key: 'index', width: 60, align: 'center' as const, render: (_: unknown, __: unknown, index: number) => index + 1 },
+    { title: 'Nơi thực tập', key: 'company', render: (_: unknown, record: IGroupedDeclaration) => (
+      <div>
+        <div className="font-bold text-navyDark">{record.companyName}</div>
+        <div className="text-xs text-slate-500 mt-0.5">Địa chỉ: {record.companyAddress}</div>
+        {record.internshipLocation && record.internshipLocation !== record.companyAddress && (
+          <div className="text-xs text-slate-400 mt-0.5">Địa điểm làm việc: {record.internshipLocation}</div>
+        )}
+      </div>
+    )},
+    { title: 'Số lượng SV', dataIndex: 'students', key: 'count', width: 110, align: 'center' as const, render: (students: IConfirmationRequest[]) => (
+      <Tag color="blue" className="m-0 font-medium px-2 py-0.5 rounded-full">{students.length} sinh viên</Tag>
+    )},
+    { title: 'Danh sách sinh viên', key: 'students_list', render: (_: unknown, record: IGroupedDeclaration) => (
+      <div className="flex flex-col gap-1 max-w-md">
+        {record.students.map((s) => (
+          <div key={s.id} className="text-xs flex items-center gap-1.5">
+            <span className="text-slate-400 font-mono">{s.studentId}</span>
+            <span>-</span>
+            <span className="font-medium text-slate-700">{s.studentName}</span>
+            <span className="text-slate-400">({s.className})</span>
+            {s.position && <span className="text-slate-500 font-normal">[{s.position}]</span>}
+          </div>
+        ))}
+      </div>
+    )},
+    { title: t(getKey('action')), key: 'actions', width: 140, render: (_: unknown, record: IGroupedDeclaration) => (
+      <Button type="primary" icon={<DownloadOutlined />} onClick={() => handlePrintGroupedPDF(record)}>
+        In Giấy Gộp
+      </Button>
+    )}
+  ];
 
   const createCompanyMutation = companyHooks.useCreateCompany();
 
@@ -337,7 +706,7 @@ const InternshipStudentsPage = () => {
       </div>
     ) },
     { title: t(getKey('registration_date')), dataIndex: 'regDate', key: 'regDate', width: 130, render: (v: string) => <span className="text-slate-600">{v}</span> },
-    { title: t(getKey('issued_status')), key: 'status', width: 140, render: (_: unknown, record: IConfirmationRequest) => {
+    { title: 'Trạng thái', key: 'status', width: 140, render: (_: unknown, record: IConfirmationRequest) => {
       const meta = getConfirmationStatusMeta(t)[record.status] || { label: record.status || 'Chờ duyệt', className: 'bg-[var(--color-gold-light)] text-[var(--color-gold-medium)]' };
       return <Tag className={cn("m-0 rounded-full px-[10px] py-0 border-none", meta.className)}>{meta.label}</Tag>;
     } },
@@ -388,7 +757,15 @@ const InternshipStudentsPage = () => {
       </div>
     ) },
     { title: t(getKey('registration_date')), dataIndex: 'regDate', key: 'regDate', width: 130, render: (v: string) => <span className="text-slate-600">{v}</span> },
-    { title: t(getKey('issued_status')), key: 'status', width: 140, render: (_: unknown, record: IConfirmationRequest) => {
+    { title: 'Trạng thái', key: 'status', width: 140, render: (_: unknown, record: IConfirmationRequest) => {
+      if (record.status === STATUS_CODE.APPROVED) {
+        const hasPaper = !!(record.internshipLocation || '').trim();
+        if (hasPaper) {
+          return <Tag className="m-0 rounded-full px-[10px] py-0 border-none bg-blue-50 text-[#1976D2]">Đã cấp</Tag>;
+        } else {
+          return <Tag className="m-0 rounded-full px-[10px] py-0 border-none bg-green-50 text-[var(--color-green-medium)]">Đã duyệt</Tag>;
+        }
+      }
       const meta = getConfirmationStatusMeta(t)[record.status] || { label: record.status || 'Chờ duyệt', className: 'bg-[var(--color-gold-light)] text-[var(--color-gold-medium)]' };
       return <Tag className={cn("m-0 rounded-full px-[10px] py-0 border-none", meta.className)}>{meta.label}</Tag>;
     } },
@@ -530,6 +907,7 @@ const InternshipStudentsPage = () => {
             { key: 'cho_cap_giay', label: `Chờ cấp giấy (${formatNumber(declarationTabCounts.cho_cap_giay)})`, icon: <FileTextOutlined /> },
             { key: 'approved', label: `Đã xong (${formatNumber(declarationTabCounts.approved)})`, icon: <CheckCircleOutlined /> },
             { key: 'rejected', label: `Bị từ chối (${formatNumber(declarationTabCounts.rejected)})`, icon: <CloseCircleOutlined /> },
+            { key: 'grouped', label: `Gộp theo nơi thực tập (${formatNumber(declarationTabCounts.grouped)})`, icon: <BankOutlined /> },
           ] : [
             { key: 'all', label: `${t(getKey('all_list'))} (${formatNumber(noCompanyTabCounts.total)})`, icon: <BankOutlined /> },
             { key: 'not_registered', label: `${t(getKey('not_registered_list'))} (${formatNumber(noCompanyTabCounts.not_registered)})`, icon: <CloseCircleOutlined /> },
@@ -539,15 +917,50 @@ const InternshipStudentsPage = () => {
         />
       </div>
 
-      {mode === 'confirmations' || mode === 'declarations' ? (
-        <Card className="overflow-hidden rounded-[18px] border border-slate-100 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
+      {mode === 'declarations' && declarationTab === 'grouped' ? (
+        <Card key="grouped-view" className="overflow-hidden rounded-[18px] border border-slate-100 bg-white p-6 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
+          <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="flex flex-1 items-center gap-3">
+              <Input
+                allowClear
+                placeholder="Tìm theo tên công ty, địa chỉ, MSSV, tên sinh viên..."
+                prefix={<SearchOutlined className="text-slate-400" />}
+                value={groupedKeyword}
+                onChange={(e) => setGroupedKeyword(e.target.value)}
+                className="!h-11 max-w-md !rounded-[12px] !border-slate-300"
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-slate-500 font-medium">Trạng thái SV:</span>
+              <Select
+                value={groupedStatusFilter}
+                onChange={(v) => setGroupedStatusFilter(v)}
+                className="!h-11 w-[200px]"
+                options={[
+                  { value: 'all', label: 'Tất cả (Chờ duyệt/Đã xong)' },
+                  { value: STATUS_CODE.CHO_CAP_GIAY, label: 'Chờ cấp giấy' },
+                  { value: STATUS_CODE.APPROVED, label: 'Đã cấp giấy/Đã xong' },
+                  { value: STATUS_CODE.PENDING, label: 'Chờ duyệt' }
+                ]}
+              />
+            </div>
+          </div>
+          <Table
+            rowKey="key"
+            dataSource={groupedDeclarations}
+            columns={groupedColumns}
+            pagination={{ pageSize: 10, showSizeChanger: true }}
+          />
+        </Card>
+      ) : (mode === 'confirmations' || mode === 'declarations') ? (
+        <Card key={`normal-view-${mode}`} className="overflow-hidden rounded-[18px] border border-slate-100 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
           <FilterTable<IConfirmationRequest, IConfirmationRequest | undefined, ICreateConfirmationRequest, IUpdateConfirmationRequest>
-            key={mode}
+            key={`table-${mode}`}
             title={mode === 'declarations' ? t(getKey('internship_students_declarations')) : t(getKey('internship_students_confirm'))}
             columns={mode === 'declarations' ? declarationColumns : confirmationColumns}
             useQueryHook={mode === 'declarations' ? useFilteredDeclarationListQuery : useFilteredConfirmationListQuery}
-            paramVariables={useMemo(() => ({ page: 1, limit: 10, periodId: selectedPeriod?.id || '' }), [selectedPeriod?.id])}
-            actions={useMemo(() => ({ isDetail: true, isEdit: !isPeriodClosed, isDelete: !isPeriodClosed }), [isPeriodClosed])}
+            paramVariables={confirmationOrDeclarationParamVariables}
+            actions={confirmationOrDeclarationActions}
             updateInfo={isPeriodClosed ? undefined : { type: 'modal', modalInfo: { modalContent: <ConfirmationForm />, modalProps: { centered: true, width: 720, title: t(getKey('edit_profile')) }, modalFunc: mode === 'declarations' ? updateDeclarationMutation : updateConfirmationMutation } }}
             deleteInfo={isPeriodClosed ? undefined : { type: 'modal', modalInfo: { modalContent: null, modalProps: {}, modalFunc: (mode === 'declarations' ? deleteDeclarationMutation : deleteConfirmationMutation) as unknown as UseMutationResult<IConfirmationRequest, AxiosError, { id: string; params: BaseListParams }> } }}
             detailInfo={{ type: 'modal', modalInfo: { modalContent: <ConfirmationForm disabled />, modalProps: { centered: true, width: 720, title: t(getKey('detail_profile')), footer: null }, modalFunc: mode === 'declarations' ? internshipHooks.useFetchDetailDeclaration : internshipHooks.useFetchDetailConfirmationRequest } }}
@@ -588,13 +1001,13 @@ const InternshipStudentsPage = () => {
           />
         </Card>
       ) : (
-        <Card className="overflow-hidden rounded-[18px] border border-slate-100 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
+        <Card key="no-company-view" className="overflow-hidden rounded-[18px] border border-slate-100 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
           <FilterTable<INoCompanyStudent, INoCompanyStudent | undefined, ICreateNoCompanyStudent, IUpdateNoCompanyStudent>
-            key={mode}
+            key="no-company-table"
             title={t(getKey('internship_students_nocompany'))}
             columns={noCompanyColumns}
             useQueryHook={useFilteredNoCompanyListQuery}
-            paramVariables={useMemo(() => ({ page: 1, limit: 10, periodId: selectedPeriod?.id || '' }), [selectedPeriod?.id])}
+            paramVariables={noCompanyParamVariables}
             updateInfo={isPeriodClosed ? undefined : { type: 'modal', modalInfo: { modalContent: <StudentForm />, modalProps: { centered: true, width: 720, title: t(getKey('edit_student')) }, modalFunc: updateNoCompanyMutation } }}
             deleteInfo={isPeriodClosed ? undefined : { type: 'modal', modalInfo: { modalContent: null, modalProps: {}, modalFunc: deleteNoCompanyMutation as unknown as import('@tanstack/react-query').UseMutationResult<INoCompanyStudent, import('axios').AxiosError, { id: string; params: BaseListParams }> } }}
             detailInfo={{ type: 'modal', modalInfo: { modalContent: <StudentForm disabled />, modalProps: { centered: true, width: 720, title: t(getKey('detail_student')), footer: null }, modalFunc: internshipHooks.useFetchDetailNoCompanyStudent } }}

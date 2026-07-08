@@ -57,6 +57,7 @@ const GroupsAdminPage: React.FC = () => {
   const updateGroupMutation = groupHooks.useUpdateGroup();
   const deleteGroupMutation = groupHooks.useDeleteGroup();
   
+  const isPeriodClosed = selectedPeriod?.status === STATUS_CODE.CLOSED;
   const rawGroups = (groupList?.rows as Group[] | undefined) ?? [];
   const groups = useMemo(() => {
     if (!selectedPeriod) return rawGroups;
@@ -88,6 +89,7 @@ const GroupsAdminPage: React.FC = () => {
   }
 
   async function doMergeWithMembers(moveMemberIds?: string[] | undefined) {
+    if (isPeriodClosed) return;
     if (!mergeLeft || !mergeRight) return message.error(t(getKey('merge_select_groups_error')));
     if (mergeLeft === mergeRight) return message.error(t(getKey('merge_same_group_error')));
     const left = groups.find((g) => g.id === mergeLeft)!;
@@ -210,6 +212,18 @@ const GroupsAdminPage: React.FC = () => {
         </div>
       </div>
 
+      {selectedPeriod && (
+        <div className={`mb-5 p-4 rounded-[18px] border flex items-center justify-between shadow-[0_12px_28px_rgba(15,23,42,0.02)] ${
+          isPeriodClosed ? 'bg-red-50 border-red-200 text-red-700' : 'bg-blue-50 border-blue-200 text-blue-700'
+        }`}>
+          <div>
+            {t(getKey('showing'))} {t(getKey('group_management'))} {t(getKey('of'))}: <strong className="underline">{selectedPeriod.name}</strong>
+            {isPeriodClosed && ` (${t(getKey('read_only_data_locked'))})`}
+          </div>
+          {isPeriodClosed && <Tag color="error">{t(getKey('read_only_tag'))}</Tag>}
+        </div>
+      )}
+
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {/* Total Groups */}
         <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_8px_20px_rgba(15,23,42,0.04)] flex justify-between items-start">
@@ -330,7 +344,7 @@ const GroupsAdminPage: React.FC = () => {
             </Form.Item>
           </div>
         )}
-        updateInfo={{
+        updateInfo={isPeriodClosed ? undefined : {
           type: 'modal',
           modalInfo: {
             modalContent: <GroupForm />,
@@ -346,14 +360,14 @@ const GroupsAdminPage: React.FC = () => {
             modalFunc: groupHooks.useFetchDetailGroup as unknown as (id: string, enable: boolean) => UseQueryResult<IDetailGroup, Error>,
           }
         }}
-        deleteInfo={{ type: 'modal', modalInfo: { modalContent: null, modalProps: {}, modalFunc: deleteGroupMutation as unknown as UseMutationResult<IListGroup, AxiosError, { id: string; params: BaseListParams }> } }}
+        deleteInfo={isPeriodClosed ? undefined : { type: 'modal', modalInfo: { modalContent: null, modalProps: {}, modalFunc: deleteGroupMutation as unknown as UseMutationResult<IListGroup, AxiosError, { id: string; params: BaseListParams }> } }}
         formatInitialValues={(g) => ({ code: g?.code ?? '', title: g?.title ?? '', supervisor: g?.supervisor ?? '', members: g?.members ?? [], maxMembers: g?.maxMembers ?? 2, status: g?.status ?? STATUS_CODE.PENDING_UP, registrationBatch: g?.registrationBatch ?? '' })}
         formatFormValues={(v) => v as unknown as ICreateGroup}
         actions={{
           isDetail: true,
-          isEdit: true,
-          isDelete: true,
-          customAction: (record) => {
+          isEdit: !isPeriodClosed,
+          isDelete: !isPeriodClosed,
+          customAction: isPeriodClosed ? undefined : (record) => {
             const r = record as Group;
             const isMergeable = r.status === STATUS_CODE.MISSING || r.status === STATUS_CODE.WARNING;
             return (

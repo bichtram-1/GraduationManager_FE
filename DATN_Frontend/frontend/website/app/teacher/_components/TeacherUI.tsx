@@ -27,8 +27,8 @@ export function getTopicStatusTone(status: string): 'green' | 'red' | 'orange' {
   return 'orange'
 }
 
-export function TeacherCard({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <div className={`overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.06)] ${className}`}>{children}</div>
+export function TeacherCard({ children, className = '', id }: { children: ReactNode; className?: string; id?: string }) {
+  return <div id={id} className={`overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.06)] ${className}`}>{children}</div>
 }
 
 export function TeacherButton({

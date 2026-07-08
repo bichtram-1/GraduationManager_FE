@@ -109,7 +109,7 @@ export default function TeacherStudentsPage() {
         },
         body: JSON.stringify({
           studentCode: extendModal.studentCode,
-          periodId: selectedPeriod.id,
+          periodId: selectedPeriod?.id,
           type: extendModal.type,
           week: extendModal.week,
           newDeadline: formattedDeadline
@@ -439,7 +439,10 @@ export default function TeacherStudentsPage() {
                       <td className="px-5 py-4 text-slate-600">{student.company || student.companyName || 'Chưa có'}</td>
                       <td className="px-5 py-4">
                         <button
-                          onClick={() => { setSelectedTTTN(student); }}
+                          onClick={() => {
+                            setSelectedTTTN(student);
+                            document.getElementById('quick-view-teacher-tttn')?.scrollIntoView({ behavior: 'smooth' });
+                          }}
                           className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 transition-all duration-200 transform hover:scale-105 shadow-sm active:scale-95"
                         >
                           Xem chi tiết
@@ -465,7 +468,7 @@ export default function TeacherStudentsPage() {
             </table>
           </TeacherCard>
 
-          <TeacherCard className="space-y-4 p-5">
+          <TeacherCard id="quick-view-teacher-tttn" className="space-y-4 p-5">
             <div className="text-sm font-semibold text-slate-900">Xem nhanh báo cáo sinh viên</div>
             {selectedTTTN ? (
               <>
@@ -509,26 +512,10 @@ export default function TeacherStudentsPage() {
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg ${
-                              rep.trang_thai === 'Đã nộp'
-                                ? 'bg-green-50 text-green-700'
-                                : rep.trang_thai === 'Thiếu'
-                                ? 'bg-red-50 text-red-700'
-                                : 'bg-orange-50 text-orange-700'
-                            }`}>
-                              {rep.trang_thai}
-                            </span>
-                            {(rep.trang_thai === 'Thiếu' || rep.trang_thai === 'Chưa nộp') && (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setExtendModal({ open: true, studentCode: selectedTTTN.studentCode || selectedTTTN.id, week: rep.tuan_so, type: 'TTTN' });
-                                }}
-                                className="text-xs font-semibold px-2 py-1 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition"
-                              >
-                                Gia hạn
-                              </button>
+                            {rep.trang_thai === 'Đã nộp' && (
+                              <span className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-green-50 text-green-700">
+                                {rep.trang_thai}
+                              </span>
                             )}
                           </div>
                         </div>
@@ -602,7 +589,10 @@ export default function TeacherStudentsPage() {
                         </td>
                         <td className="px-5 py-4">
                           <button
-                            onClick={() => { setSelectedDATN(group); }}
+                            onClick={() => {
+                              setSelectedDATN(group);
+                              document.getElementById('quick-view-teacher-datn')?.scrollIntoView({ behavior: 'smooth' });
+                            }}
                             className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 transition-all duration-200 transform hover:scale-105 shadow-sm active:scale-95"
                           >
                             Xem báo cáo
@@ -623,7 +613,7 @@ export default function TeacherStudentsPage() {
             </table>
           </TeacherCard>
 
-          <TeacherCard className="space-y-4 p-5 bg-[linear-gradient(135deg,#f0fdf4_0%,#ffffff_100%)]">
+          <TeacherCard id="quick-view-teacher-datn" className="space-y-4 p-5 bg-[linear-gradient(135deg,#f0fdf4_0%,#ffffff_100%)]">
             <div className="text-sm font-semibold text-slate-900">Xem nhanh báo cáo nhóm</div>
             {selectedDATN ? (
               <>
@@ -660,11 +650,11 @@ export default function TeacherStudentsPage() {
                             if (rep.trang_thai === 'Đã nộp') {
                               setSelectedReport(rep);
                               setReportModal({ open: true, id: selectedDATN.group, type: 'DATN' });
-                            } else {
-                              setExtendModal({ open: true, studentCode: selectedDATN.group, week: rep.tuan_so, type: 'DATN' });
                             }
                           }}
-                          className="flex items-center justify-between p-3 rounded-2xl border border-slate-100 bg-white hover:bg-emerald-50/40 hover:border-emerald-200 transition cursor-pointer shadow-xs group"
+                          className={`flex items-center justify-between p-3 rounded-2xl border border-slate-100 bg-white shadow-xs group ${
+                            rep.trang_thai === 'Đã nộp' ? 'cursor-pointer hover:bg-emerald-50/40 hover:border-emerald-200' : 'cursor-default'
+                          }`}
                         >
                           <div>
                             <div className="text-sm font-semibold text-slate-950 group-hover:text-[#2e7d32] transition flex items-center gap-1.5">
@@ -676,26 +666,10 @@ export default function TeacherStudentsPage() {
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg ${
-                              rep.trang_thai === 'Đã nộp'
-                                ? 'bg-green-50 text-green-700'
-                                : rep.trang_thai === 'Thiếu'
-                                ? 'bg-red-50 text-red-700'
-                                : 'bg-orange-50 text-orange-700'
-                            }`}>
-                              {rep.trang_thai}
-                            </span>
-                            {(rep.trang_thai === 'Thiếu' || rep.trang_thai === 'Chưa nộp') && (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setExtendModal({ open: true, studentCode: selectedDATN.group, week: rep.tuan_so, type: 'DATN' });
-                                }}
-                                className="text-xs font-semibold px-2 py-1 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition"
-                              >
-                                Gia hạn
-                              </button>
+                            {rep.trang_thai === 'Đã nộp' && (
+                              <span className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-green-50 text-green-700">
+                                {rep.trang_thai}
+                              </span>
                             )}
                           </div>
                         </div>
@@ -747,17 +721,32 @@ export default function TeacherStudentsPage() {
                 <div className="text-sm font-medium text-slate-900">File báo cáo</div>
                 <div className="mt-2 rounded-md border border-slate-100 bg-white p-3 text-sm text-slate-700">
                   {(() => {
+                    const getFileUrlHelper = (path: string | undefined) => {
+                      if (!path || path === '—') return null;
+                      const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+                      if (path.startsWith('http')) {
+                        try {
+                          const urlObj = new URL(path);
+                          const backendUrlObj = new URL(backendUrl);
+                          if (urlObj.hostname === 'localhost' || urlObj.hostname === '127.0.0.1') {
+                            urlObj.protocol = backendUrlObj.protocol;
+                            urlObj.host = backendUrlObj.host;
+                          }
+                          return urlObj.toString();
+                        } catch (_) {
+                          return path;
+                        }
+                      }
+                      return `${backendUrl}/storage/${path}`;
+                    };
                     const fileName = selectedReport?.duong_dan_file || (selectedReport ? `tuan_${selectedReport.tuan_so}.pdf` : 'report.pdf');
-                    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
-                    const fileUrl = selectedReport?.duong_dan_file 
-                      ? (selectedReport.duong_dan_file.startsWith('http') 
-                          ? selectedReport.duong_dan_file 
-                          : `${backendUrl}/storage/${selectedReport.duong_dan_file}`) 
-                      : '#';
-                    return (
+                    const fileUrl = getFileUrlHelper(selectedReport?.duong_dan_file);
+                    return fileUrl ? (
                       <a href={fileUrl} target="_blank" rel="noreferrer" className="text-blue-600 underline font-semibold hover:text-blue-800">
                         {fileName}
                       </a>
+                    ) : (
+                      <span className="text-slate-400 italic">Không có file đính kèm</span>
                     );
                   })()}
                 </div>

@@ -7,8 +7,9 @@ import {
   TeamOutlined,
   UserAddOutlined,
   SearchOutlined,
+  SwapOutlined,
 } from '@ant-design/icons';
-import { Button, Card, Form, Input, Modal, Select, Space, Table, Tag, Tabs, message } from 'antd';
+import { Button, Card, Form, Input, Modal, Select, Space, Table, Tag, Tabs, Tooltip, message } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { getKey } from '@shared/types/I18nKeyType';
 import type { ColumnsType } from 'antd/es/table';
@@ -40,6 +41,9 @@ const PeriodsPage = () => {
   const createPeriodMutation = periodHooks.useCreatePeriod();
   const updatePeriodMutation = periodHooks.useUpdatePeriod();
   const deletePeriodMutation = periodHooks.useDeletePeriod();
+
+  const [statusModalRecord, setStatusModalRecord] = useState<IListPeriod | null>(null);
+  const [newStatus, setNewStatus] = useState<BatchStatus | undefined>(undefined);
 
   const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
   const [addStudentForm] = Form.useForm();
@@ -105,6 +109,38 @@ const PeriodsPage = () => {
   const handleTabChange = (key: string) => {
     const nextTab = key as BatchType;
     setTab(nextTab);
+  };
+
+  const openStatusModal = (record: IListPeriod) => {
+    setStatusModalRecord(record);
+    setNewStatus(record.status);
+  };
+
+  const closeStatusModal = () => {
+    setStatusModalRecord(null);
+    setNewStatus(undefined);
+  };
+
+  const handleChangeStatusSubmit = () => {
+    if (!statusModalRecord || !newStatus) return;
+    updatePeriodMutation.mutate(
+      {
+        id: statusModalRecord.id,
+        body: { status: newStatus } as IUpdatePeriod,
+        index: 0,
+        params: listParams,
+      },
+      {
+        onSuccess: () => {
+          message.success('Cập nhật trạng thái đợt thành công!');
+          closeStatusModal();
+        },
+        onError: (err: unknown) => {
+          const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+          message.error(msg || 'Có lỗi xảy ra khi cập nhật trạng thái đợt!');
+        },
+      }
+    );
   };
 
   const batchTabs = useMemo(() => [
@@ -226,6 +262,28 @@ const PeriodsPage = () => {
           )}
           createInfo={{ type: 'modal', modalInfo: { modalContent: <PeriodForm tab={tab} />, modalProps: { centered: true, width: 820, title: tab === 'tttn' ? 'Tạo đợt TTTN mới' : 'Tạo đợt ĐATN mới' }, modalFunc: createPeriodMutation } }}
           updateInfo={{ type: 'modal', modalInfo: { modalContent: <PeriodForm tab={tab} />, modalProps: { centered: true, width: 820, title: t(getKey('edit_period')) }, modalFunc: updatePeriodMutation } }}
+          actions={{
+            isDetail: true,
+            isEdit: true,
+            isDelete: true,
+            customAction: (record) => {
+              const period = record as IListPeriod;
+              return (
+                <div className="pointer-events-auto">
+                  <Tooltip title="Đổi trạng thái đợt">
+                    <Button
+                      type="text"
+                      size="small"
+                      className="!px-2 pointer-events-auto"
+                      onClick={() => openStatusModal(period)}
+                    >
+                      <SwapOutlined className="text-[var(--color-primary)]" />
+                    </Button>
+                  </Tooltip>
+                </div>
+              );
+            },
+          }}
           detailInfo={{ type: 'modal', modalInfo: { modalContent: <PeriodForm tab={tab} disabled />, modalProps: { centered: true, width: 820, title: t(getKey('detail_period')), footer: null }, modalFunc: periodHooks.useFetchDetailPeriod as unknown as (id: string, enable: boolean) => import('@tanstack/react-query').UseQueryResult<IDetailPeriod, Error> } }}
           deleteInfo={{ type: 'modal', modalInfo: { modalContent: null, modalProps: {}, modalFunc: deletePeriodMutation as any } }}
           formatFormValues={(values) => ({
@@ -303,6 +361,48 @@ const PeriodsPage = () => {
             <Input placeholder="VD: Rớt đợt trước" />
           </Form.Item>
         </Form>
+      </Modal>
+
+      <Modal
+        title={
+          <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+            <SwapOutlined className="text-primary text-xl" />
+            <span className="text-lg font-bold text-slate-800">Đổi trạng thái đợt</span>
+          </div>
+        }
+        open={!!statusModalRecord}
+        onCancel={closeStatusModal}
+        onOk={handleChangeStatusSubmit}
+        confirmLoading={updatePeriodMutation.isPending}
+        centered
+        width={420}
+        okText="Cập nhật"
+        cancelText="Hủy"
+        okButtonProps={{ className: '!h-10 !px-5 !rounded-lg !bg-primary' }}
+        cancelButtonProps={{ className: '!h-10 !px-5 !rounded-lg' }}
+      >
+        {statusModalRecord && (
+          <div className="pt-4">
+            <div className="mb-4 text-sm text-slate-600">
+              Đợt: <span className="font-medium text-slate-900">{statusModalRecord.name}</span>
+            </div>
+            <div className="mb-2 text-sm font-medium text-slate-700">Trạng thái mới</div>
+            <Select
+              value={newStatus}
+              onChange={(v) => setNewStatus(v)}
+              className="!h-11 !w-full"
+              options={[
+                { value: STATUS_CODE.OPEN, label: t(getKey('period_status_open')) },
+                { value: STATUS_CODE.PUBLISHED, label: t(getKey('period_status_published')) },
+                { value: STATUS_CODE.GRADING, label: t(getKey('period_status_grading')) },
+                { value: STATUS_CODE.CLOSED, label: t(getKey('period_status_closed')) },
+              ]}
+            />
+            <p className="mt-3 text-xs text-slate-400">
+              Lưu ý: mỗi loại đợt (TTTN/ĐATN) chỉ được có 1 đợt ở trạng thái chưa đóng (Đang mở/Đã công bố/Đang chấm điểm) tại một thời điểm. Hệ thống sẽ báo lỗi nếu còn đợt khác cùng loại chưa đóng.
+            </p>
+          </div>
+        )}
       </Modal>
     </div>
   );

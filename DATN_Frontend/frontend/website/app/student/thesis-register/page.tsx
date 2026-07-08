@@ -40,6 +40,7 @@ const CONFIRM_COPY: Record<ConfirmAction['type'], { title: string; message: stri
 
 export default function ThesisRegisterPage() {
   const { selectedPeriod } = usePeriod()
+  const isPeriodLocked = selectedPeriod?.status === 'grading' || selectedPeriod?.status === 'closed'
   const [topics, setTopics] = useState<Topic[]>([])
   const [loading, setLoading] = useState(true)
   const [registration, setRegistration] = useState<Registration | null>(null)
@@ -172,6 +173,14 @@ export default function ThesisRegisterPage() {
         description="Chọn đề tài bạn muốn đăng ký hoặc chuyển sang tạo nhóm nếu cần mời thành viên."
       />
 
+      {isPeriodLocked && (
+        <div className="mb-5 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {selectedPeriod?.status === 'closed'
+            ? 'Đợt đồ án tốt nghiệp này đã đóng, bạn không thể đăng ký/hủy đề tài hoặc rời nhóm nữa.'
+            : 'Đợt đồ án tốt nghiệp đã bắt đầu chấm điểm, bạn không thể đăng ký/hủy đề tài hoặc rời nhóm nữa.'}
+        </div>
+      )}
+
       <section className="mb-6 grid gap-4 rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)] lg:grid-cols-[1fr_0.95fr]">
         <div className="rounded-[22px] bg-[linear-gradient(135deg,#eff6ff_0%,#ffffff_100%)] p-4 ring-1 ring-blue-100">
           <div className="flex items-center gap-2 text-xs font-medium text-[#1976D2]">
@@ -204,7 +213,7 @@ export default function ThesisRegisterPage() {
               </div>
             </div>
           </div>
-          {registration && registration.status !== 'accepted' && (
+          {registration && registration.status !== 'accepted' && !isPeriodLocked && (
             <div className="mt-4 flex justify-end">
               <button
                 type="button"
@@ -274,18 +283,18 @@ export default function ThesisRegisterPage() {
                   <div className="mt-6 flex items-center gap-3">
                     <button className="flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Xem chi tiết</button>
                     {!isCurrentTopic ? (
-                      <button 
-                        disabled={!!registration && registration.status === 'accepted'}
-                        onClick={() => handleRegister(t.id)} 
-                        className={`flex-1 rounded-2xl px-4 py-2 text-sm font-medium shadow-sm transition ${!!registration && registration.status === 'accepted' ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-[#2196F3] text-white hover:bg-[#1976D2]'}`}
+                      <button
+                        disabled={(!!registration && registration.status === 'accepted') || isPeriodLocked}
+                        onClick={() => handleRegister(t.id)}
+                        className={`flex-1 rounded-2xl px-4 py-2 text-sm font-medium shadow-sm transition ${(!!registration && registration.status === 'accepted') || isPeriodLocked ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-[#2196F3] text-white hover:bg-[#1976D2]'}`}
                       >
                         Đăng ký
                       </button>
                     ) : (
                       <button
-                        disabled={registration?.status === 'accepted'}
+                        disabled={registration?.status === 'accepted' || isPeriodLocked}
                         onClick={() => setConfirmAction({ type: 'cancelTopic' })}
-                        className={`flex-1 rounded-2xl border px-4 py-2 text-sm font-medium transition ${registration?.status === 'accepted' ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
+                        className={`flex-1 rounded-2xl border px-4 py-2 text-sm font-medium transition ${registration?.status === 'accepted' || isPeriodLocked ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
                       >
                         {registration?.status === 'accepted' ? 'Đã khóa đề tài' : 'Hủy đăng ký'}
                       </button>
@@ -310,10 +319,21 @@ export default function ThesisRegisterPage() {
             <div className="text-sm font-semibold text-slate-900">Cần tạo nhóm trước khi đăng ký?</div>
             <div className="mt-1 text-sm text-slate-600">Nếu đề tài yêu cầu mời thêm thành viên, hãy chuyển sang bước tạo nhóm để đồng bộ trạng thái duyệt.</div>
           </div>
-          <Link href={`/student/thesis-invite?topic=${registration?.topicId ?? 'DT001'}`} className="inline-flex items-center gap-2 rounded-2xl bg-[#2196F3] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-blue-200 transition hover:bg-[#1976D2]">
-            <Users className="h-4 w-4" />
-            Tạo nhóm ĐATN
-          </Link>
+          {isPeriodLocked ? (
+            <button
+              type="button"
+              disabled
+              className="inline-flex items-center gap-2 rounded-2xl bg-slate-100 px-4 py-2.5 text-sm font-medium text-slate-400 cursor-not-allowed"
+            >
+              <Users className="h-4 w-4" />
+              Tạo nhóm ĐATN
+            </button>
+          ) : (
+            <Link href={`/student/thesis-invite?topic=${registration?.topicId ?? 'DT001'}`} className="inline-flex items-center gap-2 rounded-2xl bg-[#2196F3] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-blue-200 transition hover:bg-[#1976D2]">
+              <Users className="h-4 w-4" />
+              Tạo nhóm ĐATN
+            </Link>
+          )}
         </div>
       </section>
 

@@ -190,24 +190,9 @@ export default function TeacherGradingPage() {
 
   const isPeriodEditable = () => {
     if (!selectedPeriod) return false
-    if (selectedPeriod.status === 'closed') return false
-
-    if (selectedPeriod.endDate) {
-      const parts = selectedPeriod.endDate.split('/')
-      if (parts.length === 3) {
-        const day = parseInt(parts[0], 10)
-        const month = parseInt(parts[1], 10) - 1
-        const year = parseInt(parts[2], 10)
-        const endDateObj = new Date(year, month, day, 23, 59, 59)
-        return new Date() <= endDateObj
-      }
-      
-      const parsedDate = new Date(selectedPeriod.endDate)
-      if (!isNaN(parsedDate.getTime())) {
-        return new Date() <= parsedDate
-      }
-    }
-    return true
+    // Chỉ được sửa điểm khi đợt đang mở hoặc đang chấm điểm; khi đã công bố (published)
+    // hoặc đã đóng (closed) thì khóa sửa điểm, khớp với Dot::daKhoaSuaDiem() ở backend.
+    return selectedPeriod.status === 'open' || selectedPeriod.status === 'grading'
   }
 
   const editable = isPeriodEditable()
