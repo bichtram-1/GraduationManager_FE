@@ -10,49 +10,6 @@ import { usePeriod } from '@/lib/providers/PeriodProvider'
 import { topicApi } from '@/lib/api/topicApi'
 import { COMMON_LABELS } from '@/constants/commonLabels'
 
-const TOPICS = [
-  {
-    code: 'DA001',
-    name: 'Hệ thống IoT giám sát nông nghiệp',
-    slots: '3/4',
-    status: 'Đã duyệt',
-    note: 'Có 2 nhóm đã đăng ký',
-    semester: 'HK2/2025-2026',
-    summary: 'Theo dõi độ ẩm, nhiệt độ và cảnh báo từ cảm biến.',
-    progress: 75,
-  },
-  {
-    code: 'DA007',
-    name: 'Blockchain cho quản lý chuỗi cung ứng',
-    slots: '0/3',
-    status: 'Chờ duyệt',
-    note: 'Chờ Admin phản hồi',
-    semester: 'HK2/2025-2026',
-    summary: 'Minh bạch hóa trạng thái vận chuyển và xác thực lô hàng.',
-    progress: 0,
-  },
-  {
-    code: 'DA012',
-    name: 'Ứng dụng ML dự đoán giá chứng khoán',
-    slots: '0/4',
-    status: 'Chờ duyệt',
-    note: 'Mới gửi tuần này',
-    semester: 'HK2/2025-2026',
-    summary: 'Dự đoán xu hướng giá từ dữ liệu lịch sử và tin tức.',
-    progress: 20,
-  },
-  {
-    code: 'DA015',
-    name: 'Hệ thống chấm điểm tự động',
-    slots: '0/3',
-    status: 'Từ chối',
-    note: 'Cần chỉnh lại mô tả',
-    semester: 'HK2/2025-2026',
-    summary: 'Tự động hóa quy trình chấm và phản hồi cho sinh viên.',
-    progress: 10,
-  },
-] as const
-
 type Topic = {
   id?: string
   code: string

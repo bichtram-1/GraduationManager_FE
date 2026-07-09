@@ -48,7 +48,7 @@ const ClassesAdminPage = () => {
       if (course && course !== 'all' && c.course !== course) return false;
       if (major && major !== 'all' && c.major !== major) return false;
       if (keyword) {
-        const match = [c.code, c.name, c.supervisor || ''].join(' ').toLowerCase().includes(keyword);
+        const match = c.name.toLowerCase().includes(keyword);
         if (!match) return false;
       }
       return true;
@@ -62,12 +62,10 @@ const ClassesAdminPage = () => {
   };
 
   const columns = [
-    { title: t(getKey('class_code')), dataIndex: 'code', key: 'code' },
     { title: t(getKey('class_name_full')), dataIndex: 'name', key: 'name', ellipsis: true },
     { title: t(getKey('education_level')), dataIndex: 'level', key: 'level' },
     { title: t(getKey('course_class_term')), dataIndex: 'course', key: 'course' },
     { title: t(getKey('major_branch')), dataIndex: 'major', key: 'major', ellipsis: true },
-    { title: t(getKey('supervisor_teacher')), dataIndex: 'supervisor', key: 'supervisor', ellipsis: true },
   ];
 
   const filterTableParams = useMemo(() => ({
@@ -110,7 +108,7 @@ const ClassesAdminPage = () => {
           updateInfo={{ type: 'modal', modalInfo: { modalContent: <ClassForm />, modalProps: { centered: true, width: 720, title: t(getKey('edit_class')) }, modalFunc: update as any } }}
           detailInfo={{ type: 'modal', modalInfo: { modalContent: <ClassForm disabled />, modalProps: { centered: true, width: 720, title: t(getKey('detail_class')), footer: null }, modalFunc: classHooks.useFetchDetailClass as any } }}
           deleteInfo={{ type: 'modal', modalInfo: { modalContent: null, modalProps: {}, modalFunc: del as any } }}
-          formatInitialValues={(c) => ({ code: c?.code ?? '', name: c?.name ?? '', level: c?.level ?? '', course: c?.course ?? '', major: c?.major ?? '', supervisor: c?.supervisor ?? '', members: c?.members ?? [], maxStudents: c?.maxStudents ?? 40, status: c?.status ?? STATUS_CODE.ACTIVE_UP })}
+          formatInitialValues={(c) => ({ name: c?.name ?? '', level: c?.level ?? '', course: c?.course ?? '', major: c?.major ?? '', members: c?.members ?? [], maxStudents: c?.maxStudents ?? 40, status: c?.status ?? STATUS_CODE.ACTIVE_UP })}
           formatFormValues={(v) => v as unknown as ICreateClass}
           actions={{ isDetail: true, isEdit: true, isDelete: true }}
         />

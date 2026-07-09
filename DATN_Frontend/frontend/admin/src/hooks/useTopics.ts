@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AxiosError } from 'axios';
 import { QueryKey } from '../constants/queryKey';
 import { topicApi, ITopicListParams } from '../api/topicApi';
-import type { BaseListParams } from '@shared/types/GeneralType';
 import type { ICreateTopic, IDetailTopic, IUpdateTopic } from '../type/TopicType';
 
 export const topicHooks = {

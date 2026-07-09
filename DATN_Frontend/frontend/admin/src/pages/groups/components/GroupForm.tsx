@@ -41,19 +41,14 @@ const GroupForm: React.FC<Props> = ({ detail, disabled }) => {
 
   const dbStudents = useMemo(() => {
     const rows = (assignmentList?.rows ?? []) as AssignmentRow[];
-    return rows.map((r) => {
-      // Mock eligibility for specific student codes for demo
-      const ineligibleCodes = ['0306231007', '0306231033', 'SV003', 'SV004'];
-      const isEligible = !ineligibleCodes.includes(r.studentId);
-      return {
-        id: r.studentId, // Use MSSV as ID
-        name: r.name,
-        code: r.studentId,
-        class: r.className,
-        eligible: isEligible,
-        reason: isEligible ? '' : 'Chưa đủ điều kiện làm đồ án'
-      };
-    });
+    return rows.map((r) => ({
+      id: r.studentId, // Use MSSV as ID
+      name: r.name,
+      code: r.studentId,
+      class: r.className,
+      eligible: true,
+      reason: ''
+    }));
   }, [assignmentList]);
 
   const statusOptions = [
@@ -165,20 +160,20 @@ const GroupForm: React.FC<Props> = ({ detail, disabled }) => {
   // Edit / Update mode
   return (
     <>
-      <Form.Item name="title" label={t(getKey('topic_name'))} rules={[{ required: true, message: 'Vui lòng nhập tên đề tài' }]}>
-        <Input />
+      <Form.Item name="title" label={`${t(getKey('topic_name'))} (lấy từ đề tài đã đăng ký, sửa qua Quản lý đề tài)`}>
+        <Input disabled />
       </Form.Item>
 
-      <Form.Item name="supervisor" label="Giảng viên hướng dẫn" rules={[{ required: true, message: 'Vui lòng nhập giảng viên hướng dẫn' }]}>
-        <Input />
+      <Form.Item name="supervisor" label="Giảng viên hướng dẫn (lấy từ đề tài đã đăng ký)">
+        <Input disabled />
       </Form.Item>
 
-      <Form.Item name="maxMembers" label="Số lượng thành viên" rules={[{ required: true, message: 'Vui lòng nhập số lượng thành viên' }]}>
-        <InputNumber min={1} max={10} className="w-full" />
+      <Form.Item name="maxMembers" label="Số lượng thành viên tối đa (lấy từ đề tài đã đăng ký)">
+        <InputNumber min={1} max={10} className="w-full" disabled />
       </Form.Item>
 
-      <Form.Item name="registrationBatch" label={t(getKey('registration_period'))} rules={[{ required: true, message: 'Vui lòng nhập đợt đăng ký' }]}>
-        <Input />
+      <Form.Item name="registrationBatch" label={t(getKey('registration_period'))}>
+        <Input disabled />
       </Form.Item>
 
       {detail?.status && (

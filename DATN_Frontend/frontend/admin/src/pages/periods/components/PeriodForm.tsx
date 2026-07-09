@@ -48,7 +48,7 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled }) => {
   const classOptions = React.useMemo(() => {
     return classesList.map((c) => ({
       value: c.id,
-      label: `${c.code} - ${c.name}`,
+      label: c.name,
     }));
   }, [classesList]);
 

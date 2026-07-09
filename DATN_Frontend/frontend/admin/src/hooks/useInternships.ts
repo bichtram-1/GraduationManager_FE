@@ -65,54 +65,12 @@ export const internshipHooks = {
     });
   },
 
-  useFetchDetailConfirmationRequest: (id: string, enabled: boolean = true) => {
-    return useQuery({
-      queryKey: [QueryKey.internships.confirmations.detail, id],
-      enabled: !!id && enabled,
-      queryFn: () => internshipApi.getConfirmationRequestDetail(id),
-    });
-  },
-
-  useCreateConfirmationRequest: () => {
-    const queryClient = useQueryClient();
-    return useMutation<IConfirmationRequest, AxiosError, { body: ICreateConfirmationRequest; params: BaseListParams }>({
-      mutationFn: internshipApi.createConfirmationRequest,
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: [QueryKey.internships.confirmations.list] });
-      },
-    });
-  },
-
-  useUpdateConfirmationRequest: () => {
-    const queryClient = useQueryClient();
-    return useMutation<IConfirmationRequest | undefined, AxiosError, { id: string; body: IUpdateConfirmationRequest; index: number; params: BaseListParams }>({
-      mutationFn: internshipApi.updateConfirmationRequest,
-      onSuccess: (_, variables) => {
-        queryClient.invalidateQueries({ queryKey: [QueryKey.internships.confirmations.list] });
-        if (variables?.id) {
-          queryClient.invalidateQueries({ queryKey: [QueryKey.internships.confirmations.detail, variables.id] });
-        }
-      },
-    });
-  },
-
-  useDeleteConfirmationRequest: () => {
-    const queryClient = useQueryClient();
-    return useMutation<unknown, AxiosError, { id: string; params: BaseListParams }>({
-      mutationFn: internshipApi.deleteConfirmationRequest,
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: [QueryKey.internships.confirmations.list] });
-      },
-    });
-  },
-
   useFetchListNoCompanyStudents: (params?: { periodId?: string }) => {
     return useQuery({
       queryKey: [QueryKey.internships.noCompany.list, params],
       queryFn: () => internshipApi.getListNoCompanyStudent(params),
     });
   },
-
 
   useFetchDetailNoCompanyStudent: (id: string, enabled: boolean = true) => {
     const { selectedPeriod } = useGlobalVariable();

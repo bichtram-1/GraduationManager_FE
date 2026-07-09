@@ -1,19 +1,11 @@
 import axiosInstance from '../axios/axios-config';
 
-const USE_MOCK = false;
-
 export const topicApi = {
   getTopics: async (params?: { periodId?: string }) => {
-    if (USE_MOCK) {
-      const res = await fetch('/api/mock/teacher/topics');
-      const json = await res.json();
-      return json.topics ?? [];
-    }
-
     const response = await axiosInstance.get('/private/v1/topics', { params });
     const resData = response?.data?.results?.objects || response?.data?.results?.object || response?.data;
     const rawList = (resData && typeof resData === 'object' && 'rows' in resData) ? resData.rows : (Array.isArray(resData) ? resData : []);
-    
+
     return rawList.map((t: { id?: string | number; code?: string; name?: string; title?: string; teacher?: string; module?: string; status?: string; published?: boolean; slots?: string; approved_students?: string }) => ({
       id: String(t.id ?? ''),
       code: t.code || `DA${String(t.id || '').padStart(3, '0')}`,
@@ -26,12 +18,6 @@ export const topicApi = {
   },
 
   getTeacherTopics: async (params?: { periodId?: string }) => {
-    if (USE_MOCK) {
-      const res = await fetch('/api/mock/teacher/topics');
-      const json = await res.json();
-      return json.topics ?? [];
-    }
-
     const response = await axiosInstance.get('/private/v1/teacher/topics', { params });
     const resData = response?.data?.results?.objects || response?.data?.results?.object || response?.data;
     const rawList = (resData && typeof resData === 'object' && 'rows' in resData) ? resData.rows : (Array.isArray(resData) ? resData : []);
@@ -58,7 +44,7 @@ export const topicApi = {
         approvedStudents: t.approved_students || 'chưa có',
         status: statusVal,
         note: t.rejectReason || '',
-        semester: 'HK2/2025-2026',
+        semester: t.period || t.batch || '',
         summary: t.description || '',
         progress: progress,
         direction: t.direction || '',
@@ -68,9 +54,6 @@ export const topicApi = {
   },
 
   createTopic: async (payload: { name: string; teacher: string; slots: string; description: string; direction?: string; fileUrl?: string; periodId?: string }) => {
-    if (USE_MOCK) {
-      return { success: true };
-    }
     const response = await axiosInstance.post('/private/v1/teacher/topics', payload, {
       params: { periodId: payload.periodId }
     });
@@ -78,25 +61,16 @@ export const topicApi = {
   },
 
   updateTopic: async (id: string, payload: { name?: string; teacher?: string; slots?: string; description?: string; direction?: string; fileUrl?: string }) => {
-    if (USE_MOCK) {
-      return { success: true };
-    }
     const response = await axiosInstance.patch(`/private/v1/teacher/topics/${id}`, payload);
     return response?.data;
   },
 
   deleteTopic: async (id: string) => {
-    if (USE_MOCK) {
-      return { success: true };
-    }
     const response = await axiosInstance.delete(`/private/v1/teacher/topics/${id}`);
     return response?.data;
   },
 
   importTopics: async (file: File, periodId?: string) => {
-    if (USE_MOCK) {
-      return { success: true, message: 'Mock import successful' };
-    }
     const formData = new FormData();
     formData.append('file', file);
     const response = await axiosInstance.post('/private/v1/teacher/topics/import', formData, {

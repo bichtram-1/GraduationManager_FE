@@ -112,7 +112,7 @@ export default function CouncilsPage() {
       const chairMember = councilMembers.find((m: any) => m.role.includes('Chủ tịch'))
       const chairStr = chairMember ? `${chairMember.role}: ${chairMember.name}` : 'Chưa phân công'
 
-      let headerCols: string[] = ['STT', 'Đề tài', 'Mã SV', 'Họ tên', 'Lớp', 'GVHD', 'GVPB']
+      const headerCols: string[] = ['STT', 'Đề tài', 'Mã SV', 'Họ tên', 'Lớp', 'GVHD', 'GVPB']
       if (isChair) {
         headerCols.push(...councilMembers.map((m: any) => shortenName(m.name)))
         headerCols.push('TB bảo vệ', 'BC-GVHD', 'BC-GVPB', 'TK')

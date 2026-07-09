@@ -1,31 +1,11 @@
 import type { BaseListParams } from '@shared/types/GeneralType';
-import type { IConfirmationRequest, ICreateConfirmationRequest, ICreateNoCompanyStudent, INoCompanyStudent, IUpdateConfirmationRequest, IUpdateNoCompanyStudent } from '../type/InternshipType';
+import type { ICreateConfirmationRequest, ICreateNoCompanyStudent, IUpdateConfirmationRequest, IUpdateNoCompanyStudent } from '../type/InternshipType';
 import axiosInstance from './axiosInstance';
 
 export const internshipApi = {
   getListConfirmationRequest: async (params?: { periodId?: string }) => {
     const response = await axiosInstance.get('/private/v1/internships/confirmations', { params });
     return response?.data?.results?.objects;
-  },
-
-  getConfirmationRequestDetail: async (id: string) => {
-    const response = await axiosInstance.get(`/private/v1/internships/confirmations/${id}`);
-    return response?.data?.results?.object;
-  },
-
-  createConfirmationRequest: async ({ body, params }: { body: ICreateConfirmationRequest; params: BaseListParams & { periodId?: string } }) => {
-    const response = await axiosInstance.post('/private/v1/internships/confirmations', body, { params });
-    return response?.data?.results?.object;
-  },
-
-  updateConfirmationRequest: async ({ id, body }: { id: string; body: IUpdateConfirmationRequest; index: number; params: BaseListParams }) => {
-    const response = await axiosInstance.patch(`/private/v1/internships/confirmations/${id}`, body);
-    return response?.data?.results?.object;
-  },
-
-  deleteConfirmationRequest: async ({ id }: { id: string; params: BaseListParams }) => {
-    const response = await axiosInstance.delete(`/private/v1/internships/confirmations/${id}`);
-    return response?.data;
   },
 
   getListDeclarations: async (params?: { periodId?: string }) => {

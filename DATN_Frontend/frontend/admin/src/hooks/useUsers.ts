@@ -11,12 +11,10 @@ import { userApi } from '../api/userApi';
 import { QueryKey } from '../constants/queryKey';
 import {
   BaseListParams,
-  ListResponseTypeObject,
 } from '@shared/types/GeneralType';
 import {
   ICreateUser,
   IDetailUser,
-  IListUser,
   IUpdateUser,
 } from 'src/type/UserType';
 
@@ -90,17 +88,6 @@ export const userHooks = {
         queryClient.invalidateQueries({ queryKey: [QueryKey.users.list] });
         queryClient.invalidateQueries({ queryKey: [QueryKey.classes.list] });
       },
-    });
-  },
-
-  /**
-   * Reset mật khẩu user về mặc định.
-   * Gọi từ ModalCreateEditUser sau khi user xác nhận Modal.confirm.
-   * Không cần update cache vì password không hiển thị trong list/detail.
-   */
-  useResetUserPassword: () => {
-    return useMutation<unknown, AxiosError, { id: string }>({
-      mutationFn: userApi.resetUserPassword,
     });
   },
 

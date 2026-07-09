@@ -1,5 +1,5 @@
 import type { BaseListParams } from '@shared/types/GeneralType';
-import type { ICreateGroup, IDetailGroup, IListGroup, IUpdateGroup } from '../type/GroupType';
+import type { ICreateGroup, IDetailGroup, IUpdateGroup } from '../type/GroupType';
 import axiosInstance from './axiosInstance';
 
 export const groupApi = {

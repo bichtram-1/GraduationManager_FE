@@ -1,68 +1,13 @@
 'use client'
 
 import { useMemo, useState, useEffect } from 'react'
-import { BookOpen, Eye, Mail, MapPin, Phone, Search, ShieldCheck, Users, Building2, Clock3 } from 'lucide-react'
+import { BookOpen, Eye, Mail, MapPin, Phone, Search, ShieldCheck, Users, Building2 } from 'lucide-react'
 import { TeacherPill, TeacherSectionHeader } from '../_components/TeacherShell'
 import { TeacherButton, TeacherCard } from '../_components/TeacherUI'
 import { usePeriod } from '@/lib/providers/PeriodProvider'
 import { teacherApi } from '@/lib/api/teacherApi'
 import { App } from 'antd'
 import { COMMON_LABELS } from '@/constants/commonLabels'
-
-const MOCK_TTTN = [
-  { id: '20520001', name: 'Nguyễn Văn A', company: 'FPT Software', mentor: 'TS. Nguyễn Văn X', phone: '0901 234 567', email: 'xnv@fpt.com', report: 'Tuần 3', status: 'Đã nộp', date: '15/05/2026' },
-  { id: '20520002', name: 'Trần Thị B', company: 'VNG Corp', mentor: 'ThS. Lê Thị Y', phone: '0909 111 222', email: 'ylt@vng.com', report: 'Tuần 2', status: 'Trễ hạn', date: '08/05/2026' },
-  { id: '20520003', name: 'Phạm Văn C', company: 'TMA Solutions', mentor: 'TS. Trần Văn Z', phone: '0933 444 555', email: 'ztv@tma.com', report: 'Tuần 3', status: 'Đã nộp', date: '16/05/2026' },
-]
-
-const MOCK_DATN = [
-  { 
-    id: '1', 
-    group: 'G01', 
-    topic: 'Hệ thống quản lý thư viện điện tử', 
-    members: 2, 
-    latest: 'Bản thảo Chương 2', 
-    status: 'Đã nộp', 
-    date: '12/05/2026', 
-    github: 'github.com/user/library-system',
-    members_list: [
-      { id: '20520001', name: 'Nguyễn Văn A', class: 'KHMT2020', is_leader: true },
-      { id: '20520002', name: 'Trần Thị B', class: 'KHMT2020', is_leader: false }
-    ],
-    topic_details: {
-      name: 'Hệ thống quản lý thư viện điện tử',
-      huong_de_tai: 'Phát triển ứng dụng Web',
-      limit: 2
-    },
-    reports: [
-      { bao_cao_id: 101, tuan_so: 1, noi_dung: 'Tìm hiểu yêu cầu và thiết kế DB', duong_dan_file: 'bao_cao_tuan_1.pdf', trang_thai: 'Đã nộp', thoi_gian_nop: '05/05/2026 14:00', comment: 'Tốt' },
-      { bao_cao_id: 102, tuan_so: 2, noi_dung: 'Bản thảo Chương 2 - Thiết kế giao diện và chức năng', duong_dan_file: 'bao_cao_tuan_2.pdf', trang_thai: 'Đã nộp', thoi_gian_nop: '12/05/2026 15:30', comment: '' }
-    ]
-  },
-  { 
-    id: '2', 
-    group: 'G02', 
-    topic: 'Ứng dụng AI nhận diện hình ảnh', 
-    members: 3, 
-    latest: 'Bản thảo Chương 1', 
-    status: 'Đang chấm điểm', 
-    date: '10/05/2026', 
-    github: 'github.com/user/ai-image-recognition',
-    members_list: [
-      { id: '20520003', name: 'Phạm Văn C', class: 'KTPM2020', is_leader: true },
-      { id: '20520004', name: 'Lê Văn D', class: 'KTPM2020', is_leader: false },
-      { id: '20520005', name: 'Hoàng Thị E', class: 'KTPM2020', is_leader: false }
-    ],
-    topic_details: {
-      name: 'Ứng dụng AI nhận diện hình ảnh',
-      huong_de_tai: 'Trí tuệ nhân tạo & Thị giác máy tính',
-      limit: 3
-    },
-    reports: [
-      { bao_cao_id: 103, tuan_so: 1, noi_dung: 'Bản thảo Chương 1 - Cơ sở lý thuyết CNN', duong_dan_file: 'bao_cao_tuan_1.pdf', trang_thai: 'Đã nộp', thoi_gian_nop: '10/05/2026 09:00', comment: 'Cần bổ dung mô hình ResNet' }
-    ]
-  }
-]
 
 export default function TeacherStudentsPage() {
   const { message } = App.useApp()
@@ -86,51 +31,6 @@ export default function TeacherStudentsPage() {
   const [loading, setLoading] = useState(false)
   const [selectedReport, setSelectedReport] = useState<any>(null)
   const [reportCommentText, setReportCommentText] = useState('')
-
-  const [extendModal, setExtendModal] = useState<{ open: boolean; studentCode?: string; week?: number; type?: 'TTTN' | 'DATN' }>({ open: false, studentCode: undefined, week: undefined, type: undefined })
-  const [extendDeadline, setExtendDeadline] = useState('')
-  const [extending, setExtending] = useState(false)
-
-  const handleSaveExtend = async () => {
-    if (!extendDeadline) {
-      message.error('Vui lòng chọn thời gian gia hạn!')
-      return
-    }
-    setExtending(true)
-    try {
-      const formattedDeadline = new Date(extendDeadline).toISOString().slice(0, 19).replace('T', ' ')
-      const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'
-      const token = localStorage.getItem('token')
-      const response = await fetch(`${backendUrl}/api/private/v1/teacher/report-extend`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          studentCode: extendModal.studentCode,
-          periodId: selectedPeriod?.id,
-          type: extendModal.type,
-          week: extendModal.week,
-          newDeadline: formattedDeadline
-        })
-      })
-      const result = await response.json()
-      if (result.success) {
-        message.success(result.message || 'Gia hạn nộp trễ thành công!')
-        setExtendModal({ open: false, studentCode: undefined, week: undefined, type: undefined })
-        setExtendDeadline('')
-        window.dispatchEvent(new Event('realtime-group-updated'))
-      } else {
-        message.error(result.message || 'Gia hạn thất bại!')
-      }
-    } catch (err) {
-      console.error(err)
-      message.error('Có lỗi xảy ra khi thực hiện gia hạn!')
-    } finally {
-      setExtending(false)
-    }
-  }
 
   const formatCompanyInfo = (val: any) => {
     if (!val || val === '—' || val === 'Chưa có' || val === 'chưa có' || val === 'Chưa cập nhật') {
@@ -175,18 +75,20 @@ export default function TeacherStudentsPage() {
               return datn.length > 0 ? datn[0] : null
             })
           } else {
-            setTttnList(MOCK_TTTN)
-            setDatnList(MOCK_DATN)
-            setSelectedTTTN(MOCK_TTTN[0])
-            setSelectedDATN(MOCK_DATN[0])
+            setTttnList([])
+            setDatnList([])
+            setSelectedTTTN(null)
+            setSelectedDATN(null)
+            message.error('Không tải được danh sách sinh viên hướng dẫn. Vui lòng thử lại!')
           }
         })
         .catch(() => {
           if (mounted) {
-            setTttnList(MOCK_TTTN)
-            setDatnList(MOCK_DATN)
-            setSelectedTTTN(MOCK_TTTN[0])
-            setSelectedDATN(MOCK_DATN[0])
+            setTttnList([])
+            setDatnList([])
+            setSelectedTTTN(null)
+            setSelectedDATN(null)
+            message.error('Có lỗi xảy ra khi tải danh sách sinh viên hướng dẫn!')
           }
         })
         .finally(() => {
@@ -207,7 +109,7 @@ export default function TeacherStudentsPage() {
       window.removeEventListener('realtime-group-updated', handleSync)
       window.removeEventListener('realtime-topic-updated', handleSync)
     }
-  }, [selectedPeriod?.id])
+  }, [selectedPeriod?.id, message])
 
   useEffect(() => {
     if (reportModal.open && reportModal.type === 'TTTN') {
@@ -496,16 +398,13 @@ export default function TeacherStudentsPage() {
                             if (rep.trang_thai === 'Đã nộp') {
                               setSelectedReport(rep);
                               setReportModal({ open: true, id: selectedTTTN.id, type: 'TTTN' });
-                            } else {
-                              setExtendModal({ open: true, studentCode: selectedTTTN.studentCode || selectedTTTN.id, week: rep.tuan_so, type: 'TTTN' });
                             }
                           }}
-                          className="flex items-center justify-between p-3 rounded-2xl border border-slate-100 bg-white hover:bg-blue-50/40 hover:border-blue-200 transition cursor-pointer shadow-xs group"
+                          className={`flex items-center justify-between p-3 rounded-2xl border border-slate-100 bg-white shadow-xs group ${rep.trang_thai === 'Đã nộp' ? 'cursor-pointer hover:bg-blue-50/40 hover:border-blue-200 transition' : 'cursor-default'}`}
                         >
                           <div>
                             <div className="text-sm font-semibold text-slate-950 group-hover:text-blue-600 transition flex items-center gap-1.5">
                               Tuần {rep.tuan_so}
-                              {rep.isExtended && <span className="text-[10px] text-blue-500 font-bold bg-blue-50 px-1.5 py-0.5 rounded-full">Đã gia hạn</span>}
                             </div>
                             <div className="text-xs text-slate-500 mt-0.5">
                               {rep.trang_thai === 'Đã nộp' ? `Nộp ngày: ${rep.thoi_gian_nop}` : `Hạn nộp: ${new Date(rep.deadline).toLocaleDateString('vi-VN')}`}
@@ -659,7 +558,6 @@ export default function TeacherStudentsPage() {
                           <div>
                             <div className="text-sm font-semibold text-slate-950 group-hover:text-[#2e7d32] transition flex items-center gap-1.5">
                               Tuần {rep.tuan_so}
-                              {rep.isExtended && <span className="text-[10px] text-blue-500 font-bold bg-blue-50 px-1.5 py-0.5 rounded-full">Đã gia hạn</span>}
                             </div>
                             <div className="text-xs text-slate-500 mt-0.5">
                               {rep.trang_thai === 'Đã nộp' ? `Nộp ngày: ${rep.thoi_gian_nop}` : `Hạn nộp: ${new Date(rep.deadline).toLocaleDateString('vi-VN')}`}
@@ -989,53 +887,6 @@ export default function TeacherStudentsPage() {
           </div>
         )}
 
-      {/* Extend Modal */}
-      {extendModal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/45 backdrop-blur-xs" onClick={() => setExtendModal({ open: false, studentCode: undefined, week: undefined, type: undefined })} />
-          <div className="relative z-50 w-full max-w-md transform overflow-hidden rounded-3xl bg-white p-6 shadow-2xl transition-all border border-slate-100">
-            <h3 className="text-lg font-semibold font-sans text-slate-900 flex items-center gap-2">
-              <Clock3 className="h-5 w-5 text-blue-600" />
-              Cho phép nộp trễ báo cáo
-            </h3>
-            <p className="mt-2 text-xs text-slate-500 font-sans">
-              Gia hạn thời gian nộp hoặc cập nhật file báo cáo **Tuần {extendModal.week}** cho {extendModal.type === 'TTTN' ? 'sinh viên' : 'nhóm'} **{extendModal.studentCode}**.
-            </p>
-
-            <div className="mt-4 font-sans">
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Chọn hạn nộp mới</label>
-              <input
-                type="datetime-local"
-                value={extendDeadline}
-                onChange={(e) => setExtendDeadline(e.target.value)}
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:bg-white"
-              />
-            </div>
-
-            <div className="mt-6 flex justify-end gap-2 font-sans">
-              <button
-                type="button"
-                className="rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-                onClick={() => {
-                  setExtendModal({ open: false, studentCode: undefined, week: undefined, type: undefined });
-                  setExtendDeadline('');
-                }}
-                disabled={extending}
-              >
-                Hủy bỏ
-              </button>
-              <button
-                type="button"
-                className="rounded-2xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700 disabled:opacity-70"
-                onClick={handleSaveExtend}
-                disabled={extending}
-              >
-                {extending ? 'Đang xử lý...' : 'Xác nhận'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   )
 }

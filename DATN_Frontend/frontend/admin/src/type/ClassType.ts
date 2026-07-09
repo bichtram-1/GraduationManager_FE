@@ -7,12 +7,10 @@ export interface IClassMember {
 }
 
 interface IBaseClass {
-  code: string;
   name: string;
   level?: string;
   course?: string;
   major?: string;
-  supervisor?: string;
   members: IClassMember[];
   maxStudents: number;
   status: ClassStatus;

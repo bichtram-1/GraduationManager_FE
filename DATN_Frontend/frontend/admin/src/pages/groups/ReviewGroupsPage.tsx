@@ -67,7 +67,7 @@ const ReviewGroupsPage: React.FC = () => {
           try {
             await rejectGroup.mutateAsync({ id });
             message.success(t(getKey('rejected_group_msg')));
-          } catch (e) {
+          } catch (_e) {
             message.error(t(getKey('update_status_err_msg')));
           } finally {
             setSavingId(null);
@@ -81,7 +81,7 @@ const ReviewGroupsPage: React.FC = () => {
     try {
       await approveGroup.mutateAsync({ id });
       message.success(t(getKey('approved_group_msg')));
-    } catch (e) {
+    } catch (_e) {
       message.error(t(getKey('update_status_err_msg')));
     } finally {
       setSavingId(null);

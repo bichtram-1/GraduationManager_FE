@@ -22,7 +22,7 @@ import { formatNumber } from '@shared/utils/numberUtils';
 
 import { useGlobalVariable } from '../../hooks/GlobalVariableProvider';
 
-type ModeKey = 'confirmations' | 'no-company' | 'declarations';
+type ModeKey = 'no-company' | 'declarations';
 type ConfirmationTab = 'all' | ConfirmationStatus | 'grouped';
 type NoCompanyTab = 'all' | NoCompanyStatus;
 
@@ -40,31 +40,6 @@ const getNoCompanyStatusMeta = (t: TFunction) => ({
   [STATUS_CODE.NOT_REGISTERED]: { label: t(getKey('not_registered_list')), className: 'bg-[var(--color-red-light)] text-[var(--color-red-medium)]' },
   [STATUS_CODE.HAS_COMPANY]: { label: t(getKey('has_company_list')), className: 'bg-[var(--color-green-light)] text-[var(--color-green-medium)]' },
 } as const);
-
-const useFilteredConfirmationListQuery = (params: BaseListParams) => {
-  const typedParams = params as BaseListParams & { keyword?: string; companyName?: string; className?: string; periodId?: string; confirmationTab?: string };
-  const periodId = typedParams.periodId;
-  const confirmationTab = typedParams.confirmationTab || 'all';
-
-  const query = internshipHooks.useFetchListConfirmationRequests({ periodId });
-  const keyword = (typedParams.keyword ?? '').trim().toLowerCase();
-  const companyName = typedParams.companyName || 'all';
-  const className = typedParams.className || 'all';
-
-  const sourceRows = (query.data?.rows ?? INITIAL_CONFIRMATIONS) as IConfirmationRequest[];
-  const filteredRows = sourceRows
-    .filter((r: IConfirmationRequest) => (confirmationTab === 'all' ? true : r.status === confirmationTab))
-    .filter((r: IConfirmationRequest) => (className === 'all' ? true : r.className === className))
-    .filter((r: IConfirmationRequest) => (companyName === 'all' || !companyName ? true : r.companyName.toLowerCase() === companyName.toLowerCase()))
-    .filter((r: IConfirmationRequest) => !keyword || [r.studentId, r.studentName, r.className, r.companyName, r.taxId].join(' ').toLowerCase().includes(keyword));
-
-  return {
-    ...query,
-    data: query.data
-      ? ({ ...query.data, rows: filteredRows, total: filteredRows.length } as ListResponseTypeObject<IConfirmationRequest>)
-      : query.data,
-  } as UseQueryResult<ListResponseTypeObject<IConfirmationRequest>, Error>;
-};
 
 const useFilteredDeclarationListQuery = (params: BaseListParams) => {
   const typedParams = params as BaseListParams & { keyword?: string; companyName?: string; className?: string; periodId?: string; declarationTab?: string };
@@ -123,12 +98,7 @@ const InternshipStudentsPage = () => {
   const { t } = useTranslation();
   const location = useLocation();
   const { selectedPeriod } = useGlobalVariable();
-  const mode: ModeKey = location.pathname.includes('/no-company')
-    ? 'no-company'
-    : location.pathname.includes('/declarations')
-    ? 'declarations'
-    : 'confirmations';
-  const [confirmationTab, setConfirmationTab] = useState<ConfirmationTab>('all');
+  const mode: ModeKey = location.pathname.includes('/no-company') ? 'no-company' : 'declarations';
   const [declarationTab, setDeclarationTab] = useState<ConfirmationTab>('pending');
   const [noCompanyTab, setNoCompanyTab] = useState<NoCompanyTab>('all');
   const [remindOpen, setRemindOpen] = useState(false);
@@ -142,8 +112,6 @@ const InternshipStudentsPage = () => {
 
   const companiesList = useMemo(() => (companiesData?.rows ?? []) as IListCompany[], [companiesData]);
 
-  const updateConfirmationMutation = internshipHooks.useUpdateConfirmationRequest();
-  const deleteConfirmationMutation = internshipHooks.useDeleteConfirmationRequest();
   const updateDeclarationMutation = internshipHooks.useUpdateDeclaration();
   const deleteDeclarationMutation = internshipHooks.useDeleteDeclaration();
   const updateNoCompanyMutation = internshipHooks.useUpdateNoCompanyStudent();
@@ -179,13 +147,6 @@ const InternshipStudentsPage = () => {
     ];
     return Array.from(new Set(classes)).filter(Boolean);
   }, [noCompanyRows, confirmationRows, declarationsRows]);
-
-  const confirmationTabCounts = useMemo(() => ({
-    total: confirmationRows.length,
-    pending: confirmationRows.filter((item: IConfirmationRequest) => item.status === STATUS_CODE.PENDING).length,
-    approved: confirmationRows.filter((item: IConfirmationRequest) => item.status === STATUS_CODE.APPROVED).length,
-    rejected: confirmationRows.filter((item: IConfirmationRequest) => item.status === STATUS_CODE.REJECTED).length,
-  }), [confirmationRows]);
 
   const declarationTabCounts = useMemo(() => {
     const validRowsForGroups = declarationsRows.filter((r: IConfirmationRequest) => {
@@ -230,15 +191,14 @@ const InternshipStudentsPage = () => {
   // useMemo bên trong nhánh ternary của JSX, vì số lượng hook gọi sẽ khác nhau giữa các
   // lần render (VD: đổi tab "Gộp theo nơi thực tập") và React sẽ báo lỗi "Rendered fewer
   // hooks than expected".
-  const confirmationOrDeclarationParamVariables = useMemo(() => ({
+  const declarationParamVariables = useMemo(() => ({
     page: 1,
     limit: 10,
     periodId: selectedPeriod?.id || '',
-    confirmationTab,
     declarationTab
-  }), [selectedPeriod?.id, confirmationTab, declarationTab]);
+  }), [selectedPeriod?.id, declarationTab]);
 
-  const confirmationOrDeclarationActions = useMemo(() => ({
+  const declarationActions = useMemo(() => ({
     isDetail: true,
     isEdit: !isPeriodClosed,
     isDelete: !isPeriodClosed
@@ -564,55 +524,6 @@ const InternshipStudentsPage = () => {
 
   const createCompanyMutation = companyHooks.useCreateCompany();
 
-  const handleConfirmationAction = (row: IConfirmationRequest, status: ConfirmationStatus) => {
-    const meta = getConfirmationStatusMeta(t)[status];
-    const targetLabel = meta.label.toLowerCase();
-    updateConfirmationMutation.mutate(
-      { id: row.id, body: { status }, index: 0, params: { page: 1, limit: 10 } },
-      {
-        onSuccess: () => {
-          message.success(t(getKey('update_confirmation_success'), { name: row.studentName, status: targetLabel }));
-          
-          if (status === STATUS_CODE.APPROVED) {
-            if (!row.taxId?.trim()) {
-              message.warning(`Sinh viên "${row.studentName}" thiếu mã số thuế công ty, vui lòng bổ sung để công ty "${row.companyName}" được tự động thêm vào danh sách đối tác.`);
-              return;
-            }
-            createCompanyMutation.mutate(
-              {
-                body: {
-                  name: row.companyName,
-                  taxId: row.taxId,
-                  field: 'Tự liên hệ',
-                  contact: row.mentor || 'Chưa cập nhật',
-                  phone: '',
-                  email: '',
-                  status: 'active',
-                  reviewStatus: 'approved',
-                },
-                params: { page: 1, limit: 10 },
-              },
-              {
-                onSuccess: () => {
-                  message.success(`Đã tự động thêm công ty "${row.companyName}" vào danh sách đối tác!`);
-                },
-                onError: (err: AxiosError) => {
-                  console.error('Failed to auto-create company:', err);
-                  const msg = (err?.response?.data as { message?: string } | undefined)?.message || '';
-                  if (msg.includes('tồn tại') || msg.includes('exist')) {
-                    message.info(`Công ty "${row.companyName}" đã có sẵn trong danh sách.`);
-                  } else {
-                    message.warning(`Không thể tự động thêm công ty vào danh sách (Lỗi: ${msg || err.message}).`);
-                  }
-                },
-              }
-            );
-          }
-        },
-      }
-    );
-  };
-
   const handleDeclarationAction = (row: IConfirmationRequest, status: ConfirmationStatus) => {
     const meta = getConfirmationStatusMeta(t)[status];
     const targetLabel = meta.label.toLowerCase();
@@ -685,57 +596,6 @@ const InternshipStudentsPage = () => {
     XLSX.utils.book_append_sheet(workbook, worksheet, 'DS cap giay xac nhan');
     XLSX.writeFile(workbook, `danh-sach-sv-cap-giay-xac-nhan-${selectedPeriod?.name || 'export'}.xlsx`);
   };
-
-  const confirmationColumns = [
-    { title: t(getKey('stt')), key: 'index', width: 70, render: (_: unknown, __: IConfirmationRequest, index: number) => formatNumber(index + 1) },
-    { title: t(getKey('student_info')), key: 'student', width: 240, ellipsis: true, render: (_: unknown, record: IConfirmationRequest) => (
-      <div className="truncate">
-        <div className="text-[var(--color-primary)] font-medium">{record.studentId}</div>
-        <div className="truncate" title={record.studentName}>{record.studentName}</div>
-        <div className="text-xs text-slate-500 truncate">{t(getKey('class_name'))}: {record.className}</div>
-      </div>
-    ) },
-    { title: t(getKey('company_info')), key: 'company', ellipsis: true, render: (_: unknown, record: IConfirmationRequest) => (
-      <div className="text-sm truncate">
-        <div className="font-medium text-slate-900 truncate" title={record.companyName}>{record.companyName}</div>
-        <div className="text-xs text-slate-500 truncate" title={record.companyAddress}>{t(getKey('company_address'))}: {record.companyAddress}</div>
-        <div className="text-xs text-slate-500 truncate" title={record.internshipLocation}>{t(getKey('internship_location'))}: {record.internshipLocation}</div>
-        <div className="text-xs text-slate-500 truncate" title={record.position}>{t(getKey('internship_position'))}: {record.position || '—'}</div>
-        <div className="text-xs text-slate-500 truncate">{t(getKey('company_tax_id'))}: {record.taxId}</div>
-        <div className="text-xs text-slate-500 truncate">{t(getKey('mentor'))}: {record.mentor}</div>
-      </div>
-    ) },
-    { title: t(getKey('registration_date')), dataIndex: 'regDate', key: 'regDate', width: 130, render: (v: string) => <span className="text-slate-600">{v}</span> },
-    { title: 'Trạng thái', key: 'status', width: 140, render: (_: unknown, record: IConfirmationRequest) => {
-      const meta = getConfirmationStatusMeta(t)[record.status] || { label: record.status || 'Chờ duyệt', className: 'bg-[var(--color-gold-light)] text-[var(--color-gold-medium)]' };
-      return <Tag className={cn("m-0 rounded-full px-[10px] py-0 border-none", meta.className)}>{meta.label}</Tag>;
-    } },
-    { title: 'Cấp giấy giới thiệu', key: 'cert', width: 130, render: (_: unknown, record: IConfirmationRequest) => (
-      <Space size={8}>
-        <Button
-          type="text"
-          size="small"
-          className="!px-2"
-          title={t(getKey('approve_cert'))}
-          onClick={() => handleConfirmationAction(record, STATUS_CODE.APPROVED)}
-          disabled={record.status === STATUS_CODE.APPROVED || isPeriodClosed}
-        >
-          <CheckCircleOutlined className="text-[var(--color-green-medium)]" />
-        </Button>
-        <Button
-          type="text"
-          size="small"
-          danger
-          className="!px-2"
-          title={t(getKey('reject_cert'))}
-          onClick={() => handleConfirmationAction(record, STATUS_CODE.REJECTED)}
-          disabled={record.status === STATUS_CODE.APPROVED || record.status === STATUS_CODE.REJECTED || isPeriodClosed}
-        >
-          <CloseCircleOutlined />
-        </Button>
-      </Space>
-    ) },
-  ];
 
   const declarationColumns = [
     { title: t(getKey('stt')), key: 'index', width: 70, render: (_: unknown, __: IConfirmationRequest, index: number) => formatNumber(index + 1) },
@@ -848,8 +708,6 @@ const InternshipStudentsPage = () => {
             <Typography.Title level={1} className="!m-0 !text-[34px] !font-bold !leading-[40px] !text-navyDark">
               {mode === 'declarations'
                 ? t(getKey('internship_students_declarations'))
-                : mode === 'confirmations'
-                ? t(getKey('internship_students_confirm'))
                 : t(getKey('internship_students_nocompany'))}
             </Typography.Title>
             <p className={cn('mt-2 mb-0 text-[18px] leading-[26px] text-grayDark')}>{t(getKey('internship_students_desc'))}</p>
@@ -891,18 +749,12 @@ const InternshipStudentsPage = () => {
 
       <div className="mb-5 rounded-[20px] border border-slate-100 bg-white px-4 pt-3 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
         <Tabs
-          activeKey={mode === 'confirmations' ? confirmationTab : mode === 'declarations' ? declarationTab : noCompanyTab}
+          activeKey={mode === 'declarations' ? declarationTab : noCompanyTab}
           onChange={(key) => {
-            if (mode === 'confirmations') setConfirmationTab(key as ConfirmationTab);
-            else if (mode === 'declarations') setDeclarationTab(key as ConfirmationTab);
+            if (mode === 'declarations') setDeclarationTab(key as ConfirmationTab);
             else setNoCompanyTab(key as NoCompanyTab);
           }}
-          items={mode === 'confirmations' ? [
-            { key: 'all', label: `${t(getKey('all_list'))} (${formatNumber(confirmationTabCounts.total)})`, icon: <BankOutlined /> },
-            { key: 'pending', label: `${t(getKey('pending_list'))} (${formatNumber(confirmationTabCounts.pending)})`, icon: <ClockCircleOutlined /> },
-            { key: 'approved', label: `${t(getKey('approved_list'))} (${formatNumber(confirmationTabCounts.approved)})`, icon: <CheckCircleOutlined /> },
-            { key: 'rejected', label: `${t(getKey('rejected_list'))} (${formatNumber(confirmationTabCounts.rejected)})`, icon: <CloseCircleOutlined /> },
-          ] : mode === 'declarations' ? [
+          items={mode === 'declarations' ? [
             { key: 'pending', label: `Chờ duyệt (${formatNumber(declarationTabCounts.pending)})`, icon: <ClockCircleOutlined /> },
             { key: 'cho_cap_giay', label: `Chờ cấp giấy (${formatNumber(declarationTabCounts.cho_cap_giay)})`, icon: <FileTextOutlined /> },
             { key: 'approved', label: `Đã xong (${formatNumber(declarationTabCounts.approved)})`, icon: <CheckCircleOutlined /> },
@@ -952,18 +804,18 @@ const InternshipStudentsPage = () => {
             pagination={{ pageSize: 10, showSizeChanger: true }}
           />
         </Card>
-      ) : (mode === 'confirmations' || mode === 'declarations') ? (
-        <Card key={`normal-view-${mode}`} className="overflow-hidden rounded-[18px] border border-slate-100 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
+      ) : mode === 'declarations' ? (
+        <Card key="normal-view-declarations" className="overflow-hidden rounded-[18px] border border-slate-100 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
           <FilterTable<IConfirmationRequest, IConfirmationRequest | undefined, ICreateConfirmationRequest, IUpdateConfirmationRequest>
-            key={`table-${mode}`}
-            title={mode === 'declarations' ? t(getKey('internship_students_declarations')) : t(getKey('internship_students_confirm'))}
-            columns={mode === 'declarations' ? declarationColumns : confirmationColumns}
-            useQueryHook={mode === 'declarations' ? useFilteredDeclarationListQuery : useFilteredConfirmationListQuery}
-            paramVariables={confirmationOrDeclarationParamVariables}
-            actions={confirmationOrDeclarationActions}
-            updateInfo={isPeriodClosed ? undefined : { type: 'modal', modalInfo: { modalContent: <ConfirmationForm />, modalProps: { centered: true, width: 720, title: t(getKey('edit_profile')) }, modalFunc: mode === 'declarations' ? updateDeclarationMutation : updateConfirmationMutation } }}
-            deleteInfo={isPeriodClosed ? undefined : { type: 'modal', modalInfo: { modalContent: null, modalProps: {}, modalFunc: (mode === 'declarations' ? deleteDeclarationMutation : deleteConfirmationMutation) as unknown as UseMutationResult<IConfirmationRequest, AxiosError, { id: string; params: BaseListParams }> } }}
-            detailInfo={{ type: 'modal', modalInfo: { modalContent: <ConfirmationForm disabled />, modalProps: { centered: true, width: 720, title: t(getKey('detail_profile')), footer: null }, modalFunc: mode === 'declarations' ? internshipHooks.useFetchDetailDeclaration : internshipHooks.useFetchDetailConfirmationRequest } }}
+            key="table-declarations"
+            title={t(getKey('internship_students_declarations'))}
+            columns={declarationColumns}
+            useQueryHook={useFilteredDeclarationListQuery}
+            paramVariables={declarationParamVariables}
+            actions={declarationActions}
+            updateInfo={isPeriodClosed ? undefined : { type: 'modal', modalInfo: { modalContent: <ConfirmationForm />, modalProps: { centered: true, width: 720, title: t(getKey('edit_profile')) }, modalFunc: updateDeclarationMutation } }}
+            deleteInfo={isPeriodClosed ? undefined : { type: 'modal', modalInfo: { modalContent: null, modalProps: {}, modalFunc: deleteDeclarationMutation as unknown as UseMutationResult<IConfirmationRequest, AxiosError, { id: string; params: BaseListParams }> } }}
+            detailInfo={{ type: 'modal', modalInfo: { modalContent: <ConfirmationForm disabled />, modalProps: { centered: true, width: 720, title: t(getKey('detail_profile')), footer: null }, modalFunc: internshipHooks.useFetchDetailDeclaration } }}
             formatInitialValues={(d) => ({ studentId: d?.studentId ?? '', studentName: d?.studentName ?? '', className: d?.className ?? '', regDate: d?.regDate ?? '', companyName: d?.companyName ?? '', companyAddress: d?.companyAddress ?? '', internshipLocation: d?.internshipLocation ?? '', position: d?.position ?? '', taxId: d?.taxId ?? '', mentor: d?.mentor ?? '', status: d?.status ?? STATUS_CODE.PENDING })}
             formatFormValues={(v) => v as unknown as ICreateConfirmationRequest}
             filterRender={() => (
@@ -990,11 +842,9 @@ const InternshipStudentsPage = () => {
                       <Select allowClear placeholder={t(getKey('all_classes'))} className="!h-11 !w-full" options={[{ value: 'all', label: t(getKey('all_classes')) }, ...classOptions.map((c) => ({ value: c, label: c }))]} />
                     </Form.Item>
                   </div>
-                  {mode === 'declarations' && (
-                    <Button icon={<DownloadOutlined />} className="!h-11" onClick={handleExportIssuedList}>
-                      Xuất DS cấp giấy
-                    </Button>
-                  )}
+                  <Button icon={<DownloadOutlined />} className="!h-11" onClick={handleExportIssuedList}>
+                    Xuất DS cấp giấy
+                  </Button>
                 </div>
               </div>
             )}
