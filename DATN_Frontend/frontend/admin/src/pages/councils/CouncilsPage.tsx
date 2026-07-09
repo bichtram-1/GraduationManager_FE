@@ -62,7 +62,7 @@ const CouncilsPage: React.FC = () => {
             Xác nhận thay đổi trạng thái
           </div>
           <div className="text-sm text-slate-500">
-            Bạn có chắc chắn muốn chuyển trạng thái hội đồng thành <strong>"{statusName}"</strong>?
+            Bạn có chắc chắn muốn chuyển trạng thái hội đồng thành <strong>&quot;{statusName}&quot;</strong>?
           </div>
         </div>
       ),
@@ -135,7 +135,7 @@ const CouncilsPage: React.FC = () => {
             Xác nhận xóa hội đồng
           </div>
           <div className="text-sm text-slate-500">
-            Bạn có chắc chắn muốn xóa hội đồng <strong>"{council.title}"</strong>? Hành động này không thể hoàn tác.
+            Bạn có chắc chắn muốn xóa hội đồng <strong>&quot;{council.title}&quot;</strong>? Hành động này không thể hoàn tác.
           </div>
         </div>
       ),

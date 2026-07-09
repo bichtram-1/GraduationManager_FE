@@ -15,7 +15,7 @@ type Props = {
   groups: IListGroup[];
 };
 
-const MergeModal: React.FC<Props> = ({ open, onCancel, onOk, mergeLeft, mergeRight, setMergeLeft, setMergeRight, groups }) => {
+const MergeModal: React.FC<Props> = ({ open, onCancel, onOk, mergeLeft, mergeRight, setMergeLeft: _setMergeLeft, setMergeRight, groups }) => {
   const leftGroup = useMemo(() => groups.find((g) => g.id === mergeLeft), [groups, mergeLeft]);
   const rightGroup = useMemo(() => groups.find((g) => g.id === mergeRight), [groups, mergeRight]);
   

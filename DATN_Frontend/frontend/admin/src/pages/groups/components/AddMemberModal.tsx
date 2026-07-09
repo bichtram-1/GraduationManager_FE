@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Input, Button, message, Alert } from 'antd';
+import { Modal, Input, Button, message } from 'antd';
 import type { IGroupMember, IListGroup } from '../../../type/GroupType';
-import { useTranslation } from 'react-i18next';
 
 type Props = {
   open: boolean;
@@ -14,7 +13,6 @@ type Props = {
 };
 
 const AddMemberModal: React.FC<Props> = ({ open, onCancel, group, sampleStudents, groups, currentGroupMembers, onAdd }) => {
-  const { t } = useTranslation();
   const [searchVal, setSearchVal] = useState('');
   const [foundStudent, setFoundStudent] = useState<IGroupMember | null>(null);
   const [searchStatus, setSearchStatus] = useState<'idle' | 'found' | 'not_found'>('idle');

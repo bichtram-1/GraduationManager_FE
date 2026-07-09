@@ -113,7 +113,6 @@ export const internshipHooks = {
     });
   },
 
-
   useFetchDetailNoCompanyStudent: (id: string, enabled: boolean = true) => {
     const { selectedPeriod } = useGlobalVariable();
     return useQuery({

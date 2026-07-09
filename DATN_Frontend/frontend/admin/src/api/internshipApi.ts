@@ -1,5 +1,5 @@
 import type { BaseListParams } from '@shared/types/GeneralType';
-import type { IConfirmationRequest, ICreateConfirmationRequest, ICreateNoCompanyStudent, INoCompanyStudent, IUpdateConfirmationRequest, IUpdateNoCompanyStudent } from '../type/InternshipType';
+import type { ICreateConfirmationRequest, ICreateNoCompanyStudent, IUpdateConfirmationRequest, IUpdateNoCompanyStudent } from '../type/InternshipType';
 import axiosInstance from './axiosInstance';
 
 export const internshipApi = {

@@ -1,9 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { AxiosError } from 'axios';
 import { QueryKey } from '../constants/queryKey';
 import { classApi } from '../api/classApi';
-import type { BaseListParams } from '@shared/types/GeneralType';
-import type { ICreateClass, IDetailClass, IUpdateClass } from '../type/ClassType';
 
 export const classHooks = {
   useFetchListClasses: (params?: { periodId?: string }) => useQuery({ queryKey: [QueryKey.classes.list, params], queryFn: () => classApi.getListClass(params) }),

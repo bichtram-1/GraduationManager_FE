@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { getKey } from '@shared/types/I18nKeyType';
 import { Button, Modal, Tooltip, Tag, Input, Select, Space, message, Form, Card } from 'antd';
 import { SwapOutlined, SearchOutlined, TeamOutlined, CheckCircleOutlined, ExclamationCircleOutlined, UserOutlined } from '@ant-design/icons';
-import AddMemberModal from './components/AddMemberModal';
 import MergeModal from './components/MergeModal';
 import FilterTable from '../../components/shared/table/FilterTable';
 import GroupForm from './components/GroupForm';
@@ -29,14 +28,6 @@ type Group = IListGroup & {
   registrationBatch: string;
 };
 
-const sampleStudents: Student[] = [
-  { id: 's1', name: 'Nguyễn Văn A', code: 'SV001', eligible: true },
-  { id: 's2', name: 'Trần Thị B', code: 'SV002', eligible: true },
-  { id: 's3', name: 'Lê Văn C', code: 'SV003', eligible: false, reason: 'Nợ môn' },
-  { id: 's4', name: 'Phạm Thị D', code: 'SV004', eligible: false, reason: 'Chưa đủ tín chỉ' },
-  { id: 's5', name: 'Hoàng Văn E', code: 'SV005', eligible: true },
-];
-
 const getStatusMeta = (t: TFunction) => ({
   [STATUS_CODE.PENDING_UP]: { label: t(getKey('status_pending')), color: 'default' },
   [STATUS_CODE.APPROVED_UP]: { label: t(getKey('status_approved_group')), color: 'green' },
@@ -49,7 +40,6 @@ const getStatusMeta = (t: TFunction) => ({
 const GroupsAdminPage: React.FC = () => {
   const { t } = useTranslation();
   const { selectedPeriod } = useGlobalVariable();
-  const [addModalGroup, setAddModalGroup] = useState<IListGroup | null>(null);
   const [mergeMode, setMergeMode] = useState(false);
   const [mergeLeft, setMergeLeft] = useState<string | null>(null);
   const [mergeRight, setMergeRight] = useState<string | null>(null);
@@ -70,23 +60,6 @@ const GroupsAdminPage: React.FC = () => {
   const enough = groups.filter((g) => g.status === STATUS_CODE.APPROVED_UP).length;
   const withWarnings = groups.filter((g) => g.status === STATUS_CODE.WARNING).length;
   const missing = groups.filter((g) => g.status === STATUS_CODE.MISSING).length;
-
-  async function addMemberToGroup(groupId: string, student: IGroupMember, _force = false) {
-    const group = groups.find((item) => item.id === groupId);
-    if (!group) return;
-    const already = group.members.find((member) => member.id === student.id);
-    if (already) return;
-    const newMembers = [...group.members, student];
-    const newStatus = newMembers.length < 2 ? STATUS_CODE.MISSING : group.status === STATUS_CODE.LOCKED ? STATUS_CODE.LOCKED : group.status;
-    await updateGroupMutation.mutateAsync({
-      id: groupId,
-      body: { members: newMembers, status: newStatus },
-      index: 0,
-      params: { page: 1, limit: 10 },
-    });
-    setAddModalGroup(null);
-    message.success(t(getKey('add_member_sim_success')));
-  }
 
   async function doMergeWithMembers(moveMemberIds?: string[] | undefined) {
     if (isPeriodClosed) return;
@@ -391,18 +364,6 @@ const GroupsAdminPage: React.FC = () => {
         }}
       />
       </Card>
-
-      {addModalGroup && (
-        <AddMemberModal
-          open={!!addModalGroup}
-          group={addModalGroup}
-          onCancel={() => setAddModalGroup(null)}
-          sampleStudents={sampleStudents}
-          groups={groups}
-          currentGroupMembers={addModalGroup.members}
-          onAdd={(student) => addMemberToGroup(addModalGroup.id, student)}
-        />
-      )}
 
       {mergeMode && (
         <MergeModal

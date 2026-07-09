@@ -41,19 +41,14 @@ const GroupForm: React.FC<Props> = ({ detail, disabled }) => {
 
   const dbStudents = useMemo(() => {
     const rows = (assignmentList?.rows ?? []) as AssignmentRow[];
-    return rows.map((r) => {
-      // Mock eligibility for specific student codes for demo
-      const ineligibleCodes = ['0306231007', '0306231033', 'SV003', 'SV004'];
-      const isEligible = !ineligibleCodes.includes(r.studentId);
-      return {
-        id: r.studentId, // Use MSSV as ID
-        name: r.name,
-        code: r.studentId,
-        class: r.className,
-        eligible: isEligible,
-        reason: isEligible ? '' : 'Chưa đủ điều kiện làm đồ án'
-      };
-    });
+    return rows.map((r) => ({
+      id: r.studentId, // Use MSSV as ID
+      name: r.name,
+      code: r.studentId,
+      class: r.className,
+      eligible: true,
+      reason: ''
+    }));
   }, [assignmentList]);
 
   const statusOptions = [

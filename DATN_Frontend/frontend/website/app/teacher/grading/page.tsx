@@ -1,64 +1,16 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { CheckCircle, Clock, Save, Trophy, Users, LayoutDashboard, FileText, BarChart3, Sparkles, CalendarDays, Building2 } from 'lucide-react'
-import { TeacherPill, TeacherSectionHeader, TeacherStatCard } from '../_components/TeacherShell'
+import { Clock, Save, Trophy, Users, FileText, BarChart3, CalendarDays, Building2 } from 'lucide-react'
+import { TeacherPill, TeacherSectionHeader } from '../_components/TeacherShell'
 import { TeacherButton, TeacherCard, TeacherInputClass } from '../_components/TeacherUI'
 import ScoringTable from './ScoringTable'
 import { usePeriod } from '@/lib/providers/PeriodProvider'
 import { teacherApi } from '@/lib/api/teacherApi'
 import { COMMON_LABELS } from '@/constants/commonLabels'
 
-// Default fallbacks (used if mock API is unavailable)
-const defaultTttnRows = [
-  { id: '20520001', name: 'Nguyễn Văn A', class: 'KTPM2022', dob: '15/01/2004', company: 'FPT Software', score: '8.8' },
-  { id: '20520002', name: 'Trần Thị B', class: 'KTPM2022', dob: '22/03/2004', company: 'VNG Corp', score: '7.8' },
-  { id: '20520004', name: 'Phạm Thị D', class: 'KHMT2022', dob: '10/07/2003', company: 'Chưa có công ty thực tập', score: '' },
-  { id: '20520006', name: 'Vũ Thị F', class: 'HTTT2022', dob: '12/12/2004', company: 'MoMo', score: '9.2' },
-]
-
-const defaultCouncilGroups = [
-  {
-    code: 'HD01',
-    name: 'Hội đồng 1 - ĐATN HK2/2025-2026',
-    date: '20/06/2026 • 08:00',
-    room: 'A.102',
-    role: 'Ủy viên',
-    done: 1,
-    total: 2,
-    members: [
-      { id: 'T001', name: 'TS. Nguyễn Văn GV', role: 'Chủ tịch' },
-      { id: 'T002', name: 'PGS. Trần Thị GV', role: 'Ủy viên' },
-      { id: 'T003', name: 'ThS. Lê Văn GV', role: 'Thư ký' },
-    ],
-    groups: [
-      { id: '1', groupCode: 'G01', topic: 'Hệ thống IoT', students: [{ id: '20520010', name: 'Lê A' }, { id: '20520011', name: 'Trần B' }] },
-      { id: '2', groupCode: 'G02', topic: 'Blockchain chuỗi cung ứng', students: [{ id: '20520012', name: 'Nguyễn C' }] },
-    ],
-  },
-  {
-    code: 'HD02',
-    name: 'Hội đồng 2 - ĐATN HK2/2025-2026',
-    date: '22/06/2026 • 13:00',
-    room: 'B.201',
-    role: 'GVPB',
-    done: 0,
-    total: 1,
-    members: [
-      { id: 'T004', name: 'TS. Phạm Thị GV', role: 'Chủ tịch' },
-      { id: 'T005', name: 'ThS. Hoàng GV', role: 'Ủy viên' },
-    ],
-    groups: [
-      { id: '3', groupCode: 'G03', topic: 'Ứng dụng ML', students: [{ id: '20520020', name: 'Hồ D' }, { id: '20520021', name: 'Phan E' }] },
-    ],
-  },
-]
-
-const defaultScoreRows = [
-  { id: '20520004', name: 'Nguyễn Văn D', chair: '', secretary: '', member: '8.5', advisor: '', reviewer: '' },
-  { id: '20520005', name: 'Trần Thị E', chair: '', secretary: '', member: '8.0', advisor: '', reviewer: '' },
-]
-
+type TttnScoreRow = { id: string; name: string; class: string; dob: string; company: string; score: string }
+type ScoreRow = { id: string; isAdvisor?: boolean; isReviewer?: boolean; hasDefense?: boolean; hasReport?: boolean }
 type CouncilMember = { id: string; name: string; role: string }
 type GroupStudent = { id: string; name: string; class?: string }
 interface CouncilGroupItem {
@@ -97,14 +49,14 @@ export default function TeacherGradingPage() {
   }
 
   const { selectedPeriod, gradingTab, setGradingTab } = usePeriod()
-  const [tttnScores, setTttnScores] = useState(defaultTttnRows)
+  const [tttnScores, setTttnScores] = useState<TttnScoreRow[]>([])
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
-  const [selectedCouncil, setSelectedCouncil] = useState<Council | null>(defaultCouncilGroups[0] as any)
+  const [selectedCouncil, setSelectedCouncil] = useState<Council | null>(null)
   const [selectedGroup, setSelectedGroup] = useState<CouncilGroupItem | null>(null)
-  const [selectedTttnId, setSelectedTttnId] = useState(defaultTttnRows[0].id)
-  const [councilList, setCouncilList] = useState<Council[]>(defaultCouncilGroups as any)
+  const [selectedTttnId, setSelectedTttnId] = useState('')
+  const [councilList, setCouncilList] = useState<Council[]>([])
   const [currentTeacherId, setCurrentTeacherId] = useState<string>('')
-  const [scoreList, setScoreList] = useState(defaultScoreRows)
+  const [scoreList, setScoreList] = useState<ScoreRow[]>([])
   const [_loading, setLoading] = useState(false)
   const [showScoringModal, setShowScoringModal] = useState(false)
   const [lastUpdatedTime, setLastUpdatedTime] = useState<string>('Chưa cập nhật')
@@ -116,19 +68,18 @@ export default function TeacherGradingPage() {
     setTimeout(() => setToast(null), 2500)
   }
 
-  // Load mock data from server if available
+  // Load dữ liệu chấm điểm thật từ server
   useEffect(() => {
     let mounted = true
     setLoading(true)
     teacherApi.getGradingData({ periodId: selectedPeriod?.id })
       .then((data) => {
         if (!mounted) return
-        console.log('grading data:', data)
         if (data) {
           if (data.teacherId) {
             setCurrentTeacherId(String(data.teacherId))
           }
-          const newTttnRows = data.tttnRows ?? defaultTttnRows
+          const newTttnRows = data.tttnRows ?? []
           setTttnScores(newTttnRows)
           if (newTttnRows.length > 0) {
             setSelectedTttnId(newTttnRows[0].id)
@@ -136,7 +87,7 @@ export default function TeacherGradingPage() {
             setSelectedTttnId('')
           }
 
-          const newCouncilList = data.councilGroups ?? defaultCouncilGroups
+          const newCouncilList = data.councilGroups ?? []
           setCouncilList(newCouncilList)
           if (newCouncilList.length > 0) {
             setSelectedCouncil(newCouncilList[0])
@@ -146,15 +97,19 @@ export default function TeacherGradingPage() {
             setSelectedGroup(null)
           }
 
-          setScoreList(data.scoreRows ?? defaultScoreRows)
+          setScoreList(data.scoreRows ?? [])
           if (data.lastUpdatedAt) {
             setLastUpdatedTime(formatVietnamTime(new Date(data.lastUpdatedAt.replace(/-/g, '/'))))
           } else {
             setLastUpdatedTime('Chưa cập nhật')
           }
+        } else {
+          notify('Không tải được dữ liệu chấm điểm. Vui lòng thử lại!', 'error')
         }
       })
-      .catch(() => {})
+      .catch(() => {
+        if (mounted) notify('Có lỗi xảy ra khi tải dữ liệu chấm điểm!', 'error')
+      })
       .finally(() => {
         if (mounted) setLoading(false)
       })
@@ -169,9 +124,9 @@ export default function TeacherGradingPage() {
       teacherApi.getGradingData({ periodId: selectedPeriod?.id })
         .then((data) => {
           if (data) {
-            setTttnScores(data.tttnRows ?? defaultTttnRows)
-            setCouncilList(data.councilGroups ?? defaultCouncilGroups)
-            setScoreList(data.scoreRows ?? defaultScoreRows)
+            setTttnScores(data.tttnRows ?? [])
+            setCouncilList(data.councilGroups ?? [])
+            setScoreList(data.scoreRows ?? [])
             if (data.lastUpdatedAt) {
               setLastUpdatedTime(formatVietnamTime(new Date(data.lastUpdatedAt.replace(/-/g, '/'))))
             } else {

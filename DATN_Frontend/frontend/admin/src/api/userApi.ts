@@ -64,13 +64,6 @@ export const userApi = {
     return response.data;
   },
 
-  resetUserPassword: async ({ id }: { id: string }) => {
-    const response = await axiosInstance.post(
-      `/api/admin/users/${id}/reset-password`
-    );
-    return response.data?.results?.object ?? response.data;
-  },
-
   getSpecializations: async () => {
     const response = await axiosInstance.get<{ code: number; results: { objects: string[] } }>(
       '/api/admin/users/specializations'

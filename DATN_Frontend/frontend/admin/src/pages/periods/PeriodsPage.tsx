@@ -1,15 +1,11 @@
 import {
-  DeleteOutlined,
-  EyeOutlined,
-  FormOutlined,
-  PlusOutlined,
   ReadOutlined,
   TeamOutlined,
   UserAddOutlined,
   SearchOutlined,
   SwapOutlined,
 } from '@ant-design/icons';
-import { Button, Card, Form, Input, Modal, Select, Space, Table, Tag, Tabs, Tooltip, message } from 'antd';
+import { Button, Card, Form, Input, Modal, Select, Tag, Tabs, Tooltip, message } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { getKey } from '@shared/types/I18nKeyType';
 import type { ColumnsType } from 'antd/es/table';
@@ -19,11 +15,7 @@ import PeriodForm from './components/PeriodForm';
 import { periodHooks } from '../../hooks/usePeriods';
 import { userHooks } from '../../hooks/useUsers';
 import type { BatchStatus, BatchType, ICreatePeriod, IUpdatePeriod, IListPeriod, IDetailPeriod } from '../../type/PeriodType';
-import type { BaseListParams } from '@shared/types/GeneralType';
 import { STATUS_CODE, cn } from '../../constants/commonConst';
-import { formatNumber } from '@shared/utils/numberUtils';
-
-type PeriodModalMode = 'create' | 'edit' | 'detail';
 
 const getStatusMeta = (t: any) => ({
   [STATUS_CODE.OPEN]: { label: t(getKey('period_status_open')), className: '!bg-[var(--color-green-light)] !text-[var(--color-green-medium)]' },
