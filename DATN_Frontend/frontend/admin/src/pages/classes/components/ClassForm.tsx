@@ -136,10 +136,6 @@ const ClassForm: React.FC<Props> = ({ disabled = false, detail }) => {
 
   return (
     <>
-      <Form.Item name="code" label={t(getKey('class_code'))} rules={[{ required: true, message: t(getKey('please_input_class_code')) }]}> 
-        <Input disabled={disabled} />
-      </Form.Item>
-
       <Form.Item name="name" label={t(getKey('class_name_full'))} rules={[{ required: true, message: t(getKey('please_input_class_name')) }]}>
         <Input disabled={disabled} />
       </Form.Item>
@@ -153,10 +149,6 @@ const ClassForm: React.FC<Props> = ({ disabled = false, detail }) => {
       </Form.Item>
 
       <Form.Item name="major" label={t(getKey('major_branch'))}>
-        <Input disabled={disabled} />
-      </Form.Item>
-
-      <Form.Item name="supervisor" label={t(getKey('supervisor_teacher'))}>
         <Input disabled={disabled} />
       </Form.Item>
 

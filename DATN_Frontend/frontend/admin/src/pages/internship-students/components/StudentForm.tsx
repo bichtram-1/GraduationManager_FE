@@ -11,17 +11,20 @@ const StudentForm: React.FC<Props> = ({ disabled = false }) => {
 
   return (
     <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+      {/* Danh sách này là dữ liệu tính động (SinhVien + DangKyThucTap) — backend
+          (CongTyController::capNhatChuaThucTap) chỉ đọc "status", nên các trường thông tin
+          sinh viên bên dưới luôn khóa lại để tránh đánh lừa người dùng là sửa lưu được. */}
       <Form.Item label={t(getKey('student_id'))} name="studentId" rules={[{ required: true, message: t(getKey('please_enter_student_id')) }]}>
-        <Input disabled={disabled} />
+        <Input disabled />
       </Form.Item>
       <Form.Item label={t(getKey('student_name'))} name="studentName" rules={[{ required: true, message: t(getKey('please_enter_fullname')) }]}>
-        <Input disabled={disabled} />
+        <Input disabled />
       </Form.Item>
       <Form.Item label={t(getKey('class_name'))} name="className" rules={[{ required: true, message: t(getKey('please_enter_class')) }]}>
-        <Input disabled={disabled} />
+        <Input disabled />
       </Form.Item>
       <Form.Item label={t(getKey('phone_number'))} name="phone" rules={[{ required: true, message: t(getKey('please_enter_phone')) }]}>
-        <Input disabled={disabled} />
+        <Input disabled />
       </Form.Item>
       <Form.Item label={t(getKey('status'))} name="status" rules={[{ required: true, message: t(getKey('please_select_status')) }]}>
         <Select

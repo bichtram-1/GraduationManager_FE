@@ -87,7 +87,6 @@ function App() {
                 <Route path={ROUTES.CLASSES} element={<ClassesAdmin />} />
                 <Route path={ROUTES.ASSIGNMENTS} element={<Assignments />} />
                 <Route path={ROUTES.STUDENT_SCORES} element={<StudentScores />} />
-                <Route path={ROUTES.INTERNSHIP_STUDENTS} element={<InternshipStudents key="confirmations" />} />
                 <Route path={ROUTES.INTERNSHIP_STUDENTS_DECLARATIONS} element={<InternshipStudents key="declarations" />} />
                 <Route path={ROUTES.INTERNSHIP_STUDENTS_NOCOMPANY} element={<InternshipStudents key="no-company" />} />
                 <Route path={ROUTES.PERIODS} element={<Periods />} />

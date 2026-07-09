@@ -12,21 +12,24 @@ const ConfirmationForm: React.FC<Props> = ({ disabled = false }) => {
 
   return (
     <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+      {/* studentId/studentName/className/regDate/companyName/taxId chỉ để tham khảo — backend
+          (CongTyService::updateConfirmationRequest) không đọc các trường này nên luôn khóa lại,
+          tránh đánh lừa người dùng là sửa lưu được. */}
       <Form.Item label={t(getKey('student_id'))} name="studentId" rules={[{ required: true, message: t(getKey('please_enter_student_id')) }]}>
-        <Input disabled={disabled} />
+        <Input disabled />
       </Form.Item>
       <Form.Item label={t(getKey('student_name'))} name="studentName" rules={[{ required: true, message: t(getKey('please_enter_fullname')) }]}>
-        <Input disabled={disabled} />
+        <Input disabled />
       </Form.Item>
       <Form.Item label={t(getKey('class_name'))} name="className" rules={[{ required: true, message: t(getKey('please_enter_class')) }]}>
-        <Input disabled={disabled} />
+        <Input disabled />
       </Form.Item>
       <Form.Item label={t(getKey('registration_date'))} name="regDate" rules={[{ required: true, message: t(getKey('please_enter_registration_date')) }]}>
-        <CustomDatePicker disabled={disabled} />
+        <CustomDatePicker disabled />
       </Form.Item>
 
       <Form.Item label={t(getKey('company_label'))} name="companyName" rules={[{ required: true, message: t(getKey('please_enter_company_name')) }]} className="md:col-span-2">
-        <Input disabled={disabled} />
+        <Input disabled />
       </Form.Item>
 
       <Form.Item label={t(getKey('company_address'))} name="companyAddress" className="md:col-span-2">
@@ -55,7 +58,7 @@ const ConfirmationForm: React.FC<Props> = ({ disabled = false }) => {
       </Form.Item>
 
       <Form.Item label={t(getKey('company_tax_id'))} name="taxId" rules={[{ required: true, message: t(getKey('please_enter_tax_id')) }]}>
-        <Input disabled={disabled} />
+        <Input disabled />
       </Form.Item>
       <Form.Item label={t(getKey('mentor_label'))} name="mentor">
         <Input disabled={disabled} />

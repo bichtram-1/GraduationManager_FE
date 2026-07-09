@@ -12,21 +12,25 @@ type Props = {
 const AssignmentForm: React.FC<Props> = ({ mode = 'edit' }) => {
   const { t } = useTranslation();
   const disabled = mode === 'detail';
-  const studentIdDisabled = mode !== 'create';
+  // studentId/name/className/status/topic/assignedAt chỉ mang tính thông tin tham khảo khi sửa —
+  // backend (PhanCongHdttController::capNhat) chỉ thực sự đọc và lưu trường "supervisor" (GVHD),
+  // các trường còn lại là dữ liệu suy ra từ sinh viên/đề tài hoặc do server tự tính, sửa ở đây
+  // không có tác dụng nên phải khóa lại để tránh đánh lừa người dùng là đã lưu được.
+  const contextDisabled = disabled || mode !== 'create';
   return (
     <>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <Form.Item label={t(getKey('student_id'))} name="studentId" rules={[{ required: true, message: t(getKey('please_enter_student_id')) }]}>
-          <Input disabled={studentIdDisabled} />
+          <Input disabled={contextDisabled} />
         </Form.Item>
         <Form.Item label={t(getKey('student_name'))} name="name" rules={[{ required: true, message: t(getKey('please_enter_fullname')) }]}>
-          <Input disabled={disabled} />
+          <Input disabled={contextDisabled} />
         </Form.Item>
         <Form.Item label={t(getKey('class_name'))} name="className" rules={[{ required: true, message: t(getKey('please_enter_class')) }]}>
-          <Input disabled={disabled} />
+          <Input disabled={contextDisabled} />
         </Form.Item>
         <Form.Item label={t(getKey('group_status'))} name="status" rules={[{ required: true, message: t(getKey('please_select_status')) }]}>
-          <Select disabled={disabled} options={[
+          <Select disabled={contextDisabled} options={[
             { value: STATUS_CODE.ASSIGNED, label: t(getKey('status_assigned')) },
             { value: STATUS_CODE.UNASSIGNED, label: t(getKey('status_unassigned')) }
           ]} />
@@ -34,7 +38,7 @@ const AssignmentForm: React.FC<Props> = ({ mode = 'edit' }) => {
       </div>
 
       <Form.Item label={t(getKey('topic_name'))} name="topic">
-        <Input disabled={disabled} />
+        <Input disabled={contextDisabled} />
       </Form.Item>
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -42,7 +46,7 @@ const AssignmentForm: React.FC<Props> = ({ mode = 'edit' }) => {
           <Input disabled={disabled} />
         </Form.Item>
         <Form.Item label={t(getKey('assigned_date_label'))} name="assignedAt">
-          <CustomDatePicker disabled={disabled} />
+          <CustomDatePicker disabled={contextDisabled} />
         </Form.Item>
       </div>
     </>

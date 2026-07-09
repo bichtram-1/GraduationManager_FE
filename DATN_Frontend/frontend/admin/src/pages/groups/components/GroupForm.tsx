@@ -160,20 +160,20 @@ const GroupForm: React.FC<Props> = ({ detail, disabled }) => {
   // Edit / Update mode
   return (
     <>
-      <Form.Item name="title" label={t(getKey('topic_name'))} rules={[{ required: true, message: 'Vui lòng nhập tên đề tài' }]}>
-        <Input />
+      <Form.Item name="title" label={`${t(getKey('topic_name'))} (lấy từ đề tài đã đăng ký, sửa qua Quản lý đề tài)`}>
+        <Input disabled />
       </Form.Item>
 
-      <Form.Item name="supervisor" label="Giảng viên hướng dẫn" rules={[{ required: true, message: 'Vui lòng nhập giảng viên hướng dẫn' }]}>
-        <Input />
+      <Form.Item name="supervisor" label="Giảng viên hướng dẫn (lấy từ đề tài đã đăng ký)">
+        <Input disabled />
       </Form.Item>
 
-      <Form.Item name="maxMembers" label="Số lượng thành viên" rules={[{ required: true, message: 'Vui lòng nhập số lượng thành viên' }]}>
-        <InputNumber min={1} max={10} className="w-full" />
+      <Form.Item name="maxMembers" label="Số lượng thành viên tối đa (lấy từ đề tài đã đăng ký)">
+        <InputNumber min={1} max={10} className="w-full" disabled />
       </Form.Item>
 
-      <Form.Item name="registrationBatch" label={t(getKey('registration_period'))} rules={[{ required: true, message: 'Vui lòng nhập đợt đăng ký' }]}>
-        <Input />
+      <Form.Item name="registrationBatch" label={t(getKey('registration_period'))}>
+        <Input disabled />
       </Form.Item>
 
       {detail?.status && (
