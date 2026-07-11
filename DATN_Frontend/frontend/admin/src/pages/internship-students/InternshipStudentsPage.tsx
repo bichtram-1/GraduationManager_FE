@@ -557,7 +557,6 @@ const InternshipStudentsPage = () => {
                   message.success(`Đã tự động thêm công ty "${row.companyName}" vào danh sách đối tác!`);
                 },
                 onError: (err: AxiosError) => {
-                  console.error('Failed to auto-create company:', err);
                   const msg = (err?.response?.data as { message?: string } | undefined)?.message || '';
                   if (msg.includes('tồn tại') || msg.includes('exist')) {
                     message.info(`Công ty "${row.companyName}" đã có sẵn trong danh sách.`);

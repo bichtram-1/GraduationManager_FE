@@ -61,8 +61,7 @@ export default function LoginPage() {
             messageApi.error(json.message || 'Đăng nhập bằng Google thất bại!')
             setLoading(false)
           }
-        } catch (err) {
-          console.error('Google login error:', err)
+        } catch {
           messageApi.error('Không thể kết nối đến máy chủ xác thực!')
           setLoading(false)
         }

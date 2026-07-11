@@ -321,8 +321,7 @@ export default function StudentInternshipPage() {
       ])
       setCompanies(compList)
       setMyRequest(request as IInternshipRequest)
-    } catch (err) {
-      console.error('Failed to load internship data:', err)
+    } catch {
       message.error('Không thể tải thông tin thực tập từ máy chủ!')
     } finally {
       setLoading(false)
@@ -440,7 +439,6 @@ export default function StudentInternshipPage() {
       // Reload updated status
       loadData()
     } catch (err: unknown) {
-      console.error('Declaration failed:', err)
       const errorMsg = (err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Gửi khai báo thất bại. Vui lòng thử lại!'
       message.error(errorMsg)
     } finally {

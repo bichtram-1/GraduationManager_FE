@@ -30,6 +30,15 @@ import { deepCompareObjects } from '@shared/utils/utils';
 interface RecordWithId {
   id?: string;
   value?: string;
+  key?: string;
+  title?: string;
+  code?: string;
+  name?: string;
+}
+
+interface ApiErrorData {
+  message?: string;
+  errors?: Record<string, string[]>;
 }
 
 interface CreateVariables<T, P> {
@@ -158,8 +167,8 @@ const FilterTable = <
     if (!paramVariables) return;
     // merge new parent paramVariables with current filter form values to preserve inputs
     const formValues = form.getFieldsValue();
-    const mergedParams: Record<string, any> = { ...internalParams, ...paramVariables };
-    
+    const mergedParams: BaseListParams & Record<string, unknown> = { ...internalParams, ...paramVariables };
+
     Object.keys(formValues).forEach(key => {
       if (formValues[key] !== undefined && formValues[key] !== null) {
         mergedParams[key] = formValues[key];
@@ -167,7 +176,7 @@ const FilterTable = <
     });
 
     if (!_.isEqual(mergedParams, internalParams)) {
-      setInternalParams(mergedParams as BaseListParams);
+      setInternalParams(mergedParams);
     }
   }, [paramVariables]);
 
@@ -220,10 +229,11 @@ const FilterTable = <
     });
   };
 
-  const showDeleteConfirm = (id: string, record: any) => {
+  const showDeleteConfirm = (id: string, record: unknown) => {
     let name = '';
     if (record) {
-      name = record.title || record.code || record.name || '';
+      const r = record as RecordWithId;
+      name = r.title || r.code || r.name || '';
     }
 
     confirm({
@@ -238,7 +248,7 @@ const FilterTable = <
           </div>
           <div className="text-sm mt-2">
             {name ? (
-              <span>Bạn có chắc chắn muốn xóa <strong>"{name}"</strong>? Hành động này không thể hoàn tác.</span>
+              <span>Bạn có chắc chắn muốn xóa <strong>&quot;{name}&quot;</strong>? Hành động này không thể hoàn tác.</span>
             ) : (
               t('delete_content')
             )}
@@ -252,7 +262,17 @@ const FilterTable = <
       className: 'custom-confirm-modal',
       onOk() {
         if (id && deleteMutation) {
-          deleteMutation.mutate({ id, params: internalParams });
+          deleteMutation.mutate(
+            { id, params: internalParams },
+            {
+              onError: (error: AxiosError) => {
+                const backendMessage = (error?.response?.data as ApiErrorData | undefined)?.message;
+                if (backendMessage) {
+                  message.error(backendMessage);
+                }
+              },
+            }
+          );
         } else {
           console.log(t('not_id'));
         }
@@ -277,14 +297,15 @@ const FilterTable = <
           onSuccess: () => {
             handleCancelModal();
           },
-          onError: (error: any) => {
-            const validationErrors = error?.response?.data?.errors;
+          onError: (error: AxiosError) => {
+            const errData = error?.response?.data as ApiErrorData | undefined;
+            const validationErrors = errData?.errors;
             if (validationErrors) {
               const firstErrorKey = Object.keys(validationErrors)[0];
               const firstError = validationErrors[firstErrorKey][0];
               message.error(firstError);
             } else {
-              message.error(error?.response?.data?.message || error?.message || 'Cập nhật thất bại!');
+              message.error(errData?.message || error?.message || 'Cập nhật thất bại!');
             }
           }
         }
@@ -296,14 +317,15 @@ const FilterTable = <
           onSuccess: () => {
             handleCancelModal();
           },
-          onError: (error: any) => {
-            const validationErrors = error?.response?.data?.errors;
+          onError: (error: AxiosError) => {
+            const errData = error?.response?.data as ApiErrorData | undefined;
+            const validationErrors = errData?.errors;
             if (validationErrors) {
               const firstErrorKey = Object.keys(validationErrors)[0];
               const firstError = validationErrors[firstErrorKey][0];
               message.error(firstError);
             } else {
-              message.error(error?.response?.data?.message || error?.message || 'Thêm mới thất bại!');
+              message.error(errData?.message || error?.message || 'Thêm mới thất bại!');
             }
           }
         }
@@ -503,7 +525,10 @@ const FilterTable = <
             </div>
 
             <Table
-              rowKey={(record: any) => record.id ?? record.value ?? record.key}
+              rowKey={(record: TList) => {
+                const r = record as RecordWithId;
+                return r.id ?? r.value ?? r.key ?? '';
+              }}
               columns={initColumns}
               dataSource={data?.rows}
               loading={isLoading || isLoadingDetail}

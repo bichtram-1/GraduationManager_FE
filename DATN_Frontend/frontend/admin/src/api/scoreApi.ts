@@ -21,24 +21,4 @@ export const scoreApi = {
     });
     return response?.data?.results?.object;
   },
-
-  updateScore: async ({
-    id,
-    body,
-  }: {
-    id: string;
-    body: {
-      mode: 'internship' | 'project';
-      status?: string;
-      finalScore?: number;
-      defenseScore?: number;
-      demoScore?: number;
-      qaScore?: number;
-      reportScore?: number;
-      dot_id?: number;
-    };
-  }) => {
-    const response = await axiosInstance.patch(`/private/v1/student-scores/${id}`, body);
-    return response?.data?.results?.object;
-  },
 };
