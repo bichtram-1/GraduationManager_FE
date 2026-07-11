@@ -287,8 +287,7 @@ export default function Page() {
         setViewingTopic(null);
       }
       showNotification(editingCode ? 'Cập nhật đề tài thành công!' : 'Đề xuất đề tài thành công!', 'success');
-    } catch (e) {
-      console.error(e);
+    } catch {
       showNotification('Không thể lưu đề tài!', 'error');
     } finally {
       setSubmitting(false)

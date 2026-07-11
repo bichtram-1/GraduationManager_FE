@@ -256,8 +256,7 @@ export default function CouncilsPage() {
       a.download = filename
       a.click()
       URL.revokeObjectURL(url)
-    } catch (e) {
-      console.error('Error generating council Excel:', e)
+    } catch {
       alert('Đã xảy ra lỗi khi xuất file Excel!')
     } finally {
       setExportingCouncilId(null)

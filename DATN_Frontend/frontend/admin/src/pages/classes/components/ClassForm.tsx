@@ -121,8 +121,7 @@ const ClassForm: React.FC<Props> = ({ disabled = false, detail }) => {
       });
       setStudentListFileName(file.name);
       message.success(t(getKey('upload_student_list_success')) || 'Tải danh sách sinh viên thành công!');
-    } catch (err) {
-      console.error(err);
+    } catch {
       form.setFieldsValue({
         studentListUrl: undefined,
         studentListFileName: undefined,

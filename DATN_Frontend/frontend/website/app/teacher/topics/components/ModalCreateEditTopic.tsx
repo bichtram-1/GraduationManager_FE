@@ -61,8 +61,7 @@ export default function ModalCreateEditTopic(props: ModalCreateEditTopicProps) {
       } else {
         alert('Tải file lên thất bại!')
       }
-    } catch (err) {
-      console.error(err)
+    } catch {
       alert('Có lỗi xảy ra khi tải file!')
     } finally {
       setUploadingFile(false)

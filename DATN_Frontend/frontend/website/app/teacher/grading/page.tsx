@@ -226,8 +226,7 @@ export default function TeacherGradingPage() {
       } else {
         notify('Lưu điểm thất bại!', 'error')
       }
-    } catch (e) {
-      console.error(e)
+    } catch {
       notify('Lưu điểm thất bại!', 'error')
     } finally {
       setSavingTttn(false)

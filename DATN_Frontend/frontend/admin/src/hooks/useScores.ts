@@ -1,5 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { AxiosError } from 'axios';
+import { useQuery } from '@tanstack/react-query';
 import { scoreApi, IScoreListParams } from '../api/scoreApi';
 
 export const scoreHooks = {
@@ -15,32 +14,6 @@ export const scoreHooks = {
       queryKey: ['scores', 'detail', id, mode],
       enabled: !!id && enabled,
       queryFn: () => scoreApi.getScoreDetail(id, mode),
-    });
-  },
-
-  useUpdateScore: () => {
-    const queryClient = useQueryClient();
-    return useMutation<
-      any,
-      AxiosError,
-      {
-        id: string;
-        body: {
-          mode: 'internship' | 'project';
-          status?: string;
-          finalScore?: number;
-          defenseScore?: number;
-          demoScore?: number;
-          qaScore?: number;
-          reportScore?: number;
-          dot_id?: number;
-        };
-      }
-    >({
-      mutationFn: scoreApi.updateScore,
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['scores'] });
-      },
     });
   },
 };

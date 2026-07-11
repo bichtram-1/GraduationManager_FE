@@ -158,8 +158,7 @@ export default function TeacherStudentsPage() {
       } else {
         message.error('Lưu nhận xét thất bại!')
       }
-    } catch (e) {
-      console.error(e)
+    } catch {
       message.error('Lưu nhận xét thất bại!')
     }
   }
@@ -181,8 +180,7 @@ export default function TeacherStudentsPage() {
       } else {
         message.error('Lưu nhận xét thất bại!')
       }
-    } catch (e) {
-      console.error(e)
+    } catch {
       message.error('Lưu nhận xét thất bại!')
     }
   }

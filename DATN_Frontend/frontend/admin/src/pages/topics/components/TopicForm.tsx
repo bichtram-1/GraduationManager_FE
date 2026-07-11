@@ -61,8 +61,7 @@ const FileField: React.FC<FileFieldProps> = ({ value, onChange, disabled }) => {
       } else {
         message.error('Không lấy được URL của file đã tải lên!');
       }
-    } catch (error) {
-      console.error(error);
+    } catch {
       message.error('Tải lên file thất bại!');
     } finally {
       setUploading(false);
