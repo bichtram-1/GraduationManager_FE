@@ -174,7 +174,7 @@ const ViTranslation = {
   project_score_management_desc: 'Quản lý điểm bảo vệ đồ án tốt nghiệp',
   internship_students: 'Quản lý SV TTTN',
   internship_students_declarations: 'Quản lý khai báo TTTN',
-  internship_students_nocompany: 'Danh sách sinh viên',
+  internship_students_nocompany: 'Danh sách sinh viên TTTN',
   internship_students_desc: 'Theo dõi sinh viên đăng ký giấy xác nhận và sinh viên chưa có công ty',
   company_address: 'Địa chỉ công ty',
   internship_location: 'Địa điểm thực tập',
