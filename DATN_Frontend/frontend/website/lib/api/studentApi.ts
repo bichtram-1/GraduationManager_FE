@@ -171,8 +171,8 @@ export const studentApi = {
     return response?.data?.results?.object || response?.data;
   },
 
-  getMyThesisRegistration: async (): Promise<IThesisRegistration | null> => {
-    const response = await axiosInstance.get('/private/v1/student/thesis/my-registration');
+  getMyThesisRegistration: async (periodId?: number | string): Promise<IThesisRegistration | null> => {
+    const response = await axiosInstance.get('/private/v1/student/thesis/my-registration', { params: { periodId } });
     return response?.data?.results?.object || null;
   },
 
@@ -191,8 +191,8 @@ export const studentApi = {
     return response?.data;
   },
 
-  getOutgoingInvitations: async (): Promise<IGroupInviteOutgoing[]> => {
-    const response = await axiosInstance.get('/private/v1/student/thesis/invitations/outgoing');
+  getOutgoingInvitations: async (periodId?: number | string): Promise<IGroupInviteOutgoing[]> => {
+    const response = await axiosInstance.get('/private/v1/student/thesis/invitations/outgoing', { params: { periodId } });
     return response?.data?.results?.objects || response?.data?.results?.object || [];
   },
 
@@ -206,8 +206,8 @@ export const studentApi = {
     return response?.data;
   },
 
-  getIncomingInvitations: async (): Promise<IGroupInviteIncoming[]> => {
-    const response = await axiosInstance.get('/private/v1/student/thesis/invitations/incoming');
+  getIncomingInvitations: async (periodId?: number | string): Promise<IGroupInviteIncoming[]> => {
+    const response = await axiosInstance.get('/private/v1/student/thesis/invitations/incoming', { params: { periodId } });
     return response?.data?.results?.objects || response?.data?.results?.object || [];
   },
 

@@ -5,9 +5,10 @@ import Link from 'next/link'
 import { ArrowRight, CalendarDays, CheckCircle2, FileText, Trophy, Upload, Building2, Clock3, TrendingUp } from 'lucide-react'
 import { StudentPill, StudentSectionHeader, StudentStatCard } from './_components/StudentShell'
 import { studentApi, IStudentDashboardData } from '@/lib/api/studentApi'
-import { Spin, message } from 'antd'
+import { App, Spin } from 'antd'
 
 export default function StudentIndexPage() {
+  const { message } = App.useApp()
   const [data, setData] = useState<IStudentDashboardData | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -49,7 +50,7 @@ export default function StudentIndexPage() {
       window.removeEventListener('realtime-topic-updated', handleSync)
       window.removeEventListener('realtime-assignment-published', handleAssignmentPublished)
     }
-  }, [])
+  }, [message])
 
   if (loading) {
     return (

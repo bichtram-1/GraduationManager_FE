@@ -1,11 +1,11 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { BarChart3, Building2, ChevronLeft, ChevronRight, MapPin, Search, Users, CalendarDays, Phone, Mail, Plus } from 'lucide-react'
+import { BarChart3, Building2, ChevronLeft, ChevronRight, MapPin, Search, CalendarDays, Plus } from 'lucide-react'
 import { StudentPill, StudentSectionHeader } from '../_components/StudentShell'
 import { StudentButton, StudentField, StudentInputClass, StudentModal } from '../_components/StudentUI'
 import { studentApi, ICompany } from '@/lib/api/studentApi'
-import { Spin, message } from 'antd'
+import { App, Spin } from 'antd'
 import { usePeriod } from '@/lib/providers/PeriodProvider'
 import { COMMON_LABELS } from '@/constants/commonLabels'
 
@@ -187,6 +187,7 @@ const parseAddressInfo = (address: string) => {
 };
 
 export default function StudentInternshipPage() {
+  const { message } = App.useApp()
   const { selectedPeriod } = usePeriod()
   const isPeriodLocked = selectedPeriod?.status === 'grading' || selectedPeriod?.status === 'closed'
   const [companies, setCompanies] = useState<ICompany[]>([])
@@ -326,7 +327,7 @@ export default function StudentInternshipPage() {
     } finally {
       setLoading(false)
     }
-  }, [selectedPeriod?.id])
+  }, [selectedPeriod?.id, message])
 
   useEffect(() => {
     setLoading(true)
@@ -585,11 +586,6 @@ export default function StudentInternshipPage() {
                     </div>
                     <div className="mt-1 flex items-center gap-1 text-xs text-slate-500">
                       <MapPin className="h-3.5 w-3.5" /> {company.address}
-                    </div>
-                    <div className="mt-2 flex flex-wrap gap-3 text-xs text-slate-500">
-                      <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" /> Mentor: {company.mentor}</span>
-                      <span className="inline-flex items-center gap-1"><Phone className="h-3.5 w-3.5" /> {company.phone}</span>
-                      <span className="inline-flex items-center gap-1"><Mail className="h-3.5 w-3.5" /> {company.email}</span>
                     </div>
                   </div>
                 </div>

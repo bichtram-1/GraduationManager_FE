@@ -1,5 +1,5 @@
 import { BankOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, SearchOutlined, SendOutlined, TeamOutlined, DeleteOutlined } from '@ant-design/icons';
-import { Button, Card, Dropdown, Form, Input, message, Modal, Select, Space, Tag, Tabs, Typography } from 'antd';
+import { Button, Card, Dropdown, Form, Input, message, Modal, Select, Space, Tag, Tabs, Typography, Tooltip } from 'antd';
 import FilterTable from '../../components/shared/table/FilterTable';
 import type { ColumnsType } from 'antd/es/table';
 import PublishModal from './components/PublishModal';
@@ -387,13 +387,22 @@ const CompaniesPage = () => {
             isEdit: true,
             isDelete: false,
             customAction: (record: unknown) => {
-              const r = record as CompanyRow;
+              const r = record as CompanyRow & { students?: number };
+              const hasInterns = r.students && r.students > 0;
               return (
                 <div className="pointer-events-auto">
                   <Space size={4}>
-                    <Button type="text" size="small" danger className="!px-2 pointer-events-auto" onClick={() => handleDelete(r)} title={t(getKey('delete'))}>
-                      <DeleteOutlined />
-                    </Button>
+                    {hasInterns ? (
+                      <Tooltip title="Không thể xóa doanh nghiệp đang có sinh viên thực tập đã được phê duyệt">
+                        <Button type="text" size="small" disabled className="!px-2 text-slate-300 cursor-not-allowed" style={{ color: '#cbd5e1' }}>
+                          <DeleteOutlined />
+                        </Button>
+                      </Tooltip>
+                    ) : (
+                      <Button type="text" size="small" danger className="!px-2 pointer-events-auto" onClick={() => handleDelete(r)} title={t(getKey('delete'))}>
+                        <DeleteOutlined />
+                      </Button>
+                    )}
                   </Space>
                 </div>
               );

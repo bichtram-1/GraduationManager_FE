@@ -8,7 +8,7 @@ import { StudentButton, StudentModal } from '../_components/StudentUI'
 import { studentApi, IThesisRegistration } from '@/lib/api/studentApi'
 import { usePeriod } from '@/lib/providers/PeriodProvider'
 import { COMMON_LABELS } from '@/constants/commonLabels'
-import { Spin, message } from 'antd'
+import { App, Spin } from 'antd'
 
 type Invite = {
   id: string
@@ -27,6 +27,7 @@ const INVITE_STATUS_META: Record<Invite['status'], { label: string; tone: 'green
 export default function InvitePage() {
   const router = useRouter()
   const params = useSearchParams()
+  const { message } = App.useApp()
   const { selectedPeriod } = usePeriod()
   const isPeriodLocked = selectedPeriod?.status === 'grading' || selectedPeriod?.status === 'closed'
 
@@ -48,9 +49,9 @@ export default function InvitePage() {
     async function load() {
       try {
         const [outgoingData, incomingData, regData] = await Promise.all([
-          studentApi.getOutgoingInvitations(),
-          studentApi.getIncomingInvitations(),
-          studentApi.getMyThesisRegistration()
+          studentApi.getOutgoingInvitations(selectedPeriod?.id),
+          studentApi.getIncomingInvitations(selectedPeriod?.id),
+          studentApi.getMyThesisRegistration(selectedPeriod?.id)
         ])
         if (!mounted) return
         setOutgoingInvites(outgoingData)
@@ -71,7 +72,7 @@ export default function InvitePage() {
     return () => {
       mounted = false
     }
-  }, [])
+  }, [selectedPeriod?.id])
 
   const addInvite = async () => {
     const id = newId.trim()
@@ -83,8 +84,8 @@ export default function InvitePage() {
       message.error('Mã số sinh viên không hợp lệ (chỉ chứa chữ và số, độ dài từ 5-15 ký tự)!')
       return
     }
-    if (outgoingInvites.some((item) => item.id === id)) {
-      message.warning('Sinh viên này đã được mời!')
+    if (outgoingInvites.some((item) => item.id === id && item.status === 'pending')) {
+      message.warning('Sinh viên này đã được mời, đang chờ phản hồi!')
       setNewId('')
       return
     }
@@ -92,7 +93,7 @@ export default function InvitePage() {
       setLoading(true)
       const topicIdToSend = registration?.topicId || null
       const res = await studentApi.sendInvitation(id, topicIdToSend)
-      setOutgoingInvites((current) => [...current, res])
+      setOutgoingInvites((current) => [...current.filter((item) => item.id !== id), res])
       setNewId('')
       message.success('Gửi lời mời thành công!')
     } catch (err: unknown) {
