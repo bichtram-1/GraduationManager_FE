@@ -9,7 +9,7 @@ import { studentApi, IDatnProgressReport, IThesisRegistration } from '@/lib/api/
 import { uploadApi } from '@/lib/api/uploadApi'
 import { usePeriod } from '@/lib/providers/PeriodProvider'
 import { COMMON_LABELS } from '@/constants/commonLabels'
-import { message } from 'antd'
+import { App } from 'antd'
 
 type StatusFilter = 'all' | 'Đã nộp' | 'Thiếu' | 'Chưa nộp'
 
@@ -33,6 +33,7 @@ const getFileUrl = (url: string | null | undefined) => {
 };
 
 export default function StudentReportsDATNPage() {
+  const { message } = App.useApp()
   const { selectedPeriod } = usePeriod()
   const isPeriodLocked = selectedPeriod?.status === 'grading' || selectedPeriod?.status === 'closed'
   const [milestones, setMilestones] = useState<IDatnProgressReport[]>([])

@@ -9,7 +9,7 @@ import { useEffect, useState } from 'react'
 import { StudentPill, StudentSectionHeader } from '../_components/StudentShell'
 import { StudentButton, StudentModal } from '../_components/StudentUI'
 import { COMMON_LABELS } from '@/constants/commonLabels'
-import { message } from 'antd'
+import { App } from 'antd'
 
 type Topic = { id: string; code?: string; title: string; module: string; published: boolean; slots?: string }
 
@@ -39,6 +39,7 @@ const CONFIRM_COPY: Record<ConfirmAction['type'], { title: string; message: stri
 }
 
 export default function ThesisRegisterPage() {
+  const { message } = App.useApp()
   const { selectedPeriod } = usePeriod()
   const isPeriodLocked = selectedPeriod?.status === 'grading' || selectedPeriod?.status === 'closed'
   const [topics, setTopics] = useState<Topic[]>([])
@@ -54,7 +55,7 @@ export default function ThesisRegisterPage() {
       try {
         const [topicsData, regData] = await Promise.all([
           topicApi.getTopics({ periodId: selectedPeriod?.id }),
-          studentApi.getMyThesisRegistration()
+          studentApi.getMyThesisRegistration(selectedPeriod?.id)
         ])
         if (!mounted) return
         setTopics(topicsData)
@@ -130,7 +131,7 @@ export default function ThesisRegisterPage() {
       await studentApi.cancelThesisRegistration()
       const [topicsData, regData] = await Promise.all([
         topicApi.getTopics({ periodId: selectedPeriod?.id }),
-        studentApi.getMyThesisRegistration()
+        studentApi.getMyThesisRegistration(selectedPeriod?.id)
       ])
       setTopics(topicsData)
       setRegistration(regData)

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { Search, ShieldCheck, Users } from 'lucide-react'
-import { message } from 'antd'
+import { App } from 'antd'
 import { TeacherSectionHeader, TeacherPill } from '../_components/TeacherShell'
 import { TeacherCard, TeacherInputClass } from '../_components/TeacherUI'
 import { usePeriod } from '@/lib/providers/PeriodProvider'
@@ -59,6 +59,7 @@ const defaultGuidanceGroups: GuidanceGroup[] = []
 const defaultReviewGroups: ReviewGroup[] = []
 
 export default function TeacherReviewGroupsPage() {
+  const { message } = App.useApp()
   const { selectedPeriod } = usePeriod()
   const [segment, setSegment] = useState<Segment>('Nhóm hướng dẫn')
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'reviewed'>('all')

@@ -8,7 +8,7 @@ import { studentApi, IProgressReport, IStudentDashboardData } from '@/lib/api/st
 import { uploadApi } from '@/lib/api/uploadApi'
 import { usePeriod } from '@/lib/providers/PeriodProvider'
 import { COMMON_LABELS } from '@/constants/commonLabels'
-import { Spin, message } from 'antd'
+import { App, Spin } from 'antd'
 
 type StatusFilter = 'all' | 'Đã nộp' | 'Thiếu' | 'Chưa nộp'
 
@@ -32,6 +32,7 @@ const getFileUrl = (url: string | null | undefined) => {
 };
 
 export default function StudentReportsTTTNPage() {
+  const { message } = App.useApp()
   const { selectedPeriod } = usePeriod()
   const isPeriodLocked = selectedPeriod?.status === 'grading' || selectedPeriod?.status === 'closed'
   const [reports, setReports] = useState<IProgressReport[]>([])
@@ -254,7 +255,7 @@ export default function StudentReportsTTTNPage() {
     <>
       <StudentSectionHeader
         title="Báo cáo TTTN"
-        description="Nộp nhật ký thực tập hàng tuần, xem tiến độ duyệt và mở nhanh từng bản nộp như trong bộ design mẫu."
+        description="Nộp nhật ký thực tập hàng tuần, xem tiến độ duyệt và mở nhanh từng bản."
         actions={(
           <button
             type="button"
