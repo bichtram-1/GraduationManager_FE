@@ -99,7 +99,7 @@ const TopicsPage = () => {
     { title: t(getKey('topic_code')), dataIndex: 'code', key: 'code', render: (v: string) => <span className="text-primary font-medium">{v}</span> },
     { title: t(getKey('topic_name')), dataIndex: 'name', key: 'name', ellipsis: true },
     { title: t(getKey('teacher')), dataIndex: 'teacher', key: 'teacher', width: 200, ellipsis: true, render: (v: string) => <span className="text-slate-600">{v}</span> },
-    { title: t(getKey('slots')), dataIndex: 'slots', key: 'slots', width: 120, render: (v: number) => formatNumber(v) },
+    { title: t(getKey('slots')), dataIndex: 'slots', key: 'slots', width: 120 },
     {
       title: t(getKey('group_status')),
       key: 'status',

@@ -81,6 +81,7 @@ const CreateCouncilPage = () => {
     }
   }, [datnPeriods]);
   const [selectedTopics, setSelectedTopics] = useState<SelectedTopic[]>([]);
+  const [draggedMemberIdx, setDraggedMemberIdx] = useState<number | null>(null);
   const [draggingTopicId, setDraggingTopicId] = useState<string | null>(null);
   const [dragOverTopicId, setDragOverTopicId] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -240,6 +241,27 @@ const CreateCouncilPage = () => {
       next.splice(sourceIndex < targetIndex ? targetIndex - 1 : targetIndex, 0, moved);
       return next;
     });
+  };
+
+  const handleMemberDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedMemberIdx(index);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleMemberDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+  };
+
+  const handleMemberDrop = (e: React.DragEvent, targetIndex: number) => {
+    e.preventDefault();
+    if (draggedMemberIdx === null || draggedMemberIdx === targetIndex) return;
+
+    const nextMembers = [...form.members];
+    const [moved] = nextMembers.splice(draggedMemberIdx, 1);
+    nextMembers.splice(targetIndex, 0, moved);
+
+    updateMembers(nextMembers);
+    setDraggedMemberIdx(null);
   };
 
   const handleSave = () => {
@@ -541,15 +563,27 @@ const CreateCouncilPage = () => {
                       {form.members.length > 0 && (
                         <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-4 shadow-inner max-h-[300px] overflow-y-auto">
                           <div className="text-xs font-semibold text-slate-500 mb-2.5">
-                            Danh sách thành viên hội đồng đã chọn ({form.members.length}):
+                            Danh sách thành viên hội đồng đã chọn ({form.members.length}) - Kéo thả để thay đổi vị trí:
                           </div>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             {form.members.map((id, idx) => (
-                              <div key={id} className="text-xs flex items-center justify-between bg-white px-3 py-2 rounded-lg border border-slate-100 shadow-sm">
-                                <span className="font-medium text-slate-700 truncate mr-2">
+                              <div
+                                key={id}
+                                draggable
+                                onDragStart={(e) => handleMemberDragStart(e, idx)}
+                                onDragOver={(e) => handleMemberDragOver(e, idx)}
+                                onDrop={(e) => handleMemberDrop(e, idx)}
+                                onDragEnd={() => setDraggedMemberIdx(null)}
+                                className={cn(
+                                  "text-xs flex items-center justify-between bg-white px-3 py-2 rounded-lg border border-slate-100 shadow-sm transition-all duration-200 cursor-grab active:cursor-grabbing hover:bg-slate-50 hover:border-slate-300",
+                                  draggedMemberIdx === idx && "opacity-40 border-dashed border-primary"
+                                )}
+                              >
+                                <span className="font-medium text-slate-700 truncate mr-2 flex items-center gap-2 select-none">
+                                  <MenuOutlined className="text-slate-400 cursor-grab" />
                                   {idx + 1}. {teacherNameById(id)}
                                 </span>
-                                <Tag color={idx === 0 ? 'gold' : 'blue'} className="m-0 text-[10px] uppercase font-semibold">
+                                <Tag color={idx === 0 ? 'gold' : 'blue'} className="m-0 text-[10px] uppercase font-semibold select-none">
                                   {idx === 0 ? 'Chủ tịch' : 'Thành viên'}
                                 </Tag>
                               </div>
