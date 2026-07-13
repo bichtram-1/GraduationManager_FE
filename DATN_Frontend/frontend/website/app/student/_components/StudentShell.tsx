@@ -150,6 +150,7 @@ export function StudentShell({ children }: { children: ReactNode }) {
                   className="w-full min-w-0"
                   placeholder="Chọn đợt hoạt động"
                   value={selectedPeriod?.id}
+                  labelRender={() => selectedPeriod?.name ?? 'Chọn đợt hoạt động'}
                   onChange={(id) => {
                     const period = periods.find((p) => p.id === id)
                     setSelectedPeriod(period)

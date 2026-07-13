@@ -11,8 +11,7 @@ import { getKey } from '@shared/types/I18nKeyType';
 import { STATUS_CODE, cn } from '../../constants/commonConst';
 import { formatNumber } from '@shared/utils/numberUtils';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const getTopicStatusMeta = (t: any) => ({
+const getTopicStatusMeta = (t: (key: string) => string) => ({
   [STATUS_CODE.PENDING]: { label: t(getKey('status_pending')), className: '!bg-[var(--color-gold-light)] !text-[var(--color-gold-medium)]' },
   [STATUS_CODE.APPROVED]: { label: t(getKey('status_approved')), className: '!bg-[var(--color-green-light)] !text-[var(--color-green-medium)]' },
   [STATUS_CODE.REJECTED]: { label: t(getKey('status_rejected')), className: '!bg-[var(--color-red-light)] !text-[var(--color-red-medium)]' },
@@ -211,7 +210,7 @@ const TopicsPage = () => {
             modalInfo: {
               modalContent: <TopicForm />,
               modalProps: { centered: true, width: 640, title: t(getKey('edit_topic')) },
-              modalFunc: updateTopicMutation as any,
+              modalFunc: updateTopicMutation as unknown as import('@tanstack/react-query').UseMutationResult<IListTopic, import('axios').AxiosError, { id: string; body: IUpdateTopic; index: number; params: import('@shared/types/GeneralType').BaseListParams }>,
             },
           }}
           deleteInfo={isPeriodClosed ? undefined : {
@@ -219,7 +218,7 @@ const TopicsPage = () => {
             modalInfo: {
               modalContent: null,
               modalProps: {},
-              modalFunc: deleteTopicMutation as any,
+              modalFunc: deleteTopicMutation as unknown as import('@tanstack/react-query').UseMutationResult<IListTopic, import('axios').AxiosError, { id: string; params: import('@shared/types/GeneralType').BaseListParams }>,
             },
           }}
           detailInfo={{
@@ -227,7 +226,7 @@ const TopicsPage = () => {
             modalInfo: {
               modalContent: <TopicForm disabled />,
               modalProps: { centered: true, width: 640, title: t(getKey('detail_topic')), footer: null },
-              modalFunc: topicHooks.useFetchDetailTopic as any,
+              modalFunc: topicHooks.useFetchDetailTopic as unknown as (id: string, enable: boolean) => import('@tanstack/react-query').UseQueryResult<IListTopic, Error>,
             },
           }}
           actions={{

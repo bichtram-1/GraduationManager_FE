@@ -6,6 +6,34 @@ import { TeacherSectionHeader } from '../../../_components/TeacherShell'
 import { usePeriod } from '@/lib/providers/PeriodProvider'
 import { teacherApi } from '@/lib/api/teacherApi'
 
+interface ICouncilMember {
+  id: string
+  name: string
+  role: string
+}
+
+interface ICouncilGroup {
+  id: string
+  groupCode?: string
+  topic?: string
+  advisorId?: string | number
+  reviewerId?: string | number
+  students?: ICouncilStudentInfo[]
+}
+
+interface ICouncilStudentInfo {
+  id: string
+  name: string
+  class?: string
+}
+
+interface IRawCouncil {
+  code: string
+  name: string
+  groups?: ICouncilGroup[]
+  members?: ICouncilMember[]
+}
+
 type Student = {
   id: string
   studentId: string
@@ -21,7 +49,7 @@ type Student = {
   }
   status: string
   isChair?: boolean
-  councilMembers?: { id: string; name: string; role: string }[]
+  councilMembers?: ICouncilMember[]
   gvhdName?: string
   gvpbName?: string
   diemGvhd?: number | null
@@ -86,16 +114,32 @@ export default function GradesClient({ councilId }: { councilId: string }) {
         }
         
         if (data?.councilGroups) {
-          const matchedCouncil = data.councilGroups.find((c: any) => c.code === councilId)
+          const matchedCouncil = data.councilGroups.find((c: IRawCouncil) => c.code === councilId)
           if (matchedCouncil) {
             setCouncilName(matchedCouncil.name)
             const groups = matchedCouncil.groups || []
             
-            const scoresPromises = groups.map(async (g: any) => {
+            const scoresPromises = groups.map(async (g: ICouncilGroup) => {
               try {
                 const res = await teacherApi.getScores(g.id)
                 if (res?.success && res?.data?.rows) {
-                  return res.data.rows.map((row: any) => ({
+                  return res.data.rows.map((row: {
+                    id: string
+                    name: string
+                    class?: string
+                    gvhdName?: string
+                    gvpbName?: string
+                    diemGvhd?: number | null
+                    diemGvpb?: number | null
+                    diemTbBaoVe?: number | null
+                    diemTongKet?: number | null
+                    diemBaoVe?: number | null
+                    lecturerScores?: Record<string, number>
+                    presentation?: number | string | null
+                    demo?: number | string | null
+                    qna?: number | string | null
+                    report?: number | string | null
+                  }) => ({
                     id: row.id,
                     studentId: row.id,
                     name: row.name,
@@ -103,10 +147,10 @@ export default function GradesClient({ councilId }: { councilId: string }) {
                     topic: g.topic,
                     group: g.groupCode || `Nhóm #${g.id}`,
                     scores: {
-                      presentation: row.presentation !== null && row.presentation !== undefined ? parseFloat(row.presentation) : null,
-                      demo: row.demo !== null && row.demo !== undefined ? parseFloat(row.demo) : null,
-                      defense: row.qna !== null && row.qna !== undefined ? parseFloat(row.qna) : null,
-                      report: row.report !== null && row.report !== undefined ? parseFloat(row.report) : null,
+                      presentation: row.presentation !== null && row.presentation !== undefined ? parseFloat(String(row.presentation)) : null,
+                      demo: row.demo !== null && row.demo !== undefined ? parseFloat(String(row.demo)) : null,
+                      defense: row.qna !== null && row.qna !== undefined ? parseFloat(String(row.qna)) : null,
+                      report: row.report !== null && row.report !== undefined ? parseFloat(String(row.report)) : null,
                     },
                     status: (row.presentation !== null || row.demo !== null || row.qna !== null) ? 'Published' : 'Draft',
                     isChair: res.data.isChair || false,
@@ -128,7 +172,7 @@ export default function GradesClient({ councilId }: { councilId: string }) {
               }
               
               // Fallback map
-              return (g.students || []).map((s: any) => ({
+              return (g.students || []).map((s: ICouncilStudentInfo) => ({
                 id: s.id,
                 studentId: s.id,
                 name: s.name,
@@ -229,14 +273,14 @@ export default function GradesClient({ councilId }: { councilId: string }) {
 
       const isChair = topicStudents[0]?.isChair || false
       const councilMembers = topicStudents[0]?.councilMembers || []
-      const chairMember = councilMembers.find((m: any) => m.role.includes('Chủ tịch'))
+      const chairMember = councilMembers.find((m: ICouncilMember) => m.role.includes('Chủ tịch'))
       const chairStr = chairMember ? `${chairMember.role}: ${chairMember.name}` : 'Chưa phân công'
       
       let headerCols: string[] = []
       if (isChair) {
         headerCols = [
           'Mã SV', 'Họ tên', 'Lớp', 'GVHD', 'GVPB',
-          ...councilMembers.map((m: any) => shortenName(m.name)),
+          ...councilMembers.map((m: ICouncilMember) => shortenName(m.name)),
           'TB bảo vệ', 'BC-GVHD', 'BC-GVPB', 'TK'
         ]
       } else {
@@ -260,7 +304,7 @@ export default function GradesClient({ councilId }: { councilId: string }) {
             `<td style="border: 0.5pt solid #a0aec0; padding: 6px; text-align: center;">${s.clazz}</td>`,
             `<td style="border: 0.5pt solid #a0aec0; padding: 6px; text-align: left;">${s.gvhdName}</td>`,
             `<td style="border: 0.5pt solid #a0aec0; padding: 6px; text-align: left;">${s.gvpbName}</td>`,
-            ...councilMembers.map((m: any) => {
+            ...councilMembers.map((m: ICouncilMember) => {
               const score = s.lecturerScores?.[m.id];
               const scoreStr = score !== undefined && score !== null ? score.toFixed(2) : '—';
               return `<td style="border: 0.5pt solid #a0aec0; padding: 6px; text-align: right;">${scoreStr}</td>`;
@@ -466,7 +510,7 @@ export default function GradesClient({ councilId }: { councilId: string }) {
                               <th className="px-4 py-3 text-left">Lớp</th>
                               <th className="px-4 py-3 text-left">GVHD</th>
                               <th className="px-4 py-3 text-left">GVPB</th>
-                              {councilMembers.map((m: any) => (
+                              {councilMembers.map((m: ICouncilMember) => (
                                 <th key={m.id} className="px-4 py-3 text-right" title={`${m.name} (${m.role})`}>
                                   {shortenName(m.name)}
                                 </th>
@@ -487,7 +531,7 @@ export default function GradesClient({ councilId }: { councilId: string }) {
                                   <td className="px-4 py-4 text-slate-700">{s.clazz}</td>
                                   <td className="px-4 py-4 text-slate-600 text-xs">{s.gvhdName}</td>
                                   <td className="px-4 py-4 text-slate-600 text-xs">{s.gvpbName}</td>
-                                  {councilMembers.map((m: any) => {
+                                  {councilMembers.map((m: ICouncilMember) => {
                                     const score = s.lecturerScores?.[m.id];
                                     return (
                                       <td key={m.id} className="px-4 py-4 text-right font-semibold text-slate-700">

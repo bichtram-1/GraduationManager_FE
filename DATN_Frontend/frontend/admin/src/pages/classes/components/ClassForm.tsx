@@ -19,7 +19,7 @@ const ClassForm: React.FC<Props> = ({ disabled = false, detail }) => {
 
   React.useEffect(() => {
     if (detail) {
-      form.setFieldsValue(detail as any);
+      form.setFieldsValue(detail as unknown as Record<string, unknown>);
       setStudentListFileName(detail.studentListFileName || '');
     } else {
       form.resetFields();
@@ -36,7 +36,7 @@ const ClassForm: React.FC<Props> = ({ disabled = false, detail }) => {
           const workbook = XLSX.read(data, { type: 'array' });
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
-          const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+          const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as unknown[][];
 
           if (rows.length <= 1) {
             resolve([]);

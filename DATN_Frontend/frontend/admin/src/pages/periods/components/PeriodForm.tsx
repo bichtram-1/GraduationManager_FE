@@ -2,7 +2,7 @@ import React from 'react';
 import { Form, Input, Select, Button, Table, Alert, Tag, Divider } from 'antd';
 import dayjs from 'dayjs';
 import { UserAddOutlined, DeleteOutlined, InfoCircleOutlined, SearchOutlined, UserOutlined, PlusOutlined } from '@ant-design/icons';
-import type { BatchType } from '../../../type/PeriodType';
+import type { BatchType, IDetailPeriod } from '../../../type/PeriodType';
 import { useTranslation } from 'react-i18next';
 import { getKey } from '@shared/types/I18nKeyType';
 import { STATUS_CODE, DATE_DISPLAY_FORMAT } from '../../../constants/commonConst';
@@ -12,16 +12,20 @@ import CustomDatePicker from '../../../components/shared/input/CustomDatePicker'
 import type { IListClass } from '../../../type/ClassType';
 import type { IListUser } from 'src/type/UserType';
 
-type ExternalStudent = IListUser & { reason?: string };
+type ExternalStudent = IListUser;
 
 type Props = {
   tab: BatchType;
   disabled?: boolean;
+  detail?: IDetailPeriod;
 };
 
-const PeriodForm: React.FC<Props> = ({ tab, disabled }) => {
+const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail }) => {
   const { t } = useTranslation();
   const form = Form.useFormInstance();
+
+  const isClosed = detail?.status === STATUS_CODE.CLOSED;
+  const disabled = initialDisabled || isClosed;
 
   const [searchKeyword, setSearchKeyword] = React.useState('');
   const [selectedStudent, setSelectedStudent] = React.useState<IListUser | null>(null);
@@ -74,7 +78,7 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled }) => {
     const isAlreadyExternal = externalStudents.some((s) => s.id === selectedStudent.id);
     if (isAlreadyExternal) return;
 
-    const updatedStudents = [...externalStudents, { ...selectedStudent, reason: 'Rớt đợt trước' }];
+    const updatedStudents = [...externalStudents, { ...selectedStudent }];
     const updatedIds = [...externalStudentIds, selectedStudent.id];
 
     form.setFieldsValue({
@@ -115,12 +119,6 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled }) => {
       dataIndex: 'className',
       key: 'className',
       render: (text: string) => text ? <Tag color="blue" className="border-none bg-blue-50 text-blue-700 font-medium">{text}</Tag> : <span className="text-slate-400">Không có lớp</span>
-    },
-    {
-      title: 'Lý do',
-      dataIndex: 'reason',
-      key: 'reason',
-      render: (text: string) => <Tag color="warning" className="border-none bg-amber-50 text-amber-700 font-medium">{text || 'Rớt đợt trước'}</Tag>
     },
     ...(!disabled ? [{
       title: 'Thao tác',
@@ -179,7 +177,7 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled }) => {
           <div className="flex items-center gap-2">
             <UserAddOutlined className="text-primary text-lg" />
             <span className="font-semibold text-slate-800 text-[15px]">
-              Sinh viên tự do / Rớt đợt trước
+              Thêm sinh viên thủ công
             </span>
           </div>
           <Tag color="cyan" className="font-medium border-none bg-cyan-50 text-cyan-700">
@@ -241,7 +239,7 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled }) => {
             dataSource={externalStudents}
             columns={studentColumns}
             rowKey="id"
-            pagination={{ pageSize: 5, size: 'small', hideOnSinglePage: true }}
+            pagination={{ pageSize: 5, size: 'small', hideOnSinglePage: true, showSizeChanger: false }}
             size="small"
             bordered={false}
             className="bg-white rounded-lg overflow-hidden border border-slate-100"

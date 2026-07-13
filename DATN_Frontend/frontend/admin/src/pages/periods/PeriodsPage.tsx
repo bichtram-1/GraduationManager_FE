@@ -10,6 +10,8 @@ import { useTranslation } from 'react-i18next';
 import { getKey } from '@shared/types/I18nKeyType';
 import type { ColumnsType } from 'antd/es/table';
 import { useMemo, useState } from 'react';
+import type { UseMutationResult } from '@tanstack/react-query';
+import type { AxiosError } from 'axios';
 import FilterTable from '../../components/shared/table/FilterTable';
 import PeriodForm from './components/PeriodForm';
 import { periodHooks } from '../../hooks/usePeriods';
@@ -17,7 +19,7 @@ import { userHooks } from '../../hooks/useUsers';
 import type { BatchStatus, BatchType, ICreatePeriod, IUpdatePeriod, IListPeriod, IDetailPeriod } from '../../type/PeriodType';
 import { STATUS_CODE, cn } from '../../constants/commonConst';
 
-const getStatusMeta = (t: any) => ({
+const getStatusMeta = (t: (key: string) => string) => ({
   [STATUS_CODE.OPEN]: { label: t(getKey('period_status_open')), className: '!bg-[var(--color-green-light)] !text-[var(--color-green-medium)]' },
   [STATUS_CODE.PUBLISHED]: { label: t(getKey('period_status_published')), className: '!bg-[var(--color-blue-light)] !text-[var(--color-blue-medium)]' },
   [STATUS_CODE.GRADING]: { label: t(getKey('period_status_grading')), className: '!bg-[var(--color-gold-light)] !text-[var(--color-gold-medium)]' },
@@ -51,12 +53,13 @@ const PeriodsPage = () => {
   const searchStudentsList = useMemo(() => {
     if (!searchStudentsData) return [];
     if (Array.isArray(searchStudentsData)) return searchStudentsData;
-    if (Array.isArray((searchStudentsData as any).rows)) return (searchStudentsData as any).rows;
+    const dataWithRows = searchStudentsData as { rows?: unknown[] };
+    if (Array.isArray(dataWithRows.rows)) return dataWithRows.rows;
     return [];
   }, [searchStudentsData]);
 
   const searchStudentOptions = useMemo(() => {
-    return searchStudentsList.map((sv: any) => ({
+    return (searchStudentsList as { id: string; name: string; className?: string | null }[]).map((sv) => ({
       value: sv.id,
       label: `${sv.id} - ${sv.name} (${sv.className || 'Không lớp'})`,
     }));
@@ -69,7 +72,7 @@ const PeriodsPage = () => {
 
   const periodOptions = useMemo(() => {
     if (!allPeriodsData || !allPeriodsData.rows) return [];
-    return allPeriodsData.rows.map((p: any) => ({
+    return allPeriodsData.rows.map((p: IListPeriod) => ({
       value: p.id,
       label: `${p.name} (${p.type === 'tttn' ? 'TTTN' : 'ĐATN'})`,
     }));
@@ -77,12 +80,11 @@ const PeriodsPage = () => {
 
   const addStudentMutation = periodHooks.useAddStudentToPeriods();
 
-  const handleAddStudentSubmit = async (values: any) => {
+  const handleAddStudentSubmit = async (values: { studentId: string; periodIds: string[]; reason?: string }) => {
     addStudentMutation.mutate(
       {
         studentId: values.studentId,
         periodIds: values.periodIds,
-        reason: values.reason,
       },
       {
         onSuccess: () => {
@@ -91,8 +93,9 @@ const PeriodsPage = () => {
           addStudentForm.resetFields();
           setStudentSearchKeyword('');
         },
-        onError: (err: any) => {
-          message.error(err?.response?.data?.message || 'Có lỗi xảy ra khi thêm sinh viên!');
+        onError: (err: unknown) => {
+          const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+          message.error(msg || 'Có lỗi xảy ra khi thêm sinh viên!');
         },
       }
     );
@@ -207,7 +210,7 @@ const PeriodsPage = () => {
             className="!h-10 !rounded-[8px] !border-primary !text-primary !px-5 !flex !items-center !gap-2 !font-medium hover:!bg-primary/5 hover:!border-primary/80"
           >
             <span className="text-primary text-base font-medium text-center w-full">
-              Thêm sinh viên tự do / rớt
+              Thêm sinh viên thủ công
             </span>
           </Button>
         </div>
@@ -258,6 +261,7 @@ const PeriodsPage = () => {
             isDetail: true,
             isEdit: true,
             isDelete: true,
+            isDeleteDisabled: (record) => (record as IListPeriod).status === STATUS_CODE.CLOSED,
             customAction: (record) => {
               const period = record as IListPeriod;
               return (
@@ -277,7 +281,7 @@ const PeriodsPage = () => {
             },
           }}
           detailInfo={{ type: 'modal', modalInfo: { modalContent: <PeriodForm tab={tab} disabled />, modalProps: { centered: true, width: 820, title: t(getKey('detail_period')), footer: null }, modalFunc: periodHooks.useFetchDetailPeriod as unknown as (id: string, enable: boolean) => import('@tanstack/react-query').UseQueryResult<IDetailPeriod, Error> } }}
-          deleteInfo={{ type: 'modal', modalInfo: { modalContent: null, modalProps: {}, modalFunc: deletePeriodMutation as any } }}
+          deleteInfo={{ type: 'modal', modalInfo: { modalContent: null, modalProps: {}, modalFunc: deletePeriodMutation as unknown as UseMutationResult<IListPeriod, AxiosError, { id: string; params: import('@shared/types/GeneralType').BaseListParams }> } }}
           formatFormValues={(values) => ({
             ...values,
             type: (values.type as BatchType) || tab,
@@ -289,7 +293,7 @@ const PeriodsPage = () => {
         title={
           <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
             <UserAddOutlined className="text-primary text-xl" />
-            <span className="text-lg font-bold text-slate-800">Thêm sinh viên tự do / rớt vào các đợt</span>
+            <span className="text-lg font-bold text-slate-800">Thêm sinh viên thủ công</span>
           </div>
         }
         open={isAddStudentModalOpen}
@@ -311,7 +315,6 @@ const PeriodsPage = () => {
           form={addStudentForm}
           layout="vertical"
           onFinish={handleAddStudentSubmit}
-          initialValues={{ reason: 'Rớt đợt trước' }}
           className="pt-4"
         >
           <Form.Item
@@ -344,13 +347,6 @@ const PeriodsPage = () => {
               options={periodOptions}
               className="w-full"
             />
-          </Form.Item>
-
-          <Form.Item
-            name="reason"
-            label="Lý do"
-          >
-            <Input placeholder="VD: Rớt đợt trước" />
           </Form.Item>
         </Form>
       </Modal>

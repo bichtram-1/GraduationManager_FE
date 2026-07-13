@@ -135,7 +135,7 @@ const StudentScoresPage: React.FC = () => {
     { title: t(getKey('action')), key: 'actions', fixed: 'right', width: 100, render: (_,_r) => (<Button type="link" onClick={() => openDetailModal(_r as ScoreRow)}>{t(getKey('detail'))}</Button>) },
   ];
 
-  const columns = (mode === 'internship' ? internshipColumns : projectColumns) as any;
+  const columns = (mode === 'internship' ? internshipColumns : projectColumns) as unknown as ColumnsType<InternshipScoreRow | ProjectScoreRow>;
 
   return (
     <div className="text-gray-800 pb-4">

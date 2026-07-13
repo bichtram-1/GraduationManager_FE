@@ -18,7 +18,7 @@ export default function AppQueryProvider({ children }: { children: ReactNode }) 
       notification.success(defaultSuccessMess);
     },
     onError: (error) => {
-      const errData = (error as AxiosError<any>).response?.data;
+      const errData = (error as AxiosError<{ error_id?: string; message?: string }>).response?.data;
       const customErr = ErrorCode()[errData?.error_id as keyof typeof ErrorCode];
       if (customErr) {
         notification.error({
