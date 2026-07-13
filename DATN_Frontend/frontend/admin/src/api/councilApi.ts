@@ -10,6 +10,7 @@ export type CouncilRow = {
   chair: string[];
   reviewer: string[];
   member: string[];
+  secretary?: string[];
   topicGroups: { code: string; title: string; members: number }[];
   accent: 'blue' | 'green';
   status?: string;

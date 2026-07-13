@@ -20,6 +20,7 @@ interface IBaseGroup {
   topicDirection?: string;
   ket_qua_huong_dan?: 'DAT' | 'KHONG_DAT' | null;
   ket_qua_phan_bien?: 'DAT' | 'KHONG_DAT' | null;
+  hoi_dong_id?: string | number | null;
 }
 
 export interface IListGroup extends IBaseGroup {

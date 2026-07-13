@@ -18,6 +18,7 @@ type CouncilCard = {
   achieved: number;
   rejected: number;
   chair: string[];
+  secretary?: string[];
   reviewer: string[];
   member: string[];
   topicGroups: { code: string; title: string; members: number }[];
@@ -412,6 +413,16 @@ const CouncilsPage: React.FC = () => {
                   </div>
                 </div>
 
+                {c.secretary && c.secretary.length > 0 && (
+                  <div className="role-col">
+                    <div className="role-name">Thư ký</div>
+                    <div className="role-title">Thư ký Hội đồng</div>
+                    <div className="chip-wrap">
+                      {c.secretary.map((t) => <span key={t} className="chip">{t}</span>)}
+                    </div>
+                  </div>
+                )}
+
                 <div className="role-col">
                   <div className="role-name">{t(getKey('reviewer_short'))}</div>
                   <div className="role-title">{t(getKey('reviewer_full'))}</div>
@@ -554,6 +565,11 @@ const CouncilsPage: React.FC = () => {
                         Chủ tịch: {name}
                       </Tag>
                     ))}
+                    {selectedCouncilForView.secretary && selectedCouncilForView.secretary.map((name: string) => (
+                      <Tag color="cyan" key={name} className="px-2.5 py-1 text-xs">
+                        Thư ký: {name}
+                      </Tag>
+                    ))}
                     {selectedCouncilForView.reviewer.map((name) => (
                       <Tag color="orange" key={name} className="px-2.5 py-1 text-xs">
                         Phản biện: {name}
@@ -565,6 +581,7 @@ const CouncilsPage: React.FC = () => {
                       </Tag>
                     ))}
                     {selectedCouncilForView.chair.length === 0 &&
+                     (!selectedCouncilForView.secretary || selectedCouncilForView.secretary.length === 0) &&
                      selectedCouncilForView.reviewer.length === 0 &&
                      selectedCouncilForView.member.length === 0 && (
                       <span className="text-xs text-slate-400 italic">Chưa có thành viên</span>
