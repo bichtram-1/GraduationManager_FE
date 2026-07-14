@@ -4,7 +4,7 @@ import {
   UserAddOutlined,
   SearchOutlined,
 } from '@ant-design/icons';
-import { Button, Card, Form, Input, Modal, Select, Tag, Tabs, Tooltip, message } from 'antd';
+import { Button, Card, Form, Input, Modal, Select, Tag, Tabs, message } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { getKey } from '@shared/types/I18nKeyType';
 import type { ColumnsType } from 'antd/es/table';
@@ -101,8 +101,6 @@ const PeriodsPage = () => {
     const nextTab = key as BatchType;
     setTab(nextTab);
   };
-
-
 
   const batchTabs = useMemo(() => [
     { key: 'tttn' as const, label: t(getKey('period_management')) + ' (TTTN)', icon: <TeamOutlined /> },

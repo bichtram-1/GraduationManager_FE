@@ -4,6 +4,9 @@ export interface IClassMember {
   id: string;
   name: string;
   code?: string;
+  phone?: string;
+  gender?: string;
+  dateOfBirth?: string | any;
 }
 
 interface IBaseClass {
