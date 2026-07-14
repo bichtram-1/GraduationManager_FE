@@ -53,14 +53,18 @@ export function StudentButton({
   )
 }
 
-export function StudentField({ label, required, hint, children }: { label: string; required?: boolean; hint?: string; children: ReactNode }) {
+export function StudentField({ label, required, hint, error, children }: { label: string; required?: boolean; hint?: string; error?: string; children: ReactNode }) {
   return (
     <div className="mb-4">
       <label className="mb-1.5 block text-sm font-medium text-slate-700">
         {label} {required && <span className="text-red-500">*</span>}
       </label>
       {children}
-      {hint && <div className="mt-1 text-xs text-slate-500">{hint}</div>}
+      {error ? (
+        <div className="mt-1 text-xs text-red-500 font-medium">{error}</div>
+      ) : (
+        hint && <div className="mt-1 text-xs text-slate-500">{hint}</div>
+      )}
     </div>
   )
 }

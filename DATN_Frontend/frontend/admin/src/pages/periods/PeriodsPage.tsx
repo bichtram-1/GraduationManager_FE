@@ -34,6 +34,16 @@ const PeriodsPage = () => {
   const createPeriodMutation = periodHooks.useCreatePeriod();
   const updatePeriodMutation = periodHooks.useUpdatePeriod();
   const deletePeriodMutation = periodHooks.useDeletePeriod();
+  const { data: allPeriodsData } = periodHooks.useFetchListPeriods({
+    page: 1,
+    limit: 100,
+  });
+  const isTabPeriodClosed = useMemo(() => {
+    if (!allPeriodsData || !allPeriodsData.rows) return false;
+    const tabPeriods = allPeriodsData.rows.filter((p: IListPeriod) => p.type === tab);
+    if (tabPeriods.length === 0) return false;
+    return tabPeriods[0].status === STATUS_CODE.CLOSED;
+  }, [allPeriodsData, tab]);
 
   const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
   const [addStudentForm] = Form.useForm();
@@ -61,17 +71,14 @@ const PeriodsPage = () => {
     }));
   }, [searchStudentsList]);
 
-  const { data: allPeriodsData } = periodHooks.useFetchListPeriods({
-    page: 1,
-    limit: 100,
-  });
-
   const periodOptions = useMemo(() => {
     if (!allPeriodsData || !allPeriodsData.rows) return [];
-    return allPeriodsData.rows.map((p: IListPeriod) => ({
-      value: p.id,
-      label: `${p.name} (${p.type === 'tttn' ? 'TTTN' : 'ĐATN'})`,
-    }));
+    return allPeriodsData.rows
+      .filter((p: IListPeriod) => p.status !== STATUS_CODE.CLOSED)
+      .map((p: IListPeriod) => ({
+        value: p.id,
+        label: `${p.name} (${p.type === 'tttn' ? 'TTTN' : 'ĐATN'})`,
+      }));
   }, [allPeriodsData]);
 
   const addStudentMutation = periodHooks.useAddStudentToPeriods();
@@ -169,11 +176,17 @@ const PeriodsPage = () => {
           </div>
           <Button
             type="default"
-            icon={<UserAddOutlined className="text-primary" />}
+            disabled={isTabPeriodClosed}
+            icon={<UserAddOutlined className={isTabPeriodClosed ? 'text-slate-400' : 'text-primary'} />}
             onClick={() => setIsAddStudentModalOpen(true)}
-            className="!h-10 !rounded-[8px] !border-primary !text-primary !px-5 !flex !items-center !gap-2 !font-medium hover:!bg-primary/5 hover:!border-primary/80"
+            className={cn(
+              '!h-10 !rounded-[8px] !px-5 !flex !items-center !gap-2 !font-medium',
+              isTabPeriodClosed
+                ? '!bg-slate-100 !border-slate-200 !text-slate-400 cursor-not-allowed pointer-events-none'
+                : '!border-primary !text-primary hover:!bg-primary/5 hover:!border-primary/80'
+            )}
           >
-            <span className="text-primary text-base font-medium text-center w-full">
+            <span className={cn('text-base font-medium text-center w-full', isTabPeriodClosed ? 'text-slate-400' : 'text-primary')}>
               Thêm sinh viên thủ công
             </span>
           </Button>
@@ -189,6 +202,7 @@ const PeriodsPage = () => {
           title={t(getKey('period_list'))}
           pageTitle={t(getKey('period_management'))}
           createButtonLabel={tab === 'tttn' ? 'Tạo đợt TTTN mới' : 'Tạo đợt ĐATN mới'}
+          isCreateDisabled={isTabPeriodClosed}
           columns={columns}
           useQueryHook={periodHooks.useFetchListPeriods}
           paramVariables={listParams}
@@ -225,6 +239,7 @@ const PeriodsPage = () => {
             isDetail: true,
             isEdit: true,
             isDelete: true,
+            isEditDisabled: (record) => (record as IListPeriod).status === STATUS_CODE.CLOSED,
             isDeleteDisabled: (record) => (record as IListPeriod).status === STATUS_CODE.CLOSED,
           }}
           detailInfo={{ type: 'modal', modalInfo: { modalContent: <PeriodForm tab={tab} disabled />, modalProps: { centered: true, width: 820, title: t(getKey('detail_period')), footer: null }, modalFunc: periodHooks.useFetchDetailPeriod as unknown as (id: string, enable: boolean) => import('@tanstack/react-query').UseQueryResult<IDetailPeriod, Error> } }}

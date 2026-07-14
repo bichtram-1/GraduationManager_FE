@@ -12,6 +12,7 @@ interface IBasePeriod {
   endDate: string;
   regDeadline: string;
   regOpenDate?: string;
+  reportStartDate?: string;
   reportDeadline?: string;
   gradingStartDate?: string;
   gradingEndDate?: string;

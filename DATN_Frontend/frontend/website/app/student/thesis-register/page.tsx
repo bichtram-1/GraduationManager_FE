@@ -5,7 +5,7 @@ import { topicApi } from '@/lib/api/topicApi'
 import { studentApi, IThesisRegistration } from '@/lib/api/studentApi'
 import Link from 'next/link'
 import { CalendarDays, CheckCircle2, Clock3, Users } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { StudentPill, StudentSectionHeader } from '../_components/StudentShell'
 import { StudentButton, StudentModal } from '../_components/StudentUI'
 import { COMMON_LABELS } from '@/constants/commonLabels'
@@ -42,6 +42,57 @@ export default function ThesisRegisterPage() {
   const { message } = App.useApp()
   const { selectedPeriod } = usePeriod()
   const isPeriodLocked = selectedPeriod?.status === 'grading' || selectedPeriod?.status === 'closed'
+  const isRegistrationTime = useMemo(() => {
+    if (!selectedPeriod) return { isOpen: false, isClosed: false }
+    const { regOpenDate, regDeadline } = selectedPeriod
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    let isOpen = true
+    let isClosed = false
+    if (regOpenDate) {
+      const parts = regOpenDate.split('/')
+      if (parts.length === 3) {
+        const day = parseInt(parts[0], 10)
+        const month = parseInt(parts[1], 10) - 1
+        const year = parseInt(parts[2], 10)
+        const openDate = new Date(year, month, day)
+        openDate.setHours(0, 0, 0, 0)
+        if (today.getTime() < openDate.getTime()) {
+          isOpen = false
+        }
+      }
+    }
+    if (regDeadline) {
+      const parts = regDeadline.split('/')
+      if (parts.length === 3) {
+        const day = parseInt(parts[0], 10)
+        const month = parseInt(parts[1], 10) - 1
+        const year = parseInt(parts[2], 10)
+        const deadlineDate = new Date(year, month, day)
+        deadlineDate.setHours(23, 59, 59, 999)
+        if (today.getTime() > deadlineDate.getTime()) {
+          isClosed = true
+        }
+      }
+    }
+    return { isOpen, isClosed }
+  }, [selectedPeriod])
+  const isActionDisabled = isPeriodLocked || !isRegistrationTime.isOpen || isRegistrationTime.isClosed
+  const showDeadlineWarning = useMemo(() => {
+    if (!selectedPeriod?.regDeadline) return false
+    const parts = selectedPeriod.regDeadline.split('/')
+    if (parts.length !== 3) return false
+    const day = parseInt(parts[0], 10)
+    const month = parseInt(parts[1], 10) - 1
+    const year = parseInt(parts[2], 10)
+    const deadlineDate = new Date(year, month, day)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    deadlineDate.setHours(0, 0, 0, 0)
+    const diffTime = deadlineDate.getTime() - today.getTime()
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    return diffDays >= 0 && diffDays <= 3
+  }, [selectedPeriod])
   const [topics, setTopics] = useState<Topic[]>([])
   const [loading, setLoading] = useState(true)
   const [registration, setRegistration] = useState<Registration | null>(null)
@@ -174,6 +225,25 @@ export default function ThesisRegisterPage() {
         description="Chọn đề tài bạn muốn đăng ký hoặc chuyển sang tạo nhóm nếu cần mời thành viên."
       />
 
+      {!isPeriodLocked && !isRegistrationTime.isOpen && (
+        <div className="mb-5 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-700 font-semibold">
+          ℹ️ Cổng đăng ký đề tài ĐATN chưa mở. Thời gian mở đăng ký: {selectedPeriod?.regOpenDate}.
+        </div>
+      )}
+
+      {!isPeriodLocked && isRegistrationTime.isClosed && (
+        <div className="mb-5 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700 font-semibold">
+          ⚠️ Cổng đăng ký đề tài ĐATN đã đóng do hết hạn (Hạn chót: {selectedPeriod?.regDeadline}). Bạn không thể đăng ký/hủy đề tài hoặc rời nhóm nữa.
+        </div>
+      )}
+
+      {!isPeriodLocked && !isRegistrationTime.isClosed && showDeadlineWarning && (
+        <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 font-semibold flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full bg-red-500 animate-ping" />
+          <span>Chú ý: Sắp đến hạn đăng ký đề tài đồ án tốt nghiệp! Hạn chót: {selectedPeriod?.regDeadline}. Vui lòng hoàn tất đăng ký sớm!</span>
+        </div>
+      )}
+
       {isPeriodLocked && (
         <div className="mb-5 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
           {selectedPeriod?.status === 'closed'
@@ -214,7 +284,7 @@ export default function ThesisRegisterPage() {
               </div>
             </div>
           </div>
-          {registration && registration.status !== 'accepted' && !isPeriodLocked && (
+          {registration && registration.status !== 'accepted' && !isActionDisabled && (
             <div className="mt-4 flex justify-end">
               <button
                 type="button"
@@ -262,8 +332,8 @@ export default function ThesisRegisterPage() {
               const isCurrentTopic = registration?.topicId === t.id
               return (
                 <div key={t.id} className="rounded-[18px] border border-slate-100 bg-white p-6 shadow-sm">
-                  <div className="flex items-start justify-between">
-                    <div>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
                       <a className="text-[#2196F3] font-medium text-sm">{t.code || t.id}</a>
                       <h3 className="mt-2 text-lg font-semibold text-slate-900">{t.title}</h3>
                       <div className="mt-2 text-xs text-slate-500">{teacher} • Số lượng: {used}/{maxSlots} sinh viên</div>
@@ -274,8 +344,8 @@ export default function ThesisRegisterPage() {
                         </div>
                       )}
                     </div>
-                    <div>
-                      <div className={`rounded-full px-3 py-1 text-xs font-medium ${hasSlot ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
+                    <div className="shrink-0">
+                      <div className={`whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium ${hasSlot ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
                         {hasSlot ? 'Còn nhận' : 'Đủ số lượng'}
                       </div>
                     </div>
@@ -285,17 +355,17 @@ export default function ThesisRegisterPage() {
                     <button className="flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Xem chi tiết</button>
                     {!isCurrentTopic ? (
                       <button
-                        disabled={(!!registration && registration.status === 'accepted') || isPeriodLocked}
+                        disabled={(!!registration && registration.status === 'accepted') || isActionDisabled}
                         onClick={() => handleRegister(t.id)}
-                        className={`flex-1 rounded-2xl px-4 py-2 text-sm font-medium shadow-sm transition ${(!!registration && registration.status === 'accepted') || isPeriodLocked ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-[#2196F3] text-white hover:bg-[#1976D2]'}`}
+                        className={`flex-1 rounded-2xl px-4 py-2 text-sm font-medium shadow-sm transition ${(!!registration && registration.status === 'accepted') || isActionDisabled ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-[#2196F3] text-white hover:bg-[#1976D2]'}`}
                       >
                         Đăng ký
                       </button>
                     ) : (
                       <button
-                        disabled={registration?.status === 'accepted' || isPeriodLocked}
+                        disabled={registration?.status === 'accepted' || isActionDisabled}
                         onClick={() => setConfirmAction({ type: 'cancelTopic' })}
-                        className={`flex-1 rounded-2xl border px-4 py-2 text-sm font-medium transition ${registration?.status === 'accepted' || isPeriodLocked ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
+                        className={`flex-1 rounded-2xl border px-4 py-2 text-sm font-medium transition ${registration?.status === 'accepted' || isActionDisabled ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
                       >
                         {registration?.status === 'accepted' ? 'Đã khóa đề tài' : 'Hủy đăng ký'}
                       </button>
@@ -320,7 +390,7 @@ export default function ThesisRegisterPage() {
             <div className="text-sm font-semibold text-slate-900">Cần tạo nhóm trước khi đăng ký?</div>
             <div className="mt-1 text-sm text-slate-600">Nếu đề tài yêu cầu mời thêm thành viên, hãy chuyển sang bước tạo nhóm để đồng bộ trạng thái duyệt.</div>
           </div>
-          {isPeriodLocked ? (
+          {isActionDisabled ? (
             <button
               type="button"
               disabled

@@ -1,8 +1,8 @@
 "use client"
 
 import { useMemo, useState, useEffect } from 'react'
-import { ArrowLeft, CheckCircle2, Clock3, Mail, Plus, XCircle } from 'lucide-react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { CheckCircle2, Clock3, Mail, Plus, XCircle } from 'lucide-react'
+import { useSearchParams } from 'next/navigation'
 import { StudentPill, StudentSectionHeader } from '../_components/StudentShell'
 import { StudentButton, StudentModal } from '../_components/StudentUI'
 import { studentApi, IThesisRegistration } from '@/lib/api/studentApi'
@@ -25,11 +25,46 @@ const INVITE_STATUS_META: Record<Invite['status'], { label: string; tone: 'green
 }
 
 export default function InvitePage() {
-  const router = useRouter()
   const params = useSearchParams()
   const { message } = App.useApp()
   const { selectedPeriod } = usePeriod()
   const isPeriodLocked = selectedPeriod?.status === 'grading' || selectedPeriod?.status === 'closed'
+  const isRegistrationTime = useMemo(() => {
+    if (!selectedPeriod) return { isOpen: false, isClosed: false }
+    const { regOpenDate, regDeadline } = selectedPeriod
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    let isOpen = true
+    let isClosed = false
+    if (regOpenDate) {
+      const parts = regOpenDate.split('/')
+      if (parts.length === 3) {
+        const day = parseInt(parts[0], 10)
+        const month = parseInt(parts[1], 10) - 1
+        const year = parseInt(parts[2], 10)
+        const openDate = new Date(year, month, day)
+        openDate.setHours(0, 0, 0, 0)
+        if (today.getTime() < openDate.getTime()) {
+          isOpen = false
+        }
+      }
+    }
+    if (regDeadline) {
+      const parts = regDeadline.split('/')
+      if (parts.length === 3) {
+        const day = parseInt(parts[0], 10)
+        const month = parseInt(parts[1], 10) - 1
+        const year = parseInt(parts[2], 10)
+        const deadlineDate = new Date(year, month, day)
+        deadlineDate.setHours(23, 59, 59, 999)
+        if (today.getTime() > deadlineDate.getTime()) {
+          isClosed = true
+        }
+      }
+    }
+    return { isOpen, isClosed }
+  }, [selectedPeriod])
+  const isActionDisabled = isPeriodLocked || !isRegistrationTime.isOpen || isRegistrationTime.isClosed
 
   const [newId, setNewId] = useState('')
   const [outgoingInvites, setOutgoingInvites] = useState<Invite[]>([])
@@ -168,6 +203,18 @@ export default function InvitePage() {
         }
       />
 
+      {!isPeriodLocked && !isRegistrationTime.isOpen && (
+        <div className="mb-5 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-700 font-semibold">
+          ℹ️ Cổng đăng ký đề tài ĐATN chưa mở. Bạn chưa thể gửi lời mời hoặc tạo nhóm. Thời gian mở đăng ký: {selectedPeriod?.regOpenDate}.
+        </div>
+      )}
+
+      {!isPeriodLocked && isRegistrationTime.isClosed && (
+        <div className="mb-5 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700 font-semibold">
+          ⚠️ Cổng đăng ký đề tài ĐATN đã đóng do hết hạn (Hạn chót: {selectedPeriod?.regDeadline}). Bạn không thể gửi lời mời, tham gia nhóm hoặc rời nhóm nữa.
+        </div>
+      )}
+
       {isPeriodLocked && (
         <div className="mb-5 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
           {selectedPeriod?.status === 'closed'
@@ -188,21 +235,49 @@ export default function InvitePage() {
             </div>
           </div>
           <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[420px]">
-            <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
-              <div className="text-xs text-slate-500">Lời mời gửi đi</div>
-              <div className="mt-2 text-lg font-semibold text-slate-900">{outgoingCount}</div>
+            <div className="flex flex-col justify-between gap-2 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
+              <div className="text-xs leading-tight text-slate-500">Lời mời gửi đi</div>
+              <div className="text-lg font-semibold text-slate-900">{outgoingCount}</div>
             </div>
-            <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
-              <div className="text-xs text-slate-500">Lời mời chờ</div>
-              <div className="mt-2 text-lg font-semibold text-slate-900">{pendingOutgoing}</div>
+            <div className="flex flex-col justify-between gap-2 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
+              <div className="text-xs leading-tight text-slate-500">Lời mời chờ</div>
+              <div className="text-lg font-semibold text-slate-900">{pendingOutgoing}</div>
             </div>
-            <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
-              <div className="text-xs text-slate-500">Lời mời nhận được</div>
-              <div className="mt-2 text-lg font-semibold text-slate-900">{incomingCount}</div>
+            <div className="flex flex-col justify-between gap-2 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
+              <div className="text-xs leading-tight text-slate-500">Lời mời nhận được</div>
+              <div className="text-lg font-semibold text-slate-900">{incomingCount}</div>
             </div>
           </div>
         </div>
       </div>
+
+      {registration ? (
+        <div className="mb-6 rounded-[28px] border border-emerald-100 bg-emerald-50/30 p-5 shadow-[0_12px_40px_rgba(16,185,129,0.03)]">
+          <h3 className="text-sm font-semibold text-emerald-950 flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+            Đã tạo nhóm thành công ({registration.groupName})
+          </h3>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {registration.members?.map((member) => (
+              <span key={member.studentCode} className="inline-flex items-center gap-1.5 rounded-xl bg-white border border-emerald-200 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                <span className="font-semibold text-slate-900">{member.name}</span>
+                <span className="text-slate-400">({member.studentCode})</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="mb-6 rounded-[28px] border border-slate-200 bg-slate-50/50 p-5">
+          <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-slate-400" />
+            Trạng thái nhóm: Chưa có nhóm
+          </h3>
+          <p className="mt-1.5 text-xs text-slate-500">
+            Hãy nhập mã số sinh viên của bạn cùng lớp ở khung &quot;Mời thành viên&quot; để tạo nhóm, hoặc chờ nhận lời mời gia nhập từ các nhóm khác.
+          </p>
+        </div>
+      )}
 
       <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
@@ -215,12 +290,6 @@ export default function InvitePage() {
           </div>
 
           <div className="space-y-4 p-5">
-            <div className="flex items-center gap-3">
-              <button onClick={() => router.back()} className="inline-flex items-center gap-2 text-sm text-slate-600">
-                <ArrowLeft className="h-4 w-4" /> Quay lại
-              </button>
-            </div>
-
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
                 <div className="text-xs text-slate-500">Đợt đang chọn</div>
@@ -243,12 +312,12 @@ export default function InvitePage() {
                 value={newId}
                 onChange={(event) => setNewId(event.target.value)}
                 placeholder="Nhập MSSV thành viên, ví dụ 20520005"
-                disabled={isPeriodLocked}
+                disabled={isActionDisabled}
                 className="flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-white disabled:cursor-not-allowed disabled:opacity-60"
               />
               <button
                 onClick={addInvite}
-                disabled={isPeriodLocked}
+                disabled={isActionDisabled}
                 className="inline-flex items-center gap-2 rounded-2xl bg-[#2196F3] px-4 py-2 text-white shadow-lg shadow-blue-200 transition hover:bg-[#1976D2] disabled:cursor-not-allowed disabled:bg-slate-300"
               >
                 <Plus className="h-4 w-4" />
@@ -267,7 +336,7 @@ export default function InvitePage() {
                     <StudentPill tone={INVITE_STATUS_META[invite.status].tone}>
                       {INVITE_STATUS_META[invite.status].label}
                     </StudentPill>
-                    {invite.status === 'pending' && invite.inviteId && !isPeriodLocked && (
+                    {invite.status === 'pending' && invite.inviteId && !isActionDisabled && (
                       <button
                         type="button"
                         onClick={() => setCancelInviteId(invite.inviteId!)}
@@ -309,7 +378,7 @@ export default function InvitePage() {
                     <button
                       type="button"
                       onClick={() => handleReject(invite.id)}
-                      disabled={invite.status !== 'pending' || isPeriodLocked}
+                      disabled={invite.status !== 'pending' || isActionDisabled}
                       className="inline-flex items-center gap-2 rounded-2xl border border-red-200 px-4 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <XCircle className="h-4 w-4" />
@@ -318,7 +387,7 @@ export default function InvitePage() {
                     <button
                       type="button"
                       onClick={() => handleAccept(invite.id)}
-                      disabled={invite.status !== 'pending' || isPeriodLocked}
+                      disabled={invite.status !== 'pending' || isActionDisabled}
                       className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:bg-slate-300"
                     >
                       <CheckCircle2 className="h-4 w-4" />

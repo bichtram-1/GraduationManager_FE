@@ -93,19 +93,19 @@ export default function StudentIndexPage() {
                 ? `Yêu cầu tự khai báo thực tập tại ${tttn.companyName} đang chờ duyệt.`
                 : 'Bạn chưa đăng ký nơi thực tập.'}
               {' '}
+              {tttn.hasPeriod && (
+                tttn.supervisorTeacher
+                  ? `Giảng viên hướng dẫn TTTN (nhà trường phân công): ${tttn.supervisorTeacher}.`
+                  : 'Nhà trường chưa công bố giảng viên hướng dẫn TTTN cho bạn.'
+              )}
+            </p>
+            <p className="mt-1 text-sm leading-6 text-slate-600">
               {datn.status === 'Đã đăng ký'
                 ? `Đề tài đồ án: "${datn.topicTitle}" (Giảng viên hướng dẫn: ${datn.instructor}).`
                 : datn.hasPeriod
                 ? 'Bạn chưa đăng ký đề tài đồ án tốt nghiệp.'
                 : ''}
             </p>
-            {tttn.hasPeriod && (
-              <p className="mt-1 text-sm leading-6 text-slate-600">
-                {tttn.supervisorTeacher
-                  ? `Giảng viên hướng dẫn TTTN (nhà trường phân công): ${tttn.supervisorTeacher}.`
-                  : 'Nhà trường chưa công bố giảng viên hướng dẫn TTTN cho bạn.'}
-              </p>
-            )}
           </div>
           <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[420px]">
             <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
