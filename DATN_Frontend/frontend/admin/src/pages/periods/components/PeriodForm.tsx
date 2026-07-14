@@ -452,17 +452,9 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
         >
           <CustomDatePicker disabled={disabled} />
         </Form.Item>
-        <Form.Item name="status" label={t(getKey('status'))} rules={[{ required: true, message: t(getKey('please_select_status')) }]}>
-          <Select disabled={disabled} options={[
-            { value: STATUS_CODE.OPEN, label: t(getKey('period_status_open')) },
-            { value: STATUS_CODE.PUBLISHED, label: t(getKey('period_status_published')) },
-            { value: STATUS_CODE.GRADING, label: t(getKey('period_status_grading')) },
-            { value: STATUS_CODE.CLOSED, label: t(getKey('period_status_closed')) }
-          ]} />
-        </Form.Item>
       </div>
 
-      <Divider orientation="left" className="!text-sm !text-slate-500">Mốc báo cáo & chấm điểm</Divider>
+      <Divider orientation="left" className="!text-sm !text-slate-500">Mốc báo cáo, phản biện & bảo vệ</Divider>
 
       <div className="grid grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-2">
         <Form.Item
@@ -490,9 +482,10 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
         >
           <CustomDatePicker disabled={disabled} />
         </Form.Item>
+
         <Form.Item
-          name="gradingStartDate"
-          label="Bắt đầu chấm điểm"
+          name="reviewStartDate"
+          label="Bắt đầu phản biện"
           dependencies={['reportDeadline', 'endDate']}
           rules={[
             ({ getFieldValue }) => ({
@@ -502,7 +495,111 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
                 if (value) {
                   const valDate = dayjs(value, DATE_DISPLAY_FORMAT, true);
                   if (report && !valDate.isAfter(dayjs(report, DATE_DISPLAY_FORMAT, true))) {
-                    return Promise.reject(new Error('Ngày bắt đầu chấm điểm phải sau hạn nộp báo cáo tiến độ'));
+                    return Promise.reject(new Error('Ngày bắt đầu phản biện phải sau hạn nộp báo cáo tiến độ'));
+                  }
+                  if (end && !valDate.isBefore(dayjs(end, DATE_DISPLAY_FORMAT, true))) {
+                    return Promise.reject(new Error('Ngày bắt đầu phản biện phải trước ngày kết thúc đợt học'));
+                  }
+                }
+                return Promise.resolve();
+              },
+            }),
+          ]}
+        >
+          <CustomDatePicker disabled={disabled} />
+        </Form.Item>
+
+        <Form.Item
+          name="reviewEndDate"
+          label="Kết thúc phản biện"
+          dependencies={['reviewStartDate', 'endDate']}
+          rules={[
+            ({ getFieldValue }) => ({
+              validator(_, value) {
+                const start = getFieldValue('reviewStartDate');
+                const end = getFieldValue('endDate');
+                if (value) {
+                  const valDate = dayjs(value, DATE_DISPLAY_FORMAT, true);
+                  if (start && !valDate.isAfter(dayjs(start, DATE_DISPLAY_FORMAT, true))) {
+                    return Promise.reject(new Error('Ngày kết thúc phản biện phải sau ngày bắt đầu phản biện'));
+                  }
+                  if (end && !valDate.isBefore(dayjs(end, DATE_DISPLAY_FORMAT, true))) {
+                    return Promise.reject(new Error('Ngày kết thúc phản biện phải trước ngày kết thúc đợt học'));
+                  }
+                }
+                return Promise.resolve();
+              },
+            }),
+          ]}
+        >
+          <CustomDatePicker disabled={disabled} />
+        </Form.Item>
+
+        <Form.Item
+          name="defenseStartDate"
+          label="Bắt đầu bảo vệ"
+          dependencies={['reviewEndDate', 'endDate']}
+          rules={[
+            ({ getFieldValue }) => ({
+              validator(_, value) {
+                const reviewEnd = getFieldValue('reviewEndDate');
+                const end = getFieldValue('endDate');
+                if (value) {
+                  const valDate = dayjs(value, DATE_DISPLAY_FORMAT, true);
+                  if (reviewEnd && !valDate.isAfter(dayjs(reviewEnd, DATE_DISPLAY_FORMAT, true))) {
+                    return Promise.reject(new Error('Ngày bắt đầu bảo vệ phải sau ngày kết thúc phản biện'));
+                  }
+                  if (end && !valDate.isBefore(dayjs(end, DATE_DISPLAY_FORMAT, true))) {
+                    return Promise.reject(new Error('Ngày bắt đầu bảo vệ phải trước ngày kết thúc đợt học'));
+                  }
+                }
+                return Promise.resolve();
+              },
+            }),
+          ]}
+        >
+          <CustomDatePicker disabled={disabled} />
+        </Form.Item>
+
+        <Form.Item
+          name="defenseEndDate"
+          label="Kết thúc bảo vệ"
+          dependencies={['defenseStartDate', 'endDate']}
+          rules={[
+            ({ getFieldValue }) => ({
+              validator(_, value) {
+                const start = getFieldValue('defenseStartDate');
+                const end = getFieldValue('endDate');
+                if (value) {
+                  const valDate = dayjs(value, DATE_DISPLAY_FORMAT, true);
+                  if (start && !valDate.isAfter(dayjs(start, DATE_DISPLAY_FORMAT, true))) {
+                    return Promise.reject(new Error('Ngày kết thúc bảo vệ phải sau ngày bắt đầu bảo vệ'));
+                  }
+                  if (end && !valDate.isBefore(dayjs(end, DATE_DISPLAY_FORMAT, true))) {
+                    return Promise.reject(new Error('Ngày kết thúc bảo vệ phải trước ngày kết thúc đợt học'));
+                  }
+                }
+                return Promise.resolve();
+              },
+            }),
+          ]}
+        >
+          <CustomDatePicker disabled={disabled} />
+        </Form.Item>
+
+        <Form.Item
+          name="gradingStartDate"
+          label="Bắt đầu chấm điểm"
+          dependencies={['defenseEndDate', 'endDate']}
+          rules={[
+            ({ getFieldValue }) => ({
+              validator(_, value) {
+                const defenseEnd = getFieldValue('defenseEndDate');
+                const end = getFieldValue('endDate');
+                if (value) {
+                  const valDate = dayjs(value, DATE_DISPLAY_FORMAT, true);
+                  if (defenseEnd && !valDate.isAfter(dayjs(defenseEnd, DATE_DISPLAY_FORMAT, true))) {
+                    return Promise.reject(new Error('Ngày bắt đầu chấm điểm phải sau ngày kết thúc bảo vệ'));
                   }
                   if (end && !valDate.isBefore(dayjs(end, DATE_DISPLAY_FORMAT, true))) {
                     return Promise.reject(new Error('Ngày bắt đầu chấm điểm phải trước ngày kết thúc đợt học'));
@@ -515,6 +612,7 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
         >
           <CustomDatePicker disabled={disabled} />
         </Form.Item>
+
         <Form.Item
           name="gradingEndDate"
           label="Kết thúc chấm điểm"
