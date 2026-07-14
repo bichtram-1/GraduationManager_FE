@@ -4,6 +4,11 @@
 @tailwind components;
 @tailwind utilities;
 
+body {
+  margin: 0;
+  padding: 0;
+}
+
 :root {
   --color-primary: #155dfc;
   --color-blue-medium: #3b82f6;
@@ -263,4 +268,13 @@
 .ant-select-disabled .ant-select-selector {
   background-color: #f8fafc !important;
   border-color: #e2e8f0 !important;
+}
+
+/* Hide scrollbars class */
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+}
+.no-scrollbar {
+  -ms-overflow-style: none !important;  /* IE and Edge */
+  scrollbar-width: none !important;  /* Firefox */
 }

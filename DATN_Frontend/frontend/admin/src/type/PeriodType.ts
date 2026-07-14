@@ -15,6 +15,10 @@ interface IBasePeriod {
   reportDeadline?: string;
   gradingStartDate?: string;
   gradingEndDate?: string;
+  reviewStartDate?: string;
+  reviewEndDate?: string;
+  defenseStartDate?: string;
+  defenseEndDate?: string;
   semester?: Semester;
   schoolYear?: string;
   studentListUrl?: string;

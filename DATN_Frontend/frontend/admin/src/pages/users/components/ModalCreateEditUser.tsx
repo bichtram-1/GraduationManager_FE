@@ -47,18 +47,14 @@ const ModalCreateEditUser = ({ mode = 'create', role }: IModalCreateEditUser) =>
   const mssvValue = Form.useWatch('id', form);
 
   useEffect(() => {
-    if (role === USER_ROLE.STUDENT && isCreateMode && mssvValue) {
-      form.setFieldValue('email', `${mssvValue}@caothang.edu.vn`);
+    if (form && role === USER_ROLE.STUDENT && isCreateMode) {
+      form.setFieldValue('email', mssvValue ? `${mssvValue}@caothang.edu.vn` : '');
       form.validateFields(['email']).catch(() => {});
     }
   }, [mssvValue, role, isCreateMode, form]);
 
-  if (!form) {
-    return null;
-  }
-
   useEffect(() => {
-    if (!isCreateMode) return;
+    if (!form || !isCreateMode) return;
 
     if (!form.getFieldValue('role')) {
       form.setFieldValue('role', role);
@@ -67,6 +63,10 @@ const ModalCreateEditUser = ({ mode = 'create', role }: IModalCreateEditUser) =>
       form.setFieldValue('status', 'active');
     }
   }, [form, isCreateMode, role]);
+
+  if (!form) {
+    return null;
+  }
 
   const titleText = useMemo(() => {
     const isStudent = role === USER_ROLE.STUDENT;
@@ -146,12 +146,15 @@ const ModalCreateEditUser = ({ mode = 'create', role }: IModalCreateEditUser) =>
               name="phone"
               className="flex-1"
               rules={[
-                { pattern: /^[0-9]*$/, message: 'Số điện thoại chỉ được chứa các chữ số!' },
-                { len: 10, message: 'Số điện thoại phải có đúng 10 chữ số!' }
+                {
+                  pattern: /^0[0-9]{9}$/,
+                  message: 'Số điện thoại phải gồm 10 chữ số và bắt đầu bằng số 0!',
+                },
               ]}
             >
               <CustomInput
                 placeholder="Ví dụ: 0901234567"
+                maxLength={10}
                 readOnly={isDetailMode}
               />
             </Form.Item>
@@ -304,7 +307,7 @@ const ModalCreateEditUser = ({ mode = 'create', role }: IModalCreateEditUser) =>
             >
               <CustomInput
                 placeholder="Email đăng nhập"
-                readOnly={isEditMode || isDetailMode}
+                readOnly={true}
               />
             </Form.Item>
 
@@ -333,12 +336,15 @@ const ModalCreateEditUser = ({ mode = 'create', role }: IModalCreateEditUser) =>
               name="phone"
               className="flex-1"
               rules={[
-                { pattern: /^[0-9]*$/, message: 'Số điện thoại chỉ được chứa các chữ số!' },
-                { len: 10, message: 'Số điện thoại phải có đúng 10 chữ số!' }
+                {
+                  pattern: /^0[0-9]{9}$/,
+                  message: 'Số điện thoại phải gồm 10 chữ số và bắt đầu bằng số 0!',
+                },
               ]}
             >
               <CustomInput
                 placeholder="Ví dụ: 0901234567"
+                maxLength={10}
                 readOnly={isDetailMode}
               />
             </Form.Item>
@@ -363,6 +369,7 @@ const ModalCreateEditUser = ({ mode = 'create', role }: IModalCreateEditUser) =>
               name="dateOfBirth"
               className="flex-1"
               rules={[
+                { required: isCreateMode, message: 'Vui lòng nhập ngày sinh!' },
                 () => ({
                   validator(_, value) {
                     if (value) {
@@ -371,6 +378,17 @@ const ModalCreateEditUser = ({ mode = 'create', role }: IModalCreateEditUser) =>
                       today.setHours(0, 0, 0, 0);
                       if (selectedDate > today) {
                         return Promise.reject(new Error('Ngày sinh không hợp lệ!'));
+                      }
+
+                      const minBirthDate = new Date(
+                        today.getFullYear() - 18,
+                        today.getMonth(),
+                        today.getDate()
+                      );
+                      if (selectedDate > minBirthDate) {
+                        return Promise.reject(
+                          new Error('Sinh viên phải đủ 18 tuổi trở lên!')
+                        );
                       }
                     }
                     return Promise.resolve();

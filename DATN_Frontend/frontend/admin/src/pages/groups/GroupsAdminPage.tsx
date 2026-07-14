@@ -118,9 +118,9 @@ const GroupsAdminPage: React.FC = () => {
       render: (_: unknown, __: unknown, index: number) => <span className="font-semibold text-slate-500">{index + 1}</span>,
     },
     { title: t(getKey('topic_name')), dataIndex: 'title', key: 'title', ellipsis: true, render: (tText: string) => <div className="font-semibold text-slate-900">{tText}</div> },
-    { title: 'GVHD', dataIndex: 'supervisor', key: 'supervisor', ellipsis: true, render: (s: string) => <span className="font-medium text-slate-700">{s}</span> },
+    { title: 'GVHD', dataIndex: 'supervisor', key: 'supervisor', width: 200, className: 'whitespace-nowrap', render: (s: string) => <span className="font-medium text-slate-700">{s}</span> },
     {
-      title: t(getKey('members')),
+      title: 'SVTH',
       key: 'members',
       render: (_: unknown, record: IListGroup) => (
         <div className="flex flex-col gap-1">
