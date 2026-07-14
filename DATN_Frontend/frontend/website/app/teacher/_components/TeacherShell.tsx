@@ -145,6 +145,7 @@ export function TeacherShell({ children }: { children: ReactNode }) {
                 className="w-full min-w-0"
                 placeholder="Chọn đợt hoạt động"
                 value={selectedPeriod?.id}
+                labelRender={() => selectedPeriod?.name ?? 'Chọn đợt hoạt động'}
                 onChange={(id) => {
                   const period = periods.find((p) => p.id === id)
                   setSelectedPeriod(period)
@@ -180,7 +181,7 @@ export function TeacherShell({ children }: { children: ReactNode }) {
 
           <div className="relative flex items-center gap-3">
             <div className="hidden text-right sm:block">
-              <div className="text-sm font-medium leading-tight">{teacher ? `${teacher.degree}. ${teacher.name}` : 'Đang tải...'}</div>
+              <div className="text-sm font-medium leading-tight">{teacher ? `${teacher.degree ? teacher.degree + '. ' : ''}${teacher.name}` : 'Đang tải...'}</div>
               <div className="text-xs text-slate-500">{teacher?.email || ''}</div>
             </div>
             <button
@@ -206,7 +207,7 @@ export function TeacherShell({ children }: { children: ReactNode }) {
                   <div className="flex items-center gap-3">
                     <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15 text-lg font-semibold">{shortName}</div>
                     <div className="min-w-0">
-                      <div className="font-semibold leading-tight">{teacher ? `${teacher.degree}. ${teacher.name}` : 'Đang tải...'}</div>
+                      <div className="font-semibold leading-tight">{teacher ? `${teacher.degree ? teacher.degree + ' ' : ''}${teacher.name}` : 'Đang tải...'}</div>
                       <div className="text-xs opacity-90">Giảng viên</div>
                     </div>
                   </div>

@@ -11,7 +11,7 @@ export const useUpload = () => {
   const { loadingUpload, setLoadingUpload } = useGlobalVariable();
 
   return useMutation<
-    any,
+    { data?: FileUploadData },
     Error,
     {
       params: UploadProps;
@@ -21,7 +21,7 @@ export const useUpload = () => {
     }
   >({
     mutationFn: (variables) =>
-      uploadApi.upload(variables.params),
+      uploadApi.upload(variables.params) as Promise<{ data?: FileUploadData }>,
     onMutate: async (variables) => {
       const { key } = variables;
       if (loadingUpload) {
@@ -29,7 +29,7 @@ export const useUpload = () => {
       }
     },
     onSuccess: (
-      res: any,
+      res,
       variables
     ) => {
       const { key, type, index } = variables;
@@ -38,7 +38,7 @@ export const useUpload = () => {
         (_oldData: FileUploadData[] | undefined) => {
           const currentData =
             (queryClient.getQueryData([key]) as FileUploadData[]) ?? [];
-          const newValue: FileUploadData[] = [res?.data]; // res?.data? là object chứa url
+          const newValue: FileUploadData[] = res?.data ? [res.data] : [];
           if (type === 'add') {
             currentData[index ?? 0] = newValue?.[0];
             return currentData;

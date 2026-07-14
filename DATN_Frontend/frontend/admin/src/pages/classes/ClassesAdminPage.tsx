@@ -25,9 +25,9 @@ const ClassesAdminPage = () => {
 
   const allRows = classList?.rows ?? [];
 
-  const levels = useMemo(() => Array.from(new Set(allRows.map((c: any) => c.level).filter(Boolean))), [allRows]);
-  const courses = useMemo(() => Array.from(new Set(allRows.map((c: any) => c.course).filter(Boolean))), [allRows]);
-  const majors = useMemo(() => Array.from(new Set(allRows.map((c: any) => c.major).filter(Boolean))), [allRows]);
+  const levels = useMemo(() => Array.from(new Set(allRows.map((c: IListClass) => c.level).filter(Boolean))), [allRows]);
+  const courses = useMemo(() => Array.from(new Set(allRows.map((c: IListClass) => c.course).filter(Boolean))), [allRows]);
+  const majors = useMemo(() => Array.from(new Set(allRows.map((c: IListClass) => c.major).filter(Boolean))), [allRows]);
 
   const useFilteredClassesQuery = (params: BaseListParams) => {
     const typedParams = params as BaseListParams & { keyword?: string; level?: string; course?: string; major?: string; periodId?: string };
@@ -58,7 +58,7 @@ const ClassesAdminPage = () => {
     return {
       ...query,
       data,
-    } as any;
+    } as unknown as import('@tanstack/react-query').UseQueryResult<import('@shared/types/GeneralType').ListResponseTypeObject<IListClass>, Error>;
   };
 
   const columns = [
@@ -76,7 +76,7 @@ const ClassesAdminPage = () => {
 
   return (
     <div>
-      <Card className="overflow-hidden rounded-[18px] border border-slate-100 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
+      <Card className="rounded-[18px] border border-slate-100 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
         <FilterTable<IListClass, IDetailClass, ICreateClass, IUpdateClass>
           title={t(getKey('class_list'))}
           pageTitle={t(getKey('class_management'))}
@@ -104,10 +104,10 @@ const ClassesAdminPage = () => {
               </Form.Item>
             </div>
           )}
-          createInfo={{ type: 'modal', modalInfo: { modalContent: <ClassForm />, modalProps: { centered: true, width: 720, title: t(getKey('create_class')) || 'Thêm lớp học mới' }, modalFunc: create as any } }}
-          updateInfo={{ type: 'modal', modalInfo: { modalContent: <ClassForm />, modalProps: { centered: true, width: 720, title: t(getKey('edit_class')) }, modalFunc: update as any } }}
-          detailInfo={{ type: 'modal', modalInfo: { modalContent: <ClassForm disabled />, modalProps: { centered: true, width: 720, title: t(getKey('detail_class')), footer: null }, modalFunc: classHooks.useFetchDetailClass as any } }}
-          deleteInfo={{ type: 'modal', modalInfo: { modalContent: null, modalProps: {}, modalFunc: del as any } }}
+          createInfo={{ type: 'modal', modalInfo: { modalContent: <ClassForm />, modalProps: { centered: true, width: 720, title: t(getKey('create_class')) || 'Thêm lớp học mới' }, modalFunc: create as unknown as import('@tanstack/react-query').UseMutationResult<IDetailClass, import('axios').AxiosError, { body: ICreateClass; params: import('@shared/types/GeneralType').BaseListParams }> } }}
+          updateInfo={{ type: 'modal', modalInfo: { modalContent: <ClassForm />, modalProps: { centered: true, width: 720, title: t(getKey('edit_class')) }, modalFunc: update as unknown as import('@tanstack/react-query').UseMutationResult<IDetailClass, import('axios').AxiosError, { id: string; body: IUpdateClass; index: number; params: import('@shared/types/GeneralType').BaseListParams }> } }}
+          detailInfo={{ type: 'modal', modalInfo: { modalContent: <ClassForm disabled />, modalProps: { centered: true, width: 720, title: t(getKey('detail_class')), footer: null }, modalFunc: classHooks.useFetchDetailClass as unknown as (id: string, enable: boolean) => import('@tanstack/react-query').UseQueryResult<IDetailClass, Error> } }}
+          deleteInfo={{ type: 'modal', modalInfo: { modalContent: null, modalProps: {}, modalFunc: del as unknown as import('@tanstack/react-query').UseMutationResult<IListClass, import('axios').AxiosError, { id: string; params: import('@shared/types/GeneralType').BaseListParams }> } }}
           formatInitialValues={(c) => ({ name: c?.name ?? '', level: c?.level ?? '', course: c?.course ?? '', major: c?.major ?? '', members: c?.members ?? [], maxStudents: c?.maxStudents ?? 40, status: c?.status ?? STATUS_CODE.ACTIVE_UP })}
           formatFormValues={(v) => v as unknown as ICreateClass}
           actions={{ isDetail: true, isEdit: true, isDelete: true }}

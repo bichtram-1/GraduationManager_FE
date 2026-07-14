@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AxiosError } from 'axios';
-import { councilApi, CouncilRow } from '../api/councilApi';
+import { councilApi, CouncilRow, CouncilTopicInput } from '../api/councilApi';
 
 export const councilHooks = {
   useFetchListCouncils: () => {
@@ -20,7 +20,7 @@ export const councilHooks = {
 
   useCreateCouncil: () => {
     const queryClient = useQueryClient();
-    return useMutation<CouncilRow, AxiosError, { title: string; room: string; date?: string; time?: string; members?: string[]; topics?: any[] }>({
+    return useMutation<CouncilRow, AxiosError, { title: string; room: string; date?: string; time?: string; members?: string[]; topics?: CouncilTopicInput[] }>({
       mutationFn: councilApi.createCouncil,
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['councilsList'] });
@@ -30,7 +30,7 @@ export const councilHooks = {
 
   useUpdateCouncil: () => {
     const queryClient = useQueryClient();
-    return useMutation<CouncilRow, AxiosError, { id: string; body: { title?: string; room?: string; date?: string; time?: string; members?: string[]; topics?: any[]; status?: string } }>({
+    return useMutation<CouncilRow, AxiosError, { id: string; body: { title?: string; room?: string; date?: string; time?: string; members?: string[]; topics?: CouncilTopicInput[]; status?: string } }>({
       mutationFn: councilApi.updateCouncil,
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['councilsList'] });

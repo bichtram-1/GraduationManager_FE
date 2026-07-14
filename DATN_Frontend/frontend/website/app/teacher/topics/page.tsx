@@ -98,15 +98,15 @@ export default function Page() {
           setTopicList(data);
           
           setSelectedTopic((curr) => {
-            if (curr && data.some((t: any) => t.id === curr.id)) {
-              return data.find((t: any) => t.id === curr.id) || data[0];
+            if (curr && data.some((t: Topic) => t.id === curr.id)) {
+              return data.find((t: Topic) => t.id === curr.id) || data[0];
             }
             return data.length > 0 ? data[0] : null;
           });
 
           setViewingTopic((curr) => {
             if (curr) {
-              const updated = data.find((t: any) => t.id === curr.id);
+              const updated = data.find((t: Topic) => t.id === curr.id);
               return updated || null;
             }
             return null;
@@ -223,9 +223,10 @@ export default function Page() {
       } else {
         showNotification(res?.message || 'Import đề tài thất bại!', 'error')
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error(e)
-      showNotification(e?.response?.data?.message || 'Có lỗi xảy ra khi import file!', 'error')
+      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      showNotification(msg || 'Có lỗi xảy ra khi import file!', 'error')
     } finally {
       setSubmitting(false)
     }
@@ -275,8 +276,8 @@ export default function Page() {
       setTopicList(data);
       if (data.length > 0) {
         setSelectedTopic((curr) => {
-          if (editingCode && data.some((t: any) => t.code === editingCode)) {
-            const updated = data.find((t: any) => t.code === editingCode);
+          if (editingCode && data.some((t: Topic) => t.code === editingCode)) {
+            const updated = data.find((t: Topic) => t.code === editingCode);
             if (updated) setViewingTopic(updated);
             return updated || data[0];
           }
@@ -321,7 +322,7 @@ export default function Page() {
             <span className="text-xs font-semibold text-slate-500 shrink-0">Trạng thái:</span>
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as any)}
+              onChange={(e) => setStatusFilter(e.target.value as 'all' | 'Đã duyệt' | 'Chờ duyệt' | 'Từ chối')}
               className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 outline-none focus:border-[#2196F3] shadow-sm cursor-pointer"
             >
               <option value="all">Tất cả ({statusCount.all})</option>

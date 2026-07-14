@@ -1,8 +1,8 @@
 import React from 'react';
-import { Form, Input, Select, Button, Table, Alert, Tag, Divider } from 'antd';
+import { Form, Input, Select, Button, Table, Alert, Tag, Divider, message } from 'antd';
 import dayjs from 'dayjs';
 import { UserAddOutlined, DeleteOutlined, InfoCircleOutlined, SearchOutlined, UserOutlined, PlusOutlined } from '@ant-design/icons';
-import type { BatchType } from '../../../type/PeriodType';
+import type { BatchType, IDetailPeriod } from '../../../type/PeriodType';
 import { useTranslation } from 'react-i18next';
 import { getKey } from '@shared/types/I18nKeyType';
 import { STATUS_CODE, DATE_DISPLAY_FORMAT } from '../../../constants/commonConst';
@@ -12,16 +12,20 @@ import CustomDatePicker from '../../../components/shared/input/CustomDatePicker'
 import type { IListClass } from '../../../type/ClassType';
 import type { IListUser } from 'src/type/UserType';
 
-type ExternalStudent = IListUser & { reason?: string };
+type ExternalStudent = IListUser;
 
 type Props = {
   tab: BatchType;
   disabled?: boolean;
+  detail?: IDetailPeriod;
 };
 
-const PeriodForm: React.FC<Props> = ({ tab, disabled }) => {
+const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail }) => {
   const { t } = useTranslation();
   const form = Form.useFormInstance();
+
+  const isClosed = detail?.status === STATUS_CODE.CLOSED;
+  const disabled = initialDisabled || isClosed;
 
   const [searchKeyword, setSearchKeyword] = React.useState('');
   const [selectedStudent, setSelectedStudent] = React.useState<IListUser | null>(null);
@@ -67,14 +71,61 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled }) => {
     return selectedClasses.some((c) => c.name === student.className);
   };
 
+  // Automatically remove manual students if their class is selected
+  React.useEffect(() => {
+    if (disabled) return;
+    if (!externalStudents || externalStudents.length === 0) return;
+
+    // Check if the current form values match the initial db detail values.
+    // If they are unchanged, it means it is the initial load, so we skip execution.
+    const initialClassIds = detail?.classIds || [];
+    const isClassIdsUnchanged = initialClassIds.length === selectedClassIds.length &&
+      initialClassIds.every((id) => selectedClassIds.includes(id));
+
+    const initialExternalStudentIds = detail?.externalStudentIds || [];
+    const isExternalStudentsUnchanged = initialExternalStudentIds.length === externalStudentIds.length &&
+      initialExternalStudentIds.every((id) => externalStudentIds.includes(id));
+
+    if (isClassIdsUnchanged && isExternalStudentsUnchanged) {
+      return;
+    }
+
+    const selectedClassesNames = selectedClasses.map((c) => c.name);
+    const duplicates = externalStudents.filter((s) => s.className ? selectedClassesNames.includes(s.className) : false);
+
+    if (duplicates.length > 0) {
+      const duplicateNames = duplicates.map((s) => `${s.name} (${s.id})`).join(', ');
+      message.warning(
+        `Đã tự động loại bỏ sinh viên: ${duplicateNames} khỏi danh sách tự do do lớp học của họ đã được chọn tham gia đợt.`
+      );
+
+      const updatedStudents = externalStudents.filter((s) => s.className ? !selectedClassesNames.includes(s.className) : true);
+      const updatedIds = updatedStudents.map((s) => s.id);
+
+      form.setFieldsValue({
+        externalStudents: updatedStudents,
+        externalStudentIds: updatedIds,
+      });
+    }
+  }, [selectedClassIds, selectedClasses, form, disabled, detail, externalStudents, externalStudentIds]);
+
+
   const handleAddStudent = () => {
     if (!selectedStudent) return;
 
     // Check if already in the external list
     const isAlreadyExternal = externalStudents.some((s) => s.id === selectedStudent.id);
-    if (isAlreadyExternal) return;
+    if (isAlreadyExternal) {
+      message.warning('Sinh viên này đã có trong danh sách tự do!');
+      return;
+    }
 
-    const updatedStudents = [...externalStudents, { ...selectedStudent, reason: 'Rớt đợt trước' }];
+    if (isStudentInSelectedClasses(selectedStudent)) {
+      message.warning('Sinh viên này đã thuộc lớp học được chọn tham gia đợt!');
+      return;
+    }
+
+    const updatedStudents = [...externalStudents, { ...selectedStudent }];
     const updatedIds = [...externalStudentIds, selectedStudent.id];
 
     form.setFieldsValue({
@@ -115,12 +166,6 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled }) => {
       dataIndex: 'className',
       key: 'className',
       render: (text: string) => text ? <Tag color="blue" className="border-none bg-blue-50 text-blue-700 font-medium">{text}</Tag> : <span className="text-slate-400">Không có lớp</span>
-    },
-    {
-      title: 'Lý do',
-      dataIndex: 'reason',
-      key: 'reason',
-      render: (text: string) => <Tag color="warning" className="border-none bg-amber-50 text-amber-700 font-medium">{text || 'Rớt đợt trước'}</Tag>
     },
     ...(!disabled ? [{
       title: 'Thao tác',
@@ -179,7 +224,7 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled }) => {
           <div className="flex items-center gap-2">
             <UserAddOutlined className="text-primary text-lg" />
             <span className="font-semibold text-slate-800 text-[15px]">
-              Sinh viên tự do / Rớt đợt trước
+              Thêm sinh viên thủ công
             </span>
           </div>
           <Tag color="cyan" className="font-medium border-none bg-cyan-50 text-cyan-700">
@@ -241,7 +286,7 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled }) => {
             dataSource={externalStudents}
             columns={studentColumns}
             rowKey="id"
-            pagination={{ pageSize: 5, size: 'small', hideOnSinglePage: true }}
+            pagination={{ pageSize: 5, size: 'small', hideOnSinglePage: true, showSizeChanger: false }}
             size="small"
             bordered={false}
             className="bg-white rounded-lg overflow-hidden border border-slate-100"
@@ -275,40 +320,136 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled }) => {
           label="Năm học"
           rules={[
             { required: true, message: 'Vui lòng nhập năm học' },
-            { pattern: /^\d{4}-\d{4}$/, message: 'Định dạng năm học phải là YYYY-YYYY, VD: 2026-2027' },
+            {
+              validator(_, value) {
+                if (!value) return Promise.resolve();
+                const match = value.match(/^(\d{4})-(\d{4})$/);
+                if (!match) {
+                  return Promise.reject(new Error('Định dạng năm học phải là YYYY-YYYY, VD: 2026-2027'));
+                }
+                const year1 = parseInt(match[1], 10);
+                const year2 = parseInt(match[2], 10);
+                if (year2 <= year1) {
+                  return Promise.reject(new Error('Năm sau phải lớn hơn năm trước'));
+                }
+                return Promise.resolve();
+              }
+            }
           ]}
         >
-          <Input disabled={disabled} placeholder="VD: 2026-2027" />
+          <Input
+            disabled={disabled}
+            placeholder="VD: 2026-2027"
+            onChange={(e) => {
+              let val = e.target.value.replace(/\s+/g, '');
+              if (/^\d{8}$/.test(val)) {
+                val = `${val.substring(0, 4)}-${val.substring(4, 8)}`;
+                form.setFieldValue('schoolYear', val);
+              }
+            }}
+          />
         </Form.Item>
       </div>
 
       <div className="grid grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-2">
-        <Form.Item name="startDate" label={t(getKey('start_date'))} rules={[{ required: true, message: t(getKey('start_date_required')) }]}>
-          <CustomDatePicker disabled={disabled} />
-        </Form.Item>
         <Form.Item
-          name="endDate"
-          label={t(getKey('end_date'))}
-          dependencies={['startDate']}
+          name="startDate"
+          label={t(getKey('start_date'))}
+          dependencies={['schoolYear']}
           rules={[
-            { required: true, message: t(getKey('end_date_required')) },
+            { required: true, message: t(getKey('start_date_required')) },
             ({ getFieldValue }) => ({
               validator(_, value) {
-                const start = getFieldValue('startDate');
-                if (!value || !start || dayjs(value, DATE_DISPLAY_FORMAT, true).isAfter(dayjs(start, DATE_DISPLAY_FORMAT, true))) {
-                  return Promise.resolve();
+                const schoolYear = getFieldValue('schoolYear');
+                if (value && schoolYear) {
+                  const match = schoolYear.match(/^(\d{4})-(\d{4})$/);
+                  if (match) {
+                    const startYear = parseInt(match[1], 10);
+                    const valYear = dayjs(value, DATE_DISPLAY_FORMAT, true).year();
+                    if (valYear < startYear) {
+                      return Promise.reject(new Error(`Ngày bắt đầu phải từ năm học ${startYear} trở đi`));
+                    }
+                  }
                 }
-                return Promise.reject(new Error('Ngày kết thúc phải sau ngày bắt đầu'));
+                return Promise.resolve();
               },
             }),
           ]}
         >
           <CustomDatePicker disabled={disabled} />
         </Form.Item>
-        <Form.Item name="regOpenDate" label="Mở đăng ký" rules={[{ required: true, message: 'Vui lòng chọn ngày mở đăng ký' }]}>
+        <Form.Item
+          name="endDate"
+          label={t(getKey('end_date'))}
+          dependencies={['startDate', 'schoolYear']}
+          rules={[
+            { required: true, message: t(getKey('end_date_required')) },
+            ({ getFieldValue }) => ({
+              validator(_, value) {
+                const start = getFieldValue('startDate');
+                const schoolYear = getFieldValue('schoolYear');
+                if (value) {
+                  const valDate = dayjs(value, DATE_DISPLAY_FORMAT, true);
+                  if (start && !valDate.isAfter(dayjs(start, DATE_DISPLAY_FORMAT, true))) {
+                    return Promise.reject(new Error('Ngày kết thúc phải sau ngày bắt đầu'));
+                  }
+                  if (schoolYear) {
+                    const match = schoolYear.match(/^(\d{4})-(\d{4})$/);
+                    if (match) {
+                      const endYear = parseInt(match[2], 10);
+                      if (valDate.year() > endYear) {
+                        return Promise.reject(new Error(`Ngày kết thúc không được vượt quá năm học ${endYear}`));
+                      }
+                    }
+                  }
+                }
+                return Promise.resolve();
+              },
+            }),
+          ]}
+        >
           <CustomDatePicker disabled={disabled} />
         </Form.Item>
-        <Form.Item name="regDeadline" label={t(getKey('reg_deadline_label'))} rules={[{ required: true, message: t(getKey('reg_deadline_required')) }]}>
+        <Form.Item
+          name="regOpenDate"
+          label="Mở đăng ký"
+          dependencies={['startDate']}
+          rules={[
+            { required: true, message: 'Vui lòng chọn ngày mở đăng ký' },
+            ({ getFieldValue }) => ({
+              validator(_, value) {
+                const start = getFieldValue('startDate');
+                if (value && start) {
+                  const valDate = dayjs(value, DATE_DISPLAY_FORMAT, true);
+                  const startDate = dayjs(start, DATE_DISPLAY_FORMAT, true);
+                  if (valDate.isBefore(startDate)) {
+                    return Promise.reject(new Error('Mở đăng ký không được trước Bắt đầu'));
+                  }
+                }
+                return Promise.resolve();
+              },
+            }),
+          ]}
+        >
+          <CustomDatePicker disabled={disabled} />
+        </Form.Item>
+        <Form.Item
+          name="regDeadline"
+          label={t(getKey('reg_deadline_label'))}
+          dependencies={['regOpenDate']}
+          rules={[
+            { required: true, message: t(getKey('reg_deadline_required')) },
+            ({ getFieldValue }) => ({
+              validator(_, value) {
+                const regOpen = getFieldValue('regOpenDate');
+                if (!value || !regOpen || dayjs(value, DATE_DISPLAY_FORMAT, true).isAfter(dayjs(regOpen, DATE_DISPLAY_FORMAT, true))) {
+                  return Promise.resolve();
+                }
+                return Promise.reject(new Error('Hạn đăng ký phải sau ngày mở đăng ký'));
+              },
+            }),
+          ]}
+        >
           <CustomDatePicker disabled={disabled} />
         </Form.Item>
         <Form.Item name="status" label={t(getKey('status'))} rules={[{ required: true, message: t(getKey('please_select_status')) }]}>
@@ -324,24 +465,75 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled }) => {
       <Divider orientation="left" className="!text-sm !text-slate-500">Mốc báo cáo & chấm điểm</Divider>
 
       <div className="grid grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-2">
-        <Form.Item name="reportDeadline" label="Hạn nộp báo cáo tiến độ">
+        <Form.Item
+          name="reportDeadline"
+          label="Hạn nộp báo cáo tiến độ"
+          dependencies={['regDeadline', 'endDate']}
+          rules={[
+            ({ getFieldValue }) => ({
+              validator(_, value) {
+                const regDeadline = getFieldValue('regDeadline');
+                const end = getFieldValue('endDate');
+                if (value) {
+                  const valDate = dayjs(value, DATE_DISPLAY_FORMAT, true);
+                  if (regDeadline && !valDate.isAfter(dayjs(regDeadline, DATE_DISPLAY_FORMAT, true))) {
+                    return Promise.reject(new Error('Hạn nộp báo cáo tiến độ phải sau hạn đăng ký'));
+                  }
+                  if (end && !valDate.isBefore(dayjs(end, DATE_DISPLAY_FORMAT, true))) {
+                    return Promise.reject(new Error('Hạn nộp báo cáo tiến độ phải trước ngày kết thúc đợt học'));
+                  }
+                }
+                return Promise.resolve();
+              },
+            }),
+          ]}
+        >
           <CustomDatePicker disabled={disabled} />
         </Form.Item>
-        <Form.Item name="gradingStartDate" label="Bắt đầu chấm điểm">
+        <Form.Item
+          name="gradingStartDate"
+          label="Bắt đầu chấm điểm"
+          dependencies={['reportDeadline', 'endDate']}
+          rules={[
+            ({ getFieldValue }) => ({
+              validator(_, value) {
+                const report = getFieldValue('reportDeadline');
+                const end = getFieldValue('endDate');
+                if (value) {
+                  const valDate = dayjs(value, DATE_DISPLAY_FORMAT, true);
+                  if (report && !valDate.isAfter(dayjs(report, DATE_DISPLAY_FORMAT, true))) {
+                    return Promise.reject(new Error('Ngày bắt đầu chấm điểm phải sau hạn nộp báo cáo tiến độ'));
+                  }
+                  if (end && !valDate.isBefore(dayjs(end, DATE_DISPLAY_FORMAT, true))) {
+                    return Promise.reject(new Error('Ngày bắt đầu chấm điểm phải trước ngày kết thúc đợt học'));
+                  }
+                }
+                return Promise.resolve();
+              },
+            }),
+          ]}
+        >
           <CustomDatePicker disabled={disabled} />
         </Form.Item>
         <Form.Item
           name="gradingEndDate"
           label="Kết thúc chấm điểm"
-          dependencies={['gradingStartDate']}
+          dependencies={['gradingStartDate', 'endDate']}
           rules={[
             ({ getFieldValue }) => ({
               validator(_, value) {
                 const start = getFieldValue('gradingStartDate');
-                if (!value || !start || dayjs(value, DATE_DISPLAY_FORMAT, true).isAfter(dayjs(start, DATE_DISPLAY_FORMAT, true))) {
-                  return Promise.resolve();
+                const end = getFieldValue('endDate');
+                if (value) {
+                  const valDate = dayjs(value, DATE_DISPLAY_FORMAT, true);
+                  if (start && !valDate.isAfter(dayjs(start, DATE_DISPLAY_FORMAT, true))) {
+                    return Promise.reject(new Error('Ngày kết thúc chấm điểm phải sau ngày bắt đầu chấm điểm'));
+                  }
+                  if (end && !valDate.isBefore(dayjs(end, DATE_DISPLAY_FORMAT, true))) {
+                    return Promise.reject(new Error('Ngày kết thúc chấm điểm phải trước ngày kết thúc đợt học'));
+                  }
                 }
-                return Promise.reject(new Error('Ngày kết thúc chấm điểm phải sau ngày bắt đầu chấm điểm'));
+                return Promise.resolve();
               },
             }),
           ]}

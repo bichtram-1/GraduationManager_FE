@@ -53,7 +53,7 @@ export const periodHooks = {
 
   useAddStudentToPeriods: () => {
     const queryClient = useQueryClient();
-    return useMutation<unknown, AxiosError, { studentId: string; periodIds: string[]; reason?: string }>({
+    return useMutation<unknown, AxiosError, { studentId: string; periodIds: string[] }>({
       mutationFn: periodApi.addStudentToPeriods,
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: [QueryKey.periods.list] });

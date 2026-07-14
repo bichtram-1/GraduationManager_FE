@@ -6,6 +6,21 @@ import { TeacherSectionHeader } from '../_components/TeacherShell'
 import { usePeriod } from '@/lib/providers/PeriodProvider'
 import { teacherApi } from '@/lib/api/teacherApi'
 
+interface ICouncilMember {
+  id: string;
+  name: string;
+  role: string;
+}
+
+interface ICouncilGroup {
+  id: string
+  groupCode?: string
+  topic?: string
+  advisorId?: string | number
+  reviewerId?: string | number
+  students?: unknown[]
+}
+
 type Council = {
   id: string
   name: string
@@ -13,8 +28,31 @@ type Council = {
   chair: string
   studentsCount: number
   avgScore: number
-  groups?: any[]
-  members?: any[]
+  groups?: ICouncilGroup[]
+  members?: ICouncilMember[]
+}
+
+interface IRawCouncil {
+  code: string
+  name: string
+  groups?: ICouncilGroup[]
+  members?: ICouncilMember[]
+}
+
+interface ICouncilGroupStudentRow {
+  id: string
+  name: string
+  class?: string
+  gvhdName?: string
+  gvpbName?: string
+  lecturerScores?: Record<string, number>
+  diemTbBaoVe?: number | null
+  diemGvhd?: number | null
+  diemGvpb?: number | null
+  diemTongKet?: number | null
+  presentation?: number | null
+  demo?: number | null
+  qna?: number | null
 }
 
 export default function CouncilsPage() {
@@ -36,9 +74,9 @@ export default function CouncilsPage() {
           setCurrentTeacherId(String(data.teacherId))
         }
         if (data?.councilGroups) {
-          const list = data.councilGroups.map((c: any) => {
-            const chair = c.members?.find((m: any) => m.role.includes('Chủ tịch'))?.name || c.members?.[0]?.name || 'Chưa phân công'
-            const studentsCount = c.groups?.reduce((acc: number, g: any) => acc + (g.students?.length || 0), 0) || 0
+          const list = data.councilGroups.map((c: IRawCouncil) => {
+            const chair = c.members?.find((m: ICouncilMember) => m.role.includes('Chủ tịch'))?.name || c.members?.[0]?.name || 'Chưa phân công'
+            const studentsCount = c.groups?.reduce((acc: number, g: ICouncilGroup) => acc + (g.students?.length || 0), 0) || 0
 
             return {
               id: c.code,
@@ -77,7 +115,7 @@ export default function CouncilsPage() {
     return initials + lastWord
   }
 
-  const exportCouncilExcel = async (councilCode: string, councilName: string, groups: any[], members: any[]) => {
+  const exportCouncilExcel = async (councilCode: string, councilName: string, groups: ICouncilGroup[], members: ICouncilMember[]) => {
     setExportingCouncilId(councilCode)
     try {
       const scorePromises = groups.map(async (g) => {
@@ -109,12 +147,12 @@ export default function CouncilsPage() {
 
       const isChair = loadedGroups[0]?.isChair || false
       const councilMembers = loadedGroups[0]?.councilMembers || members || []
-      const chairMember = councilMembers.find((m: any) => m.role.includes('Chủ tịch'))
+      const chairMember = councilMembers.find((m: ICouncilMember) => m.role.includes('Chủ tịch'))
       const chairStr = chairMember ? `${chairMember.role}: ${chairMember.name}` : 'Chưa phân công'
 
       const headerCols: string[] = ['STT', 'Đề tài', 'Mã SV', 'Họ tên', 'Lớp', 'GVHD', 'GVPB']
       if (isChair) {
-        headerCols.push(...councilMembers.map((m: any) => shortenName(m.name)))
+        headerCols.push(...councilMembers.map((m: ICouncilMember) => shortenName(m.name)))
         headerCols.push('TB bảo vệ', 'BC-GVHD', 'BC-GVPB', 'TK')
       } else {
         const hasAdvisingGroup = loadedGroups.some(g => g?.advisorId === currentTeacherId)
@@ -136,7 +174,7 @@ export default function CouncilsPage() {
         const studentsCount = g.rows.length
         if (studentsCount === 0) return
 
-        g.rows.forEach((row: any, studentIndex: number) => {
+        g.rows.forEach((row: ICouncilGroupStudentRow, studentIndex: number) => {
           let sttCellHtml = ''
           let topicCellHtml = ''
 
@@ -149,7 +187,7 @@ export default function CouncilsPage() {
           let scoreCells: string[] = []
           if (isChair) {
             scoreCells = [
-              ...councilMembers.map((m: any) => {
+              ...councilMembers.map((m: ICouncilMember) => {
                 const score = row.lecturerScores?.[m.id];
                 const scoreStr = score !== undefined && score !== null ? score.toFixed(2) : '—';
                 return `<td style="border: 0.5pt solid #a0aec0; padding: 6px; text-align: right;">${scoreStr}</td>`;

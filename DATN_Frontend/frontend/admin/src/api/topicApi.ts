@@ -5,6 +5,7 @@ import axiosInstance from './axiosInstance';
 export interface ITopicListParams extends BaseListParams {
   status?: TopicStatus | 'all';
   periodId?: string;
+  teacher?: string | 'all';
 }
 
 export const topicApi = {

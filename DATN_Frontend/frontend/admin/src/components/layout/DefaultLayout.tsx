@@ -12,6 +12,7 @@ import { cn } from '../../constants/commonConst';
 import DefaultNavigate from '../general/DefaultNavigate';
 import DefaultHeader from '../general/DefaultHeader';
 import Loading from '../shared/general/Loading';
+import { ScrollContainerProvider } from '../../hooks/ScrollContainerProvider';
 
 const { Header, Sider, Content } = Layout;
 
@@ -124,6 +125,7 @@ const AppLayout = () => {
   const [siderWidth, setSiderWidth] = useState<number>(256);
   const resizerRef = useRef<HTMLDivElement | null>(null);
   const dragState = useRef<{ startX: number; startWidth: number } | null>(null);
+  const contentRef = useRef<HTMLElement | null>(null);
 
   const toggle = () => {
     setCollapsed((prev) => !prev);
@@ -198,16 +200,19 @@ const AppLayout = () => {
             <DefaultHeader />
           </Header>
           <Content
+            ref={contentRef}
             className={cn(
               'h-[calc(100vh-90px)] min-h-[calc(100vh-90px)] overflow-auto bg-bgAdvanceSection p-5'
             )}
           >
-            <Suspense fallback={<Loading />}>
-              <App>
-                <RealtimeListener />
-                <Outlet />
-              </App>
-            </Suspense>
+            <ScrollContainerProvider containerRef={contentRef}>
+              <Suspense fallback={<Loading />}>
+                <App>
+                  <RealtimeListener />
+                  <Outlet />
+                </App>
+              </Suspense>
+            </ScrollContainerProvider>
           </Content>
         </Layout>
       </Layout>

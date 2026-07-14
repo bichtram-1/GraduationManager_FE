@@ -13,8 +13,9 @@ export const classApi = {
     return response?.data?.results?.object;
   },
 
-  createClass: async ({ body }: { body: ICreateClass; params: BaseListParams }) => {
-    const response = await axiosInstance.post('/private/v1/classes', body);
+  createClass: async ({ body, params }: { body: ICreateClass; params: BaseListParams }) => {
+    const periodId = (params as any)?.periodId;
+    const response = await axiosInstance.post('/private/v1/classes', { ...body, periodId });
     return response?.data?.results?.object;
   },
 
@@ -26,5 +27,10 @@ export const classApi = {
   deleteClass: async ({ id }: { id: string; params: BaseListParams }) => {
     const response = await axiosInstance.delete(`/private/v1/classes/${id}`);
     return response?.data;
+  },
+
+  getClassMetadata: async (): Promise<{ names: string[]; courses: string[]; majors: string[]; levels: string[] } | undefined> => {
+    const response = await axiosInstance.get('/private/v1/classes-metadata');
+    return response?.data?.results?.object;
   },
 };

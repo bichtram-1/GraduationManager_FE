@@ -19,8 +19,6 @@ export default function AppQueryProvider({ children }: { children: ReactNode }) 
     },
     onError: (error) => {
       const errData = (error as AxiosError<any>).response?.data;
-      console.log('Global Mutation Error:', error, 'errData:', errData);
-
       const customErr = ErrorCode()[errData?.error_id as keyof typeof ErrorCode];
       
       const configMsg = configErr();

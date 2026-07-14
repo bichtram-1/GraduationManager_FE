@@ -26,6 +26,12 @@ import React, { cloneElement, ReactNode, useCallback, useEffect, useState } from
 import { useTranslation } from 'react-i18next';
 import { BaseListParams, ListResponseTypeObject } from '@shared/types/GeneralType';
 import { deepCompareObjects } from '@shared/utils/utils';
+import { useScrollContainer } from '../../../hooks/ScrollContainerProvider';
+
+// Chiều cao ước tính của thanh phân trang ghim (position: sticky, xem .ant-table-pagination
+// trong App.css) — dùng làm offsetScroll để thanh cuộn ngang ghim (Table.sticky) của AntD
+// nằm sát ngay phía trên, không đè lên thanh phân trang.
+const STICKY_PAGINATION_HEIGHT = 57;
 
 interface RecordWithId {
   id?: string;
@@ -157,6 +163,7 @@ const FilterTable = <
   const hasPageHeader = !!pageTitle;
 
   const { t } = useTranslation();
+  const scrollContainerRef = useScrollContainer();
   const [form] = Form.useForm();
   const [formModal] = Form.useForm();
   const [internalParams, setInternalParams] = useState<BaseListParams>(
@@ -545,6 +552,11 @@ const FilterTable = <
               }}
               onChange={handleChangeTable}
               scroll={{ x: 'max-content' }}
+              sticky={{
+                offsetHeader: 0,
+                offsetScroll: STICKY_PAGINATION_HEIGHT,
+                getContainer: () => scrollContainerRef?.current || window,
+              }}
             />
           </Card>
         </Flex>

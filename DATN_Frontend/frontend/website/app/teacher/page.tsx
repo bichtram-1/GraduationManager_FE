@@ -7,13 +7,48 @@ import { getTopicStatusTone } from './_components/TeacherUI'
 import { usePeriod } from '@/lib/providers/PeriodProvider'
 import { teacherApi } from '@/lib/api/teacherApi'
 
+interface ITopicItem {
+  id?: string | number;
+  code?: string;
+  name: string;
+  status: string;
+  note?: string;
+  slot?: string;
+  students?: string;
+}
+
+interface ITttnItem {
+  id?: string | number;
+  name?: string;
+  studentCode?: string;
+  report?: string;
+  status?: string;
+  comment?: string;
+}
+
+interface IDatnGroupItem {
+  group?: string;
+  topic?: string;
+  members_list?: { name?: string; code?: string }[];
+  members?: number;
+  status?: string;
+  comment?: string;
+}
+
+interface ICouncilItem {
+  id?: string | number;
+  name?: string;
+  date?: string;
+  room?: string;
+}
+
 export default function TeacherIndexPage() {
   const { selectedPeriod } = usePeriod()
   const [stats, setStats] = useState({ topics: 0, tttn: 0, datn: 0, councils: 0 })
-  const [topics, setTopics] = useState<any[]>([])
-  const [tttnList, setTttnList] = useState<any[]>([])
-  const [datnList, setDatnList] = useState<any[]>([])
-  const [councilsList, setCouncilsList] = useState<any[]>([])
+  const [topics, setTopics] = useState<ITopicItem[]>([])
+  const [tttnList, setTttnList] = useState<ITttnItem[]>([])
+  const [datnList, setDatnList] = useState<IDatnGroupItem[]>([])
+  const [councilsList, setCouncilsList] = useState<ICouncilItem[]>([])
   const [loading, setLoading] = useState(false)
 
   const load = () => {
@@ -123,7 +158,7 @@ export default function TeacherIndexPage() {
     const list: [string, string, string][] = []
 
     // 1. Lấy lịch từ hội đồng chấm điểm
-    councilsList.forEach((council: any) => {
+    councilsList.forEach((council: ICouncilItem) => {
       const [datePart, timePart] = (council.date || '').split('•')
       const dayStr = datePart ? datePart.trim() : 'Lịch chấm'
       const timeStr = timePart ? timePart.trim() : '08:00'
@@ -135,7 +170,7 @@ export default function TeacherIndexPage() {
     })
 
     // 2. Lịch hướng dẫn nhóm đồ án tốt nghiệp
-    datnList.forEach((g: any) => {
+    datnList.forEach((g: IDatnGroupItem) => {
       list.push([
         'Đợt này',
         `Hướng dẫn ĐATN nhóm ${g.group}`,
