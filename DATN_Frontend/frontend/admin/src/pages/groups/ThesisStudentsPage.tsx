@@ -157,7 +157,7 @@ const ThesisStudentsPage = () => {
     if (!groupId) return;
     let selectedTopicId = '';
     Modal.confirm({
-      title: `Gán đề tài cho nhóm ${groupCode || ''}`,
+      title: `Gán đề tài cho nhóm ${groupCode || `#${groupId}`}`,
       content: (
         <div className="flex flex-col gap-2 pt-2">
           <p className="m-0 text-slate-500 text-xs">Vui lòng chọn đề tài từ danh sách dưới đây:</p>
@@ -456,7 +456,7 @@ const ThesisStudentsPage = () => {
                 <Input
                   allowClear
                   prefix={<SearchOutlined className={cn('text-slate-400')} />}
-                  placeholder="Tìm theo MSSV, Tên, Lớp, Đề tài, GVHD, Mã nhóm..."
+                  placeholder="Tìm theo MSSV, Tên, Lớp, Đề tài, GVHD..."
                   className={cn('!h-11 !rounded-[12px] !border-slate-300')}
                 />
               </Form.Item>
@@ -551,7 +551,7 @@ const ThesisStudentsPage = () => {
                     .join(', ');
                   return {
                     value: g.id,
-                    label: `${g.code} - ${g.title || 'Chưa có đề tài'} (Thành viên chưa đạt: ${ineligibleMemberNames || 'Không rõ'})`
+                    label: `${g.code ? `${g.code} - ` : `Nhóm #${g.id} - `}${g.title || 'Chưa có đề tài'} (Thành viên chưa đạt: ${ineligibleMemberNames || 'Không rõ'})`
                   };
                 })}
                 optionFilterProp="label"

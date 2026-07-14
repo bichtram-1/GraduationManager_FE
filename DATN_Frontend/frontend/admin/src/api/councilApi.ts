@@ -25,6 +25,7 @@ export type CouncilRow = {
     startTime?: string;
     reviewerId?: string;
     reviewer?: string;
+    examinerId?: string;
     examinerIds?: string[];
     minutes?: number;
   }[];
@@ -35,6 +36,7 @@ export type CouncilTopicInput = {
   id: string;
   nhom_id: string;
   reviewerId?: string | null;
+  examinerId?: string | null;
   examinerIds: string[];
   externalExaminers: string[];
   startTime: string;
