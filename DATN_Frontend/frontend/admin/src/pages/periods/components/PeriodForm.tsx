@@ -3,6 +3,7 @@ import { Form, Input, Select, Button, Table, Alert, Tag, Divider, message } from
 import dayjs from 'dayjs';
 import { UserAddOutlined, DeleteOutlined, InfoCircleOutlined, SearchOutlined, UserOutlined, PlusOutlined } from '@ant-design/icons';
 import type { BatchType, IDetailPeriod } from '../../../type/PeriodType';
+import { periodApi } from '../../../api/periodApi';
 import { useTranslation } from 'react-i18next';
 import { getKey } from '@shared/types/I18nKeyType';
 import { STATUS_CODE, DATE_DISPLAY_FORMAT } from '../../../constants/commonConst';
@@ -301,10 +302,11 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
       <Form.Item
         name="name"
         label={t(getKey('period_name_label'))}
+        validateTrigger="onBlur"
         rules={[
           { required: true, message: t(getKey('period_name_required')) },
           {
-            validator(_, value) {
+            async validator(_, value) {
               if (!value) return Promise.resolve();
               const name = value.trim();
               
@@ -325,6 +327,20 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
                 if (!isDatnName) {
                   return Promise.reject(new Error('Tên đợt ĐATN phải chứa ký tự liên quan như "Đồ án" hoặc "DA"'));
                 }
+              }
+
+              // Check uniqueness via API in real-time
+              try {
+                const resp = await periodApi.getListPeriod({ page: 1, type: 'all', status: 'all', limit: 1000 });
+                const list = resp?.rows ?? [];
+                const isDuplicate = list.some(
+                  (p) => p.name.trim().toLowerCase() === name.toLowerCase() && p.id !== detail?.id
+                );
+                if (isDuplicate) {
+                  return Promise.reject(new Error(`Tên đợt tốt nghiệp "${name}" đã tồn tại. Vui lòng chọn tên khác!`));
+                }
+              } catch (_e) {
+                // Ignore API list errors in validator
               }
 
               return Promise.resolve();
