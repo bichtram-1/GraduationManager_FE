@@ -21,4 +21,5 @@ export const classHooks = {
     const qc = useQueryClient();
     return useMutation({ mutationFn: classApi.deleteClass, onSuccess: () => qc.invalidateQueries({ queryKey: [QueryKey.classes.list] }) });
   },
+  useFetchClassMetadata: () => useQuery({ queryKey: [QueryKey.classes.list, 'metadata'], queryFn: () => classApi.getClassMetadata() }),
 };

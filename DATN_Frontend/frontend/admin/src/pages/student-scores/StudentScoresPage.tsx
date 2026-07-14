@@ -61,12 +61,16 @@ const scoreBand = (score: number) => {
   return { labelKey: 'score_failed' as const, className: '!bg-[var(--color-red-light)] !text-[var(--color-red-medium)]' };
 };
 
-const StudentScoresPage: React.FC = () => {
+type Props = {
+  fixedMode?: ScoreMode;
+};
+
+const StudentScoresPage: React.FC<Props> = ({ fixedMode }) => {
   const { t } = useTranslation();
 
   const { selectedPeriod } = useGlobalVariable();
   const [searchParams, setSearchParams] = useSearchParams();
-  const mode = (searchParams.get('mode') as ScoreMode) || 'internship';
+  const mode = fixedMode || (searchParams.get('mode') as ScoreMode) || 'internship';
   const setMode = (newMode: ScoreMode) => {
     setSearchParams({ mode: newMode });
   };
@@ -137,16 +141,19 @@ const StudentScoresPage: React.FC = () => {
 
   const columns = (mode === 'internship' ? internshipColumns : projectColumns) as unknown as ColumnsType<InternshipScoreRow | ProjectScoreRow>;
 
+  const pageTitleKey = fixedMode === 'internship' ? 'internship_score_management' : fixedMode === 'project' ? 'project_score_management' : 'student_score_management';
+  const pageDescKey = fixedMode === 'internship' ? 'internship_score_management_desc' : fixedMode === 'project' ? 'project_score_management_desc' : 'student_scores_desc';
+
   return (
     <div className="text-gray-800 pb-4">
       <div className="mb-5 rounded-[22px] border border-slate-100 bg-white px-6 py-5 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
         <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-[var(--color-blue-light)] px-3 py-1 text-xs font-medium text-[var(--color-primary)]">
-          <FileDoneOutlined /> {t(getKey('student_score_management'))}
+          <FileDoneOutlined /> {t(getKey(pageTitleKey))}
         </div>
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="!m-0 !text-[34px] !font-bold !leading-[40px] !text-navyDark">{t(getKey('student_scores_title'))}</h1>
-            <p className="mt-2 mb-0 text-[18px] leading-[26px] text-grayDark">{t(getKey('student_scores_desc'))}</p>
+            <h1 className="!m-0 !text-[34px] !font-bold !leading-[40px] !text-navyDark">{t(getKey(pageTitleKey))}</h1>
+            <p className="mt-2 mb-0 text-[18px] leading-[26px] text-grayDark">{t(getKey(pageDescKey))}</p>
           </div>
         </div>
       </div>
@@ -154,7 +161,7 @@ const StudentScoresPage: React.FC = () => {
       {selectedPeriod && (
         <div className={cn('mb-5 p-4 rounded-[18px] border flex items-center justify-between shadow-[0_12px_28px_rgba(15,23,42,0.02)] bg-blue-50 border-blue-200 text-blue-700')}>
           <div>
-            {t(getKey('showing'))} {t(getKey('student_score_management'))} {t(getKey('of'))}: <strong className="underline">{selectedPeriod.name}</strong>
+            {t(getKey('showing'))} {t(getKey(pageTitleKey))} {t(getKey('of'))}: <strong className="underline">{selectedPeriod.name}</strong>
           </div>
         </div>
       )}
@@ -207,10 +214,12 @@ const StudentScoresPage: React.FC = () => {
       </div>
 
       <div className="mb-5 rounded-[20px] border border-slate-100 bg-white px-4 pt-3 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
-        <Tabs activeKey={mode} onChange={(k) => setMode(k as ScoreMode)} items={[
-          { key: 'internship', label: t(getKey('internship_score_management')) },
-          { key: 'project', label: t(getKey('project_score_management')) }
-        ]} />
+        {!fixedMode && (
+          <Tabs activeKey={mode} onChange={(k) => setMode(k as ScoreMode)} items={[
+            { key: 'internship', label: t(getKey('internship_score_management')) },
+            { key: 'project', label: t(getKey('project_score_management')) }
+          ]} />
+        )}
 
         <div className="p-4">
           <div className="mb-4 flex flex-col justify-between gap-4 md:flex-row md:items-center">

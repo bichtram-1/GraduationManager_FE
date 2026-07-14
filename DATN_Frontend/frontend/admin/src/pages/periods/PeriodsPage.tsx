@@ -220,7 +220,7 @@ const PeriodsPage = () => {
         <Tabs activeKey={tab} onChange={handleTabChange} items={batchTabs} />
       </div>
 
-      <Card className="overflow-hidden rounded-[18px] border border-slate-100 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
+      <Card className="rounded-[18px] border border-slate-100 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
         <FilterTable<IListPeriod, IDetailPeriod, ICreatePeriod, IUpdatePeriod>
           title={t(getKey('period_list'))}
           pageTitle={t(getKey('period_management'))}

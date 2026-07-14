@@ -416,7 +416,7 @@ const AssignmentsPage = () => {
                         <Radio value={teacher.id} disabled={teacher.status !== STATUS_CODE.AVAILABLE} />
                         <div className="min-w-0 flex-1">
                           <div className="block text-sm font-semibold leading-5 text-slate-900">
-                            {teacher.degree} {teacher.name}{teacher.major ? ` • ${teacher.major}` : ''}
+                            {teacher.degree ? `${teacher.degree} ` : ''}{teacher.name}{teacher.major ? ` • ${teacher.major}` : ''}
                           </div>
                         </div>
                       </div>
@@ -462,7 +462,7 @@ const AssignmentsPage = () => {
       ) : (
         <div className="px-4 py-4">
           <FilterTable<AssignmentRow, IDetailAssignment, ICreateAssignment, IUpdateAssignment>
-            title={`${t(getKey('assigned_list'))} (${formatNumber(assignedCount)})`}
+            title={t(getKey('assigned_list'))}
             columns={[
               { title: t(getKey('student_id')), dataIndex: 'studentId', key: 'studentId', render: (v: string) => <span className="text-[var(--color-primary)] font-medium">{v}</span> },
               { title: t(getKey('student_name')), dataIndex: 'name', key: 'name', ellipsis: true },

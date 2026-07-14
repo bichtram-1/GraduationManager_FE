@@ -4,6 +4,7 @@ import FilterTable from '../../components/shared/table/FilterTable';
 import TopicForm from './components/TopicForm';
 import type { IListTopic, ICreateTopic, IUpdateTopic, TopicStatus } from '../../type/TopicType';
 import { topicHooks } from '../../hooks/useTopics';
+import { assignmentHooks } from '../../hooks/useAssignments';
 import { useMemo, useCallback } from 'react';
 import { useGlobalVariable } from '../../hooks/GlobalVariableProvider';
 import { useTranslation } from 'react-i18next';
@@ -27,6 +28,7 @@ const TopicsPage = () => {
   });
   const updateTopicMutation = topicHooks.useUpdateTopic();
   const deleteTopicMutation = topicHooks.useDeleteTopic();
+  const { data: teachers = [] } = assignmentHooks.useFetchTeachers();
 
   const rows = topicList?.rows ?? [];
   const isPeriodClosed = selectedPeriod?.status === STATUS_CODE.CLOSED;
@@ -199,7 +201,7 @@ const TopicsPage = () => {
         </div>
       </div>
 
-      <Card className="overflow-hidden rounded-[18px] border border-slate-100 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
+      <Card className="rounded-[18px] border border-slate-100 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
         <FilterTable<IListTopic, IListTopic, ICreateTopic, IUpdateTopic>
           title={t(getKey('topic_list'))}
           columns={columns}
@@ -208,7 +210,7 @@ const TopicsPage = () => {
           updateInfo={isPeriodClosed ? undefined : {
             type: 'modal',
             modalInfo: {
-              modalContent: <TopicForm />,
+              modalContent: <TopicForm mode="edit" />,
               modalProps: { centered: true, width: 640, title: t(getKey('edit_topic')) },
               modalFunc: updateTopicMutation as unknown as import('@tanstack/react-query').UseMutationResult<IListTopic, import('axios').AxiosError, { id: string; body: IUpdateTopic; index: number; params: import('@shared/types/GeneralType').BaseListParams }>,
             },
@@ -224,7 +226,7 @@ const TopicsPage = () => {
           detailInfo={{
             type: 'modal',
             modalInfo: {
-              modalContent: <TopicForm disabled />,
+              modalContent: <TopicForm mode="detail" />,
               modalProps: { centered: true, width: 640, title: t(getKey('detail_topic')), footer: null },
               modalFunc: topicHooks.useFetchDetailTopic as unknown as (id: string, enable: boolean) => import('@tanstack/react-query').UseQueryResult<IListTopic, Error>,
             },
@@ -245,7 +247,7 @@ const TopicsPage = () => {
           formatFormValues={(values: Record<string, unknown>) => values as ICreateTopic | IUpdateTopic}
           filterRender={() => (
             <div className="mb-4 grid grid-cols-1 gap-3 xl:grid-cols-12">
-              <Form.Item name="keyword" className="xl:col-span-8 !mb-0">
+              <Form.Item name="keyword" className="xl:col-span-5 !mb-0">
                 <Input
                   allowClear
                   prefix={<SearchOutlined className="text-slate-400" />}
@@ -254,7 +256,21 @@ const TopicsPage = () => {
                 />
               </Form.Item>
 
-              <Form.Item name="status" className="xl:col-span-4 !mb-0">
+              <Form.Item name="teacher" className="xl:col-span-4 !mb-0">
+                <Select
+                  allowClear
+                  showSearch
+                  placeholder={t(getKey('teacher'))}
+                  className="!h-11 !w-full"
+                  optionFilterProp="label"
+                  options={[
+                    { value: 'all', label: t(getKey('all_tab')) },
+                    ...teachers.map((teacherItem) => ({ value: teacherItem.name, label: teacherItem.name })),
+                  ]}
+                />
+              </Form.Item>
+
+              <Form.Item name="status" className="xl:col-span-3 !mb-0">
                 <Select
                   allowClear
                   placeholder={t(getKey('group_status'))}

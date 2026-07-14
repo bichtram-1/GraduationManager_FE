@@ -76,7 +76,7 @@ const ClassesAdminPage = () => {
 
   return (
     <div>
-      <Card className="overflow-hidden rounded-[18px] border border-slate-100 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
+      <Card className="rounded-[18px] border border-slate-100 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
         <FilterTable<IListClass, IDetailClass, ICreateClass, IUpdateClass>
           title={t(getKey('class_list'))}
           pageTitle={t(getKey('class_management'))}

@@ -194,6 +194,39 @@
   border-radius: 0 !important;
 }
 
+/* Ghim thanh phân trang ở đáy vùng nội dung có thể cuộn (Content trong DefaultLayout) —
+   chỉ dùng chung 1 thanh cuộn dọc của cả trang, không tạo thêm vùng cuộn riêng cho bảng.
+   Chiều cao cố định 57px khớp với STICKY_PAGINATION_HEIGHT (FilterTable.tsx) — dùng làm
+   offsetScroll cho thanh cuộn ngang ghim (Table.sticky) của AntD nằm sát ngay phía trên. */
+.filter-table-card .ant-table-pagination {
+  position: sticky !important;
+  bottom: 0;
+  z-index: 10;
+  background: var(--color-white);
+  margin: 0 !important;
+  min-height: 57px;
+  box-sizing: border-box;
+  padding: 12px 24px !important;
+  border-top: 1px solid var(--color-black-alpha-10);
+  border-radius: 0 0 10px 10px;
+  /* Đổ bóng nhẹ lên trên để che hẳn ranh giới, tránh lộ viền/nội dung dòng cuối khi thanh
+     phân trang vừa "nhả" khỏi trạng thái ghim ở đúng cuối danh sách. */
+  box-shadow: 0 -6px 8px -6px rgba(15, 23, 42, 0.08);
+}
+
+/* Chừa sẵn một khoảng trống đúng bằng chiều cao thanh phân trang ở cuối phần thân bảng,
+   để dòng cuối cùng không bao giờ nằm sát/chung vị trí với thanh phân trang khi nó "nhả"
+   khỏi trạng thái ghim — tránh hiện tượng lộ/xé hình dòng cuối ngay tại ranh giới cuộn. */
+.filter-table-card .ant-spin-container {
+  padding-bottom: 57px;
+}
+
+/* Thanh tiêu đề của bảng cũng ghim lại khi cuộn dọc (Table.sticky ở FilterTable.tsx),
+   giống cách header trang cố định ở trên. */
+.filter-table-card .ant-table-sticky-holder {
+  z-index: 9;
+}
+
 /* Tabs underline and active color to match Figma */
 .ant-tabs-nav .ant-tabs-tab.ant-tabs-tab-active {
   color: var(--color-primary) !important;

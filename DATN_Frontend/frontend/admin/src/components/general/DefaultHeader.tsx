@@ -35,19 +35,14 @@ const DefaultHeader = () => {
   const { data: periodsData } = periodHooks.useFetchListPeriods({ page: 1, limit: 100 });
   const allPeriods = periodsData?.rows ?? [];
 
-  const searchParams = new URLSearchParams(pathname.search);
-  const scoreMode = searchParams.get('mode') || 'internship';
-
   const isInternshipPage =
     pathname.pathname.startsWith('/internship-students') ||
-    pathname.pathname.startsWith('/assignments') ||
-    (pathname.pathname === '/student-scores' && scoreMode === 'internship');
+    pathname.pathname.startsWith('/assignments');
 
   const isThesisPage =
     pathname.pathname.startsWith('/groups') ||
     pathname.pathname.startsWith('/councils') ||
-    pathname.pathname.startsWith('/topics') ||
-    (pathname.pathname === '/student-scores' && scoreMode === 'project');
+    pathname.pathname.startsWith('/topics');
 
   useEffect(() => {
     if (allPeriods.length === 0) return;

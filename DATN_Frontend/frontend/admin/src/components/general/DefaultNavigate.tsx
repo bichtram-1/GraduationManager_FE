@@ -10,7 +10,6 @@ import {
   SolutionOutlined,
   UserOutlined,
   DashboardOutlined,
-  FileDoneOutlined,
 } from '@ant-design/icons';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -107,6 +106,7 @@ const DefaultNavigate = ({ collapsed, onToggle }: IDefaultNavigate) => {
       children: [
         { key: ROUTES.INTERNSHIP_STUDENTS_DECLARATIONS, label: t(getKey('internship_students_declarations')) },
         { key: ROUTES.INTERNSHIP_STUDENTS_NOCOMPANY, label: t(getKey('internship_students_nocompany')) },
+        { key: ROUTES.INTERNSHIP_STUDENTS_SCORES, label: t(getKey('internship_score_management')) },
       ],
     },
     {
@@ -117,12 +117,8 @@ const DefaultNavigate = ({ collapsed, onToggle }: IDefaultNavigate) => {
         { key: ROUTES.GROUPS, label: t(getKey('group_list')) },
         { key: ROUTES.GROUPS_REVIEW, label: t(getKey('group_review')) },
         { key: ROUTES.GROUPS_STUDENTS, label: t(getKey('thesis_students_management')) || 'Danh sách sinh viên ĐATN' },
+        { key: ROUTES.GROUPS_SCORES, label: t(getKey('project_score_management')) },
       ],
-    },
-    {
-      key: ROUTES.STUDENT_SCORES,
-      label: t(getKey('student_score_management')),
-      icon: <FileDoneOutlined style={{ fontSize: 20 }} />,
     },
     // Courses menu removed
     // Achievements menu removed

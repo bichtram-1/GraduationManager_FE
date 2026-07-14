@@ -16,7 +16,7 @@ import {
 import { uploadApi } from '../../../api/uploadApi';
 
 type Props = {
-  disabled?: boolean;
+  mode?: 'edit' | 'detail';
 };
 
 interface FileFieldProps {
@@ -201,17 +201,23 @@ const FileField: React.FC<FileFieldProps> = ({ value, onChange, disabled }) => {
   );
 };
 
-const TopicForm: React.FC<Props> = ({ disabled = false }) => {
+const TopicForm: React.FC<Props> = ({ mode = 'edit' }) => {
   const { t } = useTranslation();
+  const disabled = mode === 'detail';
+  // Admin chỉ có vai trò duyệt/từ chối đề tài do giảng viên đề xuất, không phải người biên tập
+  // nội dung đề tài — Tên/Giảng viên/Chỉ tiêu/File chỉ mang tính tham khảo khi sửa, khóa lại để
+  // tránh đánh lừa người dùng là đã lưu được các trường này (backend vẫn chấp nhận nhưng admin
+  // không nên là người sửa nội dung đề tài của giảng viên).
+  const contextDisabled = disabled || mode === 'edit';
 
   return (
     <div className="grid grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-2">
       <Form.Item label={t(getKey('topic_name'))} name="name" rules={[{ required: true, message: t(getKey('please_enter_topic_name')) }]}>
-        <Input disabled={disabled} placeholder="VD: Phân tích dữ liệu giáo dục" />
+        <Input disabled={contextDisabled} placeholder="VD: Phân tích dữ liệu giáo dục" />
       </Form.Item>
 
       <Form.Item label={t(getKey('teacher'))} name="teacher" rules={[{ required: true, message: t(getKey('please_enter_teacher')) }]}>
-        <Input disabled={disabled} placeholder="VD: TS. Nguyễn Văn X" />
+        <Input disabled={contextDisabled} placeholder="VD: TS. Nguyễn Văn X" />
       </Form.Item>
 
       <Form.Item
@@ -222,7 +228,7 @@ const TopicForm: React.FC<Props> = ({ disabled = false }) => {
           { pattern: /^\d+\/\d+$/, message: 'Định dạng chỉ tiêu phải là số/số, VD: 0/3' },
         ]}
       >
-        <Input disabled={disabled} placeholder="VD: 0/3" />
+        <Input disabled={contextDisabled} placeholder="VD: 0/3" />
       </Form.Item>
 
       <Form.Item label={t(getKey('status'))} name="status" rules={[{ required: true, message: t(getKey('please_select_status')) }]}>
@@ -241,7 +247,7 @@ const TopicForm: React.FC<Props> = ({ disabled = false }) => {
         name="fileUrl"
         className="md:col-span-2"
       >
-        <FileField disabled={disabled} />
+        <FileField disabled={contextDisabled} />
       </Form.Item>
 
       <Form.Item
