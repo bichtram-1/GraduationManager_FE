@@ -1,12 +1,14 @@
 import React from 'react';
-import { Form, Input, Button, Space, Upload, Typography, message, AutoComplete } from 'antd';
-import { UploadOutlined } from '@ant-design/icons';
+import { Form, Input, Button, Space, Upload, Typography, message, AutoComplete, Select } from 'antd';
+import { UploadOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { IDetailClass } from '../../../type/ClassType';
 import { useTranslation } from 'react-i18next';
 import { getKey } from '@shared/types/I18nKeyType';
 import { uploadApi } from '../../../api/uploadApi';
 import * as XLSX from 'xlsx';
 import { classHooks } from '../../../hooks/useClasses';
+import CustomDatePicker from '../../../components/shared/input/CustomDatePicker';
+import dayjs from 'dayjs';
 
 type Props = {
   disabled?: boolean;
@@ -46,7 +48,7 @@ const ClassForm: React.FC<Props> = ({ disabled = false, detail }) => {
     }
   }, [detail, form]);
 
-  const parseExcelFile = (file: File): Promise<Array<{ id: string; name: string; code: string }>> => {
+  const parseExcelFile = (file: File): Promise<Array<{ id: string; name: string; code: string; phone?: string; gender?: string; dateOfBirth?: dayjs.Dayjs }>> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -67,6 +69,9 @@ const ClassForm: React.FC<Props> = ({ disabled = false, detail }) => {
           let mssvCol = 0;
           let nameCol = 1;
           let emailCol = -1;
+          let phoneCol = -1;
+          let genderCol = -1;
+          let dobCol = -1;
 
           for (let i = 0; i < Math.min(3, rows.length); i++) {
             const row = rows[i];
@@ -97,10 +102,29 @@ const ClassForm: React.FC<Props> = ({ disabled = false, detail }) => {
               if (cellClean.includes('email')) {
                 emailCol = colIndex;
               }
+              if (
+                cellClean.includes('điện thoại') ||
+                cellClean.includes('sđt') ||
+                cellClean.includes('phone')
+              ) {
+                phoneCol = colIndex;
+              }
+              if (cellClean.includes('giới tính') || cellClean.includes('gender')) {
+                genderCol = colIndex;
+              }
+              if (
+                cellClean.includes('ngày sinh') ||
+                cellClean.includes('ngaysinh') ||
+                cellClean.includes('ngay_sinh') ||
+                cellClean.includes('birth') ||
+                cellClean.includes('dob')
+              ) {
+                dobCol = colIndex;
+              }
             }
           }
 
-          const parsedMembers: Array<{ id: string; name: string; code: string }> = [];
+          const parsedMembers: Array<{ id: string; name: string; code: string; phone?: string; gender?: string; dateOfBirth?: dayjs.Dayjs }> = [];
           const seenCodes = new Set<string>();
           const duplicates: string[] = [];
 
@@ -110,6 +134,38 @@ const ClassForm: React.FC<Props> = ({ disabled = false, detail }) => {
             const code = row[mssvCol] ? String(row[mssvCol]).trim() : '';
             const name = row[nameCol] ? String(row[nameCol]).trim() : '';
             const email = emailCol >= 0 && row[emailCol] ? String(row[emailCol]).trim() : '';
+            const phone = phoneCol >= 0 && row[phoneCol] ? String(row[phoneCol]).trim() : '';
+            
+            let gender = 'Nam';
+            if (genderCol >= 0 && row[genderCol]) {
+              const genderVal = String(row[genderCol]).toLowerCase().trim();
+              if (genderVal.includes('nữ') || genderVal.includes('female') || genderVal.includes('nu')) {
+                gender = 'Nu';
+              } else if (genderVal.includes('khác') || genderVal.includes('other') || genderVal.includes('khac')) {
+                gender = 'Khac';
+              }
+            }
+
+            let dateOfBirth: dayjs.Dayjs | undefined = undefined;
+            if (dobCol >= 0 && row[dobCol]) {
+              const dobVal = row[dobCol];
+              if (typeof dobVal === 'number') {
+                const dateObj = XLSX.SSF.parse_date_code(dobVal);
+                const dobStr = `${dateObj.y}-${String(dateObj.m).padStart(2, '0')}-${String(dateObj.d).padStart(2, '0')}`;
+                dateOfBirth = dayjs(dobStr);
+              } else {
+                const dobStr = String(dobVal).trim();
+                const dmy = dobStr.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
+                if (dmy) {
+                  dateOfBirth = dayjs(`${dmy[3]}-${dmy[2].padStart(2, '0')}-${dmy[1].padStart(2, '0')}`);
+                } else {
+                  const ymd = dobStr.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
+                  if (ymd) {
+                    dateOfBirth = dayjs(`${ymd[1]}-${ymd[2].padStart(2, '0')}-${ymd[3].padStart(2, '0')}`);
+                  }
+                }
+              }
+            }
 
             if (code && name) {
               if (!/^0[0-9]{9}$/.test(code)) {
@@ -125,6 +181,25 @@ const ClassForm: React.FC<Props> = ({ disabled = false, detail }) => {
                 }
               }
 
+              if (phone) {
+                if (!/^0[0-9]{9}$/.test(phone)) {
+                  reject(new Error(`File Excel - Dòng ${rowIndex + 1}: Số điện thoại '${phone}' không hợp lệ (phải gồm 10 chữ số bắt đầu bằng số 0).`));
+                  return;
+                }
+              }
+
+              if (dateOfBirth) {
+                if (!dateOfBirth.isValid()) {
+                  reject(new Error(`File Excel - Dòng ${rowIndex + 1}: Ngày sinh không hợp lệ.`));
+                  return;
+                }
+                const age = dayjs().diff(dateOfBirth, 'year');
+                if (age < 18) {
+                  reject(new Error(`File Excel - Dòng ${rowIndex + 1}: Sinh viên phải đủ 18 tuổi trở lên.`));
+                  return;
+                }
+              }
+
               if (seenCodes.has(code)) {
                 duplicates.push(code);
               }
@@ -133,6 +208,9 @@ const ClassForm: React.FC<Props> = ({ disabled = false, detail }) => {
                 id: `s_${Date.now()}_${rowIndex}`,
                 name,
                 code,
+                phone: phone || undefined,
+                gender,
+                dateOfBirth,
               });
             }
           }
@@ -379,48 +457,101 @@ const ClassForm: React.FC<Props> = ({ disabled = false, detail }) => {
           <div>
             <div className="mb-2 font-medium">{t(getKey('members'))}</div>
             {fields.map((f) => (
-              <Space key={f.key} className="flex mb-2" align="start">
-                <Form.Item
-                  {...f}
-                  name={[f.name, 'name']}
-                  validateTrigger="onBlur"
-                  rules={[{ required: true, message: t(getKey('student_name_required')) }]}
-                >
-                  <Input placeholder={t(getKey('student_name'))} disabled={disabled} />
-                </Form.Item>
+              <div key={f.key} className="grid grid-cols-1 gap-x-3 gap-y-2 md:grid-cols-5 items-start mb-3 border border-slate-100 rounded-lg p-3 bg-slate-50/30 relative pr-10">
                 <Form.Item
                   {...f}
                   name={[f.name, 'code']}
                   validateTrigger="onBlur"
                   rules={[
                     { required: true, message: 'Vui lòng nhập MSSV!' },
-                    { pattern: /^0[0-9]{9}$/, message: 'MSSV phải gồm 10 chữ số bắt đầu bằng số 0!' },
+                    { pattern: /^0[0-9]{9}$/, message: 'MSSV gồm 10 số bắt đầu bằng 0!' },
                     {
                       validator: (_, value) => {
                         if (!value) return Promise.resolve();
                         const members = form.getFieldValue('members') || [];
                         const matches = members.filter((m: any) => m && m.code && m.code.trim() === value.trim());
                         if (matches.length > 1) {
-                          return Promise.reject('MSSV này bị trùng trong danh sách!');
+                          return Promise.reject('MSSV bị trùng!');
                         }
                         return Promise.resolve();
                       }
                     }
                   ]}
                 >
-                  <Input placeholder={t(getKey('student_id'))} disabled={disabled} />
+                  <Input placeholder="Mã số sinh viên (MSSV)" disabled={disabled} />
+                </Form.Item>
+                <Form.Item
+                  {...f}
+                  name={[f.name, 'name']}
+                  validateTrigger="onBlur"
+                  rules={[{ required: true, message: 'Vui lòng nhập họ tên!' }]}
+                >
+                  <Input placeholder="Họ và tên" disabled={disabled} />
+                </Form.Item>
+                <Form.Item
+                  {...f}
+                  name={[f.name, 'phone']}
+                  validateTrigger="onBlur"
+                  rules={[
+                    { pattern: /^0[0-9]{9}$/, message: 'SĐT gồm 10 số bắt đầu bằng 0!' }
+                  ]}
+                >
+                  <Input placeholder="Số điện thoại" disabled={disabled} />
+                </Form.Item>
+                <Form.Item
+                  {...f}
+                  name={[f.name, 'gender']}
+                >
+                  <Select placeholder="Chọn giới tính" disabled={disabled} options={[
+                    { value: 'Nam', label: 'Nam' },
+                    { value: 'Nu', label: 'Nữ' },
+                    { value: 'Khac', label: 'Khác' },
+                  ]} />
+                </Form.Item>
+                <Form.Item
+                  {...f}
+                  name={[f.name, 'dateOfBirth']}
+                  rules={[
+                    () => ({
+                      validator(_, value) {
+                        if (value) {
+                          const selectedDate = new Date(value);
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          if (selectedDate > today) {
+                            return Promise.reject(new Error('Ngày sinh không hợp lệ!'));
+                          }
+                          const minBirthDate = new Date(
+                            today.getFullYear() - 18,
+                            today.getMonth(),
+                            today.getDate()
+                          );
+                          if (selectedDate > minBirthDate) {
+                            return Promise.reject(new Error('Sinh viên phải đủ 18 tuổi trở lên!'));
+                          }
+                        }
+                        return Promise.resolve();
+                      },
+                    }),
+                  ]}
+                >
+                  <CustomDatePicker disabled={disabled} format="DD/MM/YYYY" placeholder="Ngày sinh" />
                 </Form.Item>
                 {!disabled && (
-                  <Button danger onClick={() => remove(f.name)}>
-                    {t(getKey('delete'))}
-                  </Button>
+                  <Button
+                    danger
+                    type="text"
+                    icon={<DeleteOutlined />}
+                    onClick={() => remove(f.name)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2"
+                  />
                 )}
-              </Space>
+              </div>
             ))}
 
             {!disabled && (
               <Form.Item>
-                <Button type="dashed" onClick={() => add({ id: `s${Date.now()}`, name: '', code: '' })} block>
+                <Button type="dashed" onClick={() => add({ id: `s${Date.now()}`, name: '', code: '', phone: '', gender: 'Nam', dateOfBirth: undefined })} block>
                   {t(getKey('add_student'))}
                 </Button>
               </Form.Item>

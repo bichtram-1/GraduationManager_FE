@@ -28,8 +28,8 @@ import { usePeriod } from '@/lib/providers/PeriodProvider'
 const NAV_ITEMS = [
   { key: 'home', href: '/student', label: 'Trang chủ', icon: Home },
     { key: 'internship', href: '/student/internship', label: 'Đăng ký TTTN', icon: ClipboardList },
-    { key: 'thesis', href: '/student/thesis-register', label: 'Đăng ký ĐATN', icon: BookOpen },
     { key: 'thesis-create', href: '/student/thesis-invite', label: 'Tạo nhóm ĐATN', icon: Users },
+    { key: 'thesis', href: '/student/thesis-register', label: 'Đăng ký ĐATN', icon: BookOpen },
   { key: 'reports-tttn', href: '/student/reports/tttn', label: 'Báo cáo TTTN', icon: FileText },
   { key: 'reports-datn', href: '/student/reports/datn', label: 'Báo cáo ĐATN', icon: GraduationCap },
   { key: 'results', href: '/student/results', label: 'Kết quả', icon: Award },

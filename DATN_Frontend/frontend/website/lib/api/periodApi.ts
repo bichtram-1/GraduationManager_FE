@@ -7,6 +7,7 @@ export interface IListPeriod {
   startDate: string;
   endDate: string;
   regDeadline: string;
+  regOpenDate?: string;
   status: 'open' | 'published' | 'grading' | 'closed';
   studentListFileName?: string;
   studentListUrl?: string;

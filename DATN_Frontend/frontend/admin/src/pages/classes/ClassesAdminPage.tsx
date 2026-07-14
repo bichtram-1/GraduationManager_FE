@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { getKey } from '@shared/types/I18nKeyType';
 import type { BaseListParams } from '@shared/types/GeneralType';
 import { STATUS_CODE } from '../../constants/commonConst';
+import dayjs from 'dayjs';
 
 const ClassesAdminPage = () => {
   const { t } = useTranslation();
@@ -108,8 +109,25 @@ const ClassesAdminPage = () => {
           updateInfo={{ type: 'modal', modalInfo: { modalContent: <ClassForm />, modalProps: { centered: true, width: 720, title: t(getKey('edit_class')) }, modalFunc: update as unknown as import('@tanstack/react-query').UseMutationResult<IDetailClass, import('axios').AxiosError, { id: string; body: IUpdateClass; index: number; params: import('@shared/types/GeneralType').BaseListParams }> } }}
           detailInfo={{ type: 'modal', modalInfo: { modalContent: <ClassForm disabled />, modalProps: { centered: true, width: 720, title: t(getKey('detail_class')), footer: null }, modalFunc: classHooks.useFetchDetailClass as unknown as (id: string, enable: boolean) => import('@tanstack/react-query').UseQueryResult<IDetailClass, Error> } }}
           deleteInfo={{ type: 'modal', modalInfo: { modalContent: null, modalProps: {}, modalFunc: del as unknown as import('@tanstack/react-query').UseMutationResult<IListClass, import('axios').AxiosError, { id: string; params: import('@shared/types/GeneralType').BaseListParams }> } }}
-          formatInitialValues={(c) => ({ name: c?.name ?? '', level: c?.level ?? '', course: c?.course ?? '', major: c?.major ?? '', members: c?.members ?? [], maxStudents: c?.maxStudents ?? 40, status: c?.status ?? STATUS_CODE.ACTIVE_UP })}
-          formatFormValues={(v) => v as unknown as ICreateClass}
+          formatInitialValues={(c) => ({
+            name: c?.name ?? '',
+            level: c?.level ?? '',
+            course: c?.course ?? '',
+            major: c?.major ?? '',
+            members: (c?.members ?? []).map((m: any) => ({
+              ...m,
+              dateOfBirth: m.dateOfBirth ? dayjs(m.dateOfBirth) : undefined,
+            })),
+            maxStudents: c?.maxStudents ?? 40,
+            status: c?.status ?? STATUS_CODE.ACTIVE_UP,
+          })}
+          formatFormValues={(v: any) => ({
+            ...v,
+            members: (v.members ?? []).map((m: any) => ({
+              ...m,
+              dateOfBirth: m.dateOfBirth ? dayjs(m.dateOfBirth).format('YYYY-MM-DD') : undefined,
+            })),
+          } as unknown as ICreateClass)}
           actions={{ isDetail: true, isEdit: true, isDelete: true }}
         />
       </Card>

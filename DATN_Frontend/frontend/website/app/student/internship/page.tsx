@@ -211,6 +211,75 @@ export default function StudentInternshipPage() {
     duration: '',
     confirmPaper: false,
   })
+  const [errors, setErrors] = useState({
+    phone: '',
+    email: '',
+    duration: '',
+  })
+
+  const validateField = (name: string, value: string) => {
+    let errorMsg = ''
+    if (name === 'phone') {
+      const trimmed = value.trim()
+      if (!trimmed) {
+        errorMsg = 'Vui lòng nhập số điện thoại liên hệ'
+      } else if (!/^(0|\+84)[3|5|7|8|9][0-9]{8}$/.test(trimmed)) {
+        errorMsg = 'Số điện thoại phải gồm 10 chữ số bắt đầu bằng 0 hoặc +84'
+      }
+    } else if (name === 'email') {
+      const trimmed = value.trim()
+      if (!trimmed) {
+        errorMsg = 'Vui lòng nhập email người liên hệ'
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+        errorMsg = 'Email người liên hệ không đúng định dạng!'
+      }
+    } else if (name === 'duration') {
+      const trimmed = value.trim()
+      if (!trimmed) {
+        errorMsg = 'Vui lòng nhập thời gian thực tập'
+      } else {
+        const parseDurationToWeeks = (str: string): number => {
+          const normalized = str.trim().toLowerCase();
+          const numMatch = normalized.match(/\d+(?:\.\d+)?/);
+          if (!numMatch) return 0;
+          const num = parseFloat(numMatch[0]);
+          if (normalized.includes('tháng') || normalized.includes('thang')) {
+            return num * 4.3; // Quy đổi tháng ra tuần
+          }
+          return num; // Mặc định là tuần
+        };
+        if (parseDurationToWeeks(trimmed) < 8) {
+          errorMsg = 'Thời gian thực tập phải từ 8 tuần trở lên!'
+        }
+      }
+    }
+    setErrors((current) => ({ ...current, [name]: errorMsg }))
+    return errorMsg === ''
+  }
+
+  const handleCloseModal = () => {
+    setDeclareOpen(false)
+    setDeclareForm({
+      companyName: '',
+      taxId: '',
+      field: '',
+      position: '',
+      address: '',
+      internshipAddress: '',
+      mentor: '',
+      phone: '',
+      email: '',
+      duration: '',
+      confirmPaper: false,
+    })
+    setErrors({
+      phone: '',
+      email: '',
+      duration: '',
+    })
+    setSelectedWardOption('')
+    setCustomWardText('')
+  }
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [suggestions, setSuggestions] = useState<ICompany[]>([])
   const [lookingUpTax, setLookingUpTax] = useState(false)
@@ -388,13 +457,12 @@ export default function StudentInternshipPage() {
       return
     }
 
-    if (phone && !/^(0|\+84)[3|5|7|8|9][0-9]{8}$/.test(phone)) {
-      message.error('Số điện thoại liên hệ không hợp lệ (phải gồm 10 chữ số bắt đầu bằng 0 hoặc +84)!')
-      return
-    }
+    const isPhoneValid = validateField('phone', phone)
+    const isEmailValid = validateField('email', email)
+    const isDurationValid = validateField('duration', duration)
 
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      message.error('Email người liên hệ không đúng định dạng!')
+    if (!isPhoneValid || !isEmailValid || !isDurationValid) {
+      message.error('Vui lòng sửa các lỗi trong form trước khi gửi!')
       return
     }
 
@@ -420,23 +488,7 @@ export default function StudentInternshipPage() {
       }, selectedPeriod?.id)
 
       message.success('Gửi hồ sơ khai báo nơi thực tập thành công!')
-      setDeclareOpen(false)
-      // Reset form fields
-      setDeclareForm({
-        companyName: '',
-        taxId: '',
-        field: '',
-        position: '',
-        address: '',
-        internshipAddress: '',
-        mentor: '',
-        phone: '',
-        email: '',
-        duration: '',
-        confirmPaper: false,
-      })
-      setSelectedWardOption('')
-      setCustomWardText('')
+      handleCloseModal()
       // Reload updated status
       loadData()
     } catch (err: unknown) {
@@ -643,11 +695,11 @@ export default function StudentInternshipPage() {
         open={declareOpen}
         title="Khai báo nơi thực tập"
         description="Khai báo đơn vị tự liên hệ thực tập ngoài danh sách"
-        onClose={() => setDeclareOpen(false)}
+        onClose={handleCloseModal}
         closeDisabled={submitting}
         footer={
           <>
-            <StudentButton variant="secondary" disabled={submitting} onClick={() => setDeclareOpen(false)}>{COMMON_LABELS.CANCEL}</StudentButton>
+            <StudentButton variant="secondary" disabled={submitting} onClick={handleCloseModal}>{COMMON_LABELS.CANCEL}</StudentButton>
             <StudentButton variant="primary" disabled={submitting} onClick={handleDeclareSubmit}>
               {submitting ? (
                 <>
@@ -766,28 +818,40 @@ export default function StudentInternshipPage() {
               disabled={submitting}
             />
           </StudentField>
-          <StudentField label="Số điện thoại liên hệ">
+          <StudentField label="Số điện thoại liên hệ" required error={errors.phone}>
             <input
               value={declareForm.phone}
-              onChange={(event) => setDeclareForm((current) => ({ ...current, phone: event.target.value }))}
+              onChange={(event) => {
+                const val = event.target.value;
+                setDeclareForm((current) => ({ ...current, phone: val }));
+                validateField('phone', val);
+              }}
               className={StudentInputClass()}
               placeholder="Nhập số điện thoại liên lạc"
               disabled={submitting}
             />
           </StudentField>
-          <StudentField label="Email người liên hệ">
+          <StudentField label="Email người liên hệ" required error={errors.email}>
             <input
               value={declareForm.email}
-              onChange={(event) => setDeclareForm((current) => ({ ...current, email: event.target.value }))}
+              onChange={(event) => {
+                const val = event.target.value;
+                setDeclareForm((current) => ({ ...current, email: val }));
+                validateField('email', val);
+              }}
               className={StudentInputClass()}
               placeholder="mentor@company.com"
               disabled={submitting}
             />
           </StudentField>
-          <StudentField label="Thời gian thực tập">
+          <StudentField label="Thời gian thực tập" required error={errors.duration}>
             <input
               value={declareForm.duration}
-              onChange={(event) => setDeclareForm((current) => ({ ...current, duration: event.target.value }))}
+              onChange={(event) => {
+                const val = event.target.value;
+                setDeclareForm((current) => ({ ...current, duration: val }));
+                validateField('duration', val);
+              }}
               className={StudentInputClass()}
               placeholder="8 tuần, 12 tuần..."
               disabled={submitting}

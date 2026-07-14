@@ -245,11 +245,15 @@ export default function StudentResultsPage() {
             <div className="mt-3 space-y-3 text-sm text-slate-600">
               <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3">
                 <span>TTTN</span>
-                <span className="font-medium text-[#1976D2]">{data.tttn.finalScore} / 10</span>
+                <span className="font-medium text-[#1976D2]">
+                  {!data.tttn.finalScore || String(data.tttn.finalScore).toLowerCase().includes('chưa chấm') ? '_' : data.tttn.finalScore} / 10
+                </span>
               </div>
               <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3">
                 <span>ĐATN</span>
-                <span className="font-medium text-emerald-600">{data.datn.finalScore} / 10</span>
+                <span className="font-medium text-emerald-600">
+                  {!data.datn.finalScore || String(data.datn.finalScore).toLowerCase().includes('chưa chấm') ? '_' : data.datn.finalScore} / 10
+                </span>
               </div>
               <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3">
                 <span>GPA xếp loại</span>
