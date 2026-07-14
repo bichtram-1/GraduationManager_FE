@@ -289,7 +289,7 @@ const CompaniesPage = () => {
         />
       </div>
 
-      <Card className="overflow-hidden rounded-[18px] border border-slate-100 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
+      <Card className="rounded-[18px] border border-slate-100 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
         <FilterTable<CompanyRow, IDetailCompany, ICreateCompany, IUpdateCompany>
           title={t(getKey('company_list'))}
           createButtonLabel={t(getKey('add_company'))}

@@ -12,6 +12,7 @@ export interface ISignInResult {
 }
 
 export interface ISignInResponse {
+  code: number;
   results: { object: ISignInResult };
 }
 

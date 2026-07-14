@@ -11,6 +11,13 @@ import { teacherApi } from '@/lib/api/teacherApi'
 type Segment = 'Nhóm hướng dẫn' | 'Nhóm phản biện'
 type EvaluationValue = '' | 'dat' | 'khongdat'
 
+interface IGroupMemberInfo {
+  id: string
+  name: string
+  is_leader?: boolean
+  class_name?: string
+}
+
 type GuidanceGroup = {
   id: string
   segment: Segment
@@ -23,7 +30,7 @@ type GuidanceGroup = {
   status: 'pending' | 'reviewed'
   evaluation: EvaluationValue
   note: string
-  members_list?: any[]
+  members_list?: IGroupMemberInfo[]
 }
 
 type ReviewGroup = {
@@ -39,7 +46,7 @@ type ReviewGroup = {
   status: 'pending' | 'reviewed'
   evaluation: EvaluationValue
   note: string
-  members_list?: any[]
+  members_list?: IGroupMemberInfo[]
 }
 
 type ReviewApiResponse = {
@@ -122,7 +129,7 @@ export default function TeacherReviewGroupsPage() {
     return guidanceGroups.filter((group) => {
       const statusMatch = statusFilter === 'all' || group.status === statusFilter
       
-      const memberMatch = !nameQ || (group.members_list && group.members_list.some((m: any) => {
+      const memberMatch = !nameQ || (group.members_list && group.members_list.some((m: IGroupMemberInfo) => {
         const mssv = (m.id || '').toLowerCase()
         const name = (m.name || '').toLowerCase()
         const cls = (m.class_name || '').toLowerCase()
@@ -141,7 +148,7 @@ export default function TeacherReviewGroupsPage() {
     return reviewGroups.filter((group) => {
       const statusMatch = statusFilter === 'all' || group.status === statusFilter
       
-      const memberMatch = !nameQ || (group.members_list && group.members_list.some((m: any) => {
+      const memberMatch = !nameQ || (group.members_list && group.members_list.some((m: IGroupMemberInfo) => {
         const mssv = (m.id || '').toLowerCase()
         const name = (m.name || '').toLowerCase()
         const cls = (m.class_name || '').toLowerCase()
@@ -381,7 +388,7 @@ export default function TeacherReviewGroupsPage() {
                     {selectedGuidanceGroup.members_list && selectedGuidanceGroup.members_list.length > 0 && (
                       <div className="mt-2 space-y-1.5 border-t border-slate-100 pt-2">
                         <div className="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Thành viên:</div>
-                        {selectedGuidanceGroup.members_list.map((m: any) => (
+                        {selectedGuidanceGroup.members_list.map((m: IGroupMemberInfo) => (
                           <div key={m.id} className="text-sm font-semibold text-slate-800 flex items-center justify-between gap-1.5">
                             <div className="flex items-center gap-1.5 truncate">
                               <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0"></span>
@@ -522,7 +529,7 @@ export default function TeacherReviewGroupsPage() {
                     {selectedReviewGroup.members_list && selectedReviewGroup.members_list.length > 0 && (
                       <div className="mt-2 space-y-1.5 border-t border-slate-100 pt-2">
                         <div className="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Thành viên:</div>
-                        {selectedReviewGroup.members_list.map((m: any) => (
+                        {selectedReviewGroup.members_list.map((m: IGroupMemberInfo) => (
                           <div key={m.id} className="text-sm font-semibold text-slate-800 flex items-center justify-between gap-1.5">
                             <div className="flex items-center gap-1.5 truncate">
                               <span className="h-2 w-2 rounded-full bg-blue-500 shrink-0"></span>

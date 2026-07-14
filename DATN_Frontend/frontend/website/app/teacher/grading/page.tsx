@@ -535,7 +535,7 @@ export default function TeacherGradingPage() {
               <div className="flex items-center gap-3">
                 <select
                   value={roleFilter}
-                  onChange={(e) => setRoleFilter(e.target.value as any)}
+                  onChange={(e) => setRoleFilter(e.target.value as 'all' | 'reviewer' | 'member' | 'advisor')}
                   className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                 >
                   <option value="all">Tất cả vai trò</option>
@@ -545,7 +545,7 @@ export default function TeacherGradingPage() {
                 </select>
                 <select
                   value={datnFilter}
-                  onChange={(e) => setDatnFilter(e.target.value as any)}
+                  onChange={(e) => setDatnFilter(e.target.value as 'all' | 'graded' | 'grading' | 'ungraded')}
                   className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                 >
                   <option value="all">Tất cả đề tài</option>

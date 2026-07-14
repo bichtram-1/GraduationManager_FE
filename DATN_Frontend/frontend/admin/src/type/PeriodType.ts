@@ -1,3 +1,5 @@
+import type { IListUser } from './UserType';
+
 export type BatchType = 'tttn' | 'datn';
 export type BatchStatus = 'open' | 'published' | 'grading' | 'closed';
 
@@ -10,6 +12,7 @@ interface IBasePeriod {
   endDate: string;
   regDeadline: string;
   regOpenDate?: string;
+  reportStartDate?: string;
   reportDeadline?: string;
   gradingStartDate?: string;
   gradingEndDate?: string;
@@ -23,7 +26,7 @@ interface IBasePeriod {
   studentListFileName?: string;
   classIds?: string[];
   externalStudentIds?: string[];
-  externalStudents?: any[];
+  externalStudents?: (IListUser & { reason?: string })[];
   numberDN?: number;
   numberSV?: number;
   numberTopics?: number;

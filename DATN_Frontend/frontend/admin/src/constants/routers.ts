@@ -12,11 +12,12 @@ export const ROUTES = {
   COUNCILS: '/councils',
   COUNCILS_CREATE: '/councils/create',
   ASSIGNMENTS: '/assignments',
-  STUDENT_SCORES: '/student-scores',
   CLASSES: '/classes',
   INTERNSHIP_STUDENTS: '/internship-students',
   INTERNSHIP_STUDENTS_DECLARATIONS: '/internship-students/declarations',
   INTERNSHIP_STUDENTS_NOCOMPANY: '/internship-students/no-company',
+  INTERNSHIP_STUDENTS_SCORES: '/internship-students/scores',
+  GROUPS_SCORES: '/groups/scores',
   PERIODS: '/periods',
   FORGOTPW: '/forgot-password',
 };
@@ -36,11 +37,12 @@ export const HEADER_TITLES: Record<RoutePath, keyof I18nKey> = {
   [ROUTES.COUNCILS_CREATE]: 'council_management',
   [ROUTES.PERIODS]: 'period_management',
   [ROUTES.ASSIGNMENTS]: 'assignment_management',
-  [ROUTES.STUDENT_SCORES]: 'student_score_management',
   [ROUTES.CLASSES]: 'class_management',
   [ROUTES.INTERNSHIP_STUDENTS]: 'internship_students',
   [ROUTES.INTERNSHIP_STUDENTS_DECLARATIONS]: 'internship_students_declarations',
   [ROUTES.INTERNSHIP_STUDENTS_NOCOMPANY]: 'internship_students_nocompany',
+  [ROUTES.INTERNSHIP_STUDENTS_SCORES]: 'internship_score_management',
+  [ROUTES.GROUPS_SCORES]: 'project_score_management',
   [ROUTES.FORGOTPW]: 'forgot_password_title',
 };
 

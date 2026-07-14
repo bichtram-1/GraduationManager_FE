@@ -19,20 +19,83 @@ export default function TeacherStudentsPage() {
   const [searchName, setSearchName] = useState('')
   const [searchCompany, setSearchCompany] = useState('')
   const [searchTopic, setSearchTopic] = useState('')
-  const [tttnList, setTttnList] = useState<any[]>([])
-  const [datnList, setDatnList] = useState<any[]>([])
-  const [selectedTTTN, setSelectedTTTN] = useState<any>(null)
-  const [selectedDATN, setSelectedDATN] = useState<any>(null)
+  interface IStudentReport {
+    bao_cao_id: string | number
+    comment?: string
+    title?: string
+    date?: string
+    fileUrl?: string
+    week?: number
+    status?: string
+    tuan_so?: number
+    trang_thai?: string
+    thoi_gian_nop?: string
+    deadline?: string
+    duong_dan_file?: string
+    noi_dung?: string
+  }
+
+  interface ITttnStudent {
+    id: string
+    name: string
+    comment?: string
+    reports?: IStudentReport[]
+    studentCode?: string
+    companyName?: string
+    company?: string
+    phone?: string
+    email?: string
+    mentor?: string
+    class?: string
+    className?: string
+    major?: string
+    majorName?: string
+    companyAddress?: string
+    address?: string
+    internshipPosition?: string
+    field?: string
+    internshipLocation?: string
+    internshipAddress?: string
+    taxId?: string
+    taxCode?: string
+    mentorName?: string
+    mentorPhone?: string
+    mentorPhoneNo?: string
+  }
+
+  interface IGroupMemberInfo {
+    id: string
+    name: string
+    is_leader?: boolean
+    class_name?: string
+    studentCode?: string
+    class?: string
+  }
+
+  interface IDatnGroup {
+    group: string
+    topic?: string
+    topic_details?: { name?: string; huong_de_tai?: string }
+    members?: number
+    members_list?: IGroupMemberInfo[]
+    reports?: IStudentReport[]
+    comment?: string
+  }
+
+  const [tttnList, setTttnList] = useState<ITttnStudent[]>([])
+  const [datnList, setDatnList] = useState<IDatnGroup[]>([])
+  const [selectedTTTN, setSelectedTTTN] = useState<ITttnStudent | null>(null)
+  const [selectedDATN, setSelectedDATN] = useState<IDatnGroup | null>(null)
   const [comments, setComments] = useState<Record<string, string>>({})
   const [commentModal, setCommentModal] = useState<{ open: boolean; id?: string; text: string }>({ open: false, id: undefined, text: '' })
   const [reportModal, setReportModal] = useState<{ open: boolean; id?: string; type?: 'TTTN' | 'DATN' }>({ open: false, id: undefined, type: undefined })
-  const [companyModal, setCompanyModal] = useState<{ open: boolean; student: any }>({ open: false, student: null })
-  const [groupDetailModal, setGroupDetailModal] = useState<{ open: boolean; group: any }>({ open: false, group: null })
+  const [companyModal, setCompanyModal] = useState<{ open: boolean; student: ITttnStudent | null }>({ open: false, student: null })
+  const [groupDetailModal, setGroupDetailModal] = useState<{ open: boolean; group: IDatnGroup | null }>({ open: false, group: null })
   const [loading, setLoading] = useState(false)
-  const [selectedReport, setSelectedReport] = useState<any>(null)
+  const [selectedReport, setSelectedReport] = useState<IStudentReport | null>(null)
   const [reportCommentText, setReportCommentText] = useState('')
 
-  const formatCompanyInfo = (val: any) => {
+  const formatCompanyInfo = (val?: string | null) => {
     if (!val || val === '—' || val === 'Chưa có' || val === 'chưa có' || val === 'Chưa cập nhật') {
       return 'Chưa có thông tin'
     }
@@ -54,23 +117,23 @@ export default function TeacherStudentsPage() {
 
             // Load comments from backend
             const initialComments: Record<string, string> = {}
-            tttn.forEach((item: any) => {
+            tttn.forEach((item: ITttnStudent) => {
               if (item.comment) initialComments[item.id] = item.comment
             })
-            datn.forEach((item: any) => {
+            datn.forEach((item: IDatnGroup) => {
               if (item.comment) initialComments[item.group] = item.comment
             })
             setComments(initialComments)
 
-            setSelectedTTTN((curr: any) => {
-              if (curr && tttn.some((s: any) => s.id === curr.id)) {
-                return tttn.find((s: any) => s.id === curr.id)
+            setSelectedTTTN((curr) => {
+              if (curr && tttn.some((s: ITttnStudent) => s.id === curr.id)) {
+                return tttn.find((s: ITttnStudent) => s.id === curr.id) || null
               }
               return tttn.length > 0 ? tttn[0] : null
             })
-            setSelectedDATN((curr: any) => {
-              if (curr && datn.some((g: any) => g.group === curr.group)) {
-                return datn.find((g: any) => g.group === curr.group)
+            setSelectedDATN((curr) => {
+              if (curr && datn.some((g: IDatnGroup) => g.group === curr.group)) {
+                return datn.find((g: IDatnGroup) => g.group === curr.group) || null
               }
               return datn.length > 0 ? datn[0] : null
             })
@@ -124,14 +187,14 @@ export default function TeacherStudentsPage() {
   const handleSaveReportComment = async () => {
     if (!reportModal.id || !reportModal.type) return
     try {
-      const payload: any = {
+      const payload: { studentId: string; periodId?: string; comment: string; type: "TTTN" | "DATN"; baoCaoId?: number } = {
         studentId: reportModal.id,
         periodId: selectedPeriod?.id,
         comment: reportCommentText,
-        type: reportModal.type
+        type: reportModal.type as "TTTN" | "DATN"
       }
       if (selectedReport) {
-        payload.baoCaoId = selectedReport.bao_cao_id
+        payload.baoCaoId = Number(selectedReport.bao_cao_id)
       }
       const res = await teacherApi.saveReportComment(payload)
       if (res?.success) {
@@ -139,16 +202,16 @@ export default function TeacherStudentsPage() {
         
         if (selectedReport) {
           // Update selectedReport comment
-          setSelectedReport((prev: any) => prev ? { ...prev, comment: reportCommentText } : null)
+          setSelectedReport((prev) => prev ? { ...prev, comment: reportCommentText } : null)
           // Update reports array
-          const updateReports = (reps: any[]) => reps.map(r => r.bao_cao_id === selectedReport.bao_cao_id ? { ...r, comment: reportCommentText } : r)
+          const updateReports = (reps: IStudentReport[]) => reps.map(r => r.bao_cao_id === selectedReport.bao_cao_id ? { ...r, comment: reportCommentText } : r)
           
           if (reportModal.type === 'TTTN') {
             setTttnList(prev => prev.map(s => s.id === reportModal.id ? { ...s, reports: updateReports(s.reports || []) } : s))
-            setSelectedTTTN((prev: any) => prev ? { ...prev, reports: updateReports(prev.reports || []) } : null)
+            setSelectedTTTN((prev) => prev ? { ...prev, reports: updateReports(prev.reports || []) } : null)
           } else {
             setDatnList(prev => prev.map(g => g.group === reportModal.id ? { ...g, reports: updateReports(g.reports || []) } : g))
-            setSelectedDATN((prev: any) => prev ? { ...prev, reports: updateReports(prev.reports || []) } : null)
+            setSelectedDATN((prev) => prev ? { ...prev, reports: updateReports(prev.reports || []) } : null)
           }
         } else {
           setComments((c) => ({ ...c, [reportModal.id!]: reportCommentText }))
@@ -218,7 +281,7 @@ export default function TeacherStudentsPage() {
       const topicName = (row.topic_details?.name || row.topic || '').toLowerCase()
       const topicMatch = !topicQ || topicName.includes(topicQ)
 
-      const memberMatch = !nameQ || (row.members_list && row.members_list.some((m: any) => {
+      const memberMatch = !nameQ || (row.members_list && row.members_list.some((m: IGroupMemberInfo) => {
         const mssv = (m.id || m.studentCode || '').toLowerCase()
         const hoten = (m.name || '').toLowerCase()
         return mssv.includes(nameQ) || hoten.includes(nameQ)
@@ -389,7 +452,7 @@ export default function TeacherStudentsPage() {
                     <div className="text-sm text-slate-400 italic py-2 text-center bg-slate-50 rounded-2xl">Chưa có báo cáo nào được nộp.</div>
                   ) : (
                     <div className="max-h-[350px] overflow-y-auto pr-1 space-y-2">
-                      {selectedTTTN.reports.map((rep: any) => (
+                      {selectedTTTN.reports.map((rep: IStudentReport) => (
                         <div
                           key={rep.bao_cao_id || rep.tuan_so}
                           onClick={() => {
@@ -405,7 +468,7 @@ export default function TeacherStudentsPage() {
                               Tuần {rep.tuan_so}
                             </div>
                             <div className="text-xs text-slate-500 mt-0.5">
-                              {rep.trang_thai === 'Đã nộp' ? `Nộp ngày: ${rep.thoi_gian_nop}` : `Hạn nộp: ${new Date(rep.deadline).toLocaleDateString('vi-VN')}`}
+                              {rep.trang_thai === 'Đã nộp' ? `Nộp ngày: ${rep.thoi_gian_nop}` : `Hạn nộp: ${new Date(rep.deadline || '').toLocaleDateString('vi-VN')}`}
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
@@ -474,7 +537,7 @@ export default function TeacherStudentsPage() {
                         <td className="px-5 py-4 text-slate-600">
                           {group.members_list && group.members_list.length > 0 ? (
                             <div className="space-y-1">
-                              {group.members_list.map((m: any) => (
+                              {group.members_list.map((m: IGroupMemberInfo) => (
                                 <div key={m.id} className="text-xs text-slate-700">
                                   <span className="font-semibold whitespace-nowrap">{m.name}</span>
                                 </div>
@@ -522,7 +585,7 @@ export default function TeacherStudentsPage() {
                     {selectedDATN.members_list && selectedDATN.members_list.length > 0 && (
                       <div className="mt-2 space-y-1.5 border-t border-slate-100 pt-2">
                         <div className="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Thành viên:</div>
-                        {selectedDATN.members_list.map((m: any) => (
+                        {selectedDATN.members_list.map((m: IGroupMemberInfo) => (
                           <div key={m.id} className="text-xs font-semibold text-slate-800 flex items-center gap-1.5 whitespace-nowrap">
                             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0"></span>
                             <span className="truncate">{m.name}</span>
@@ -540,7 +603,7 @@ export default function TeacherStudentsPage() {
                     <div className="text-sm text-slate-400 italic py-2 text-center bg-white/80 rounded-2xl border border-slate-100">Chưa có báo cáo nào được nộp.</div>
                   ) : (
                     <div className="max-h-[350px] overflow-y-auto pr-1 space-y-2">
-                      {selectedDATN.reports.map((rep: any) => (
+                      {selectedDATN.reports.map((rep: IStudentReport) => (
                         <div
                           key={rep.bao_cao_id || rep.tuan_so}
                           onClick={() => {
@@ -558,7 +621,7 @@ export default function TeacherStudentsPage() {
                               Tuần {rep.tuan_so}
                             </div>
                             <div className="text-xs text-slate-500 mt-0.5">
-                              {rep.trang_thai === 'Đã nộp' ? `Nộp ngày: ${rep.thoi_gian_nop}` : `Hạn nộp: ${new Date(rep.deadline).toLocaleDateString('vi-VN')}`}
+                              {rep.trang_thai === 'Đã nộp' ? `Nộp ngày: ${rep.thoi_gian_nop}` : `Hạn nộp: ${new Date(rep.deadline || '').toLocaleDateString('vi-VN')}`}
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
@@ -859,7 +922,7 @@ export default function TeacherStudentsPage() {
                 </h4>
                 <div className="space-y-3">
                   {groupDetailModal.group.members_list && groupDetailModal.group.members_list.length > 0 ? (
-                    groupDetailModal.group.members_list.map((m: any) => (
+                    groupDetailModal.group.members_list.map((m: IGroupMemberInfo) => (
                       <div key={m.id} className="border-b border-slate-100 pb-2 last:border-0 last:pb-0 font-sans">
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-bold text-slate-900">{m.name}</span>

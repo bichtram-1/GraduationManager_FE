@@ -22,7 +22,20 @@ export const topicApi = {
     const resData = response?.data?.results?.objects || response?.data?.results?.object || response?.data;
     const rawList = (resData && typeof resData === 'object' && 'rows' in resData) ? resData.rows : (Array.isArray(resData) ? resData : []);
 
-    return rawList.map((t: any) => {
+    return rawList.map((t: {
+      id?: string | number;
+      code?: string;
+      name?: string;
+      slots?: string;
+      approved_students?: string;
+      status?: string;
+      rejectReason?: string;
+      period?: string;
+      batch?: string;
+      description?: string;
+      direction?: string;
+      fileUrl?: string;
+    }) => {
       const slotsStr = t.slots || '0/4';
       const parts = slotsStr.split('/');
       const registered = parseInt(parts[0] || '0', 10);

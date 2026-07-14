@@ -7,6 +7,7 @@ import { STATUS_CODE } from '../../constants/commonConst';
 import { formatNumber } from '@shared/utils/numberUtils';
 import { useGlobalVariable } from '../../hooks/GlobalVariableProvider';
 import { TeamOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
+import type { IListGroup, IGroupMember } from '../../type/GroupType';
 
 const { Search } = Input;
 
@@ -26,7 +27,7 @@ const ReviewGroupsPage: React.FC = () => {
   const approveGroup = groupHooks.useApproveGroup();
   const rejectGroup = groupHooks.useRejectGroup();
   
-  const rawGroups = (q?.rows ?? []) as any[];
+  const rawGroups = (q?.rows ?? []) as IListGroup[];
   const groups = useMemo(() => {
     if (!selectedPeriod) return rawGroups;
     return rawGroups.filter((g) => g.registrationBatch === selectedPeriod.name);
@@ -49,7 +50,7 @@ const ReviewGroupsPage: React.FC = () => {
         }
       }
       if (!s) return true;
-      return [g.code, g.title, g.supervisor].join(' ').toLowerCase().includes(s) || g.members.some((m: any) => m.name.toLowerCase().includes(s));
+      return [g.code, g.title, g.supervisor].join(' ').toLowerCase().includes(s) || g.members.some((m: IGroupMember) => m.name.toLowerCase().includes(s));
     });
   }, [groups, query, statusFilter]);
 
@@ -101,9 +102,9 @@ const ReviewGroupsPage: React.FC = () => {
       title: t(getKey('members')),
       key: 'members',
       width: 300,
-      render: (_: any, r: any) => (
+      render: (_: unknown, r: IListGroup) => (
         <div className="flex flex-col gap-1">
-          {(r.members || []).map((m: any) => (
+          {(r.members || []).map((m: IGroupMember) => (
             <Tooltip key={m.id} title={m.eligible !== false ? `${m.name} (${m.code || ''})` : `${m.name} (${m.code || ''}) — ${m.reason}`}>
               <div className="text-xs">
                 <span className={`inline-block px-2.5 py-1 rounded text-xs font-medium ${m.eligible !== false ? 'bg-slate-100 text-slate-700' : 'bg-red-100 text-red-700'}`}>
@@ -117,11 +118,11 @@ const ReviewGroupsPage: React.FC = () => {
         </div>
       ),
     },
-    { title: t(getKey('group_status')), key: 'status', width: 120, render: (_: any, r: any) => {
+    { title: t(getKey('group_status')), key: 'status', width: 120, render: (_: unknown, r: IListGroup) => {
       const meta = STATUS_META[r.status];
       return <Tag color={meta?.color || 'default'} className="!px-2 !py-[2px] !text-xs !font-medium">{meta ? t(getKey(meta.labelKey)) : r.status}</Tag>;
     } },
-    { title: t(getKey('action')), key: 'action', width: 150, render: (_: any, r: any) => {
+    { title: t(getKey('action')), key: 'action', width: 150, render: (_: unknown, r: IListGroup) => {
       const isApproved = r.status === STATUS_CODE.APPROVED_UP;
       const isRejected = r.status === STATUS_CODE.DISSOLVED || r.status === STATUS_CODE.LOCKED;
       const isPending = r.status === STATUS_CODE.PENDING_UP || r.status === STATUS_CODE.WARNING || r.status === STATUS_CODE.MISSING;

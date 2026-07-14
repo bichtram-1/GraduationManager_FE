@@ -1,11 +1,26 @@
-import { DataLoginType, DataLogoutType } from '../type/UserLoginType';
-import { ISignInResponse } from '../type/AuthType';
+import { DataLoginType, DataLogoutType, UserLoginType } from '../type/UserLoginType';
+import { DetailResponseType } from '@shared/types/GeneralType';
 import axiosInstance from './axiosInstance';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const mapLoginResponse = (resData: any): ISignInResponse | any => {
-  if (resData?.success && resData?.data) {
-    const backendData = resData.data;
+interface IBackendLoginData {
+  success?: boolean;
+  data?: {
+    access_token?: string;
+    refresh_token?: string;
+    role?: string;
+    user?: {
+      giang_vien_id?: number | string;
+      sinh_vien_id?: number | string;
+      ho_ten?: string;
+      email?: string;
+    };
+  };
+}
+
+const mapLoginResponse = (resData: unknown): DetailResponseType<UserLoginType> => {
+  const data = resData as IBackendLoginData | null;
+  if (data?.success && data?.data) {
+    const backendData = data.data;
     let mappedRole = 'student';
     if (backendData.role === 'ADMIN') {
       mappedRole = 'admin';
@@ -14,22 +29,23 @@ const mapLoginResponse = (resData: any): ISignInResponse | any => {
     }
 
     return {
+      code: 200,
       results: {
         object: {
-          access_token: backendData.access_token,
+          access_token: backendData.access_token ?? '',
           refresh_token: backendData.refresh_token,
           user: {
             id: String(backendData.user?.giang_vien_id || backendData.user?.sinh_vien_id || 'u-unknown'),
             name: backendData.user?.ho_ten || 'Người dùng',
-            email: backendData.user?.email,
+            email: backendData.user?.email || '',
             role: mappedRole,
-          },
+          } as unknown as import('../type/UserType').IDetailUser,
         },
       },
-    } as ISignInResponse;
+    } as DetailResponseType<UserLoginType>;
   }
 
-  return resData;
+  return resData as DetailResponseType<UserLoginType>;
 };
 
 export const authApi = {

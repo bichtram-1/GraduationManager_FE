@@ -13,7 +13,7 @@ import {
 } from '@shared/types/GeneralType';
 import axiosInstance from './axiosInstance';
 
-interface IUserListParams extends BaseListParams {
+export interface IUserListParams extends BaseListParams {
   keyword?: string;
   className?: string;
   status?: UserStatusType;

@@ -7,7 +7,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AxiosError } from 'axios';
-import { userApi } from '../api/userApi';
+import { userApi, IUserListParams } from '../api/userApi';
 import { QueryKey } from '../constants/queryKey';
 import {
   BaseListParams,
@@ -20,7 +20,7 @@ import {
 
 export const userHooks = {
   /** Lấy danh sách user (phân trang, filter) — dùng cho table */
-  useFetchListUsers: (params: any) => {
+  useFetchListUsers: (params: IUserListParams) => {
     return useQuery({
       queryKey: [QueryKey.users.list, params],
       queryFn: () => userApi.getListUser(params),

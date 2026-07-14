@@ -33,7 +33,7 @@ export const periodApi = {
     return response?.data;
   },
 
-  addStudentToPeriods: async (body: { studentId: string; periodIds: string[]; reason?: string }) => {
+  addStudentToPeriods: async (body: { studentId: string; periodIds: string[] }) => {
     const response = await axiosInstance.post('/private/v1/periods/add-student', body);
     return response?.data;
   },

@@ -139,7 +139,7 @@ export default function ScoringTable({
           setIsChair(j.data.isChair || false)
           const loaded = j.data.rows || []
           setRows((cur) => cur.map((r) => {
-            const found = loaded.find((x: any) => x.id === r.member.id)
+            const found = loaded.find((x: { id: string; presentation?: number | string | null; demo?: number | string | null; qna?: number | string | null; report?: number | string | null; otherScores?: unknown[] }) => x.id === r.member.id)
             if (!found) return r
             return {
               ...r,

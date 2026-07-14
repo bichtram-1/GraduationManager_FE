@@ -1,7 +1,18 @@
+import { useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom';
+import { dashboardApi, IPublicSummary } from '../../api/dashboardApi';
 import { cn } from '../../constants/commonConst';
 
 const AuthLayout = () => {
+  const [summary, setSummary] = useState<IPublicSummary | null>(null);
+
+  useEffect(() => {
+    dashboardApi
+      .getPublicSummary()
+      .then(setSummary)
+      .catch(() => setSummary(null));
+  }, []);
+
   return (
     <div className={cn('flex h-screen w-screen overflow-hidden bg-slate-100')}> 
       <div
@@ -32,15 +43,15 @@ const AuthLayout = () => {
 
           <div className={cn('mt-10 grid grid-cols-3 gap-3')}> 
             <div className={cn('rounded-2xl border border-white/15 bg-white/10 p-4 shadow-[0_16px_30px_rgba(2,6,23,0.12)] backdrop-blur')}>
-              <div className={cn('text-2xl font-semibold')}>524</div>
+              <div className={cn('text-2xl font-semibold')}>{summary ? summary.totalStudents : '—'}</div>
               <div className={cn('mt-1 text-xs text-white/80')}>Sinh viên</div>
             </div>
             <div className={cn('rounded-2xl border border-white/15 bg-white/10 p-4 shadow-[0_16px_30px_rgba(2,6,23,0.12)] backdrop-blur')}>
-              <div className={cn('text-2xl font-semibold')}>48</div>
+              <div className={cn('text-2xl font-semibold')}>{summary ? summary.totalTeachers : '—'}</div>
               <div className={cn('mt-1 text-xs text-white/80')}>Giảng viên</div>
             </div>
             <div className={cn('rounded-2xl border border-white/15 bg-white/10 p-4 shadow-[0_16px_30px_rgba(2,6,23,0.12)] backdrop-blur')}>
-              <div className={cn('text-2xl font-semibold')}>76</div>
+              <div className={cn('text-2xl font-semibold')}>{summary ? summary.totalTopics : '—'}</div>
               <div className={cn('mt-1 text-xs text-white/80')}>Đề tài</div>
             </div>
           </div>

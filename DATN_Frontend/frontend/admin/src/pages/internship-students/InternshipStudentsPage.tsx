@@ -24,7 +24,6 @@ import { useGlobalVariable } from '../../hooks/GlobalVariableProvider';
 
 type ModeKey = 'no-company' | 'declarations';
 type ConfirmationTab = 'all' | ConfirmationStatus | 'grouped';
-type NoCompanyTab = 'all' | NoCompanyStatus;
 
 const INITIAL_CONFIRMATIONS: IConfirmationRequest[] = [];
 const INITIAL_NO_COMPANY_STUDENTS: INoCompanyStudent[] = [];
@@ -100,7 +99,6 @@ const InternshipStudentsPage = () => {
   const { selectedPeriod } = useGlobalVariable();
   const mode: ModeKey = location.pathname.includes('/no-company') ? 'no-company' : 'declarations';
   const [declarationTab, setDeclarationTab] = useState<ConfirmationTab>('pending');
-  const [noCompanyTab, setNoCompanyTab] = useState<NoCompanyTab>('all');
   const [remindOpen, setRemindOpen] = useState(false);
   const [groupedKeyword, setGroupedKeyword] = useState('');
   const [groupedStatusFilter, setGroupedStatusFilter] = useState<'all' | 'cho_cap_giay' | 'approved' | 'pending'>('all');
@@ -181,12 +179,6 @@ const InternshipStudentsPage = () => {
     };
   }, [declarationsRows]);
 
-  const noCompanyTabCounts = useMemo(() => ({
-    total: noCompanyRows.length,
-    not_registered: noCompanyRows.filter((item: INoCompanyStudent) => item.status === STATUS_CODE.NOT_REGISTERED).length,
-    has_company: noCompanyRows.filter((item: INoCompanyStudent) => item.status === STATUS_CODE.HAS_COMPANY).length,
-  }), [noCompanyRows]);
-
   // Hook luôn phải gọi vô điều kiện ở mọi lần render (Rules of Hooks) — không được đặt
   // useMemo bên trong nhánh ternary của JSX, vì số lượng hook gọi sẽ khác nhau giữa các
   // lần render (VD: đổi tab "Gộp theo nơi thực tập") và React sẽ báo lỗi "Rendered fewer
@@ -208,8 +200,7 @@ const InternshipStudentsPage = () => {
     page: 1,
     limit: 10,
     periodId: selectedPeriod?.id || '',
-    noCompanyTab
-  }), [selectedPeriod?.id, noCompanyTab]);
+  }), [selectedPeriod?.id]);
 
   interface IGroupedDeclaration {
     key: string;
@@ -746,27 +737,22 @@ const InternshipStudentsPage = () => {
         ))}
       </div>
 
-      <div className="mb-5 rounded-[20px] border border-slate-100 bg-white px-4 pt-3 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
-        <Tabs
-          activeKey={mode === 'declarations' ? declarationTab : noCompanyTab}
-          onChange={(key) => {
-            if (mode === 'declarations') setDeclarationTab(key as ConfirmationTab);
-            else setNoCompanyTab(key as NoCompanyTab);
-          }}
-          items={mode === 'declarations' ? [
-            { key: 'pending', label: `Chờ duyệt (${formatNumber(declarationTabCounts.pending)})`, icon: <ClockCircleOutlined /> },
-            { key: 'cho_cap_giay', label: `Chờ cấp giấy (${formatNumber(declarationTabCounts.cho_cap_giay)})`, icon: <FileTextOutlined /> },
-            { key: 'approved', label: `Đã xong (${formatNumber(declarationTabCounts.approved)})`, icon: <CheckCircleOutlined /> },
-            { key: 'rejected', label: `Bị từ chối (${formatNumber(declarationTabCounts.rejected)})`, icon: <CloseCircleOutlined /> },
-            { key: 'grouped', label: `Gộp theo nơi thực tập (${formatNumber(declarationTabCounts.grouped)})`, icon: <BankOutlined /> },
-          ] : [
-            { key: 'all', label: `${t(getKey('all_list'))} (${formatNumber(noCompanyTabCounts.total)})`, icon: <BankOutlined /> },
-            { key: 'not_registered', label: `${t(getKey('not_registered_list'))} (${formatNumber(noCompanyTabCounts.not_registered)})`, icon: <CloseCircleOutlined /> },
-            { key: 'has_company', label: `${t(getKey('has_company_list'))} (${formatNumber(noCompanyTabCounts.has_company)})`, icon: <CheckCircleOutlined /> },
-          ]}
-          className="batch-tabs"
-        />
-      </div>
+      {mode === 'declarations' && (
+        <div className="mb-5 rounded-[20px] border border-slate-100 bg-white px-4 pt-3 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
+          <Tabs
+            activeKey={declarationTab}
+            onChange={(key) => setDeclarationTab(key as ConfirmationTab)}
+            items={[
+              { key: 'pending', label: `Chờ duyệt (${formatNumber(declarationTabCounts.pending)})`, icon: <ClockCircleOutlined /> },
+              { key: 'cho_cap_giay', label: `Chờ cấp giấy (${formatNumber(declarationTabCounts.cho_cap_giay)})`, icon: <FileTextOutlined /> },
+              { key: 'approved', label: `Đã xong (${formatNumber(declarationTabCounts.approved)})`, icon: <CheckCircleOutlined /> },
+              { key: 'rejected', label: `Bị từ chối (${formatNumber(declarationTabCounts.rejected)})`, icon: <CloseCircleOutlined /> },
+              { key: 'grouped', label: `Gộp theo nơi thực tập (${formatNumber(declarationTabCounts.grouped)})`, icon: <BankOutlined /> },
+            ]}
+            className="batch-tabs"
+          />
+        </div>
+      )}
 
       {mode === 'declarations' && declarationTab === 'grouped' ? (
         <Card key="grouped-view" className="overflow-hidden rounded-[18px] border border-slate-100 bg-white p-6 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
@@ -804,7 +790,7 @@ const InternshipStudentsPage = () => {
           />
         </Card>
       ) : mode === 'declarations' ? (
-        <Card key="normal-view-declarations" className="overflow-hidden rounded-[18px] border border-slate-100 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
+        <Card key="normal-view-declarations" className="rounded-[18px] border border-slate-100 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
           <FilterTable<IConfirmationRequest, IConfirmationRequest | undefined, ICreateConfirmationRequest, IUpdateConfirmationRequest>
             key="table-declarations"
             title={t(getKey('internship_students_declarations'))}
@@ -850,7 +836,7 @@ const InternshipStudentsPage = () => {
           />
         </Card>
       ) : (
-        <Card key="no-company-view" className="overflow-hidden rounded-[18px] border border-slate-100 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
+        <Card key="no-company-view" className="rounded-[18px] border border-slate-100 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
           <FilterTable<INoCompanyStudent, INoCompanyStudent | undefined, ICreateNoCompanyStudent, IUpdateNoCompanyStudent>
             key="no-company-table"
             title={t(getKey('internship_students_nocompany'))}
@@ -865,13 +851,20 @@ const InternshipStudentsPage = () => {
             filterRender={() => (
               <div className="mb-4">
                 <div className="mb-3 grid grid-cols-1 gap-3 xl:grid-cols-12">
-                  <Form.Item name="keyword" className="xl:col-span-5 !mb-0">
+                  <Form.Item name="keyword" className="xl:col-span-4 !mb-0">
                     <Input allowClear prefix={<SearchOutlined className="text-slate-400" />} placeholder={t(getKey('search_student_no_company_placeholder'))} className="!h-11 !rounded-[12px] !border-slate-300" />
                   </Form.Item>
-                  <Form.Item name="className" className="xl:col-span-3 !mb-0">
+                  <Form.Item name="className" className="xl:col-span-2 !mb-0">
                     <Select allowClear placeholder={t(getKey('all_classes'))} className="!h-11 !w-full" options={[{ value: 'all', label: t(getKey('all_classes')) }, ...classOptions.map((c) => ({ value: c, label: c }))]} />
                   </Form.Item>
-                  <Form.Item name="assignmentStatus" className="xl:col-span-4 !mb-0" initialValue="all">
+                  <Form.Item name="noCompanyTab" className="xl:col-span-3 !mb-0" initialValue="all">
+                    <Select className="!h-11 !w-full" options={[
+                      { value: 'all', label: t(getKey('all_list')) },
+                      { value: STATUS_CODE.NOT_REGISTERED, label: t(getKey('not_registered_list')) },
+                      { value: STATUS_CODE.HAS_COMPANY, label: t(getKey('has_company_list')) },
+                    ]} />
+                  </Form.Item>
+                  <Form.Item name="assignmentStatus" className="xl:col-span-3 !mb-0" initialValue="all">
                     <Select className="!h-11 !w-full" options={[
                       { value: 'all', label: 'Tất cả trạng thái phân công' },
                       { value: 'assigned', label: 'Đã phân công GVHD' },

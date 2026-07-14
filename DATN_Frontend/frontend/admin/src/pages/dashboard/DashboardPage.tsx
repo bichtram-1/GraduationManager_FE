@@ -51,6 +51,59 @@ const DashboardPage = () => {
         { title: t(getKey('submit_final_report')), date: '30/07/2026', color: 'gray' },
       ];
     }
+
+    if (selectedPeriod.type === 'datn') {
+      return [
+        {
+          title: 'Mở đăng ký đợt học',
+          date: selectedPeriod.regOpenDate || '—',
+          color: isCompleted(selectedPeriod.regOpenDate) ? 'green' : 'gray',
+        },
+        {
+          title: 'Hạn đăng ký đợt học',
+          date: selectedPeriod.regDeadline || '—',
+          color: isCompleted(selectedPeriod.regDeadline) ? 'green' : 'gray',
+        },
+        {
+          title: 'Bắt đầu đợt (Đồ án tốt nghiệp)',
+          date: selectedPeriod.startDate || '—',
+          color: isCompleted(selectedPeriod.startDate) ? 'green' : 'gray',
+        },
+        {
+          title: 'Hạn nộp báo cáo tiến độ',
+          date: selectedPeriod.reportDeadline || '—',
+          color: isCompleted(selectedPeriod.reportDeadline) ? 'green' : 'gray',
+        },
+        {
+          title: 'Thời gian phản biện đồ án',
+          date: selectedPeriod.reviewStartDate && selectedPeriod.reviewEndDate 
+            ? `${selectedPeriod.reviewStartDate} - ${selectedPeriod.reviewEndDate}` 
+            : '—',
+          color: isCompleted(selectedPeriod.reviewEndDate) ? 'green' : 'gray',
+        },
+        {
+          title: 'Thời gian bảo vệ đồ án',
+          date: selectedPeriod.defenseStartDate && selectedPeriod.defenseEndDate 
+            ? `${selectedPeriod.defenseStartDate} - ${selectedPeriod.defenseEndDate}` 
+            : '—',
+          color: isCompleted(selectedPeriod.defenseEndDate) ? 'green' : 'gray',
+        },
+        {
+          title: 'Thời gian chấm điểm',
+          date: selectedPeriod.gradingStartDate && selectedPeriod.gradingEndDate 
+            ? `${selectedPeriod.gradingStartDate} - ${selectedPeriod.gradingEndDate}` 
+            : '—',
+          color: isCompleted(selectedPeriod.gradingEndDate) ? 'green' : 'gray',
+        },
+        {
+          title: 'Kết thúc đợt học',
+          date: selectedPeriod.endDate || '—',
+          color: isCompleted(selectedPeriod.endDate) ? 'green' : 'gray',
+        },
+      ];
+    }
+
+    // TTTN mode
     return [
       {
         title: 'Mở đăng ký đợt học',
@@ -63,7 +116,7 @@ const DashboardPage = () => {
         color: isCompleted(selectedPeriod.regDeadline) ? 'green' : 'gray',
       },
       {
-        title: 'Bắt đầu đợt (Thực tập/Đồ án)',
+        title: 'Bắt đầu đợt (Thực tập tốt nghiệp)',
         date: selectedPeriod.startDate || '—',
         color: isCompleted(selectedPeriod.startDate) ? 'green' : 'gray',
       },
@@ -73,9 +126,16 @@ const DashboardPage = () => {
         color: isCompleted(selectedPeriod.reportDeadline) ? 'green' : 'gray',
       },
       {
-        title: 'Kết thúc đợt (Hạn chấm điểm)',
-        date: selectedPeriod.gradingEndDate || selectedPeriod.endDate || '—',
-        color: isCompleted(selectedPeriod.gradingEndDate || selectedPeriod.endDate) ? 'green' : 'gray',
+        title: 'Thời gian chấm điểm',
+        date: selectedPeriod.gradingStartDate && selectedPeriod.gradingEndDate 
+          ? `${selectedPeriod.gradingStartDate} - ${selectedPeriod.gradingEndDate}` 
+          : '—',
+        color: isCompleted(selectedPeriod.gradingEndDate) ? 'green' : 'gray',
+      },
+      {
+        title: 'Kết thúc đợt học',
+        date: selectedPeriod.endDate || '—',
+        color: isCompleted(selectedPeriod.endDate) ? 'green' : 'gray',
       },
     ];
   }, [selectedPeriod, t]);

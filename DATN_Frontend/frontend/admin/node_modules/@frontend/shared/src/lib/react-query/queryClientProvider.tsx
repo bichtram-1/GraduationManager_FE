@@ -18,17 +18,29 @@ export default function AppQueryProvider({ children }: { children: ReactNode }) 
       notification.success(defaultSuccessMess);
     },
     onError: (error) => {
-      const errData = (error as AxiosError<GeneralErrorType<{}>>).response?.data;
+      const errData = (error as AxiosError<any>).response?.data;
+      console.log('Global Mutation Error:', error, 'errData:', errData);
+
       const customErr = ErrorCode()[errData?.error_id as keyof typeof ErrorCode];
+      
+      let errMsg = '';
       if (customErr) {
-        notification.error({
-          message: customErr,
-        });
+        errMsg = customErr;
+      } else if (errData && typeof errData === 'object' && typeof errData.message === 'string') {
+        errMsg = errData.message;
+      } else if (typeof errData === 'string') {
+        errMsg = errData;
+      } else if (error.message) {
+        errMsg = error.message;
+      } else {
+        const configMsg = configErr();
+        errMsg = (configMsg && typeof configMsg.message === 'string') ? configMsg.message : 'Đã có lỗi xảy ra';
       }
-      else {
-        const msgError = configErr();
-        notification.error(msgError);
-      }
+
+      notification.error({
+        message: errMsg,
+        duration: 6,
+      });
     },
   });
 

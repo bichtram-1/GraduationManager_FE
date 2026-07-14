@@ -4,6 +4,7 @@ import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined, CalendarOutlin
 import { useNavigate } from 'react-router-dom';
 import { councilHooks } from '../../hooks/useCouncils';
 import { groupHooks } from '../../hooks/useGroups';
+import type { CouncilRow } from '../../api/councilApi';
 import { ROUTES } from '../../constants/routers';
 import { useTranslation } from 'react-i18next';
 import { getKey } from '@shared/types/I18nKeyType';
@@ -22,13 +23,13 @@ type CouncilCard = {
   secretary?: string[];
   reviewer: string[];
   member: string[];
-  topicGroups: { code: string; title: string; members: number }[];
+  topicGroups: { code: string; title: string; members: number | string[] }[];
   external?: { name: string; council?: string }[];
   // per-topic assignments (optional)
   topics?: {
     code?: string;
     title?: string;
-    members?: number;
+    members?: number | string[];
     examiners?: string[]; // internal examiners
     externalExaminers?: string[];
     startTime?: string; // hh:mm
@@ -149,8 +150,9 @@ const CouncilsPage: React.FC = () => {
           onSuccess: () => {
             message.success('Cập nhật trạng thái hội đồng thành công!');
           },
-          onError: (err: any) => {
-            message.error(err?.response?.data?.message || err.message || 'Có lỗi xảy ra!');
+          onError: (err: unknown) => {
+            const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+            message.error(msg || (err as Error).message || 'Có lỗi xảy ra!');
           }
         });
       }
@@ -159,7 +161,7 @@ const CouncilsPage: React.FC = () => {
 
   const councilsInPeriod = useMemo(() => {
     if (!selectedPeriod) return councils;
-    return councils.filter((c: any) => c.dot_id === String(selectedPeriod.id) || c.batch === selectedPeriod.name);
+    return councils.filter((c: CouncilRow) => c.dot_id === String(selectedPeriod.id) || c.batch === selectedPeriod.name);
   }, [councils, selectedPeriod]);
 
   const totalCouncils = useMemo(() => councilsInPeriod.length, [councilsInPeriod]);
@@ -223,6 +225,9 @@ const CouncilsPage: React.FC = () => {
         deleteCouncilMutation.mutate(councilId, {
           onSuccess: () => {
             message.success(t(getKey('delete_council_success')));
+          },
+          onError: (err: any) => {
+            message.error(err.message || t(getKey('config_error_message')));
           }
         });
       },
@@ -434,8 +439,8 @@ const CouncilsPage: React.FC = () => {
                 </div>
                 <div className="head-actions">
                   <div className="flex gap-2 flex-wrap justify-end">
-                    <span className="chip">{(t(getKey('groups_achieved'), { count: c.achieved } as any) as string)}</span>
-                    <span className="chip">{(t(getKey('groups_rejected'), { count: c.rejected } as any) as string)}</span>
+                    <span className="chip">{(t(getKey('groups_achieved') as string, { count: c.achieved }) as string)}</span>
+                    <span className="chip">{(t(getKey('groups_rejected') as string, { count: c.rejected }) as string)}</span>
                   </div>
                   <div className="action-row">
                     {!isPeriodClosed && (!c.status || c.status === 'NHAP') && (
@@ -510,54 +515,49 @@ const CouncilsPage: React.FC = () => {
 
                 {/* Cột 3: Ủy viên */}
                 <div className="role-col">
-                  <div className="role-name">Ủy viên</div>
-                  <div className="chip-wrap flex flex-col gap-1 items-start mt-2">
-                    {(() => {
-                      const uyViens: string[] = [];
-                      (c.reviewer || []).forEach((name) => {
-                        if (!uyViens.includes(name)) uyViens.push(name);
-                      });
-                      (c.member || []).forEach((name) => {
-                        const isChair = (c.chair || []).includes(name);
-                        const isSec = (c.secretary || []).includes(name);
-                        if (!isChair && !isSec && !uyViens.includes(name)) {
-                          uyViens.push(name);
-                        }
-                      });
-                      aggregatedInternal.forEach((name) => {
-                        const isChair = (c.chair || []).includes(name);
-                        const isSec = (c.secretary || []).includes(name);
-                        if (!isChair && !isSec && !uyViens.includes(name)) {
-                          uyViens.push(name);
-                        }
-                      });
-                      aggregatedExternal.forEach((name) => {
-                        const isChair = (c.chair || []).includes(name);
-                        const isSec = (c.secretary || []).includes(name);
-                        if (!isChair && !isSec && !uyViens.includes(name)) {
-                          uyViens.push(name);
-                        }
-                      });
-                      (c.external || []).forEach((e) => {
-                        const name = typeof e === 'string' ? e : e.name;
-                        const isChair = (c.chair || []).includes(name);
-                        const isSec = (c.secretary || []).includes(name);
-                        if (!isChair && !isSec && !uyViens.includes(name)) {
-                          uyViens.push(name);
-                        }
-                      });
-
-                      return uyViens.length ? (
-                        uyViens.map((name) => (
-                          <span key={name} className="text-slate-700 text-sm py-0.5">
-                            {name}
-                          </span>
+                  <div className="role-name">{t(getKey('topic_group'))}</div>
+                  <div className="role-title">{t(getKey('assigned_topic_groups_list'))}</div>
+                  {c.topicGroups.length ? (
+                    <div className="topic-list">
+                      {c.topics && c.topics.length ? (
+                        c.topics.map((topic) => (
+                          <div className="topic-item" key={topic.code}>
+                            <div className="flex justify-between items-center">
+                              <div>
+                                <div className="topic-item-title">{topic.code} - {topic.title}</div>
+                                <div className="topic-item-meta">
+                                  {Array.isArray((topic as any).members)
+                                    ? (t(getKey('students_count_suffix'), { count: (topic as any).members.length } as any) as string)
+                                    : (t(getKey('students_count_suffix'), { count: topic.members } as any) as string)}
+                                </div>
+                              </div>
+                              {topic.startTime && <div className="chip">{topic.startTime}</div>}
+                            </div>
+                            {Array.isArray((topic as any).members) && (topic as any).members.length > 0 && (
+                              <div className="mt-2 text-[var(--color-text-secondary)] text-[13px]">{(topic as any).members.join(', ')}</div>
+                            )}
+                            <div className="mt-2" />
+                          </div>
                         ))
                       ) : (
-                        <span className="muted text-xs italic">Chưa phân công</span>
-                      );
-                    })()}
-                  </div>
+                        c.topicGroups.map((topic) => (
+                          <div className="topic-item" key={topic.code}>
+                            <div className="topic-item-title">{topic.code} - {topic.title}</div>
+                            <div className="topic-item-meta">
+                              {Array.isArray((topic as any).members)
+                                ? (t(getKey('students_count_suffix'), { count: (topic as any).members.length } as any) as string)
+                                : (t(getKey('students_count_suffix'), { count: topic.members } as any) as string)}
+                            </div>
+                            {Array.isArray((topic as any).members) && (topic as any).members.length > 0 && (
+                              <div className="mt-2 text-[var(--color-text-secondary)] text-[13px]">{(topic as any).members.join(', ')}</div>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  ) : (
+                    <span className="muted">{t(getKey('not_assigned_topic_groups'))}</span>
+                  )}
                 </div>
 
                 {/* Cột 4: Tổng nhóm */}
@@ -670,7 +670,18 @@ const CouncilsPage: React.FC = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 bg-white">
-                        {(selectedCouncilForView.topics || selectedCouncilForView.topicGroups || []).map((topic: any, index: number) => (
+                        {(selectedCouncilForView.topics || selectedCouncilForView.topicGroups || []).map((topic: {
+                          code?: string;
+                          topicCode?: string;
+                          topicName?: string;
+                          title?: string;
+                          members?: number | string[];
+                          advisorName?: string;
+                          reviewer?: string;
+                          examiners?: string[];
+                          externalExaminers?: string[];
+                          startTime?: string;
+                        }, index: number) => (
                           <tr key={topic.code || topic.topicCode || index} className="hover:bg-slate-50/50">
                             <td className="px-3 py-2 font-medium text-slate-700">{index + 1}</td>
                             <td className="px-3 py-2 max-w-[200px]">

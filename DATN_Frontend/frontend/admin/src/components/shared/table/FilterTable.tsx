@@ -26,6 +26,12 @@ import React, { cloneElement, ReactNode, useCallback, useEffect, useState } from
 import { useTranslation } from 'react-i18next';
 import { BaseListParams, ListResponseTypeObject } from '@shared/types/GeneralType';
 import { deepCompareObjects } from '@shared/utils/utils';
+import { useScrollContainer } from '../../../hooks/ScrollContainerProvider';
+
+// Chiều cao ước tính của thanh phân trang ghim (position: sticky, xem .ant-table-pagination
+// trong App.css) — dùng làm offsetScroll để thanh cuộn ngang ghim (Table.sticky) của AntD
+// nằm sát ngay phía trên, không đè lên thanh phân trang.
+const STICKY_PAGINATION_HEIGHT = 57;
 
 interface RecordWithId {
   id?: string;
@@ -62,6 +68,7 @@ interface ActionTableInfoProps {
   isDetail?: boolean;
   isEdit?: boolean;
   isDelete?: boolean;
+  isEditDisabled?: (record: unknown) => boolean;
   isDeleteDisabled?: (record: unknown) => boolean;
   customAction?: (record: unknown, index: number) => ReactNode;
   detailInfo?: CRUDTableInfoType<(id: string, enable: boolean) => UseQueryResult<unknown, Error>>;
@@ -88,6 +95,7 @@ export interface FilterTableProps<
   pageTitle?: string;
   pageSubtitle?: string;
   createButtonLabel?: string;
+  isCreateDisabled?: boolean;
   columns?: TableColumnsType<TList>;
   useQueryHook: (
     params: BaseListParams
@@ -133,6 +141,7 @@ const FilterTable = <
   pageTitle,
   pageSubtitle,
   createButtonLabel,
+  isCreateDisabled,
   columns,
   useQueryHook,
   paramVariables,
@@ -157,6 +166,7 @@ const FilterTable = <
   const hasPageHeader = !!pageTitle;
 
   const { t } = useTranslation();
+  const scrollContainerRef = useScrollContainer();
   const [form] = Form.useForm();
   const [formModal] = Form.useForm();
   const [internalParams, setInternalParams] = useState<BaseListParams>(
@@ -384,24 +394,32 @@ const FilterTable = <
               }
 
               {actions?.isEdit &&
-                <div
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    const recordWithId = record as RecordWithId;
-                    const recordId = recordWithId?.id || recordWithId?.value || '';
-                    setOpenModal({
-                      open: true,
-                      id: recordId,
-                      index,
-                      type: UpdateModalType,
-                    });
-                  }}
-                  className={`flex items-center
-                   justify-center
-                   cursor-pointer pointer-events-auto rounded-full ${classCssAciton}`}
-                >
-                  <FormOutlined />
-                </div>
+                (() => {
+                  const editDisabled = actions?.isEditDisabled?.(record) ?? false;
+                  return (
+                    <div
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        if (editDisabled) return;
+                        const recordWithId = record as RecordWithId;
+                        const recordId = recordWithId?.id || recordWithId?.value || '';
+                        setOpenModal({
+                          open: true,
+                          id: recordId,
+                          index,
+                          type: UpdateModalType,
+                        });
+                      }}
+                      className={`flex items-center justify-center rounded-full ${classCssAciton} ${
+                        editDisabled
+                          ? 'opacity-50 cursor-not-allowed !pointer-events-none !bg-transparent'
+                          : 'cursor-pointer pointer-events-auto'
+                      }`}
+                    >
+                      <FormOutlined />
+                    </div>
+                  );
+                })()
               }
 
               {actions?.isDelete &&
@@ -416,9 +434,10 @@ const FilterTable = <
                         const recordId = recordWithId?.id || recordWithId?.value || '';
                         showDeleteConfirm(recordId, record);
                       }}
-                      className={`flex items-center rounded-full
-                       justify-center pointer-events-auto ${classCssAciton} ${
-                        disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                      className={`flex items-center rounded-full justify-center ${classCssAciton} ${
+                        disabled
+                          ? 'opacity-50 cursor-not-allowed !pointer-events-none !bg-transparent'
+                          : 'cursor-pointer pointer-events-auto'
                       }`}
                     >
                       <DeleteOutlined className="text-red-500" />
@@ -440,16 +459,23 @@ const FilterTable = <
 
   const renderCreateButton = () => {
     if (!createInfo?.type) return null;
+    const createDisabled = isCreateDisabled ?? false;
     return (
       <Button
         type="primary"
-        icon={<PlusOutlined className="text-white" />}
+        disabled={createDisabled}
+        icon={<PlusOutlined className={createDisabled ? "text-slate-400" : "text-white"} />}
         onClick={() => {
+          if (createDisabled) return;
           setOpenModal({ open: true, id: '', index: -1, type: CreateModalType });
         }}
-        className="!h-10 !rounded-[8px] !bg-primary !px-5 !flex !items-center !gap-2 !font-medium hover:!bg-blueDark"
+        className={`!h-10 !rounded-[8px] !px-5 !flex !items-center !gap-2 !font-medium ${
+          createDisabled
+            ? "!bg-slate-100 !border-slate-200 !text-slate-400 cursor-not-allowed hover:!bg-slate-100 hover:!border-slate-200 pointer-events-none"
+            : "!bg-primary !text-white hover:!bg-blueDark"
+        }`}
       >
-        <span className="text-white text-base font-medium text-center w-full">
+        <span className={`text-base font-medium text-center w-full ${createDisabled ? "text-slate-400" : "text-white"}`}>
           {createButtonLabel || `${t('add_new_btn')} ${title || ''}`}
         </span>
       </Button>
@@ -545,6 +571,11 @@ const FilterTable = <
               }}
               onChange={handleChangeTable}
               scroll={{ x: 'max-content' }}
+              sticky={{
+                offsetHeader: 0,
+                offsetScroll: STICKY_PAGINATION_HEIGHT,
+                getContainer: () => scrollContainerRef?.current || window,
+              }}
             />
           </Card>
         </Flex>

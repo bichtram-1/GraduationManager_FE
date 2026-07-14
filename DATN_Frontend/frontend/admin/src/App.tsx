@@ -86,9 +86,10 @@ function App() {
                 <Route path={ROUTES.GROUPS_STUDENTS} element={<ThesisStudents />} />
                 <Route path={ROUTES.CLASSES} element={<ClassesAdmin />} />
                 <Route path={ROUTES.ASSIGNMENTS} element={<Assignments />} />
-                <Route path={ROUTES.STUDENT_SCORES} element={<StudentScores />} />
                 <Route path={ROUTES.INTERNSHIP_STUDENTS_DECLARATIONS} element={<InternshipStudents key="declarations" />} />
                 <Route path={ROUTES.INTERNSHIP_STUDENTS_NOCOMPANY} element={<InternshipStudents key="no-company" />} />
+                <Route path={ROUTES.INTERNSHIP_STUDENTS_SCORES} element={<StudentScores fixedMode="internship" />} />
+                <Route path={ROUTES.GROUPS_SCORES} element={<StudentScores fixedMode="project" />} />
                 <Route path={ROUTES.PERIODS} element={<Periods />} />
               </Route>
               {/* Những route cần bọc Auth Layout */}
