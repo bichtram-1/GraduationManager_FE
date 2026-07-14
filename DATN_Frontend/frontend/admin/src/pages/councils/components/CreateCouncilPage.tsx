@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { Button, Card, DatePicker, Input, Select, Tag, TimePicker, Modal, message } from 'antd';
 import dayjs from 'dayjs';
-import { ArrowLeftOutlined, MenuOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, MenuOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '../../../constants/commonConst';
 import { useTranslation } from 'react-i18next';
@@ -54,11 +54,77 @@ type CommitteeForm = {
 
 type WorkflowTab = 'pick' | 'sort';
 
+const useDragScroll = () => {
+  const ref = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    let isDown = false;
+    let startX: number;
+    let scrollLeft: number;
+
+    const handleMouseDown = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (
+        target.closest('select') ||
+        target.closest('input') ||
+        target.closest('button') ||
+        target.closest('.ant-select') ||
+        target.closest('.ant-btn') ||
+        target.closest('tr[draggable]')
+      ) {
+        return;
+      }
+      isDown = true;
+      el.style.cursor = 'grabbing';
+      startX = e.pageX - el.offsetLeft;
+      scrollLeft = el.scrollLeft;
+    };
+
+    const handleMouseLeave = () => {
+      isDown = false;
+      el.style.cursor = '';
+    };
+
+    const handleMouseUp = () => {
+      isDown = false;
+      el.style.cursor = '';
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDown) return;
+      e.preventDefault();
+      const x = e.pageX - el.offsetLeft;
+      const walk = (x - startX) * 1.5;
+      el.scrollLeft = scrollLeft - walk;
+    };
+
+    el.addEventListener('mousedown', handleMouseDown);
+    el.addEventListener('mouseleave', handleMouseLeave);
+    el.addEventListener('mouseup', handleMouseUp);
+    el.addEventListener('mousemove', handleMouseMove);
+
+    return () => {
+      el.removeEventListener('mousedown', handleMouseDown);
+      el.removeEventListener('mouseleave', handleMouseLeave);
+      el.removeEventListener('mouseup', handleMouseUp);
+      el.removeEventListener('mousemove', handleMouseMove);
+    };
+  }, []);
+
+  return ref;
+};
+
 const CreateCouncilPage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const section2Ref = useRef<HTMLDivElement | null>(null);
+  const pickContainerRef = useDragScroll();
+  const sortContainerRef = useDragScroll();
+  const previewContainerRef = useDragScroll();
   const { selectedPeriod } = useGlobalVariable();
   const { data: periodList } = periodHooks.useFetchListPeriods({ page: 1, limit: 100 });
   const datnPeriods = useMemo(() => {
@@ -81,24 +147,133 @@ const CreateCouncilPage = () => {
     }
   }, [datnPeriods]);
   const [selectedTopics, setSelectedTopics] = useState<SelectedTopic[]>([]);
-  const [draggedMemberIdx, setDraggedMemberIdx] = useState<number | null>(null);
+  const [selectedChairId, setSelectedChairId] = useState<string | null>(null);
+  const [selectedSecretaryId, setSelectedSecretaryId] = useState<string | null>(null);
   const [draggingTopicId, setDraggingTopicId] = useState<string | null>(null);
   const [dragOverTopicId, setDragOverTopicId] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [workflowTab, setWorkflowTab] = useState<WorkflowTab>('pick');
   const [isPreviewVisible, setIsPreviewVisible] = useState(false);
 
+  const [checkedSortTopicIds, setCheckedSortTopicIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    const selectedIds = selectedTopics.map((t) => t.id);
+    setCheckedSortTopicIds((prev) => prev.filter((id) => selectedIds.includes(id)));
+  }, [selectedTopics]);
+
+  const handleBulkDeselect = () => {
+    setSelectedTopics((current) => current.filter((t) => !checkedSortTopicIds.includes(t.id)));
+    setCheckedSortTopicIds([]);
+  };
+
+  const [activeRowTopicId, setActiveRowTopicId] = useState<string | null>(null);
+
+  const moveTopicUpDown = (index: number, direction: 'up' | 'down') => {
+    setSelectedTopics((current) => {
+      const next = [...current];
+      const targetIndex = direction === 'up' ? index - 1 : index + 1;
+      if (targetIndex < 0 || targetIndex >= next.length) return current;
+
+      const temp = next[index];
+      next[index] = next[targetIndex];
+      next[targetIndex] = temp;
+      return next;
+    });
+  };
+
+  const handleScrollPropagation = (e: React.WheelEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    const deltaY = e.deltaY;
+
+    // Check if scrolling up at the top
+    if (deltaY < 0 && el.scrollTop === 0) {
+      const contentEl = document.querySelector('.ant-layout-content') || document.documentElement;
+      contentEl.scrollTop += deltaY;
+    }
+    // Check if scrolling down at the bottom
+    else if (deltaY > 0 && el.scrollTop + el.clientHeight >= el.scrollHeight - 1) {
+      const contentEl = document.querySelector('.ant-layout-content') || document.documentElement;
+      contentEl.scrollTop += deltaY;
+    }
+  };
+  const [advisorSortOrder, setAdvisorSortOrder] = useState<'asc' | 'desc' | null>(null);
+  const [selectedAdvisorFilterId, setSelectedAdvisorFilterId] = useState<string | null>(null);
+
   const { data: groupList, refetch: refetchGroups } = groupHooks.useFetchListGroups();
   const { data: teacherList = [], refetch: refetchTeachers } = assignmentHooks.useFetchTeachers();
   const createCouncilMutation = councilHooks.useCreateCouncil();
   const updateCouncilMutation = councilHooks.useUpdateCouncil();
+  const { data: councilsList = [] } = councilHooks.useFetchListCouncils();
 
   const [advisorBuckets, setAdvisorBuckets] = useState<AdvisorBucket[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [dateError, setDateError] = useState<string | null>(null);
   const isPrefilledRef = useRef(false);
   const isInitialLoadRef = useRef(true);
   const stateFromLocation = (location?.state as LocationState) || null;
   const originalBatch = stateFromLocation?.council?.batch || '';
+
+  useEffect(() => {
+    if (!editingId && councilsList && councilsList.length > 0) {
+      let maxNum = 0;
+      councilsList.forEach((c) => {
+        const match = c.title?.match(/^Hội\s+đồng\s+(\d+)$/i);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (num > maxNum) {
+            maxNum = num;
+          }
+        }
+      });
+      if (maxNum === 0) {
+        maxNum = councilsList.length;
+      }
+      setForm((current) => ({
+        ...current,
+        name: `Hội đồng ${maxNum + 1}`,
+      }));
+    } else if (!editingId && (!councilsList || councilsList.length === 0)) {
+      setForm((current) => ({
+        ...current,
+        name: 'Hội đồng 1',
+      }));
+    }
+  }, [councilsList, editingId]);
+
+  const roomOptions = useMemo(() => {
+    return Array.from({ length: 15 }, (_, i) => ({
+      value: `F7.${i + 1}`,
+      label: `F7.${i + 1}`,
+    }));
+  }, []);
+
+  const selectedPeriodObj = useMemo(() => {
+    return datnPeriods.find((p) => p.name === form.batch);
+  }, [datnPeriods, form.batch]);
+
+  const validateDefenseDate = (dateStr: string, periodObj?: IListPeriod) => {
+    if (!dateStr || !periodObj) {
+      setDateError(null);
+      return true;
+    }
+    
+    const date = dayjs(dateStr, 'YYYY-MM-DD');
+    const defenseStart = periodObj.defenseStartDate ? dayjs(periodObj.defenseStartDate, 'DD/MM/YYYY') : null;
+    const defenseEnd = periodObj.defenseEndDate ? dayjs(periodObj.defenseEndDate, 'DD/MM/YYYY') : null;
+
+    if (defenseStart && defenseEnd) {
+      if (date.isBefore(defenseStart, 'day') || date.isAfter(defenseEnd, 'day')) {
+        const startStr = defenseStart.format('DD/MM/YYYY');
+        const endStr = defenseEnd.format('DD/MM/YYYY');
+        setDateError(`Ngày bảo vệ phải nằm trong thời gian quy định ${startStr} - ${endStr}`);
+        return false;
+      }
+    }
+
+    setDateError(null);
+    return true;
+  };
 
   useEffect(() => {
     // If we are editing and form.batch is equal to the original council batch, do not reset!
@@ -123,6 +298,19 @@ const CreateCouncilPage = () => {
   }, [form.batch, editingId, originalBatch]);
 
   useEffect(() => {
+    // Chỉ ẩn thanh cuộn của khung nhìn chính khi đang ở trang Tạo/Sửa hội đồng này
+    const contentEl = document.querySelector('.ant-layout-content');
+    if (contentEl) {
+      contentEl.classList.add('no-scrollbar');
+    }
+    return () => {
+      if (contentEl) {
+        contentEl.classList.remove('no-scrollbar');
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     if (groupList?.rows) {
       const bucketsMap: Record<string, SelectedTopic[]> = {};
       (groupList.rows as IListGroup[]).forEach((g) => {
@@ -130,6 +318,43 @@ const CreateCouncilPage = () => {
         const periodName = form.batch || selectedPeriod?.name || '';
         if (periodName && g.registrationBatch && g.registrationBatch !== periodName) {
           return;
+        }
+
+        // Chỉ hiển thị nhóm đề tài chưa được gán vào hội đồng nào, hoặc đang thuộc hội đồng hiện tại đang chỉnh sửa
+        const isAssignedToOther = g.hoi_dong_id && (!editingId || String(g.hoi_dong_id) !== String(editingId));
+        if (isAssignedToOther) {
+          return;
+        }
+
+        // Lọc theo kết quả hướng dẫn/phản biện dựa trên thời gian đợt
+        const periodObj = datnPeriods.find((p) => p.name === periodName);
+        if (periodObj) {
+          const parsePeriodDate = (dateStr?: string) => {
+            if (!dateStr) return null;
+            let d = dayjs(dateStr, 'DD/MM/YYYY');
+            if (!d.isValid()) d = dayjs(dateStr, 'YYYY-MM-DD');
+            return d.isValid() ? d : null;
+          };
+
+          const today = dayjs();
+          const ngayBatDauPhanBien = parsePeriodDate(periodObj.reviewStartDate);
+
+          const kqHd = g.ket_qua_huong_dan;
+          const kqPb = g.ket_qua_phan_bien;
+
+          if (ngayBatDauPhanBien && today.isAfter(ngayBatDauPhanBien.subtract(1, 'day'), 'day')) {
+            // Từ ngày bắt đầu phản biện đến cuối đợt: Bắt buộc cả hai kết quả phải là DAT
+            if (kqHd !== 'DAT' || kqPb !== 'DAT') {
+              return;
+            }
+          } else {
+            // Trước ngày bắt đầu phản biện: Nhóm có kết quả hướng dẫn & phản biện là null hoặc DAT
+            const isHdValid = !kqHd || kqHd === 'DAT';
+            const isPbValid = !kqPb || kqPb === 'DAT';
+            if (!isHdValid || !isPbValid) {
+              return;
+            }
+          }
         }
 
         const supervisor = g.supervisor || 'Chưa phân công';
@@ -153,7 +378,7 @@ const CreateCouncilPage = () => {
       }));
       setAdvisorBuckets(buckets);
     }
-  }, [groupList, teacherList, selectedPeriod, form.batch]);
+  }, [groupList, teacherList, selectedPeriod, form.batch, editingId, datnPeriods]);
 
   const availableAdvisorOptions = useMemo(
     () =>
@@ -186,13 +411,25 @@ const CreateCouncilPage = () => {
     return found ? found.id : name;
   };
 
+  const isChairAlreadyAssigned = (teacherId: string) => {
+    const matchedCouncil = councilsList.find((c) => {
+      if (editingId && c.id === editingId) return false;
+      const teacherName = teacherNameById(teacherId);
+      return c.chair && c.chair.includes(teacherName);
+    });
+    return matchedCouncil;
+  };
+
   const updateMembers = (nextMemberIds: string[]) => {
     setForm((current) => ({ ...current, members: nextMemberIds }));
     setSelectedTopics((current) => current.filter((topic) => nextMemberIds.includes(topic.advisorId) || nextMemberIds.includes(findTeacherIdByName(topic.advisorId))));
+    setSelectedChairId((prev) => (prev && nextMemberIds.includes(prev) ? prev : null));
+    setSelectedSecretaryId((prev) => (prev && nextMemberIds.includes(prev) ? prev : null));
+    setSelectedAdvisorFilterId((prev) => (prev && nextMemberIds.includes(prev) ? prev : null));
   };
 
-  const toggleTopic = (topic: AdvisorTopic, enabled: boolean) => {
-    if (!memberIds.includes(topic.advisorId)) return;
+  const toggleTopic = (topic: AdvisorTopic | SelectedTopic, enabled: boolean) => {
+    if (enabled && !memberIds.includes(topic.advisorId)) return;
 
     setSelectedTopics((current) => {
       if (enabled) {
@@ -238,30 +475,9 @@ const CreateCouncilPage = () => {
 
       const next = [...current];
       const [moved] = next.splice(sourceIndex, 1);
-      next.splice(sourceIndex < targetIndex ? targetIndex - 1 : targetIndex, 0, moved);
+      next.splice(targetIndex, 0, moved);
       return next;
     });
-  };
-
-  const handleMemberDragStart = (e: React.DragEvent, index: number) => {
-    setDraggedMemberIdx(index);
-    e.dataTransfer.effectAllowed = 'move';
-  };
-
-  const handleMemberDragOver = (e: React.DragEvent, index: number) => {
-    e.preventDefault();
-  };
-
-  const handleMemberDrop = (e: React.DragEvent, targetIndex: number) => {
-    e.preventDefault();
-    if (draggedMemberIdx === null || draggedMemberIdx === targetIndex) return;
-
-    const nextMembers = [...form.members];
-    const [moved] = nextMembers.splice(draggedMemberIdx, 1);
-    nextMembers.splice(targetIndex, 0, moved);
-
-    updateMembers(nextMembers);
-    setDraggedMemberIdx(null);
   };
 
   const handleSave = () => {
@@ -270,15 +486,43 @@ const CreateCouncilPage = () => {
       return;
     }
 
-    if (memberIds.length === 0) {
-      message.error(t(getKey('please_select_at_least_one_teacher')));
+    if (!validateDefenseDate(form.date, selectedPeriodObj)) {
       return;
     }
 
-    if (selectedTopics.length === 0) {
-      message.error(t(getKey('please_select_at_least_one_topic')));
+    if (!selectedChairId) {
+      message.error("Vui lòng chọn Chủ tịch hội đồng");
       return;
     }
+
+    if (!selectedSecretaryId) {
+      message.error("Vui lòng chọn Thư ký hội đồng");
+      return;
+    }
+
+    if (selectedChairId === selectedSecretaryId) {
+      message.error("Chủ tịch và Thư ký không được trùng nhau");
+      return;
+    }
+
+    const otherCouncil = isChairAlreadyAssigned(selectedChairId);
+    if (otherCouncil) {
+      message.error(`giảng viên ${teacherNameById(selectedChairId)} đã làm chủ tịch tại ${otherCouncil.title}`);
+      return;
+    }
+
+    const rearrangedMembers = [
+      selectedChairId,
+      selectedSecretaryId,
+      ...form.members.filter((id) => id !== selectedChairId && id !== selectedSecretaryId)
+    ].filter(Boolean) as string[];
+
+    if (rearrangedMembers.length < 5) {
+      message.error("không đủ thành viên hội đồng ít nhất 5 thành viên");
+      return;
+    }
+
+
 
     for (const topic of selectedTopics) {
       const hasInternal = topic.examinerIds && topic.examinerIds.length > 0;
@@ -309,7 +553,9 @@ const CreateCouncilPage = () => {
       date: form.date,
       time: form.time,
       dot_id: selectedPeriodId,
-      members: form.members,
+      members: rearrangedMembers,
+      chairId: selectedChairId,
+      secretaryId: selectedSecretaryId,
       topics: selectedTopics.map(st => {
         const sched = calculateTopicSchedules[st.id];
         return {
@@ -330,10 +576,6 @@ const CreateCouncilPage = () => {
           setSaved(true);
           message.success(t(getKey('update_council_success_message')));
           navigate('/councils');
-        },
-        onError: (err) => {
-          const data = err.response?.data as { message?: string } | undefined;
-          message.error(data?.message || err.message || t(getKey('config_error_message')));
         }
       });
     } else {
@@ -342,20 +584,63 @@ const CreateCouncilPage = () => {
           setSaved(true);
           message.success(t(getKey('create_council_success'), { count: selectedTopics.length }) as string);
           navigate('/councils');
-        },
-        onError: (err) => {
-          const data = err.response?.data as { message?: string } | undefined;
-          message.error(data?.message || err.message || t(getKey('config_error_message')));
         }
       });
     }
   };
 
   const eligibleTopics = useMemo(() => {
-    return advisorBuckets
+    let list = advisorBuckets
       .filter((bucket) => memberIds.includes(bucket.advisorId))
-      .flatMap((bucket) => bucket.topics);
-  }, [advisorBuckets, memberIds]);
+      .flatMap((bucket) =>
+        bucket.topics.map((t) => ({ ...t, advisorName: bucket.advisorName }))
+      );
+
+    if (selectedAdvisorFilterId) {
+      list = list.filter((t) => t.advisorId === selectedAdvisorFilterId);
+    }
+
+    if (advisorSortOrder) {
+      list.sort((a, b) => {
+        const nameA = a.advisorName || '';
+        const nameB = b.advisorName || '';
+        if (advisorSortOrder === 'asc') {
+          return nameA.localeCompare(nameB, 'vi');
+        } else {
+          return nameB.localeCompare(nameA, 'vi');
+        }
+      });
+    }
+
+    return list;
+  }, [advisorBuckets, memberIds, advisorSortOrder, selectedAdvisorFilterId]);
+
+  const isAllSelected = useMemo(() => {
+    if (eligibleTopics.length === 0) return false;
+    return eligibleTopics.every((topic) => selectedTopics.some((item) => item.id === topic.id));
+  }, [eligibleTopics, selectedTopics]);
+
+  const handleToggleAll = (checked: boolean) => {
+    if (checked) {
+      const newSelections = [...selectedTopics];
+      eligibleTopics.forEach((topic) => {
+        if (!newSelections.some((item) => item.id === topic.id)) {
+          newSelections.push({
+            ...topic,
+            reviewerId: null,
+            examinerIds: [],
+            externalExaminers: [],
+            startTime: null,
+            minutes: topic.minutes || 40,
+          });
+        }
+      });
+      setSelectedTopics(newSelections);
+    } else {
+      const eligibleIds = eligibleTopics.map((t) => t.id);
+      setSelectedTopics((current) => current.filter((item) => !eligibleIds.includes(item.id)));
+    }
+  };
 
   const calculateTopicSchedules = useMemo(() => {
     let currentStartTime = form.time || '08:00';
@@ -382,12 +667,21 @@ const CreateCouncilPage = () => {
   }, [form.time, selectedTopics]);
 
   const getTeacherRoleInCouncil = (id: string, index: number) => {
-    if (index === 0) return 'Chủ tịch';
+    if (id === selectedChairId) return 'Chủ tịch';
+    if (id === selectedSecretaryId) return 'Thư ký (TH)';
     const isReviewer = selectedTopics.some((t) => t.reviewerId === id);
     if (isReviewer) return 'Phản biện';
     return 'Ủy viên';
   };
   const committeeSummary = t(getKey('members_count_label'), { count: memberIds.length }) as string;
+
+  const rearrangedMembers = useMemo(() => {
+    return [
+      selectedChairId,
+      selectedSecretaryId,
+      ...form.members.filter((id) => id !== selectedChairId && id !== selectedSecretaryId)
+    ].filter(Boolean) as string[];
+  }, [form.members, selectedChairId, selectedSecretaryId]);
 
   const openSortTab = () => {
     if (selectedTopics.length > 0) setWorkflowTab('sort');
@@ -401,12 +695,19 @@ const CreateCouncilPage = () => {
 
     setEditingId(council.id);
 
+    const mappedMembers = (council.member || [])
+      .concat(council.chair || [])
+      .concat(council.reviewer || [])
+      .concat(council.secretary || [])
+      .map((nm: string) => findTeacherIdByName(nm))
+      .filter(Boolean) as string[];
+
     setForm((current) => ({
       ...current,
       name: council.title || current.name,
       batch: council.batch || current.batch,
       room: council.room || current.room,
-      members: (council.member || []).concat(council.chair || []).concat(council.reviewer || []).map((nm: string) => findTeacherIdByName(nm)).filter(Boolean) as string[],
+      members: mappedMembers,
       date: (() => {
         const parts = council.dateTime ? council.dateTime.split(' · ') : [];
         if (parts.length > 0) {
@@ -422,6 +723,15 @@ const CreateCouncilPage = () => {
         return parts.length > 1 ? parts[1] : '';
       })(),
     }));
+
+    const chName = council.chair?.[0] || '';
+    const secName = council.secretary?.[0] || '';
+    if (chName) {
+      setSelectedChairId(findTeacherIdByName(chName));
+    }
+    if (secName) {
+      setSelectedSecretaryId(findTeacherIdByName(secName));
+    }
   }, [location, teacherList]);
 
   // Prefill selectedTopics once advisorBuckets, teacherList and council are loaded
@@ -489,7 +799,7 @@ const CreateCouncilPage = () => {
           <div className="space-y-4 p-5 md:p-6">
               <div>
                 <div className="mb-1 text-xs text-gray-600">{t(getKey('council_name'))}</div>
-                <Input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="VD: Hội đồng số 1" />
+                <Input value={form.name} disabled placeholder="Tên hội đồng sẽ tự động tạo" />
               </div>
 
               <div>
@@ -511,7 +821,13 @@ const CreateCouncilPage = () => {
 
               <div>
                 <div className="mb-1 text-xs text-gray-600">{t(getKey('defense_room'))}</div>
-                <Input value={form.room} onChange={(event) => setForm({ ...form, room: event.target.value })} placeholder="VD: A1.401" />
+                <Select
+                  value={form.room || undefined}
+                  onChange={(value) => setForm({ ...form, room: value })}
+                  placeholder="Chọn phòng bảo vệ..."
+                  options={roomOptions}
+                  className="w-full"
+                />
               </div>
 
               <div className="flex gap-2">
@@ -519,10 +835,24 @@ const CreateCouncilPage = () => {
                   <div className="mb-1 text-xs text-gray-600">{t(getKey('defense_date'))}</div>
                   <DatePicker
                     className="w-full"
+                    status={dateError ? 'error' : undefined}
                     format="DD/MM/YYYY"
                     value={form.date ? dayjs(form.date, 'YYYY-MM-DD', true) : null}
-                    onChange={(date) => setForm({ ...form, date: date ? date.format('YYYY-MM-DD') : '' })}
+                    onChange={(date) => {
+                      const formatted = date ? date.format('YYYY-MM-DD') : '';
+                      setForm({ ...form, date: formatted });
+                      if (formatted && selectedPeriodObj) {
+                        validateDefenseDate(formatted, selectedPeriodObj);
+                      } else {
+                        setDateError(null);
+                      }
+                    }}
                   />
+                  {dateError && (
+                    <div className="mt-1 text-xs text-red-500 font-medium leading-normal animate-fade-in">
+                      {dateError}
+                    </div>
+                  )}
                 </div>
                 <div className="flex-1">
                   <div className="mb-1 text-xs text-gray-600">{t(getKey('start_time'))}</div>
@@ -561,33 +891,74 @@ const CreateCouncilPage = () => {
                         disabled={availableAdvisorOptions.length === 0}
                       />
                       {form.members.length > 0 && (
-                        <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-4 shadow-inner max-h-[300px] overflow-y-auto">
-                          <div className="text-xs font-semibold text-slate-500 mb-2.5">
-                            Danh sách thành viên hội đồng đã chọn ({form.members.length}) - Kéo thả để thay đổi vị trí:
+                        <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-4 shadow-inner space-y-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <div className="mb-1.5 text-xs font-semibold text-slate-600">Phân công Chủ tịch:</div>
+                              <Select
+                                value={selectedChairId || undefined}
+                                onChange={(value) => {
+                                  if (value) {
+                                    const otherCouncil = isChairAlreadyAssigned(value);
+                                    if (otherCouncil) {
+                                      message.error(`giảng viên ${teacherNameById(value)} đã làm chủ tịch tại ${otherCouncil.title}`);
+                                      return;
+                                    }
+                                  }
+                                  setSelectedChairId(value ?? null);
+                                  if (value === selectedSecretaryId) {
+                                    setSelectedSecretaryId(null);
+                                  }
+                                }}
+                                placeholder="Chọn Chủ tịch hội đồng..."
+                                options={form.members.map((id) => ({
+                                  value: id,
+                                  label: teacherNameById(id),
+                                }))}
+                                className="w-full"
+                                allowClear
+                              />
+                            </div>
+                            <div>
+                              <div className="mb-1.5 text-xs font-semibold text-slate-600">Phân công Thư ký:</div>
+                              <Select
+                                value={selectedSecretaryId || undefined}
+                                onChange={(value) => {
+                                  setSelectedSecretaryId(value ?? null);
+                                }}
+                                placeholder="Chọn Thư ký hội đồng..."
+                                options={form.members
+                                  .filter((id) => id !== selectedChairId)
+                                  .map((id) => ({
+                                    value: id,
+                                    label: teacherNameById(id),
+                                  }))}
+                                className="w-full"
+                                allowClear
+                                disabled={!selectedChairId}
+                              />
+                            </div>
                           </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            {form.members.map((id, idx) => (
-                              <div
-                                key={id}
-                                draggable
-                                onDragStart={(e) => handleMemberDragStart(e, idx)}
-                                onDragOver={(e) => handleMemberDragOver(e, idx)}
-                                onDrop={(e) => handleMemberDrop(e, idx)}
-                                onDragEnd={() => setDraggedMemberIdx(null)}
-                                className={cn(
-                                  "text-xs flex items-center justify-between bg-white px-3 py-2 rounded-lg border border-slate-100 shadow-sm transition-all duration-200 cursor-grab active:cursor-grabbing hover:bg-slate-50 hover:border-slate-300",
-                                  draggedMemberIdx === idx && "opacity-40 border-dashed border-primary"
-                                )}
-                              >
-                                <span className="font-medium text-slate-700 truncate mr-2 flex items-center gap-2 select-none">
-                                  <MenuOutlined className="text-slate-400 cursor-grab" />
-                                  {idx + 1}. {teacherNameById(id)}
-                                </span>
-                                <Tag color={idx === 0 ? 'gold' : 'blue'} className="m-0 text-[10px] uppercase font-semibold select-none">
-                                  {idx === 0 ? 'Chủ tịch' : 'Thành viên'}
-                                </Tag>
-                              </div>
-                            ))}
+
+                          <div>
+                            <div className="text-xs font-semibold text-slate-500 mb-2">
+                              Thành viên hội đồng đã chọn ({form.members.length}):
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              {form.members.map((id) => {
+                                const isChair = id === selectedChairId;
+                                const isSec = id === selectedSecretaryId;
+                                return (
+                                  <Tag
+                                    color={isChair ? 'gold' : isSec ? 'cyan' : 'blue'}
+                                    key={id}
+                                    className="px-2.5 py-1 text-xs"
+                                  >
+                                    {teacherNameById(id)} {isChair ? '(Chủ tịch)' : isSec ? '(Thư ký)' : ''}
+                                  </Tag>
+                                );
+                              })}
+                            </div>
                           </div>
                         </div>
                       )}
@@ -634,21 +1005,62 @@ const CreateCouncilPage = () => {
             </div>
 
             {workflowTab === 'pick' ? (
-              <div className="p-5">
+              <div className="p-5 space-y-4">
+                {/* Lọc theo giảng viên trong hội đồng */}
+                {memberIds.length > 0 && (
+                  <div className="flex items-center gap-3 bg-slate-50 border border-slate-100 p-3 rounded-xl w-fit">
+                    <span className="text-xs font-semibold text-slate-600">Lọc theo GVHD (Thành viên hội đồng):</span>
+                    <Select
+                      value={selectedAdvisorFilterId || undefined}
+                      onChange={(value) => setSelectedAdvisorFilterId(value ?? null)}
+                      placeholder="Tất cả giảng viên trong hội đồng..."
+                      options={memberIds.map((id) => ({
+                        value: id,
+                        label: teacherNameById(id),
+                      }))}
+                      className="w-72"
+                      allowClear
+                    />
+                  </div>
+                )}
+
                 {eligibleTopics.length === 0 ? (
                   <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 px-4 py-10 text-center text-sm text-gray-500">
                     Chưa có đề tài nào đủ điều kiện hoặc không có giảng viên hướng dẫn nào của đề tài tham gia hội đồng này.
                   </div>
                 ) : (
-                  <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-                    <table className="w-full border-collapse text-sm">
-                      <thead className="bg-gray-50 text-gray-600">
+                  <div ref={pickContainerRef} onWheel={handleScrollPropagation} className="overflow-auto max-h-[400px] rounded-xl border border-gray-200 bg-white no-scrollbar">
+                    <table className="w-full min-w-[800px] border-collapse text-sm">
+                      <thead className="bg-gray-50 text-gray-600 sticky top-0 z-10">
                         <tr>
-                          <th className="w-14 px-4 py-3 text-left">{t(getKey('select_column'))}</th>
+                          <th className="w-14 px-4 py-3 text-left">
+                            <input
+                              type="checkbox"
+                              checked={isAllSelected}
+                              onChange={(e) => handleToggleAll(e.target.checked)}
+                              className="h-4 w-4 accent-[var(--color-primary)]"
+                            />
+                          </th>
                           <th className="w-16 px-4 py-3 text-left">STT</th>
                           <th className="px-4 py-3 text-left">{t(getKey('topic_name'))}</th>
-                          <th className="px-4 py-3 text-left">{t(getKey('advisor_short'))}</th>
-                          <th className="px-4 py-3 text-left">Thành viên</th>
+                          <th
+                            className="px-4 py-3 text-left whitespace-nowrap cursor-pointer select-none hover:bg-gray-100 transition-colors"
+                            onClick={() => {
+                              setAdvisorSortOrder((prev) => {
+                                if (prev === null) return 'asc';
+                                if (prev === 'asc') return 'desc';
+                                return null;
+                              });
+                            }}
+                          >
+                            <span className="flex items-center gap-1.5">
+                              {t(getKey('advisor_short'))}
+                              {advisorSortOrder === 'asc' && <span className="text-[10px] text-slate-600">▲</span>}
+                              {advisorSortOrder === 'desc' && <span className="text-[10px] text-slate-600">▼</span>}
+                              {advisorSortOrder === null && <span className="text-[10px] text-slate-400">⇅</span>}
+                            </span>
+                          </th>
+                          <th className="px-4 py-3 text-left">SVTH</th>
                           <th className="w-28 px-4 py-3 text-left">{t(getKey('duration_column'))}</th>
                         </tr>
                       </thead>
@@ -668,7 +1080,7 @@ const CreateCouncilPage = () => {
                               </td>
                               <td className="px-4 py-3 align-top font-medium text-gray-700">{formatNumber(idx + 1)}</td>
                               <td className="px-4 py-3 align-top font-medium text-gray-900">{topic.topicName}</td>
-                              <td className="px-4 py-3 align-top text-gray-600">{teacherNameById(topic.advisorId)}</td>
+                              <td className="px-4 py-3 align-top text-gray-600 whitespace-nowrap font-medium">{teacherNameById(topic.advisorId)}</td>
                               <td className="px-4 py-3 align-top text-xs text-gray-600">
                                 <div className="flex flex-col gap-0.5">
                                   {topic.members.map((m: string) => (
@@ -697,92 +1109,178 @@ const CreateCouncilPage = () => {
             ) : selectedTopics.length === 0 ? (
               <div className="px-5 py-16 text-center text-gray-500">{t(getKey('no_topics_selected_message'))}</div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-sm">
-                  <thead className="bg-gray-50 text-gray-600">
-                    <tr>
-                      <th className="w-12 px-4 py-3 text-left"></th>
-                      <th className="w-20 px-4 py-3 text-left">{t(getKey('stt'))}</th>
-                      <th className="px-4 py-3 text-left">{t(getKey('topic_name'))}</th>
-                      <th className="px-4 py-3 text-left">{t(getKey('advisor_short'))}</th>
-                      <th className="px-4 py-3 text-left">{t(getKey('reviewer_short'))}</th>
-                      <th className="px-4 py-3 text-left">{t(getKey('examiner_title'))}</th>
-                      <th className="px-4 py-3 text-left">{t(getKey('external_teachers_short'))}</th>
-                      <th className="px-4 py-3 text-left">{t(getKey('time'))}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selectedTopics.map((topic, index) => (
-                      <tr
-                        key={topic.id}
-                        draggable
-                        onDragStart={() => setDraggingTopicId(topic.id)}
-                        onDragOver={(event) => event.preventDefault()}
-                        onDragEnter={() => setDragOverTopicId(topic.id)}
-                        onDrop={() => {
-                          if (draggingTopicId) moveSelectedTopic(draggingTopicId, topic.id);
-                        }}
-                        onDragEnd={() => {
-                          setDraggingTopicId(null);
-                          setDragOverTopicId(null);
-                        }}
-                        className={`border-t border-gray-100 hover:bg-gray-50 ${draggingTopicId === topic.id ? 'opacity-50' : ''} ${dragOverTopicId === topic.id ? 'bg-gray-50' : ''}`}
-                      >
-                        <td className="px-4 py-3 align-top text-gray-400">
-                          <MenuOutlined />
-                        </td>
-                        <td className="px-4 py-3 align-top font-medium text-gray-700">{formatNumber(index + 1)}</td>
-                        <td className="px-4 py-3 align-top font-medium text-gray-900">{topic.topicName}</td>
-                        <td className="px-4 py-3 align-top text-gray-600">{teacherNameById(topic.advisorId)}</td>
-                        <td className="px-4 py-3 align-top">
-                          <Select
-                            value={topic.reviewerId || undefined}
-                            onChange={(value) => updateReviewerForTopic(topic.id, value ?? null)}
-                            placeholder={t(getKey('select_reviewer_placeholder'))}
-                            options={memberIds
-                              .filter((id) => id !== topic.advisorId)
-                              .map((id) => ({ value: id, label: teacherNameById(id) }))}
-                            className="w-full min-w-[220px]"
-                            allowClear
+              <div className="p-5 space-y-4">
+                {checkedSortTopicIds.length > 0 && (
+                  <div className="flex items-center justify-between bg-red-50 border border-red-100 p-3 rounded-xl">
+                    <span className="text-xs font-semibold text-red-700">
+                      Đã chọn {checkedSortTopicIds.length} đề tài để bỏ chọn
+                    </span>
+                    <Button
+                      type="primary"
+                      danger
+                      onClick={handleBulkDeselect}
+                    >
+                      Bỏ chọn các đề tài đã chọn ({checkedSortTopicIds.length})
+                    </Button>
+                  </div>
+                )}
+                <div ref={sortContainerRef} onWheel={handleScrollPropagation} className="overflow-auto max-h-[450px] rounded-xl border border-gray-200 bg-white no-scrollbar">
+                  <table className="w-full min-w-[1200px] border-collapse text-sm">
+                    <thead className="bg-gray-50 text-gray-600 sticky top-0 z-10">
+                      <tr>
+                        <th className="w-14 px-4 py-3 text-left">
+                          <input
+                            type="checkbox"
+                            checked={selectedTopics.length > 0 && checkedSortTopicIds.length === selectedTopics.length}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setCheckedSortTopicIds(selectedTopics.map((t) => t.id));
+                              } else {
+                                setCheckedSortTopicIds([]);
+                              }
+                            }}
+                            className="h-4 w-4 accent-[var(--color-primary)]"
                           />
-                        </td>
-                        <td className="px-4 py-3 align-top">
-                          <Select
-                            mode="multiple"
-                            value={topic.examinerIds || []}
-                            onChange={(value) => updateExaminerForTopic(topic.id, value ?? [])}
-                            placeholder={t(getKey('select_examiners_placeholder'))}
-                            options={memberIds
-                              .filter((id) => id !== topic.advisorId && id !== topic.reviewerId)
-                              .map((id) => ({ value: id, label: teacherNameById(id) }))}
-                            className="w-full min-w-[220px]"
-                            allowClear
-                          />
-                        </td>
-                        <td className="px-4 py-3 align-top">
-                          <Select
-                            mode="multiple"
-                            value={topic.externalExaminers || []}
-                            onChange={(value) => updateExternalExaminersForTopic(topic.id, value ?? [])}
-                            placeholder={t(getKey('select_external_placeholder'))}
-                            options={teacherList.filter((teacher) => !memberIds.includes(teacher.id)).map((teacher) => ({ value: teacher.id, label: `${teacher.name} - Chuyên môn: ${teacher.major || 'Chưa rõ'}` }))}
-                            className="w-full min-w-[220px]"
-                            allowClear
-                          />
-                        </td>
-                        <td className="px-4 py-3 align-top font-semibold text-[var(--color-primary)]">
-                          {(() => {
-                            const sched = calculateTopicSchedules[topic.id];
-                            return sched ? `${sched.start} - ${sched.end}` : '—';
-                          })()}
-                          <div className="text-xs text-gray-500 font-normal mt-1">
-                            (Dự kiến: {topic.minutes}p)
-                          </div>
-                        </td>
+                        </th>
+                        <th className="w-20 px-4 py-3 text-left">{t(getKey('stt'))}</th>
+                        <th className="px-4 py-3 text-left">{t(getKey('topic_name'))}</th>
+                        <th className="px-4 py-3 text-left">{t(getKey('advisor_short'))}</th>
+                        <th className="px-4 py-3 text-left">{t(getKey('reviewer_short'))}</th>
+                        <th className="px-4 py-3 text-left">{t(getKey('examiner_title'))}</th>
+                        <th className="px-4 py-3 text-left">{t(getKey('external_teachers_short'))}</th>
+                        <th className="px-4 py-3 text-left">{t(getKey('time'))}</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {selectedTopics.map((topic, index) => (
+                        <tr
+                          key={topic.id}
+                          draggable
+                          onDragStart={(e) => {
+                            setTimeout(() => {
+                              setDraggingTopicId(topic.id);
+                            }, 0);
+                          }}
+                          onDragOver={(event) => event.preventDefault()}
+                          onDragEnter={() => {
+                            if (draggingTopicId && draggingTopicId !== topic.id) {
+                              moveSelectedTopic(draggingTopicId, topic.id);
+                            }
+                          }}
+                          onDragEnd={() => {
+                            setDraggingTopicId(null);
+                            setDragOverTopicId(null);
+                          }}
+                          onClick={() => setActiveRowTopicId(topic.id)}
+                          className={cn(
+                            "border-t border-gray-100 transition-all duration-200",
+                            draggingTopicId === topic.id
+                              ? "bg-blue-50/10 border-2 border-dashed border-blue-300 opacity-60 scale-[0.99] shadow-inner"
+                              : activeRowTopicId === topic.id
+                              ? "bg-blue-50/70 border-y border-blue-300 shadow-[0_4px_12px_rgba(37,99,235,0.08)] relative z-10 scale-[1.005]"
+                              : "hover:bg-slate-50 cursor-grab active:cursor-grabbing"
+                          )}
+                          title="Nhấn giữ và kéo thả dòng này để thay đổi thứ tự bảo vệ"
+                        >
+                          <td className={cn("px-4 py-3 align-top", draggingTopicId === topic.id && "invisible")}>
+                            <input
+                              type="checkbox"
+                              checked={checkedSortTopicIds.includes(topic.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setCheckedSortTopicIds((prev) => [...prev, topic.id]);
+                                } else {
+                                  setCheckedSortTopicIds((prev) => prev.filter((id) => id !== topic.id));
+                                }
+                              }}
+                              className="h-4 w-4 accent-[var(--color-primary)]"
+                            />
+                          </td>
+                          <td className={cn("px-4 py-3 align-top font-medium text-gray-700", draggingTopicId === topic.id && "invisible")}>
+                            <div className="flex items-center gap-1.5">
+                              <span>{formatNumber(index + 1)}</span>
+                              {activeRowTopicId === topic.id && (
+                                <div className="flex flex-col gap-0.5 ml-1">
+                                  <Button
+                                    type="text"
+                                    size="small"
+                                    icon={<span className="text-[10px] font-bold">▲</span>}
+                                    disabled={index === 0}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      moveTopicUpDown(index, 'up');
+                                    }}
+                                    className="h-5 w-5 p-0 flex items-center justify-center hover:bg-blue-100 text-blue-600 rounded"
+                                    title="Di chuyển lên"
+                                  />
+                                  <Button
+                                    type="text"
+                                    size="small"
+                                    icon={<span className="text-[10px] font-bold">▼</span>}
+                                    disabled={index === selectedTopics.length - 1}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      moveTopicUpDown(index, 'down');
+                                    }}
+                                    className="h-5 w-5 p-0 flex items-center justify-center hover:bg-blue-100 text-blue-600 rounded"
+                                    title="Di chuyển xuống"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                          <td className={cn("px-4 py-3 align-top font-medium text-gray-900", draggingTopicId === topic.id && "invisible")}>{topic.topicName}</td>
+                          <td className={cn("px-4 py-3 align-top text-gray-600", draggingTopicId === topic.id && "invisible")}>{teacherNameById(topic.advisorId)}</td>
+                          <td className={cn("px-4 py-3 align-top", draggingTopicId === topic.id && "invisible")}>
+                            <Select
+                              value={topic.reviewerId || undefined}
+                              onChange={(value) => updateReviewerForTopic(topic.id, value ?? null)}
+                              placeholder={t(getKey('select_reviewer_placeholder'))}
+                              options={memberIds
+                                .filter((id) => id !== topic.advisorId)
+                                .map((id) => ({ value: id, label: teacherNameById(id) }))}
+                              className="w-full min-w-[220px]"
+                              allowClear
+                            />
+                          </td>
+                          <td className={cn("px-4 py-3 align-top", draggingTopicId === topic.id && "invisible")}>
+                            <Select
+                              mode="multiple"
+                              value={topic.examinerIds || []}
+                              onChange={(value) => updateExaminerForTopic(topic.id, value ?? [])}
+                              placeholder={t(getKey('select_examiners_placeholder'))}
+                              options={memberIds
+                                .filter((id) => id !== topic.advisorId && id !== topic.reviewerId)
+                                .map((id) => ({ value: id, label: teacherNameById(id) }))}
+                              className="w-full min-w-[220px]"
+                              allowClear
+                            />
+                          </td>
+                          <td className={cn("px-4 py-3 align-top", draggingTopicId === topic.id && "invisible")}>
+                            <Select
+                              mode="multiple"
+                              value={topic.externalExaminers || []}
+                              onChange={(value) => updateExternalExaminersForTopic(topic.id, value ?? [])}
+                              placeholder={t(getKey('select_external_placeholder'))}
+                              options={teacherList.filter((teacher) => !memberIds.includes(teacher.id)).map((teacher) => ({ value: teacher.id, label: teacher.name }))}
+                              className="w-full min-w-[220px]"
+                              allowClear
+                            />
+                          </td>
+                          <td className={cn("px-4 py-3 align-top font-semibold text-[var(--color-primary)]", draggingTopicId === topic.id && "invisible")}>
+                            {(() => {
+                              const sched = calculateTopicSchedules[topic.id];
+                              return sched ? `${sched.start} - ${sched.end}` : '—';
+                            })()}
+                            <div className="text-xs text-gray-500 font-normal mt-1">
+                              (Dự kiến: {topic.minutes}p)
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
           </Card>
@@ -791,10 +1289,29 @@ const CreateCouncilPage = () => {
 
       <div className="mt-6 flex items-center justify-end gap-3">
         <Button onClick={() => navigate('/councils')}>{t(getKey('cancel_btn_text'))}</Button>
-        <Button onClick={() => setIsPreviewVisible(true)} disabled={!form.name || !form.room || !form.date || !form.time || memberIds.length === 0 || selectedTopics.length === 0}>
+        <Button
+          onClick={() => {
+            if (!selectedChairId) {
+              message.error("Vui lòng chọn Chủ tịch hội đồng");
+              return;
+            }
+            if (!selectedSecretaryId) {
+              message.error("Vui lòng chọn Thư ký hội đồng");
+              return;
+            }
+            if (selectedChairId === selectedSecretaryId) {
+              message.error("Chủ tịch và Thư ký không được trùng nhau");
+              return;
+            }
+            if (validateDefenseDate(form.date, selectedPeriodObj)) {
+              setIsPreviewVisible(true);
+            }
+          }}
+          disabled={!form.name || !form.room || !form.date || !form.time || memberIds.length === 0}
+        >
           Xem trước
         </Button>
-        <Button type="primary" onClick={handleSave} disabled={!form.name || !form.room || !form.date || !form.time || memberIds.length === 0 || selectedTopics.length === 0}>
+        <Button type="primary" onClick={handleSave} disabled={!form.name || !form.room || !form.date || !form.time || memberIds.length === 0}>
           {editingId ? 'Cập nhật hội đồng' : 'Lưu hội đồng'}
         </Button>
       </div>
@@ -851,10 +1368,11 @@ const CreateCouncilPage = () => {
 
           <div>
             <div className="flex flex-wrap gap-2">
-              {form.members.map((id, idx) => {
+              {rearrangedMembers.map((id, idx) => {
                 const role = getTeacherRoleInCouncil(id, idx);
                 const tagColors: Record<string, string> = {
                   'Chủ tịch': 'gold',
+                  'Thư ký (TH)': 'cyan',
                   'Phản biện': 'orange',
                   'Ủy viên': 'blue'
                 };
@@ -870,8 +1388,8 @@ const CreateCouncilPage = () => {
 
           <div>
             <div className="text-xs font-semibold text-slate-500 mb-2">Danh sách bảo vệ & Sắp xếp ({selectedTopics.length}):</div>
-            <div className="overflow-hidden rounded-lg border border-slate-100">
-              <table className="w-full text-left text-xs border-collapse">
+            <div ref={previewContainerRef} className="overflow-x-auto rounded-lg border border-slate-100 no-scrollbar">
+              <table className="w-full min-w-[650px] text-left text-xs border-collapse">
                 <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-100">
                   <tr>
                     <th className="px-3 py-2">STT</th>

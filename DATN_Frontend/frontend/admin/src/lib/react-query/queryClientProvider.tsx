@@ -19,18 +19,45 @@ export default function AppQueryProvider({ children }: { children: ReactNode }) 
     },
     onError: (error) => {
       const errData = (error as AxiosError<any>).response?.data;
+      console.log('Global Mutation Error:', error, 'errData:', errData);
+
       const customErr = ErrorCode()[errData?.error_id as keyof typeof ErrorCode];
+      
+      const configMsg = configErr();
+      const defaultErrTitle = (configMsg && typeof configMsg.message === 'string')
+        ? configMsg.message
+        : 'Đã có lỗi xảy ra';
+
+      let detailMsg = '';
       if (customErr) {
+        detailMsg = customErr;
+      } else if (errData && typeof errData === 'object') {
+        if (typeof errData.message === 'string') {
+          detailMsg = errData.message;
+        } else if (typeof errData.error === 'string') {
+          detailMsg = errData.error;
+        } else if (errData.message && typeof errData.message === 'object') {
+          detailMsg = JSON.stringify(errData.message);
+        } else {
+          detailMsg = JSON.stringify(errData);
+        }
+      } else if (typeof errData === 'string') {
+        detailMsg = errData;
+      } else if (error.message) {
+        detailMsg = error.message;
+      }
+
+      if (detailMsg) {
         notification.error({
-          message: customErr,
-        });
-      } else if (errData?.message) {
-        notification.error({
-          message: errData.message,
+          message: defaultErrTitle,
+          description: detailMsg,
+          duration: 6,
         });
       } else {
-        const msgError = configErr();
-        notification.error(msgError);
+        notification.error({
+          message: defaultErrTitle,
+          duration: 6,
+        });
       }
     },
   });

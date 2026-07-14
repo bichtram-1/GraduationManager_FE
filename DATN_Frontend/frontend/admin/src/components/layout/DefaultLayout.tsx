@@ -199,7 +199,7 @@ const AppLayout = () => {
           </Header>
           <Content
             className={cn(
-              'h-[calc(100vh-90px)] min-h-[calc(100vh-90px)] overflow-auto bg-bgAdvanceSection p-8'
+              'h-[calc(100vh-90px)] min-h-[calc(100vh-90px)] overflow-auto bg-bgAdvanceSection p-5'
             )}
           >
             <Suspense fallback={<Loading />}>

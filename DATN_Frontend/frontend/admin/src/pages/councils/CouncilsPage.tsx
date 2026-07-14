@@ -18,6 +18,7 @@ type CouncilCard = {
   achieved: number;
   rejected: number;
   chair: string[];
+  secretary?: string[];
   reviewer: string[];
   member: string[];
   topicGroups: { code: string; title: string; members: number }[];
@@ -35,9 +36,72 @@ type CouncilCard = {
   status?: string;
 };
 
+const useDragScroll = () => {
+  const ref = React.useRef<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    let isDown = false;
+    let startX: number;
+    let scrollLeft: number;
+
+    const handleMouseDown = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (
+        target.closest('select') ||
+        target.closest('input') ||
+        target.closest('button') ||
+        target.closest('.ant-select') ||
+        target.closest('.ant-btn')
+      ) {
+        return;
+      }
+      isDown = true;
+      el.style.cursor = 'grabbing';
+      startX = e.pageX - el.offsetLeft;
+      scrollLeft = el.scrollLeft;
+    };
+
+    const handleMouseLeave = () => {
+      isDown = false;
+      el.style.cursor = '';
+    };
+
+    const handleMouseUp = () => {
+      isDown = false;
+      el.style.cursor = '';
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDown) return;
+      e.preventDefault();
+      const x = e.pageX - el.offsetLeft;
+      const walk = (x - startX) * 1.5;
+      el.scrollLeft = scrollLeft - walk;
+    };
+
+    el.addEventListener('mousedown', handleMouseDown);
+    el.addEventListener('mouseleave', handleMouseLeave);
+    el.addEventListener('mouseup', handleMouseUp);
+    el.addEventListener('mousemove', handleMouseMove);
+
+    return () => {
+      el.removeEventListener('mousedown', handleMouseDown);
+      el.removeEventListener('mouseleave', handleMouseLeave);
+      el.removeEventListener('mouseup', handleMouseUp);
+      el.removeEventListener('mousemove', handleMouseMove);
+    };
+  }, []);
+
+  return ref;
+};
+
 const CouncilsPage: React.FC = () => {
   const { t } = useTranslation();
   const { selectedPeriod } = useGlobalVariable();
+  const previewContainerRef = useDragScroll();
   const { data: councils = [] } = councilHooks.useFetchListCouncils();
   const deleteCouncilMutation = councilHooks.useDeleteCouncil();
   const updateCouncilMutation = councilHooks.useUpdateCouncil();
@@ -147,9 +211,6 @@ const CouncilsPage: React.FC = () => {
         deleteCouncilMutation.mutate(councilId, {
           onSuccess: () => {
             message.success(t(getKey('delete_council_success')));
-          },
-          onError: (err: any) => {
-            message.error(err.message || t(getKey('config_error_message')));
           }
         });
       },
@@ -204,7 +265,7 @@ const CouncilsPage: React.FC = () => {
         .council-ui .btn { padding:8px 14px; border-radius:8px; font-weight:600; cursor:pointer }
         .council-ui .btnp { background:#185FA5; color:#fff; border:none }
         .council-ui .btns { background:transparent; border:1px solid #e6e6e6 }
-        .council-ui .council-body { display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr 1.4fr; gap:14px; border-top:1px solid var(--color-border-tertiary); padding-top:14px }
+        .council-ui .council-body { display:grid; grid-template-columns:1fr 1fr 1.2fr 1fr; gap:14px; border-top:1px solid var(--color-border-tertiary); padding-top:14px }
         .council-ui .role-col { min-width:0; display:flex; flex-direction:column; gap:8px; padding:0 8px }
         .council-ui .role-col .btn { flex-shrink:0 }
         .council-ui .role-name { font-size:12px; font-weight:700; color:var(--color-text-secondary); text-transform:uppercase; letter-spacing:.04em }
@@ -215,8 +276,8 @@ const CouncilsPage: React.FC = () => {
         .council-ui .topic-item-title { font-size:12px; color:var(--color-text-primary); line-height:1.4 }
         .council-ui .topic-item-meta { font-size:11px; color:var(--color-text-secondary); margin-top:4px }
         .council-ui .muted { color:var(--color-text-secondary); font-size:12px }
-        @media (max-width:1100px){ .council-ui .council-body{grid-template-columns:1fr 1fr 1fr} }
-        @media (max-width:900px){ .council-ui .filter-panel{grid-template-columns:1fr 1fr} .council-ui .council-body{grid-template-columns:1fr 1fr} }
+        @media (max-width:1100px){ .council-ui .council-body{grid-template-columns:1fr 1fr 1.2fr 1fr} }
+        @media (max-width:900px){ .council-ui .filter-panel{grid-template-columns:1fr 1fr} .council-ui .council-body{grid-template-columns:1fr 1fr 1.2fr 0.8fr} }
         @media (max-width:700px){ .council-ui .filter-panel{grid-template-columns:1fr} .council-ui .stats{grid-template-columns:1fr 1fr} .council-ui .council-body{grid-template-columns:1fr} }
       `}</style>
 
@@ -404,88 +465,97 @@ const CouncilsPage: React.FC = () => {
               </div>
 
               <div className="council-body">
+                {/* Cột 1: Chủ tịch */}
                 <div className="role-col">
-                  <div className="role-name">{t(getKey('advisor_short'))}</div>
-                  <div className="role-title">{t(getKey('advisor_full'))}</div>
-                  <div className="chip-wrap">
-                    {c.chair.map((t) => <span key={t} className="chip">{t}</span>)}
-                  </div>
-                </div>
-
-                <div className="role-col">
-                  <div className="role-name">{t(getKey('reviewer_short'))}</div>
-                  <div className="role-title">{t(getKey('reviewer_full'))}</div>
-                  <div className="chip-wrap">
-                    {c.reviewer.map((t) => <span key={t} className="chip">{t}</span>)}
-                  </div>
-                </div>
-
-                <div className="role-col">
-                  <div className="role-name">{t(getKey('examiner_title'))}</div>
-                  <div className="role-title">{t(getKey('examiner_list'))}</div>
-                  <div className="chip-wrap">
-                    {aggregatedInternal.length || aggregatedExternal.length ? (
-                      <>
-                        {aggregatedInternal.map((t) => <span key={t} className="chip">{t}</span>)}
-                        {aggregatedExternal.map((t) => <span key={t} className="chip bg-[var(--color-purple-lightest)]">{t}</span>)}
-                      </>
+                  <div className="role-name">Chủ tịch</div>
+                  <div className="chip-wrap flex flex-col gap-1 items-start mt-2">
+                    {c.chair && c.chair.length ? (
+                      c.chair.map((name) => (
+                        <span key={name} className="font-semibold text-slate-800 text-sm py-0.5">
+                          {name}
+                        </span>
+                      ))
                     ) : (
-                      <span className="muted">{t(getKey('not_assigned'))}</span>
+                      <span className="muted text-xs italic">Chưa phân công</span>
                     )}
                   </div>
                 </div>
 
+                {/* Cột 2: Thư ký */}
                 <div className="role-col">
-                  <div className="role-name">{t(getKey('topic_group'))}</div>
-                  <div className="role-title">{t(getKey('assigned_topic_groups_list'))}</div>
-                  {c.topicGroups.length ? (
-                    <div className="topic-list">
-                      {c.topics && c.topics.length ? (
-                        c.topics.map((topic) => (
-                          <div className="topic-item" key={topic.code}>
-                            <div className="flex justify-between items-center">
-                              <div>
-                                <div className="topic-item-title">{topic.code} - {topic.title}</div>
-                                <div className="topic-item-meta">
-                                  {Array.isArray((topic as any).members)
-                                    ? (t(getKey('students_count_suffix'), { count: (topic as any).members.length } as any) as string)
-                                    : (t(getKey('students_count_suffix'), { count: topic.members } as any) as string)}
-                                </div>
-                              </div>
-                              {topic.startTime && <div className="chip">{topic.startTime}</div>}
-                            </div>
-                            {Array.isArray((topic as any).members) && (topic as any).members.length > 0 && (
-                              <div className="mt-2 text-[var(--color-text-secondary)] text-[13px]">{(topic as any).members.join(', ')}</div>
-                            )}
-                            <div className="mt-2" />
-                          </div>
-                        ))
-                      ) : (
-                        c.topicGroups.map((topic) => (
-                          <div className="topic-item" key={topic.code}>
-                            <div className="topic-item-title">{topic.code} - {topic.title}</div>
-                            <div className="topic-item-meta">
-                              {Array.isArray((topic as any).members)
-                                ? (t(getKey('students_count_suffix'), { count: (topic as any).members.length } as any) as string)
-                                : (t(getKey('students_count_suffix'), { count: topic.members } as any) as string)}
-                            </div>
-                            {Array.isArray((topic as any).members) && (topic as any).members.length > 0 && (
-                              <div className="mt-2 text-[var(--color-text-secondary)] text-[13px]">{(topic as any).members.join(', ')}</div>
-                            )}
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  ) : (
-                    <span className="muted">{t(getKey('not_assigned_topic_groups'))}</span>
-                  )}
+                  <div className="role-name">Thư ký</div>
+                  <div className="chip-wrap flex flex-col gap-1 items-start mt-2">
+                    {c.secretary && c.secretary.length ? (
+                      c.secretary.map((name) => (
+                        <span key={name} className="font-semibold text-slate-800 text-sm py-0.5">
+                          {name}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="muted text-xs italic">Chưa phân công</span>
+                    )}
+                  </div>
                 </div>
 
+                {/* Cột 3: Ủy viên */}
                 <div className="role-col">
-                  <div className="role-name">{t(getKey('external_teachers_short'))}</div>
-                  <div className="role-title">{t(getKey('external_teachers_title'))}</div>
-                  <div className="chip-wrap">
-                    {c.external && c.external.length ? c.external.map((e) => <span key={e.name} className="chip">{e.name}</span>) : <span className="muted">{t(getKey('no_external_teachers'))}</span>}
+                  <div className="role-name">Ủy viên</div>
+                  <div className="chip-wrap flex flex-col gap-1 items-start mt-2">
+                    {(() => {
+                      const uyViens: string[] = [];
+                      (c.reviewer || []).forEach((name) => {
+                        if (!uyViens.includes(name)) uyViens.push(name);
+                      });
+                      (c.member || []).forEach((name) => {
+                        const isChair = (c.chair || []).includes(name);
+                        const isSec = (c.secretary || []).includes(name);
+                        if (!isChair && !isSec && !uyViens.includes(name)) {
+                          uyViens.push(name);
+                        }
+                      });
+                      aggregatedInternal.forEach((name) => {
+                        const isChair = (c.chair || []).includes(name);
+                        const isSec = (c.secretary || []).includes(name);
+                        if (!isChair && !isSec && !uyViens.includes(name)) {
+                          uyViens.push(name);
+                        }
+                      });
+                      aggregatedExternal.forEach((name) => {
+                        const isChair = (c.chair || []).includes(name);
+                        const isSec = (c.secretary || []).includes(name);
+                        if (!isChair && !isSec && !uyViens.includes(name)) {
+                          uyViens.push(name);
+                        }
+                      });
+                      (c.external || []).forEach((e) => {
+                        const name = typeof e === 'string' ? e : e.name;
+                        const isChair = (c.chair || []).includes(name);
+                        const isSec = (c.secretary || []).includes(name);
+                        if (!isChair && !isSec && !uyViens.includes(name)) {
+                          uyViens.push(name);
+                        }
+                      });
+
+                      return uyViens.length ? (
+                        uyViens.map((name) => (
+                          <span key={name} className="text-slate-700 text-sm py-0.5">
+                            {name}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="muted text-xs italic">Chưa phân công</span>
+                      );
+                    })()}
+                  </div>
+                </div>
+
+                {/* Cột 4: Tổng nhóm */}
+                <div className="role-col">
+                  <div className="role-name">Tổng nhóm</div>
+                  <div className="chip-wrap mt-2">
+                    <span className="chip bg-blue-50 text-blue-700 border border-blue-100 font-semibold text-sm px-3.5 py-1 rounded-full">
+                      {(c.topics?.length || c.topicGroups.length || 0)} nhóm
+                    </span>
                   </div>
                 </div>
               </div>
@@ -554,6 +624,11 @@ const CouncilsPage: React.FC = () => {
                         Chủ tịch: {name}
                       </Tag>
                     ))}
+                    {selectedCouncilForView.secretary && selectedCouncilForView.secretary.map((name: string) => (
+                      <Tag color="cyan" key={name} className="px-2.5 py-1 text-xs">
+                        Thư ký: {name}
+                      </Tag>
+                    ))}
                     {selectedCouncilForView.reviewer.map((name) => (
                       <Tag color="orange" key={name} className="px-2.5 py-1 text-xs">
                         Phản biện: {name}
@@ -565,6 +640,7 @@ const CouncilsPage: React.FC = () => {
                       </Tag>
                     ))}
                     {selectedCouncilForView.chair.length === 0 &&
+                     (!selectedCouncilForView.secretary || selectedCouncilForView.secretary.length === 0) &&
                      selectedCouncilForView.reviewer.length === 0 &&
                      selectedCouncilForView.member.length === 0 && (
                       <span className="text-xs text-slate-400 italic">Chưa có thành viên</span>
@@ -574,8 +650,8 @@ const CouncilsPage: React.FC = () => {
 
                 <div>
                   <div className="text-xs font-semibold text-slate-500 mb-2">Danh sách bảo vệ & Sắp xếp ({(selectedCouncilForView.topics || selectedCouncilForView.topicGroups || []).length}):</div>
-                  <div className="overflow-hidden rounded-lg border border-slate-100">
-                    <table className="w-full text-left text-xs border-collapse">
+                  <div ref={previewContainerRef} className="overflow-x-auto rounded-lg border border-slate-100 no-scrollbar">
+                    <table className="w-full min-w-[650px] text-left text-xs border-collapse">
                       <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-100">
                         <tr>
                           <th className="px-3 py-2">STT</th>
