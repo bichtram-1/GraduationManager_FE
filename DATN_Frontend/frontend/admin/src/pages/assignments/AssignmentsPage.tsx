@@ -416,7 +416,7 @@ const AssignmentsPage = () => {
                         <Radio value={teacher.id} disabled={teacher.status !== STATUS_CODE.AVAILABLE} />
                         <div className="min-w-0 flex-1">
                           <div className="block text-sm font-semibold leading-5 text-slate-900">
-                            {teacher.degree ? `${teacher.degree} ` : ''}{teacher.name}{teacher.major ? ` • ${teacher.major}` : ''}
+                            {teacher.name}{teacher.major ? ` • ${teacher.major}` : ''}
                           </div>
                         </div>
                       </div>
