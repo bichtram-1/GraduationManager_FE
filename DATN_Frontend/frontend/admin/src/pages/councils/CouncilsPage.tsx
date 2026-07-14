@@ -3,6 +3,7 @@ import { message, Modal, Button, Tag } from 'antd';
 import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined, CalendarOutlined, CheckCircleOutlined, CloseCircleOutlined, SolutionOutlined, ExclamationCircleFilled, SendOutlined, LockOutlined, UndoOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { councilHooks } from '../../hooks/useCouncils';
+import { groupHooks } from '../../hooks/useGroups';
 import { ROUTES } from '../../constants/routers';
 import { useTranslation } from 'react-i18next';
 import { getKey } from '@shared/types/I18nKeyType';
@@ -106,12 +107,23 @@ const CouncilsPage: React.FC = () => {
   const deleteCouncilMutation = councilHooks.useDeleteCouncil();
   const updateCouncilMutation = councilHooks.useUpdateCouncil();
   const [selectedCouncilForView, setSelectedCouncilForView] = useState<CouncilCard | null>(null);
-  const [activeTab, setActiveTab] = useState<'list' | 'filter'>('list');
   const [query, setQuery] = useState('');
   const [roomFilter, setRoomFilter] = useState('all');
   const [sessionFilter, setSessionFilter] = useState<'all' | 'morning' | 'afternoon'>('all');
   const navigate = useNavigate();
   const isPeriodClosed = selectedPeriod?.status === STATUS_CODE.CLOSED;
+
+  const { data: groupList } = groupHooks.useFetchListGroups();
+  const [isUnassignedModalVisible, setIsUnassignedModalVisible] = useState(false);
+
+  const unassignedGroups = useMemo(() => {
+    if (!groupList || !groupList.rows || !selectedPeriod) return [];
+    return (groupList.rows as any[]).filter((g) => {
+      const matchesPeriod = g.registrationBatch === selectedPeriod.name;
+      const isUnassigned = !g.hoi_dong_id;
+      return matchesPeriod && isUnassigned;
+    });
+  }, [groupList, selectedPeriod]);
 
   const handleUpdateStatus = (councilId: string, status: string, statusName: string) => {
     if (isPeriodClosed) return;
@@ -291,7 +303,15 @@ const CouncilsPage: React.FC = () => {
             <h1 className="m-0 text-[34px] font-bold leading-[40px] text-navyDark">{t(getKey('council_management'))}</h1>
             <p className="mt-2 mb-0 text-[18px] leading-[26px] text-grayDark">{t(getKey('council_management_desc'))}</p>
           </div>
-          <div>
+          <div className="flex items-center gap-3">
+            <Button
+              type="default"
+              icon={<SolutionOutlined />}
+              onClick={() => setIsUnassignedModalVisible(true)}
+              className="rounded-xl h-[46px] px-6 font-semibold shadow-sm flex items-center gap-1.5 border-slate-200 text-slate-700 hover:text-[var(--color-primary)] hover:border-[var(--color-primary)]"
+            >
+              Nhóm chưa phân hội đồng ({unassignedGroups.length})
+            </Button>
             <Button
               type="primary"
               icon={<PlusOutlined />}
@@ -316,81 +336,72 @@ const CouncilsPage: React.FC = () => {
           </div>
         )}
 
-        <div className="tabs">
-          <button className={`tab ${activeTab === 'list' ? 'on' : ''}`} onClick={() => setActiveTab('list')}>{t(getKey('council_list_tab'))}</button>
-          <button className={`tab ${activeTab === 'filter' ? 'on' : ''}`} onClick={() => setActiveTab('filter')}>{t(getKey('filter_tab'))}</button>
+        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {/* Active Councils */}
+          <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_8px_20px_rgba(15,23,42,0.04)] flex justify-between items-start">
+            <div>
+              <div className="text-sm text-slate-500">{t(getKey('active_councils'))}</div>
+              <div className="mt-1 text-[32px] font-bold leading-[38px] text-slate-900">{formatNumber(totalCouncils)}</div>
+            </div>
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+              <CalendarOutlined style={{ fontSize: 20 }} />
+            </div>
+          </div>
+
+          {/* Eligible Groups */}
+          <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-5 shadow-[0_8px_20px_rgba(15,23,42,0.04)] flex justify-between items-start">
+            <div>
+              <div className="text-sm text-emerald-700">{t(getKey('eligible_groups'))}</div>
+              <div className="mt-1 text-[32px] font-bold leading-[38px] text-emerald-700">{formatNumber(totalEligible)}</div>
+            </div>
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
+              <CheckCircleOutlined style={{ fontSize: 20 }} />
+            </div>
+          </div>
+
+          {/* Rejected Groups */}
+          <div className="rounded-2xl border border-rose-100 bg-rose-50/50 p-5 shadow-[0_8px_20px_rgba(15,23,42,0.04)] flex justify-between items-start">
+            <div>
+              <div className="text-sm text-rose-700">{t(getKey('rejected_groups'))}</div>
+              <div className="mt-1 text-[32px] font-bold leading-[38px] text-rose-700">{formatNumber(totalRejected)}</div>
+            </div>
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-rose-100 text-rose-600">
+              <CloseCircleOutlined style={{ fontSize: 20 }} />
+            </div>
+          </div>
+
+          {/* Cross Assessors */}
+          <div className="rounded-2xl border border-sky-100 bg-sky-50/50 p-5 shadow-[0_8px_20px_rgba(15,23,42,0.04)] flex justify-between items-start">
+            <div>
+              <div className="text-sm text-sky-700">{t(getKey('cross_assessors'))}</div>
+              <div className="mt-1 text-[32px] font-bold leading-[38px] text-sky-700">{formatNumber(totalAssessors)}</div>
+            </div>
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-sky-100 text-sky-600">
+              <SolutionOutlined style={{ fontSize: 20 }} />
+            </div>
+          </div>
         </div>
 
-        {activeTab === 'filter' && (
-          <div className="filter-panel">
-            <input
-              className="filter-input"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder={t(getKey('search_council_placeholder'))}
-            />
-            <select className="filter-input" value={roomFilter} onChange={(event) => setRoomFilter(event.target.value)}>
-              <option value="all">{t(getKey('all_rooms'))}</option>
-              {rooms.map((room) => (
-                <option value={room} key={room}>{room}</option>
-              ))}
-            </select>
-            <select className="filter-input" value={sessionFilter} onChange={(event) => setSessionFilter(event.target.value as 'all' | 'morning' | 'afternoon')}>
-              <option value="all">{t(getKey('all_sessions'))}</option>
-              <option value="morning">{t(getKey('morning_session'))}</option>
-              <option value="afternoon">{t(getKey('afternoon_session'))}</option>
-            </select>
-            <button className="btn btns" onClick={resetFilters}>{t(getKey('reset_filters'))}</button>
-          </div>
-        )}
-
-        {activeTab === 'list' && (
-          <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {/* Active Councils */}
-            <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_8px_20px_rgba(15,23,42,0.04)] flex justify-between items-start">
-              <div>
-                <div className="text-sm text-slate-500">{t(getKey('active_councils'))}</div>
-                <div className="mt-1 text-[32px] font-bold leading-[38px] text-slate-900">{formatNumber(totalCouncils)}</div>
-              </div>
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
-                <CalendarOutlined style={{ fontSize: 20 }} />
-              </div>
-            </div>
-
-            {/* Eligible Groups */}
-            <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-5 shadow-[0_8px_20px_rgba(15,23,42,0.04)] flex justify-between items-start">
-              <div>
-                <div className="text-sm text-emerald-700">{t(getKey('eligible_groups'))}</div>
-                <div className="mt-1 text-[32px] font-bold leading-[38px] text-emerald-700">{formatNumber(totalEligible)}</div>
-              </div>
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
-                <CheckCircleOutlined style={{ fontSize: 20 }} />
-              </div>
-            </div>
-
-            {/* Rejected Groups */}
-            <div className="rounded-2xl border border-rose-100 bg-rose-50/50 p-5 shadow-[0_8px_20px_rgba(15,23,42,0.04)] flex justify-between items-start">
-              <div>
-                <div className="text-sm text-rose-700">{t(getKey('rejected_groups'))}</div>
-                <div className="mt-1 text-[32px] font-bold leading-[38px] text-rose-700">{formatNumber(totalRejected)}</div>
-              </div>
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-rose-100 text-rose-600">
-                <CloseCircleOutlined style={{ fontSize: 20 }} />
-              </div>
-            </div>
-
-            {/* Cross Assessors */}
-            <div className="rounded-2xl border border-sky-100 bg-sky-50/50 p-5 shadow-[0_8px_20px_rgba(15,23,42,0.04)] flex justify-between items-start">
-              <div>
-                <div className="text-sm text-sky-700">{t(getKey('cross_assessors'))}</div>
-                <div className="mt-1 text-[32px] font-bold leading-[38px] text-sky-700">{formatNumber(totalAssessors)}</div>
-              </div>
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-sky-100 text-sky-600">
-                <SolutionOutlined style={{ fontSize: 20 }} />
-              </div>
-            </div>
-          </div>
-        )}
+        <div className="filter-panel mb-6">
+          <input
+            className="filter-input"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={t(getKey('search_council_placeholder'))}
+          />
+          <select className="filter-input" value={roomFilter} onChange={(event) => setRoomFilter(event.target.value)}>
+            <option value="all">{t(getKey('all_rooms'))}</option>
+            {rooms.map((room) => (
+              <option value={room} key={room}>{room}</option>
+            ))}
+          </select>
+          <select className="filter-input" value={sessionFilter} onChange={(event) => setSessionFilter(event.target.value as 'all' | 'morning' | 'afternoon')}>
+            <option value="all">{t(getKey('all_sessions'))}</option>
+            <option value="morning">{t(getKey('morning_session'))}</option>
+            <option value="afternoon">{t(getKey('afternoon_session'))}</option>
+          </select>
+          <button className="btn btns" onClick={resetFilters}>{t(getKey('reset_filters'))}</button>
+        </div>
 
         <div>
           {filteredCouncils.map((c) => {
@@ -567,11 +578,7 @@ const CouncilsPage: React.FC = () => {
             open={!!selectedCouncilForView}
             onCancel={() => setSelectedCouncilForView(null)}
             centered
-            footer={[
-              <Button key="close" onClick={() => setSelectedCouncilForView(null)}>
-                Đóng
-              </Button>
-            ]}
+            footer={null}
             width={800}
           >
             {selectedCouncilForView && (
@@ -650,7 +657,7 @@ const CouncilsPage: React.FC = () => {
 
                 <div>
                   <div className="text-xs font-semibold text-slate-500 mb-2">Danh sách bảo vệ & Sắp xếp ({(selectedCouncilForView.topics || selectedCouncilForView.topicGroups || []).length}):</div>
-                  <div ref={previewContainerRef} className="overflow-x-auto rounded-lg border border-slate-100 no-scrollbar">
+                  <div ref={previewContainerRef} className="overflow-auto max-h-[350px] rounded-lg border border-slate-100">
                     <table className="w-full min-w-[650px] text-left text-xs border-collapse">
                       <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-100">
                         <tr>
@@ -658,7 +665,7 @@ const CouncilsPage: React.FC = () => {
                           <th className="px-3 py-2">Đề tài / Sinh viên</th>
                           <th className="px-3 py-2">GVHD</th>
                           <th className="px-3 py-2">GVPB</th>
-                          <th className="px-3 py-2">Ủy viên (Người chấm)</th>
+                          <th className="px-3 py-2">GV Chấm</th>
                           <th className="px-3 py-2">Giờ bảo vệ</th>
                         </tr>
                       </thead>
@@ -674,16 +681,8 @@ const CouncilsPage: React.FC = () => {
                             </td>
                             <td className="px-3 py-2 text-slate-600">{topic.advisorName || '—'}</td>
                             <td className="px-3 py-2 text-slate-600 font-medium">{topic.reviewer || '—'}</td>
-                            <td className="px-3 py-2 text-slate-600">
-                              <div className="flex flex-col gap-0.5">
-                                {(topic.examiners || []).map((name: string) => (
-                                  <span key={name}>{name}</span>
-                                ))}
-                                {(topic.externalExaminers || []).map((name: string) => (
-                                  <span key={name} className="text-purple-600 font-medium">{name} (Ngoài trường)</span>
-                                ))}
-                                {(!topic.examiners?.length && !topic.externalExaminers?.length) && '—'}
-                              </div>
+                            <td className="px-3 py-2 text-slate-600 font-medium">
+                              {(topic.externalExaminers || []).join(', ') || '—'}
                             </td>
                             <td className="px-3 py-2 font-semibold text-[var(--color-primary)]">
                               {topic.startTime || '—'}
@@ -701,6 +700,60 @@ const CouncilsPage: React.FC = () => {
                 </div>
               </div>
             )}
+          </Modal>
+
+          <Modal
+            title={
+              <div className="flex items-center gap-2 text-lg font-bold text-slate-800">
+                <SolutionOutlined className="text-blue-500 font-bold" />
+                <span>Danh sách nhóm chưa phân công hội đồng ({unassignedGroups.length})</span>
+              </div>
+            }
+            open={isUnassignedModalVisible}
+            onCancel={() => setIsUnassignedModalVisible(false)}
+            footer={null}
+            width={900}
+            centered
+          >
+            <div className="mt-4">
+              <div className="max-h-[450px] overflow-auto rounded-xl border border-slate-100">
+                <table className="min-w-full divide-y divide-slate-100 text-sm">
+                  <thead className="bg-slate-50 text-slate-500 font-semibold sticky top-0 z-10">
+                    <tr>
+                      <th className="px-4 py-3 text-left w-12 bg-slate-50">STT</th>
+                      <th className="px-4 py-3 text-left bg-slate-50">Tên đề tài</th>
+                      <th className="px-4 py-3 text-left w-48 bg-slate-50">Giảng viên hướng dẫn</th>
+                      <th className="px-4 py-3 text-left bg-slate-50">Sinh viên thực hiện</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 bg-white text-slate-600">
+                    {unassignedGroups.map((g, idx) => (
+                      <tr key={g.id} className="hover:bg-slate-50/50">
+                        <td className="px-4 py-3 font-medium text-slate-700">{idx + 1}</td>
+                        <td className="px-4 py-3 font-semibold text-slate-800">{g.title || '—'}</td>
+                        <td className="px-4 py-3 font-medium text-slate-600">{g.supervisor || '—'}</td>
+                        <td className="px-4 py-3 text-xs text-slate-500">
+                          <div className="flex flex-col gap-1">
+                            {(g.members || []).map((m: any) => (
+                              <span key={m.id} className="whitespace-nowrap font-medium">
+                                {m.code} - {m.name}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {unassignedGroups.length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="px-4 py-12 text-center text-slate-400 italic">
+                          Tất cả các nhóm đề tài trong đợt đã được phân công vào hội đồng bảo vệ!
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </Modal>
 
           {filteredCouncils.length === 0 && (

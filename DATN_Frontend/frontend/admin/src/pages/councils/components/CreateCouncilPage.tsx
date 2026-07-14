@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react';
-import { Button, Card, DatePicker, Input, Select, Tag, TimePicker, Modal, message } from 'antd';
+import { Button, Card, DatePicker, Input, Select, Tag, TimePicker, Modal, message, Checkbox } from 'antd';
 import dayjs from 'dayjs';
-import { ArrowLeftOutlined, MenuOutlined, DeleteOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, MenuOutlined, DeleteOutlined, SwapOutlined } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '../../../constants/commonConst';
 import { useTranslation } from 'react-i18next';
@@ -38,6 +38,7 @@ type AdvisorBucket = {
 
 type SelectedTopic = AdvisorTopic & {
   reviewerId?: string | null;
+  examinerId?: string | null;
   examinerIds?: string[];
   externalExaminers?: string[];
   startTime?: string | null;
@@ -117,6 +118,42 @@ const useDragScroll = () => {
   return ref;
 };
 
+const normalizeString = (str: any) => {
+  if (typeof str !== 'string') str = String(str || '');
+  if (!str) return '';
+  return str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .toLowerCase();
+};
+
+const cleanAndNormalize = (str: any) => {
+  if (typeof str !== 'string') str = String(str || '');
+  if (!str) return '';
+  return str
+    .normalize('NFC')
+    .replace(/^((GS|PGS)\b\.?\s*(TS\b)?\.?|ThS\b\.?|TS\b\.?|GVC\b\.?)\s*/i, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+};
+
+const cleanNormalizeNoAccent = (str: any) => {
+  if (typeof str !== 'string') str = String(str || '');
+  if (!str) return '';
+  return str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .replace(/^((GS|PGS)\b\.?\s*(TS\b)?\.?|ThS\b\.?|TS\b\.?|GVC\b\.?)\s*/i, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+};
+
 const CreateCouncilPage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -149,11 +186,15 @@ const CreateCouncilPage = () => {
   const [selectedTopics, setSelectedTopics] = useState<SelectedTopic[]>([]);
   const [selectedChairId, setSelectedChairId] = useState<string | null>(null);
   const [selectedSecretaryId, setSelectedSecretaryId] = useState<string | null>(null);
+  const [swappingTopic, setSwappingTopic] = useState<SelectedTopic | null>(null);
+  const [examinersToSwapOut, setExaminersToSwapOut] = useState<string[]>([]);
+  const [replacementExaminers, setReplacementExaminers] = useState<string[]>([]);
   const [draggingTopicId, setDraggingTopicId] = useState<string | null>(null);
   const [dragOverTopicId, setDragOverTopicId] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [workflowTab, setWorkflowTab] = useState<WorkflowTab>('pick');
   const [isPreviewVisible, setIsPreviewVisible] = useState(false);
+  const [searchValue, setSearchValue] = useState('');
 
   const [checkedSortTopicIds, setCheckedSortTopicIds] = useState<string[]>([]);
 
@@ -380,49 +421,152 @@ const CreateCouncilPage = () => {
     }
   }, [groupList, teacherList, selectedPeriod, form.batch, editingId, datnPeriods]);
 
-  const availableAdvisorOptions = useMemo(
-    () =>
-      teacherList.map((teacher: IAssignmentTeacher) => ({
-        value: teacher.id,
-        label: `${teacher.name} - Chuyên môn: ${teacher.major || 'Chưa rõ'}`,
-      })),
-    [teacherList],
-  );
+  const lecturersWithUnassignedTopics = useMemo(() => {
+    const totalGroupsCount: Record<string, number> = {};
+    const assignedGroupsCount: Record<string, number> = {};
+
+    if (groupList?.rows) {
+      const periodName = form.batch || selectedPeriod?.name || '';
+      (groupList.rows as IListGroup[]).forEach((g) => {
+        // Lọc đề tài thuộc đợt đang chọn tạo hội đồng
+        if (g.registrationBatch !== periodName) {
+          return;
+        }
+
+        const supervisor = g.supervisor;
+        if (supervisor && supervisor !== 'Chưa phân công' && supervisor !== '—') {
+          const teacherId = findTeacherIdByName(supervisor);
+          if (teacherId) {
+            totalGroupsCount[teacherId] = (totalGroupsCount[teacherId] || 0) + 1;
+
+            const isAssignedToOther = g.hoi_dong_id && (!editingId || String(g.hoi_dong_id) !== String(editingId));
+            if (isAssignedToOther) {
+              assignedGroupsCount[teacherId] = (assignedGroupsCount[teacherId] || 0) + 1;
+            }
+          }
+        }
+      });
+    }
+
+    const excludedIds = new Set<string>();
+    Object.keys(totalGroupsCount).forEach((teacherId) => {
+      const total = totalGroupsCount[teacherId];
+      const assigned = assignedGroupsCount[teacherId] || 0;
+      if (total > 0 && assigned === total) {
+        excludedIds.add(teacherId);
+      }
+    });
+
+    const allowedIds = new Set<string>();
+    teacherList.forEach((teacher) => {
+      if (!excludedIds.has(teacher.id)) {
+        allowedIds.add(teacher.id);
+      }
+    });
+
+    return allowedIds;
+  }, [groupList, teacherList, form.batch, editingId, selectedPeriod]);
+
+  const availableAdvisorOptions = useMemo(() => {
+    let filteredTeachers: IAssignmentTeacher[] = [];
+
+    if (searchValue.trim() === '') {
+      // Lọc danh sách các giảng viên đang có nhóm sinh viên hướng dẫn đề tài chưa được phân công vào hội đồng nào
+      filteredTeachers = teacherList.filter((teacher: IAssignmentTeacher) =>
+        lecturersWithUnassignedTopics.has(teacher.id) ||
+        form.members.includes(teacher.id)
+      );
+    } else {
+      // Khi nhập từ khoá tìm kiếm thì sẽ lọc theo họ tên của danh sách các giảng viên của hệ thống
+      const query = normalizeString(searchValue);
+      filteredTeachers = teacherList.filter((teacher: IAssignmentTeacher) =>
+        normalizeString(teacher.name).includes(query) ||
+        form.members.includes(teacher.id)
+      );
+    }
+
+    return filteredTeachers.map((teacher: IAssignmentTeacher) => ({
+      value: teacher.id,
+      label: teacher.name,
+    }));
+  }, [teacherList, lecturersWithUnassignedTopics, form.members, searchValue]);
 
   const memberIds = form.members;
 
-  const teacherNameById = (id: string) => {
+  function teacherNameById(id: any) {
     if (!id) return '';
-    const cleanId = id.replace(/^(ThS|TS|PGS|GS|PGS\.\s*TS|GS\.\s*TS|ThS\.|TS\.|PGS\.\s*TS\.|GS\.\s*TS\.)\s+/i, '').trim();
-    const found = teacherList.find((teacher: IAssignmentTeacher) => {
-      const cleanTName = teacher.name.replace(/^(ThS|TS|PGS|GS|PGS\.\s*TS|GS\.\s*TS|ThS\.|TS\.|PGS\.\s*TS\.|GS\.\s*TS\.)\s+/i, '').trim();
-      return teacher.id === id || cleanTName.toLowerCase() === cleanId.toLowerCase();
-    });
-    return found ? found.name : id;
-  };
+    const idStr = String(id).trim();
+    const found = teacherList.find((teacher: IAssignmentTeacher) => String(teacher.id).trim() === idStr);
+    if (found) return found.name;
 
-  const findTeacherIdByName = (name: string) => {
+    const cleanId = cleanAndNormalize(idStr);
+    const cleanIdNoAccent = cleanNormalizeNoAccent(idStr);
+    
+    const matchedByName = teacherList.find((teacher: IAssignmentTeacher) => {
+      const tName = cleanAndNormalize(teacher.name);
+      if (tName === cleanId) return true;
+      const tNameNoAccent = cleanNormalizeNoAccent(teacher.name);
+      return tNameNoAccent === cleanIdNoAccent;
+    });
+
+    return matchedByName ? matchedByName.name : id;
+  }
+
+  function findTeacherIdByName(name: string) {
     if (!name) return '';
-    const cleanName = name.replace(/^(ThS|TS|PGS|GS|PGS\.\s*TS|GS\.\s*TS|ThS\.|TS\.|PGS\.\s*TS\.|GS\.\s*TS\.)\s+/i, '').trim();
-    const found = teacherList.find((teacher: IAssignmentTeacher) => {
-      const cleanTName = teacher.name.replace(/^(ThS|TS|PGS|GS|PGS\.\s*TS|GS\.\s*TS|ThS\.|TS\.|PGS\.\s*TS\.|GS\.\s*TS\.)\s+/i, '').trim();
-      return cleanTName.toLowerCase() === cleanName.toLowerCase();
-    });
-    return found ? found.id : name;
-  };
+    
+    const cleanName = cleanAndNormalize(name);
+    const cleanNameNoAccent = cleanNormalizeNoAccent(name);
 
-  const isChairAlreadyAssigned = (teacherId: string) => {
-    const matchedCouncil = councilsList.find((c) => {
-      if (editingId && c.id === editingId) return false;
-      const teacherName = teacherNameById(teacherId);
-      return c.chair && c.chair.includes(teacherName);
+    const found = teacherList.find((teacher: IAssignmentTeacher) => {
+      const tName = cleanAndNormalize(teacher.name);
+      if (tName === cleanName) return true;
+      const tNameNoAccent = cleanNormalizeNoAccent(teacher.name);
+      return tNameNoAccent === cleanNameNoAccent;
     });
-    return matchedCouncil;
+
+    return found ? found.id : name;
+  }
+
+  const getOtherCouncilAssignment = (teacherId: string) => {
+    if (!teacherId) return null;
+    const teacherName = teacherNameById(teacherId);
+    const matchedCouncil = councilsList.find((c: any) => {
+      if (editingId && String(c.id) === String(editingId)) return false;
+      const isChair = c.chair && c.chair.includes(teacherName);
+      const isSec = c.secretary && c.secretary.includes(teacherName);
+      return isChair || isSec;
+    });
+
+    if (matchedCouncil) {
+      const isChair = matchedCouncil.chair && matchedCouncil.chair.includes(teacherName);
+      return {
+        title: matchedCouncil.title,
+        role: isChair ? 'Chủ tịch' : 'Thư ký'
+      };
+    }
+    return null;
   };
 
   const updateMembers = (nextMemberIds: string[]) => {
     setForm((current) => ({ ...current, members: nextMemberIds }));
-    setSelectedTopics((current) => current.filter((topic) => nextMemberIds.includes(topic.advisorId) || nextMemberIds.includes(findTeacherIdByName(topic.advisorId))));
+    setSelectedTopics((current) => current
+      .filter((topic) => nextMemberIds.includes(topic.advisorId) || nextMemberIds.includes(findTeacherIdByName(topic.advisorId)))
+      .map((topic) => {
+        const defaultExaminers = nextMemberIds.filter((id) => {
+          const advisorName = teacherNameById(topic.advisorId);
+          const reviewerName = topic.reviewerId ? teacherNameById(topic.reviewerId) : null;
+          const currentName = teacherNameById(id);
+          return currentName !== advisorName && id !== topic.advisorId &&
+                 currentName !== reviewerName && id !== topic.reviewerId;
+        });
+        return {
+          ...topic,
+          examinerId: defaultExaminers[0] || null,
+          examinerIds: defaultExaminers,
+        };
+      })
+    );
     setSelectedChairId((prev) => (prev && nextMemberIds.includes(prev) ? prev : null));
     setSelectedSecretaryId((prev) => (prev && nextMemberIds.includes(prev) ? prev : null));
     setSelectedAdvisorFilterId((prev) => (prev && nextMemberIds.includes(prev) ? prev : null));
@@ -434,7 +578,15 @@ const CreateCouncilPage = () => {
     setSelectedTopics((current) => {
       if (enabled) {
         if (current.some((item) => item.id === topic.id)) return current;
-        return [...current, { ...topic, reviewerId: null, examinerIds: [], externalExaminers: [], startTime: null }];
+        const defaultExaminers = memberIds.filter((id) => {
+          const advisorName = teacherNameById(topic.advisorId);
+          const reviewerId = (topic as SelectedTopic).reviewerId || null;
+          const reviewerName = reviewerId ? teacherNameById(reviewerId) : null;
+          const currentName = teacherNameById(id);
+          return currentName !== advisorName && id !== topic.advisorId &&
+                 currentName !== reviewerName && id !== reviewerId;
+        });
+        return [...current, { ...topic, reviewerId: null, examinerId: defaultExaminers[0] || null, examinerIds: defaultExaminers, externalExaminers: [], startTime: null }];
       }
 
       return current.filter((item) => item.id !== topic.id);
@@ -442,11 +594,124 @@ const CreateCouncilPage = () => {
   };
 
   const updateReviewerForTopic = (topicId: string, reviewerId: string | null) => {
-    setSelectedTopics((current) => current.map((topic) => (topic.id === topicId ? { ...topic, reviewerId } : topic)));
+    const isSameId = (id1: any, id2: any) => {
+      if (id1 === id2) return true;
+      if (!id1 || !id2) return false;
+      return String(id1).trim() === String(id2).trim();
+    };
+
+    const includesId = (arr: any[], id: any) => {
+      return arr.some(item => isSameId(item, id));
+    };
+
+    const topic = selectedTopics.find((t) => isSameId(t.id, topicId));
+    if (topic) {
+      // 1. Identify existing swaps (council members who were swapped for external teachers)
+      const prevReviewerId = topic.reviewerId;
+      const defaultExaminersPrev = memberIds.filter((id) => {
+        const advisorName = teacherNameById(topic.advisorId);
+        const reviewerName = prevReviewerId ? teacherNameById(prevReviewerId) : null;
+        const currentName = teacherNameById(id);
+        return currentName !== advisorName && !isSameId(id, topic.advisorId) &&
+               currentName !== reviewerName && !isSameId(id, prevReviewerId);
+      });
+
+      const externalExaminers = (topic.examinerIds || []).filter((id) => !includesId(memberIds, id));
+      const missingExaminers = defaultExaminersPrev.filter((id) => !includesId(topic.examinerIds || [], id));
+
+      // Map missing examiner to external examiner
+      const swapMap: Record<string, string> = {};
+      missingExaminers.forEach((id, idx) => {
+        if (externalExaminers[idx]) {
+          swapMap[String(id)] = String(externalExaminers[idx]);
+        }
+      });
+
+      // 2. If new reviewerId was swapped out, automatically discard that swap and notify the user
+      if (reviewerId && swapMap[String(reviewerId)]) {
+        Modal.warning({
+          centered: true,
+          title: 'Hủy luân chuyển người chấm',
+          content: `Đã tự động hủy luân chuyển người chấm cho giảng viên ${teacherNameById(reviewerId)} do giảng viên này được phân công làm GVPB.`,
+          okText: 'Xác nhận',
+          okButtonProps: { className: 'rounded-xl font-semibold bg-blue-600 border-none text-white hover:opacity-90' },
+        });
+      }
+
+      // 3. Compute new default examiners
+      const newDefaultExaminers = memberIds.filter((id) => {
+        const advisorName = teacherNameById(topic.advisorId);
+        const reviewerName = reviewerId ? teacherNameById(reviewerId) : null;
+        const currentName = teacherNameById(id);
+        return currentName !== advisorName && !isSameId(id, topic.advisorId) &&
+               currentName !== reviewerName && !isSameId(id, reviewerId);
+      });
+
+      // 4. Apply swaps to new default examiners list
+      const nextExaminerIds = newDefaultExaminers.map((id) => {
+        const key = String(id);
+        return swapMap[key] || id;
+      });
+
+      // 5. Update state
+      setSelectedTopics((current) => current.map((t) => {
+        if (isSameId(t.id, topicId)) {
+          return {
+            ...t,
+            reviewerId,
+            examinerId: nextExaminerIds[0] || null,
+            examinerIds: nextExaminerIds,
+          };
+        }
+        return t;
+      }));
+      return;
+    }
+
+    setSelectedTopics((current) => current.map((t) => {
+      if (isSameId(t.id, topicId)) {
+        const defaultExaminers = memberIds.filter((id) => {
+          const advisorName = teacherNameById(t.advisorId);
+          const reviewerName = reviewerId ? teacherNameById(reviewerId) : null;
+          const currentName = teacherNameById(id);
+          return currentName !== advisorName && !isSameId(id, t.advisorId) &&
+                 currentName !== reviewerName && !isSameId(id, reviewerId);
+        });
+        return {
+          ...t,
+          reviewerId,
+          examinerId: defaultExaminers[0] || null,
+          examinerIds: defaultExaminers,
+        };
+      }
+      return t;
+    }));
   };
 
   const updateExaminerForTopic = (topicId: string, examinerIds: string[] | null) => {
-    setSelectedTopics((current) => current.map((topic) => (topic.id === topicId ? { ...topic, examinerIds: examinerIds ?? [] } : topic)));
+    const list = examinerIds ?? [];
+    setSelectedTopics((current) => current.map((topic) => (topic.id === topicId ? { ...topic, examinerId: list[0] || null, examinerIds: list } : topic)));
+  };
+
+  const swapExaminer = (topicId: string, externalTeacherId: string) => {
+    setSelectedTopics((current) => current.map((topic) => {
+      if (topic.id === topicId) {
+        return {
+          ...topic,
+          examinerId: externalTeacherId,
+          examinerIds: [externalTeacherId]
+        };
+      }
+      return topic;
+    }));
+  };
+
+  const handleToggleSwapOut = (id: string) => {
+    setExaminersToSwapOut((prev) => {
+      const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
+      setReplacementExaminers((rep) => rep.slice(0, next.length));
+      return next;
+    });
   };
 
   const updateExternalExaminersForTopic = (topicId: string, externalIds: string[] | null) => {
@@ -505,9 +770,15 @@ const CreateCouncilPage = () => {
       return;
     }
 
-    const otherCouncil = isChairAlreadyAssigned(selectedChairId);
-    if (otherCouncil) {
-      message.error(`giảng viên ${teacherNameById(selectedChairId)} đã làm chủ tịch tại ${otherCouncil.title}`);
+    const chairAssignment = getOtherCouncilAssignment(selectedChairId);
+    if (chairAssignment) {
+      message.error(`giảng viên ${teacherNameById(selectedChairId)} đã làm ${chairAssignment.role} tại ${chairAssignment.title}`);
+      return;
+    }
+
+    const secAssignment = getOtherCouncilAssignment(selectedSecretaryId);
+    if (secAssignment) {
+      message.error(`giảng viên ${teacherNameById(selectedSecretaryId)} đã làm ${secAssignment.role} tại ${secAssignment.title}`);
       return;
     }
 
@@ -529,18 +800,180 @@ const CreateCouncilPage = () => {
       const hasExternal = topic.externalExaminers && topic.externalExaminers.length > 0;
 
       if (hasInternal) {
-        const conflict = (topic.examinerIds || []).some((id) => id === topic.advisorId || (topic.reviewerId && id === topic.reviewerId));
+        const conflict = (topic.examinerIds || []).some((id) => {
+          const sId = String(id).trim();
+          const sAdv = String(topic.advisorId || '').trim();
+          const sRev = String(topic.reviewerId || '').trim();
+          return sId === sAdv || (topic.reviewerId && sId === sRev);
+        });
         if (conflict) {
-          message.error(t(getKey('examiner_conflict'), { code: topic.topicCode }));
+          message.error(t(getKey('examiner_conflict'), { code: topic.topicCode || `Nhóm #${topic.id}` }));
           return;
         }
       }
 
       if (hasExternal) {
-        const conflictExt = (topic.externalExaminers || []).some((id) => id === topic.advisorId || (topic.reviewerId && id === topic.reviewerId));
+        const conflictExt = (topic.externalExaminers || []).some((id) => {
+          const sId = String(id).trim();
+          const sAdv = String(topic.advisorId || '').trim();
+          const sRev = String(topic.reviewerId || '').trim();
+          return sId === sAdv || (topic.reviewerId && sId === sRev);
+        });
         if (conflictExt) {
-          message.error(t(getKey('external_examiner_conflict'), { code: topic.topicCode }));
+          message.error(t(getKey('external_examiner_conflict'), { code: topic.topicCode || `Nhóm #${topic.id}` }));
           return;
+        }
+      }
+    }
+
+    // Validate cross-council schedule conflicts for all busy teachers in this council's topics
+    if (form.date && form.time) {
+      const [y, m, d] = form.date.split('-');
+      const currentCouncilDateStr = `${d}/${m}/${y}`;
+
+      for (const topic of selectedTopics) {
+        const sched = calculateTopicSchedules[topic.id];
+        if (!sched) continue;
+
+        const [tH, tM] = sched.start.split(':').map(Number);
+        const tStartSec = tH * 60 + tM;
+        const tEndSec = tStartSec + (topic.minutes || 40);
+
+        const busyIds: string[] = [
+          topic.advisorId,
+          topic.reviewerId,
+          ...(topic.examinerIds || []),
+          selectedChairId,
+          selectedSecretaryId
+        ].filter(Boolean).map(String).map((tId: string) => tId.trim()).filter((tId: string) => /^\d+$/.test(tId));
+
+        for (const c of councilsList) {
+          if (editingId && String(c.id) === String(editingId)) continue;
+
+          const parts = c.dateTime ? c.dateTime.split(' · ') : [];
+          const cDate = parts.length > 0 ? parts[0] : '';
+          if (cDate !== currentCouncilDateStr) continue;
+
+          const otherChairId = c.chair && c.chair[0] ? findTeacherIdByName(c.chair[0]) : null;
+          const otherSecId = c.secretary && c.secretary[0] ? findTeacherIdByName(c.secretary[0]) : null;
+
+          let foundConflict = false;
+          for (const otherTopicRaw of (c.topics || [])) {
+            const otherTopic = otherTopicRaw as any;
+            const [oH, oM] = (otherTopic.startTime || '08:00').split(':').map(Number);
+            const oStart = oH * 60 + oM;
+            const oEnd = oStart + (otherTopic.minutes || 40);
+
+            const isOverlap = tStartSec < oEnd && oStart < tEndSec;
+            if (isOverlap) {
+              const otherBusy = [
+                otherTopic.advisorId,
+                otherTopic.reviewerId,
+                ...(otherTopic.examinerIds || []),
+                otherChairId,
+                otherSecId
+              ].filter(Boolean).map(String).map((tId: string) => tId.trim()).filter((tId: string) => /^\d+$/.test(tId));
+
+              const commonTeacherId: string | undefined = busyIds.find((tId: string) => otherBusy.includes(tId));
+              if (commonTeacherId) {
+                const otherMemberNames = [
+                  ...(c.chair || []),
+                  ...(c.secretary || []),
+                  ...(c.reviewer || []),
+                  ...(c.member || [])
+                ];
+                const otherMemberIds = otherMemberNames.map((name: string) => findTeacherIdByName(name));
+
+                const isMemberOfOther = otherChairId === commonTeacherId || 
+                                       otherSecId === commonTeacherId || 
+                                       otherMemberIds.includes(commonTeacherId);
+
+                const isExternalInOther = !isMemberOfOther && (otherTopic.examinerIds || []).includes(commonTeacherId);
+
+                let otherRole = 'Thành viên';
+                if (otherChairId === commonTeacherId) otherRole = 'Chủ tịch';
+                else if (otherSecId === commonTeacherId) otherRole = 'Thư ký';
+                else if (String(otherTopic.reviewerId).trim() === String(commonTeacherId).trim()) otherRole = 'Giảng viên phản biện';
+                else if (String(otherTopic.advisorId).trim() === String(commonTeacherId).trim()) otherRole = 'Giảng viên hướng dẫn';
+                else if (isExternalInOther) otherRole = 'Giảng viên chấm luân chuyển';
+                else if ((otherTopic.examinerIds || []).includes(commonTeacherId)) otherRole = 'Giảng viên chấm';
+
+                const isExternalInCurrent = (topic.externalExaminers || []).includes(commonTeacherId);
+
+                let currentRole = 'Thành viên';
+                if (selectedChairId === commonTeacherId) currentRole = 'Chủ tịch';
+                else if (selectedSecretaryId === commonTeacherId) currentRole = 'Thư ký';
+                else if (String(topic.reviewerId).trim() === String(commonTeacherId).trim()) currentRole = 'Giảng viên phản biện';
+                else if (String(topic.advisorId).trim() === String(commonTeacherId).trim()) currentRole = 'Giảng viên hướng dẫn';
+                else if (isExternalInCurrent) currentRole = 'Giảng viên chấm luân chuyển';
+                else if ((topic.examinerIds || []).includes(commonTeacherId)) currentRole = 'Giảng viên chấm';
+
+                Modal.error({
+                  centered: true,
+                  title: 'Trùng lịch bảo vệ',
+                  width: 600,
+                  content: (
+                    <div className="text-slate-600 text-sm space-y-3">
+                      <div className="mt-2">
+                        Phát hiện trùng lịch cho giảng viên:{' '}
+                        <strong className="text-red-600 text-base">{teacherNameById(commonTeacherId)}</strong>
+                      </div>
+
+                      <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3 space-y-2">
+                        <div>
+                          <span className="font-semibold text-slate-700">Lịch đã phân công (Bận):</span>
+                          <ul className="list-disc pl-5 mt-1 text-xs text-slate-500 space-y-1">
+                            <li>
+                              Hội đồng: <strong>"{c.title}"</strong>
+                            </li>
+                            <li>
+                              Nhóm đề tài: <strong>{otherTopic.topicCode || `Nhóm #${otherTopic.id}`}</strong> - {otherTopic.topicName}
+                            </li>
+                            <li>
+                              Vai trò: <strong className="text-blue-600">{otherRole}</strong>
+                            </li>
+                            <li>
+                              Khung giờ: <strong>{otherTopic.startTime || '08:00'}</strong> ngày <strong>{cDate}</strong>
+                            </li>
+                          </ul>
+                        </div>
+
+                        <div className="border-t border-slate-100 pt-2">
+                          <span className="font-semibold text-slate-700">Lịch phân công mới (Trùng lắp):</span>
+                          <ul className="list-disc pl-5 mt-1 text-xs text-slate-500 space-y-1">
+                            <li>
+                              Hội đồng hiện tại: <strong>"{form.name || 'Hội đồng mới'}"</strong>
+                            </li>
+                            <li>
+                              Nhóm đề tài: <strong>{topic.topicCode || `Nhóm #${topic.id}`}</strong> - {topic.topicName}
+                            </li>
+                            <li>
+                              Vai trò: <strong className="text-red-600">{currentRole}</strong>
+                            </li>
+                            <li>
+                              Khung giờ: <strong>{sched.start} - {sched.end}</strong> ngày <strong>{currentCouncilDateStr}</strong>
+                            </li>
+                          </ul>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 font-semibold text-slate-800 bg-red-50 text-red-700 p-2.5 rounded-lg text-xs">
+                        ⚠️ Yêu cầu: Vui lòng đổi lịch hội đồng sang ngày khác hoặc chọn giảng viên khác thay thế để tránh trùng lịch bảo vệ!
+                      </div>
+                    </div>
+                  ),
+                  okText: 'Xác nhận',
+                  okButtonProps: { className: 'rounded-xl font-semibold bg-blue-600 border-none text-white hover:opacity-90' },
+                });
+                foundConflict = true;
+                break;
+              }
+            }
+          }
+
+          if (foundConflict) {
+            return;
+          }
         }
       }
     }
@@ -562,6 +995,7 @@ const CreateCouncilPage = () => {
           id: st.id,
           nhom_id: st.id,
           reviewerId: st.reviewerId,
+          examinerId: st.examinerId || null,
           examinerIds: st.examinerIds || [],
           externalExaminers: st.externalExaminers || [],
           startTime: sched ? sched.start : '08:00',
@@ -625,10 +1059,19 @@ const CreateCouncilPage = () => {
       const newSelections = [...selectedTopics];
       eligibleTopics.forEach((topic) => {
         if (!newSelections.some((item) => item.id === topic.id)) {
+          const defaultExaminers = memberIds.filter((id) => {
+            const advisorName = teacherNameById(topic.advisorId);
+            const reviewerId = (topic as SelectedTopic).reviewerId || null;
+            const reviewerName = reviewerId ? teacherNameById(reviewerId) : null;
+            const currentName = teacherNameById(id);
+            return currentName !== advisorName && id !== topic.advisorId &&
+                   currentName !== reviewerName && id !== reviewerId;
+          });
           newSelections.push({
             ...topic,
             reviewerId: null,
-            examinerIds: [],
+            examinerId: defaultExaminers[0] || null,
+            examinerIds: defaultExaminers,
             externalExaminers: [],
             startTime: null,
             minutes: topic.minutes || 40,
@@ -673,6 +1116,97 @@ const CreateCouncilPage = () => {
     if (isReviewer) return 'Phản biện';
     return 'Ủy viên';
   };
+
+  const checkTeacherScheduleConflict = (teacherId: string, topicId: string) => {
+    if (!form.date || !form.time || !calculateTopicSchedules[topicId]) return false;
+
+    // 1. Calculate time window of the target topic
+    const targetSched = calculateTopicSchedules[topicId];
+    const [targetH, targetM] = targetSched.start.split(':').map(Number);
+    const targetStartSec = targetH * 60 + targetM;
+    const targetEndSec = targetStartSec + (selectedTopics.find((t) => t.id === topicId)?.minutes || 40);
+
+    // 2. Check conflict in the current council being edited
+    const hasConflictInCurrent = selectedTopics.some((otherTopic) => {
+      if (otherTopic.id === topicId) return false;
+      const otherSched = calculateTopicSchedules[otherTopic.id];
+      if (!otherSched) return false;
+      const [otherH, otherM] = otherSched.start.split(':').map(Number);
+      const otherStartSec = otherH * 60 + otherM;
+      const otherEndSec = otherStartSec + (otherTopic.minutes || 40);
+
+      const isOverlap = targetStartSec < otherEndSec && otherStartSec < targetEndSec;
+      if (isOverlap) {
+        const busyIds = [
+          otherTopic.advisorId,
+          otherTopic.reviewerId,
+          ...(otherTopic.examinerIds || [])
+        ].map(String).map(id => id.trim()).filter(id => /^\d+$/.test(id));
+        if (busyIds.includes(String(teacherId).trim())) return true;
+      }
+      return false;
+    });
+
+    if (hasConflictInCurrent) return true;
+
+    // 3. Check conflict in other councils
+    const [y, m, d] = form.date.split('-');
+    const currentCouncilDateStr = `${d}/${m}/${y}`;
+
+    const hasConflictInOther = councilsList.some((c: any) => {
+      if (String(c.id) === String(editingId)) return false;
+
+      const parts = c.dateTime ? c.dateTime.split(' · ') : [];
+      const cDate = parts.length > 0 ? parts[0] : '';
+      if (cDate !== currentCouncilDateStr) return false;
+
+      // Calculate total council duration
+      let cStartSec = 24 * 60;
+      let cEndSec = 0;
+      (c.topics || []).forEach((t: any) => {
+        const [tH, tM] = (t.startTime || '08:00').split(':').map(Number);
+        const tStart = tH * 60 + tM;
+        const tEnd = tStart + (t.minutes || 40);
+        if (tStart < cStartSec) cStartSec = tStart;
+        if (tEnd > cEndSec) cEndSec = tEnd;
+      });
+
+      const isOverlapWithCouncil = targetStartSec < cEndSec && cStartSec < targetEndSec;
+      if (isOverlapWithCouncil) {
+        // If they are a council member, they are busy
+        const cMemberNames = [
+          ...(c.chair || []),
+          ...(c.secretary || []),
+          ...(c.reviewer || []),
+          ...(c.member || [])
+        ];
+        const cMemberIds = cMemberNames.map(findTeacherIdByName).filter(id => /^\d+$/.test(id));
+        if (cMemberIds.includes(teacherId)) return true;
+      }
+
+      // Check specific overlapping topics in that council
+      const hasOverlapTopic = (c.topics || []).some((t: any) => {
+        const [tH, tM] = (t.startTime || '08:00').split(':').map(Number);
+        const tStart = tH * 60 + tM;
+        const tEnd = tStart + (t.minutes || 40);
+
+        const isOverlap = targetStartSec < tEnd && tStart < targetEndSec;
+        if (isOverlap) {
+          const busyIds = [
+            t.advisorId,
+            t.reviewerId,
+            ...(t.examinerIds || [])
+          ].map(String).map(id => id.trim()).filter(id => /^\d+$/.test(id));
+          if (busyIds.includes(String(teacherId).trim())) return true;
+        }
+        return false;
+      });
+
+      return hasOverlapTopic;
+    });
+
+    return hasConflictInOther;
+  };
   const committeeSummary = t(getKey('members_count_label'), { count: memberIds.length }) as string;
 
   const rearrangedMembers = useMemo(() => {
@@ -691,7 +1225,7 @@ const CreateCouncilPage = () => {
   useEffect(() => {
     const state = (location?.state as LocationState) || null;
     const council = state?.council;
-    if (!council) return;
+    if (!council || teacherList.length === 0) return;
 
     setEditingId(council.id);
 
@@ -744,12 +1278,29 @@ const CreateCouncilPage = () => {
     const councilTopics: CouncilTopicPayload[] = council.topics || council.topicGroups || [];
 
     councilTopics.forEach((topic) => {
-      const found = advisorBuckets.flatMap((b) => b.topics).find((pt) => pt.topicCode === topic.code);
+      const found = advisorBuckets.flatMap((b) => b.topics).find((pt) => pt.id === topic.id);
       if (found) {
+        const rawRevId = topic.reviewerId || (topic.reviewer ? findTeacherIdByName(topic.reviewer) : null);
+        const revId = rawRevId ? findTeacherIdByName(rawRevId) : null;
+        
+        const rawExIds = topic.examinerIds || [];
+        const savedExIds = rawExIds.length > 0
+          ? rawExIds.map((idOrName) => findTeacherIdByName(idOrName)).filter(Boolean) as string[]
+          : (topic.examiners || []).map((n: string) => findTeacherIdByName(n)).filter(Boolean) as string[];
+        
+        const defaultExIds = savedExIds.length > 0 ? savedExIds : memberIds.filter((id) => {
+          const advisorName = teacherNameById(found.advisorId);
+          const reviewerName = revId ? teacherNameById(revId) : null;
+          const currentName = teacherNameById(id);
+          return currentName !== advisorName && id !== found.advisorId &&
+                 currentName !== reviewerName && id !== revId;
+        });
+
         const sel: SelectedTopic = {
           ...found,
-          reviewerId: topic.reviewerId || (topic.reviewer ? findTeacherIdByName(topic.reviewer) : null),
-          examinerIds: topic.examinerIds || (topic.examiners || []).map((n: string) => findTeacherIdByName(n)).filter(Boolean) as string[],
+          reviewerId: revId,
+          examinerId: defaultExIds[0] || null,
+          examinerIds: defaultExIds,
           externalExaminers: (topic.externalExaminers || []).map((n: string) => findTeacherIdByName(n)).filter(Boolean) as string[],
           startTime: topic.startTime || null,
           minutes: topic.minutes || found.minutes,
@@ -764,7 +1315,7 @@ const CreateCouncilPage = () => {
       isPrefilledRef.current = true;
       setTimeout(() => section2Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
     }
-  }, [location, advisorBuckets, teacherList]);
+  }, [location, advisorBuckets, teacherList, memberIds]);
 
   const scrollToSection2 = () => {
     openSortTab();
@@ -882,26 +1433,34 @@ const CreateCouncilPage = () => {
                     </div>
                     <div className="w-full space-y-3">
                       <Select
+                        mode="multiple"
+                        showSearch
                         value={form.members}
-                        onChange={updateMembers}
+                        searchValue={searchValue}
+                        onSearch={setSearchValue}
+                        onChange={(value) => {
+                          updateMembers(value);
+                          setSearchValue('');
+                        }}
+                        onBlur={() => setSearchValue('')}
                         placeholder={availableAdvisorOptions.length > 0 ? t(getKey('select_teachers_placeholder')) : t(getKey('no_teachers_available'))}
                         options={availableAdvisorOptions}
                         className="w-full"
-                        mode="multiple"
                         disabled={availableAdvisorOptions.length === 0}
+                        filterOption={false}
                       />
                       {form.members.length > 0 && (
                         <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-4 shadow-inner space-y-4">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                              <div className="mb-1.5 text-xs font-semibold text-slate-600">Phân công Chủ tịch:</div>
+                             <div className="mb-1.5 text-xs font-semibold text-slate-600">Phân công Chủ tịch:</div>
                               <Select
                                 value={selectedChairId || undefined}
                                 onChange={(value) => {
                                   if (value) {
-                                    const otherCouncil = isChairAlreadyAssigned(value);
-                                    if (otherCouncil) {
-                                      message.error(`giảng viên ${teacherNameById(value)} đã làm chủ tịch tại ${otherCouncil.title}`);
+                                    const assignment = getOtherCouncilAssignment(value);
+                                    if (assignment) {
+                                      message.error(`giảng viên ${teacherNameById(value)} đã làm ${assignment.role} tại ${assignment.title}`);
                                       return;
                                     }
                                   }
@@ -924,6 +1483,13 @@ const CreateCouncilPage = () => {
                               <Select
                                 value={selectedSecretaryId || undefined}
                                 onChange={(value) => {
+                                  if (value) {
+                                    const assignment = getOtherCouncilAssignment(value);
+                                    if (assignment) {
+                                      message.error(`giảng viên ${teacherNameById(value)} đã làm ${assignment.role} tại ${assignment.title}`);
+                                      return;
+                                    }
+                                  }
                                   setSelectedSecretaryId(value ?? null);
                                 }}
                                 placeholder="Chọn Thư ký hội đồng..."
@@ -1146,8 +1712,7 @@ const CreateCouncilPage = () => {
                         <th className="px-4 py-3 text-left">{t(getKey('topic_name'))}</th>
                         <th className="px-4 py-3 text-left">{t(getKey('advisor_short'))}</th>
                         <th className="px-4 py-3 text-left">{t(getKey('reviewer_short'))}</th>
-                        <th className="px-4 py-3 text-left">{t(getKey('examiner_title'))}</th>
-                        <th className="px-4 py-3 text-left">{t(getKey('external_teachers_short'))}</th>
+                         <th className="px-4 py-3 text-left">GV Chấm</th>
                         <th className="px-4 py-3 text-left">{t(getKey('time'))}</th>
                       </tr>
                     </thead>
@@ -1237,36 +1802,44 @@ const CreateCouncilPage = () => {
                               onChange={(value) => updateReviewerForTopic(topic.id, value ?? null)}
                               placeholder={t(getKey('select_reviewer_placeholder'))}
                               options={memberIds
-                                .filter((id) => id !== topic.advisorId)
+                                .filter((id) => {
+                                  const advisorName = teacherNameById(topic.advisorId);
+                                  const currentName = teacherNameById(id);
+                                  return currentName !== advisorName && id !== topic.advisorId;
+                                })
                                 .map((id) => ({ value: id, label: teacherNameById(id) }))}
                               className="w-full min-w-[220px]"
                               allowClear
                             />
                           </td>
                           <td className={cn("px-4 py-3 align-top", draggingTopicId === topic.id && "invisible")}>
-                            <Select
-                              mode="multiple"
-                              value={topic.examinerIds || []}
-                              onChange={(value) => updateExaminerForTopic(topic.id, value ?? [])}
-                              placeholder={t(getKey('select_examiners_placeholder'))}
-                              options={memberIds
-                                .filter((id) => id !== topic.advisorId && id !== topic.reviewerId)
-                                .map((id) => ({ value: id, label: teacherNameById(id) }))}
-                              className="w-full min-w-[220px]"
-                              allowClear
-                            />
+                            <div className="flex items-center justify-between gap-2 border border-slate-100 bg-slate-50/50 p-2 rounded-lg min-w-[220px]">
+                              <div className="flex flex-col gap-0.5 max-w-[170px]">
+                                {(topic.examinerIds || []).map((id) => (
+                                  <Tag
+                                    key={id}
+                                    closable={false}
+                                    className="mr-1 my-0.5 bg-slate-100 border-slate-200 text-slate-700 font-medium rounded truncate max-w-full"
+                                    title={teacherNameById(id)}
+                                  >
+                                    {teacherNameById(id)}
+                                  </Tag>
+                                ))}
+                                {!topic.examinerIds?.length && (
+                                  <span className="text-xs text-slate-400 italic">Chưa phân công</span>
+                                )}
+                              </div>
+                              <Button
+                                type="text"
+                                size="small"
+                                icon={<SwapOutlined className="text-blue-500 hover:text-blue-700" />}
+                                onClick={() => setSwappingTopic(topic)}
+                                title="Luân chuyển giảng viên chấm"
+                                className="flex items-center justify-center p-1 hover:bg-blue-50 rounded"
+                              />
+                            </div>
                           </td>
-                          <td className={cn("px-4 py-3 align-top", draggingTopicId === topic.id && "invisible")}>
-                            <Select
-                              mode="multiple"
-                              value={topic.externalExaminers || []}
-                              onChange={(value) => updateExternalExaminersForTopic(topic.id, value ?? [])}
-                              placeholder={t(getKey('select_external_placeholder'))}
-                              options={teacherList.filter((teacher) => !memberIds.includes(teacher.id)).map((teacher) => ({ value: teacher.id, label: teacher.name }))}
-                              className="w-full min-w-[220px]"
-                              allowClear
-                            />
-                          </td>
+
                           <td className={cn("px-4 py-3 align-top font-semibold text-[var(--color-primary)]", draggingTopicId === topic.id && "invisible")}>
                             {(() => {
                               const sched = calculateTopicSchedules[topic.id];
@@ -1388,7 +1961,7 @@ const CreateCouncilPage = () => {
 
           <div>
             <div className="text-xs font-semibold text-slate-500 mb-2">Danh sách bảo vệ & Sắp xếp ({selectedTopics.length}):</div>
-            <div ref={previewContainerRef} className="overflow-x-auto rounded-lg border border-slate-100 no-scrollbar">
+            <div ref={previewContainerRef} className="overflow-auto max-h-[350px] rounded-lg border border-slate-100">
               <table className="w-full min-w-[650px] text-left text-xs border-collapse">
                 <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-100">
                   <tr>
@@ -1396,7 +1969,7 @@ const CreateCouncilPage = () => {
                     <th className="px-3 py-2">Đề tài / Sinh viên</th>
                     <th className="px-3 py-2">GVHD</th>
                     <th className="px-3 py-2">GVPB</th>
-                    <th className="px-3 py-2">Ủy viên (Người chấm)</th>
+                    <th className="px-3 py-2">GV Chấm</th>
                     <th className="px-3 py-2">Giờ bảo vệ</th>
                   </tr>
                 </thead>
@@ -1412,13 +1985,10 @@ const CreateCouncilPage = () => {
                       <td className="px-3 py-2 text-slate-600 font-medium">{topic.reviewerId ? teacherNameById(topic.reviewerId) : '—'}</td>
                       <td className="px-3 py-2 text-slate-600">
                         <div className="flex flex-col gap-0.5">
-                          {(topic.examinerIds || []).map((id) => (
+                          {(topic.externalExaminers || []).map((id) => (
                             <span key={id}>{teacherNameById(id)}</span>
                           ))}
-                          {(topic.externalExaminers || []).map((id) => (
-                            <span key={id} className="text-purple-600 font-medium">{teacherNameById(id)} (Ngoài trường)</span>
-                          ))}
-                          {(!topic.examinerIds?.length && !topic.externalExaminers?.length) && '—'}
+                          {!topic.externalExaminers?.length && '—'}
                         </div>
                       </td>
                       <td className="px-3 py-2 font-semibold text-[var(--color-primary)]">
@@ -1439,6 +2009,172 @@ const CreateCouncilPage = () => {
             </div>
           </div>
         </div>
+      </Modal>
+
+      {/* Popup luân chuyển giảng viên chấm */}
+      <Modal
+        title={
+          <div className="flex items-center gap-2 text-slate-800 font-bold border-b border-slate-100 pb-3">
+            <SwapOutlined className="text-blue-500 animate-pulse" />
+            <span>Luân chuyển Giảng viên chấm</span>
+          </div>
+        }
+        open={swappingTopic !== null}
+        onCancel={() => {
+          setSwappingTopic(null);
+          setExaminersToSwapOut([]);
+          setReplacementExaminers([]);
+        }}
+        footer={[
+          <Button
+            key="cancel"
+            onClick={() => {
+              setSwappingTopic(null);
+              setExaminersToSwapOut([]);
+              setReplacementExaminers([]);
+            }}
+            className="rounded-md font-medium"
+          >
+            Hủy
+          </Button>,
+          <Button
+            key="confirm"
+            type="primary"
+            onClick={() => {
+              if (!swappingTopic) return;
+              if (examinersToSwapOut.length === 0) {
+                message.error("Vui lòng chọn giảng viên hiện tại cần luân chuyển");
+                return;
+              }
+              if (replacementExaminers.length === 0) {
+                message.error("Vui lòng chọn giảng viên ngoài hội đồng thay thế");
+                return;
+              }
+              if (examinersToSwapOut.length !== replacementExaminers.length) {
+                message.error(`Số lượng giảng viên ngoài hội đồng thay thế phải bằng số lượng giảng viên cần luân chuyển (đã chọn: ${examinersToSwapOut.length}, thay thế: ${replacementExaminers.length})`);
+                return;
+              }
+
+              const currentIds = swappingTopic.examinerIds || [];
+              const nextIds = currentIds
+                .filter((id) => !examinersToSwapOut.includes(id))
+                .concat(replacementExaminers);
+
+              const nextExternalIds = nextIds.filter((id) => !memberIds.some((mId) => String(mId).trim() === String(id).trim()));
+
+              setSelectedTopics((current) => current.map((t) => {
+                if (t.id === swappingTopic.id) {
+                  return {
+                    ...t,
+                    examinerId: nextIds[0] || null,
+                    examinerIds: nextIds,
+                    externalExaminers: nextExternalIds
+                  };
+                }
+                return t;
+              }));
+
+              message.success("Luân chuyển giảng viên chấm thành công");
+              setSwappingTopic(null);
+              setExaminersToSwapOut([]);
+              setReplacementExaminers([]);
+            }}
+            className="rounded-md font-medium bg-blue-500 hover:bg-blue-600 border-none"
+          >
+            Xác nhận luân chuyển
+          </Button>
+        ]}
+        width={600}
+        destroyOnClose
+      >
+        {swappingTopic && (
+          <div className="py-4">
+            <div className="mb-4 bg-blue-50 border border-blue-100 p-3 rounded-lg text-xs text-blue-700">
+              <span className="font-semibold">Đề tài:</span> {swappingTopic.topicName}
+            </div>
+
+            <div className="grid grid-cols-2 gap-6">
+              {/* Cột 1: GV Chấm hiện tại */}
+              <div className="border border-slate-100 rounded-xl p-4 bg-slate-50/30">
+                <div className="text-xs font-semibold text-slate-500 mb-3 uppercase tracking-wider">GV Chấm trong hội đồng (Chọn luân chuyển)</div>
+                <div className="flex flex-col gap-1.5">
+                  {(swappingTopic.examinerIds || []).map((id) => (
+                    <div
+                      key={id}
+                      className="flex items-center gap-3 bg-white border border-slate-100 px-3 py-2 rounded-lg shadow-sm hover:bg-slate-50/50 cursor-pointer transition-colors"
+                      onClick={() => handleToggleSwapOut(id)}
+                    >
+                      <Checkbox
+                        checked={examinersToSwapOut.includes(id)}
+                        onChange={() => handleToggleSwapOut(id)}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <span className="text-xs font-semibold text-slate-700">{teacherNameById(id)}</span>
+                    </div>
+                  ))}
+                  {!swappingTopic.examinerIds?.length && (
+                    <span className="text-xs text-slate-400 italic">Chưa có người chấm</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Cột 2: GV Ngoài hội đồng */}
+              <div className="border border-slate-100 rounded-xl p-4 bg-slate-50/30">
+                <div className="flex justify-between items-center mb-3">
+                  <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">GV Ngoài hội đồng thay thế</div>
+                  {examinersToSwapOut.length > 0 && (
+                    <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
+                      Đã chọn: {replacementExaminers.length}/{examinersToSwapOut.length}
+                    </span>
+                  )}
+                </div>
+                <Select
+                  mode="multiple"
+                  showSearch
+                  placeholder={
+                    examinersToSwapOut.length === 0
+                      ? "Vui lòng chọn giảng viên cần luân chuyển trước"
+                      : "Chọn giảng viên ngoài hội đồng thay thế"
+                  }
+                  disabled={examinersToSwapOut.length === 0}
+                  optionFilterProp="label"
+                  value={replacementExaminers}
+                  onChange={(val) => {
+                    const limit = examinersToSwapOut.length;
+                    if (val.length > limit) {
+                      message.warning(`Chỉ được chọn tối đa ${limit} giảng viên thay thế`);
+                      setReplacementExaminers(val.slice(0, limit));
+                    } else {
+                      setReplacementExaminers(val);
+                    }
+                  }}
+                  options={teacherList
+                    .filter((teacher) => {
+                      const isMember = memberIds.some((id) => String(id).trim() === String(teacher.id).trim());
+                      if (isMember) return false;
+
+                      if (swappingTopic && checkTeacherScheduleConflict(teacher.id, swappingTopic.id)) {
+                        return false;
+                      }
+
+                      return true;
+                    })
+                    .map((teacher) => {
+                      const isSelected = replacementExaminers.some((id) => String(id).trim() === String(teacher.id).trim());
+                      const reachedLimit = replacementExaminers.length >= examinersToSwapOut.length;
+                      return {
+                        value: teacher.id,
+                        label: teacher.name,
+                        disabled: !isSelected && reachedLimit,
+                      };
+                    })}
+                  className="w-full"
+                  allowClear
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

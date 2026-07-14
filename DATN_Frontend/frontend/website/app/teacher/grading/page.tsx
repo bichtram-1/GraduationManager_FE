@@ -501,7 +501,7 @@ export default function TeacherGradingPage() {
                       <div className="mt-3 space-y-2 text-sm">
                         {(council.groups || []).map((g) => (
                           <div
-                            key={g.groupCode}
+                            key={g.groupCode || g.id}
                             role="button"
                             onClick={(e) => {
                               e.stopPropagation();
@@ -659,7 +659,7 @@ export default function TeacherGradingPage() {
                         }
 
                         return (
-                          <tr key={g.groupCode} className="border-t border-slate-100 transition hover:bg-slate-50/80">
+                          <tr key={g.groupCode || g.id} className="border-t border-slate-100 transition hover:bg-slate-50/80">
                             <td className="px-5 py-4 text-slate-500 font-medium">{index + 1}</td>
                             <td className="px-5 py-4 text-slate-900">
                               <div className="text-sm font-semibold text-[#1976D2]">{g.topic}</div>
