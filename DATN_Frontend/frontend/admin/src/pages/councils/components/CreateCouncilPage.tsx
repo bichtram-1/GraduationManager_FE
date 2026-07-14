@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { Button, Card, DatePicker, Input, Select, Tag, TimePicker, Modal, message } from 'antd';
 import dayjs from 'dayjs';
-import { ArrowLeftOutlined, MenuOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, MenuOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '../../../constants/commonConst';
 import { useTranslation } from 'react-i18next';
@@ -54,11 +54,77 @@ type CommitteeForm = {
 
 type WorkflowTab = 'pick' | 'sort';
 
+const useDragScroll = () => {
+  const ref = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    let isDown = false;
+    let startX: number;
+    let scrollLeft: number;
+
+    const handleMouseDown = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (
+        target.closest('select') ||
+        target.closest('input') ||
+        target.closest('button') ||
+        target.closest('.ant-select') ||
+        target.closest('.ant-btn') ||
+        target.closest('tr[draggable]')
+      ) {
+        return;
+      }
+      isDown = true;
+      el.style.cursor = 'grabbing';
+      startX = e.pageX - el.offsetLeft;
+      scrollLeft = el.scrollLeft;
+    };
+
+    const handleMouseLeave = () => {
+      isDown = false;
+      el.style.cursor = '';
+    };
+
+    const handleMouseUp = () => {
+      isDown = false;
+      el.style.cursor = '';
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDown) return;
+      e.preventDefault();
+      const x = e.pageX - el.offsetLeft;
+      const walk = (x - startX) * 1.5;
+      el.scrollLeft = scrollLeft - walk;
+    };
+
+    el.addEventListener('mousedown', handleMouseDown);
+    el.addEventListener('mouseleave', handleMouseLeave);
+    el.addEventListener('mouseup', handleMouseUp);
+    el.addEventListener('mousemove', handleMouseMove);
+
+    return () => {
+      el.removeEventListener('mousedown', handleMouseDown);
+      el.removeEventListener('mouseleave', handleMouseLeave);
+      el.removeEventListener('mouseup', handleMouseUp);
+      el.removeEventListener('mousemove', handleMouseMove);
+    };
+  }, []);
+
+  return ref;
+};
+
 const CreateCouncilPage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const section2Ref = useRef<HTMLDivElement | null>(null);
+  const pickContainerRef = useDragScroll();
+  const sortContainerRef = useDragScroll();
+  const previewContainerRef = useDragScroll();
   const { selectedPeriod } = useGlobalVariable();
   const { data: periodList } = periodHooks.useFetchListPeriods({ page: 1, limit: 100 });
   const datnPeriods = useMemo(() => {
@@ -88,6 +154,49 @@ const CreateCouncilPage = () => {
   const [saved, setSaved] = useState(false);
   const [workflowTab, setWorkflowTab] = useState<WorkflowTab>('pick');
   const [isPreviewVisible, setIsPreviewVisible] = useState(false);
+
+  const [checkedSortTopicIds, setCheckedSortTopicIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    const selectedIds = selectedTopics.map((t) => t.id);
+    setCheckedSortTopicIds((prev) => prev.filter((id) => selectedIds.includes(id)));
+  }, [selectedTopics]);
+
+  const handleBulkDeselect = () => {
+    setSelectedTopics((current) => current.filter((t) => !checkedSortTopicIds.includes(t.id)));
+    setCheckedSortTopicIds([]);
+  };
+
+  const [activeRowTopicId, setActiveRowTopicId] = useState<string | null>(null);
+
+  const moveTopicUpDown = (index: number, direction: 'up' | 'down') => {
+    setSelectedTopics((current) => {
+      const next = [...current];
+      const targetIndex = direction === 'up' ? index - 1 : index + 1;
+      if (targetIndex < 0 || targetIndex >= next.length) return current;
+
+      const temp = next[index];
+      next[index] = next[targetIndex];
+      next[targetIndex] = temp;
+      return next;
+    });
+  };
+
+  const handleScrollPropagation = (e: React.WheelEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    const deltaY = e.deltaY;
+
+    // Check if scrolling up at the top
+    if (deltaY < 0 && el.scrollTop === 0) {
+      const contentEl = document.querySelector('.ant-layout-content') || document.documentElement;
+      contentEl.scrollTop += deltaY;
+    }
+    // Check if scrolling down at the bottom
+    else if (deltaY > 0 && el.scrollTop + el.clientHeight >= el.scrollHeight - 1) {
+      const contentEl = document.querySelector('.ant-layout-content') || document.documentElement;
+      contentEl.scrollTop += deltaY;
+    }
+  };
   const [advisorSortOrder, setAdvisorSortOrder] = useState<'asc' | 'desc' | null>(null);
   const [selectedAdvisorFilterId, setSelectedAdvisorFilterId] = useState<string | null>(null);
 
@@ -217,6 +326,37 @@ const CreateCouncilPage = () => {
           return;
         }
 
+        // Lọc theo kết quả hướng dẫn/phản biện dựa trên thời gian đợt
+        const periodObj = datnPeriods.find((p) => p.name === periodName);
+        if (periodObj) {
+          const parsePeriodDate = (dateStr?: string) => {
+            if (!dateStr) return null;
+            let d = dayjs(dateStr, 'DD/MM/YYYY');
+            if (!d.isValid()) d = dayjs(dateStr, 'YYYY-MM-DD');
+            return d.isValid() ? d : null;
+          };
+
+          const today = dayjs();
+          const ngayBatDauPhanBien = parsePeriodDate(periodObj.reviewStartDate);
+
+          const kqHd = g.ket_qua_huong_dan;
+          const kqPb = g.ket_qua_phan_bien;
+
+          if (ngayBatDauPhanBien && today.isAfter(ngayBatDauPhanBien.subtract(1, 'day'), 'day')) {
+            // Từ ngày bắt đầu phản biện đến cuối đợt: Bắt buộc cả hai kết quả phải là DAT
+            if (kqHd !== 'DAT' || kqPb !== 'DAT') {
+              return;
+            }
+          } else {
+            // Trước ngày bắt đầu phản biện: Nhóm có kết quả hướng dẫn & phản biện là null hoặc DAT
+            const isHdValid = !kqHd || kqHd === 'DAT';
+            const isPbValid = !kqPb || kqPb === 'DAT';
+            if (!isHdValid || !isPbValid) {
+              return;
+            }
+          }
+        }
+
         const supervisor = g.supervisor || 'Chưa phân công';
         if (!bucketsMap[supervisor]) {
           bucketsMap[supervisor] = [];
@@ -238,7 +378,7 @@ const CreateCouncilPage = () => {
       }));
       setAdvisorBuckets(buckets);
     }
-  }, [groupList, teacherList, selectedPeriod, form.batch, editingId]);
+  }, [groupList, teacherList, selectedPeriod, form.batch, editingId, datnPeriods]);
 
   const availableAdvisorOptions = useMemo(
     () =>
@@ -288,8 +428,8 @@ const CreateCouncilPage = () => {
     setSelectedAdvisorFilterId((prev) => (prev && nextMemberIds.includes(prev) ? prev : null));
   };
 
-  const toggleTopic = (topic: AdvisorTopic, enabled: boolean) => {
-    if (!memberIds.includes(topic.advisorId)) return;
+  const toggleTopic = (topic: AdvisorTopic | SelectedTopic, enabled: boolean) => {
+    if (enabled && !memberIds.includes(topic.advisorId)) return;
 
     setSelectedTopics((current) => {
       if (enabled) {
@@ -335,7 +475,7 @@ const CreateCouncilPage = () => {
 
       const next = [...current];
       const [moved] = next.splice(sourceIndex, 1);
-      next.splice(sourceIndex < targetIndex ? targetIndex - 1 : targetIndex, 0, moved);
+      next.splice(targetIndex, 0, moved);
       return next;
     });
   };
@@ -382,10 +522,7 @@ const CreateCouncilPage = () => {
       return;
     }
 
-    if (selectedTopics.length === 0) {
-      message.error(t(getKey('please_select_at_least_one_topic')));
-      return;
-    }
+
 
     for (const topic of selectedTopics) {
       const hasInternal = topic.examinerIds && topic.examinerIds.length > 0;
@@ -439,10 +576,6 @@ const CreateCouncilPage = () => {
           setSaved(true);
           message.success(t(getKey('update_council_success_message')));
           navigate('/councils');
-        },
-        onError: (err) => {
-          const data = err.response?.data as { message?: string } | undefined;
-          message.error(data?.message || err.message || t(getKey('config_error_message')));
         }
       });
     } else {
@@ -451,10 +584,6 @@ const CreateCouncilPage = () => {
           setSaved(true);
           message.success(t(getKey('create_council_success'), { count: selectedTopics.length }) as string);
           navigate('/councils');
-        },
-        onError: (err) => {
-          const data = err.response?.data as { message?: string } | undefined;
-          message.error(data?.message || err.message || t(getKey('config_error_message')));
         }
       });
     }
@@ -900,8 +1029,8 @@ const CreateCouncilPage = () => {
                     Chưa có đề tài nào đủ điều kiện hoặc không có giảng viên hướng dẫn nào của đề tài tham gia hội đồng này.
                   </div>
                 ) : (
-                  <div className="overflow-auto max-h-[400px] rounded-xl border border-gray-200 bg-white">
-                    <table className="w-full border-collapse text-sm">
+                  <div ref={pickContainerRef} onWheel={handleScrollPropagation} className="overflow-auto max-h-[400px] rounded-xl border border-gray-200 bg-white no-scrollbar">
+                    <table className="w-full min-w-[800px] border-collapse text-sm">
                       <thead className="bg-gray-50 text-gray-600 sticky top-0 z-10">
                         <tr>
                           <th className="w-14 px-4 py-3 text-left">
@@ -980,92 +1109,178 @@ const CreateCouncilPage = () => {
             ) : selectedTopics.length === 0 ? (
               <div className="px-5 py-16 text-center text-gray-500">{t(getKey('no_topics_selected_message'))}</div>
             ) : (
-              <div className="overflow-auto max-h-[450px]">
-                <table className="w-full border-collapse text-sm">
-                  <thead className="bg-gray-50 text-gray-600 sticky top-0 z-10">
-                    <tr>
-                      <th className="w-12 px-4 py-3 text-left"></th>
-                      <th className="w-20 px-4 py-3 text-left">{t(getKey('stt'))}</th>
-                      <th className="px-4 py-3 text-left">{t(getKey('topic_name'))}</th>
-                      <th className="px-4 py-3 text-left">{t(getKey('advisor_short'))}</th>
-                      <th className="px-4 py-3 text-left">{t(getKey('reviewer_short'))}</th>
-                      <th className="px-4 py-3 text-left">{t(getKey('examiner_title'))}</th>
-                      <th className="px-4 py-3 text-left">{t(getKey('external_teachers_short'))}</th>
-                      <th className="px-4 py-3 text-left">{t(getKey('time'))}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selectedTopics.map((topic, index) => (
-                      <tr
-                        key={topic.id}
-                        draggable
-                        onDragStart={() => setDraggingTopicId(topic.id)}
-                        onDragOver={(event) => event.preventDefault()}
-                        onDragEnter={() => setDragOverTopicId(topic.id)}
-                        onDrop={() => {
-                          if (draggingTopicId) moveSelectedTopic(draggingTopicId, topic.id);
-                        }}
-                        onDragEnd={() => {
-                          setDraggingTopicId(null);
-                          setDragOverTopicId(null);
-                        }}
-                        className={`border-t border-gray-100 hover:bg-gray-50 ${draggingTopicId === topic.id ? 'opacity-50' : ''} ${dragOverTopicId === topic.id ? 'bg-gray-50' : ''}`}
-                      >
-                        <td className="px-4 py-3 align-top text-gray-400">
-                          <MenuOutlined />
-                        </td>
-                        <td className="px-4 py-3 align-top font-medium text-gray-700">{formatNumber(index + 1)}</td>
-                        <td className="px-4 py-3 align-top font-medium text-gray-900">{topic.topicName}</td>
-                        <td className="px-4 py-3 align-top text-gray-600">{teacherNameById(topic.advisorId)}</td>
-                        <td className="px-4 py-3 align-top">
-                          <Select
-                            value={topic.reviewerId || undefined}
-                            onChange={(value) => updateReviewerForTopic(topic.id, value ?? null)}
-                            placeholder={t(getKey('select_reviewer_placeholder'))}
-                            options={memberIds
-                              .filter((id) => id !== topic.advisorId)
-                              .map((id) => ({ value: id, label: teacherNameById(id) }))}
-                            className="w-full min-w-[220px]"
-                            allowClear
+              <div className="p-5 space-y-4">
+                {checkedSortTopicIds.length > 0 && (
+                  <div className="flex items-center justify-between bg-red-50 border border-red-100 p-3 rounded-xl">
+                    <span className="text-xs font-semibold text-red-700">
+                      Đã chọn {checkedSortTopicIds.length} đề tài để bỏ chọn
+                    </span>
+                    <Button
+                      type="primary"
+                      danger
+                      onClick={handleBulkDeselect}
+                    >
+                      Bỏ chọn các đề tài đã chọn ({checkedSortTopicIds.length})
+                    </Button>
+                  </div>
+                )}
+                <div ref={sortContainerRef} onWheel={handleScrollPropagation} className="overflow-auto max-h-[450px] rounded-xl border border-gray-200 bg-white no-scrollbar">
+                  <table className="w-full min-w-[1200px] border-collapse text-sm">
+                    <thead className="bg-gray-50 text-gray-600 sticky top-0 z-10">
+                      <tr>
+                        <th className="w-14 px-4 py-3 text-left">
+                          <input
+                            type="checkbox"
+                            checked={selectedTopics.length > 0 && checkedSortTopicIds.length === selectedTopics.length}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setCheckedSortTopicIds(selectedTopics.map((t) => t.id));
+                              } else {
+                                setCheckedSortTopicIds([]);
+                              }
+                            }}
+                            className="h-4 w-4 accent-[var(--color-primary)]"
                           />
-                        </td>
-                        <td className="px-4 py-3 align-top">
-                          <Select
-                            mode="multiple"
-                            value={topic.examinerIds || []}
-                            onChange={(value) => updateExaminerForTopic(topic.id, value ?? [])}
-                            placeholder={t(getKey('select_examiners_placeholder'))}
-                            options={memberIds
-                              .filter((id) => id !== topic.advisorId && id !== topic.reviewerId)
-                              .map((id) => ({ value: id, label: teacherNameById(id) }))}
-                            className="w-full min-w-[220px]"
-                            allowClear
-                          />
-                        </td>
-                        <td className="px-4 py-3 align-top">
-                          <Select
-                            mode="multiple"
-                            value={topic.externalExaminers || []}
-                            onChange={(value) => updateExternalExaminersForTopic(topic.id, value ?? [])}
-                            placeholder={t(getKey('select_external_placeholder'))}
-                            options={teacherList.filter((teacher) => !memberIds.includes(teacher.id)).map((teacher) => ({ value: teacher.id, label: `${teacher.name} - Chuyên môn: ${teacher.major || 'Chưa rõ'}` }))}
-                            className="w-full min-w-[220px]"
-                            allowClear
-                          />
-                        </td>
-                        <td className="px-4 py-3 align-top font-semibold text-[var(--color-primary)]">
-                          {(() => {
-                            const sched = calculateTopicSchedules[topic.id];
-                            return sched ? `${sched.start} - ${sched.end}` : '—';
-                          })()}
-                          <div className="text-xs text-gray-500 font-normal mt-1">
-                            (Dự kiến: {topic.minutes}p)
-                          </div>
-                        </td>
+                        </th>
+                        <th className="w-20 px-4 py-3 text-left">{t(getKey('stt'))}</th>
+                        <th className="px-4 py-3 text-left">{t(getKey('topic_name'))}</th>
+                        <th className="px-4 py-3 text-left">{t(getKey('advisor_short'))}</th>
+                        <th className="px-4 py-3 text-left">{t(getKey('reviewer_short'))}</th>
+                        <th className="px-4 py-3 text-left">{t(getKey('examiner_title'))}</th>
+                        <th className="px-4 py-3 text-left">{t(getKey('external_teachers_short'))}</th>
+                        <th className="px-4 py-3 text-left">{t(getKey('time'))}</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {selectedTopics.map((topic, index) => (
+                        <tr
+                          key={topic.id}
+                          draggable
+                          onDragStart={(e) => {
+                            setTimeout(() => {
+                              setDraggingTopicId(topic.id);
+                            }, 0);
+                          }}
+                          onDragOver={(event) => event.preventDefault()}
+                          onDragEnter={() => {
+                            if (draggingTopicId && draggingTopicId !== topic.id) {
+                              moveSelectedTopic(draggingTopicId, topic.id);
+                            }
+                          }}
+                          onDragEnd={() => {
+                            setDraggingTopicId(null);
+                            setDragOverTopicId(null);
+                          }}
+                          onClick={() => setActiveRowTopicId(topic.id)}
+                          className={cn(
+                            "border-t border-gray-100 transition-all duration-200",
+                            draggingTopicId === topic.id
+                              ? "bg-blue-50/10 border-2 border-dashed border-blue-300 opacity-60 scale-[0.99] shadow-inner"
+                              : activeRowTopicId === topic.id
+                              ? "bg-blue-50/70 border-y border-blue-300 shadow-[0_4px_12px_rgba(37,99,235,0.08)] relative z-10 scale-[1.005]"
+                              : "hover:bg-slate-50 cursor-grab active:cursor-grabbing"
+                          )}
+                          title="Nhấn giữ và kéo thả dòng này để thay đổi thứ tự bảo vệ"
+                        >
+                          <td className={cn("px-4 py-3 align-top", draggingTopicId === topic.id && "invisible")}>
+                            <input
+                              type="checkbox"
+                              checked={checkedSortTopicIds.includes(topic.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setCheckedSortTopicIds((prev) => [...prev, topic.id]);
+                                } else {
+                                  setCheckedSortTopicIds((prev) => prev.filter((id) => id !== topic.id));
+                                }
+                              }}
+                              className="h-4 w-4 accent-[var(--color-primary)]"
+                            />
+                          </td>
+                          <td className={cn("px-4 py-3 align-top font-medium text-gray-700", draggingTopicId === topic.id && "invisible")}>
+                            <div className="flex items-center gap-1.5">
+                              <span>{formatNumber(index + 1)}</span>
+                              {activeRowTopicId === topic.id && (
+                                <div className="flex flex-col gap-0.5 ml-1">
+                                  <Button
+                                    type="text"
+                                    size="small"
+                                    icon={<span className="text-[10px] font-bold">▲</span>}
+                                    disabled={index === 0}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      moveTopicUpDown(index, 'up');
+                                    }}
+                                    className="h-5 w-5 p-0 flex items-center justify-center hover:bg-blue-100 text-blue-600 rounded"
+                                    title="Di chuyển lên"
+                                  />
+                                  <Button
+                                    type="text"
+                                    size="small"
+                                    icon={<span className="text-[10px] font-bold">▼</span>}
+                                    disabled={index === selectedTopics.length - 1}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      moveTopicUpDown(index, 'down');
+                                    }}
+                                    className="h-5 w-5 p-0 flex items-center justify-center hover:bg-blue-100 text-blue-600 rounded"
+                                    title="Di chuyển xuống"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                          <td className={cn("px-4 py-3 align-top font-medium text-gray-900", draggingTopicId === topic.id && "invisible")}>{topic.topicName}</td>
+                          <td className={cn("px-4 py-3 align-top text-gray-600", draggingTopicId === topic.id && "invisible")}>{teacherNameById(topic.advisorId)}</td>
+                          <td className={cn("px-4 py-3 align-top", draggingTopicId === topic.id && "invisible")}>
+                            <Select
+                              value={topic.reviewerId || undefined}
+                              onChange={(value) => updateReviewerForTopic(topic.id, value ?? null)}
+                              placeholder={t(getKey('select_reviewer_placeholder'))}
+                              options={memberIds
+                                .filter((id) => id !== topic.advisorId)
+                                .map((id) => ({ value: id, label: teacherNameById(id) }))}
+                              className="w-full min-w-[220px]"
+                              allowClear
+                            />
+                          </td>
+                          <td className={cn("px-4 py-3 align-top", draggingTopicId === topic.id && "invisible")}>
+                            <Select
+                              mode="multiple"
+                              value={topic.examinerIds || []}
+                              onChange={(value) => updateExaminerForTopic(topic.id, value ?? [])}
+                              placeholder={t(getKey('select_examiners_placeholder'))}
+                              options={memberIds
+                                .filter((id) => id !== topic.advisorId && id !== topic.reviewerId)
+                                .map((id) => ({ value: id, label: teacherNameById(id) }))}
+                              className="w-full min-w-[220px]"
+                              allowClear
+                            />
+                          </td>
+                          <td className={cn("px-4 py-3 align-top", draggingTopicId === topic.id && "invisible")}>
+                            <Select
+                              mode="multiple"
+                              value={topic.externalExaminers || []}
+                              onChange={(value) => updateExternalExaminersForTopic(topic.id, value ?? [])}
+                              placeholder={t(getKey('select_external_placeholder'))}
+                              options={teacherList.filter((teacher) => !memberIds.includes(teacher.id)).map((teacher) => ({ value: teacher.id, label: teacher.name }))}
+                              className="w-full min-w-[220px]"
+                              allowClear
+                            />
+                          </td>
+                          <td className={cn("px-4 py-3 align-top font-semibold text-[var(--color-primary)]", draggingTopicId === topic.id && "invisible")}>
+                            {(() => {
+                              const sched = calculateTopicSchedules[topic.id];
+                              return sched ? `${sched.start} - ${sched.end}` : '—';
+                            })()}
+                            <div className="text-xs text-gray-500 font-normal mt-1">
+                              (Dự kiến: {topic.minutes}p)
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
           </Card>
@@ -1092,11 +1307,11 @@ const CreateCouncilPage = () => {
               setIsPreviewVisible(true);
             }
           }}
-          disabled={!form.name || !form.room || !form.date || !form.time || memberIds.length === 0 || selectedTopics.length === 0}
+          disabled={!form.name || !form.room || !form.date || !form.time || memberIds.length === 0}
         >
           Xem trước
         </Button>
-        <Button type="primary" onClick={handleSave} disabled={!form.name || !form.room || !form.date || !form.time || memberIds.length === 0 || selectedTopics.length === 0}>
+        <Button type="primary" onClick={handleSave} disabled={!form.name || !form.room || !form.date || !form.time || memberIds.length === 0}>
           {editingId ? 'Cập nhật hội đồng' : 'Lưu hội đồng'}
         </Button>
       </div>
@@ -1173,8 +1388,8 @@ const CreateCouncilPage = () => {
 
           <div>
             <div className="text-xs font-semibold text-slate-500 mb-2">Danh sách bảo vệ & Sắp xếp ({selectedTopics.length}):</div>
-            <div className="overflow-hidden rounded-lg border border-slate-100">
-              <table className="w-full text-left text-xs border-collapse">
+            <div ref={previewContainerRef} className="overflow-x-auto rounded-lg border border-slate-100 no-scrollbar">
+              <table className="w-full min-w-[650px] text-left text-xs border-collapse">
                 <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-100">
                   <tr>
                     <th className="px-3 py-2">STT</th>
