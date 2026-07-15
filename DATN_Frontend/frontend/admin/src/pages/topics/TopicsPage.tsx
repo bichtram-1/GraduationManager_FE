@@ -19,9 +19,9 @@ const getTopicStatusMeta = (t: (key: string) => string) => ({
 } as const);
 
 interface ITopicFiltersProps {
-  teachers: any[];
+  teachers: { name: string }[];
   rows: IListTopic[];
-  t: (key: string, options?: any) => string;
+  t: (key: string, options?: Record<string, unknown>) => string;
 }
 
 const TopicFilters = ({ teachers, rows, t }: ITopicFiltersProps) => {
