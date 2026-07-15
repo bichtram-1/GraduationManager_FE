@@ -18,6 +18,74 @@ const getTopicStatusMeta = (t: (key: string) => string) => ({
   [STATUS_CODE.REJECTED]: { label: t(getKey('status_rejected')), className: '!bg-[var(--color-red-light)] !text-[var(--color-red-medium)]' },
 } as const);
 
+interface ITopicFiltersProps {
+  teachers: { name: string }[];
+  rows: IListTopic[];
+  t: (key: string, options?: Record<string, unknown>) => string;
+}
+
+const TopicFilters = ({ teachers, rows, t }: ITopicFiltersProps) => {
+  const status = Form.useWatch('status');
+
+  return (
+    <div className="mb-4 grid grid-cols-1 gap-3 xl:grid-cols-12">
+      <Form.Item name="keyword" className="xl:col-span-5 !mb-0">
+        <Input
+          allowClear
+          prefix={<SearchOutlined className="text-slate-400" />}
+          placeholder={t(getKey('search_topics_placeholder'))}
+          className="!h-11 !rounded-[12px] !border-slate-300"
+        />
+      </Form.Item>
+
+      <Form.Item name="teacher" className="xl:col-span-4 !mb-0">
+        <Select
+          allowClear
+          showSearch
+          placeholder={t(getKey('teacher'))}
+          className="!h-11 !w-full"
+          optionFilterProp="label"
+          options={[
+            { value: 'all', label: t(getKey('all_tab')) },
+            ...teachers.map((teacherItem) => {
+              const teacherTopics = rows.filter((r: IListTopic) => r.teacher === teacherItem.name);
+              
+              let count = teacherTopics.length;
+
+              if (status === STATUS_CODE.APPROVED) {
+                count = teacherTopics.filter((r) => r.status === STATUS_CODE.APPROVED).length;
+              } else if (status === STATUS_CODE.PENDING) {
+                count = teacherTopics.filter((r) => r.status === STATUS_CODE.PENDING).length;
+              } else if (status === STATUS_CODE.REJECTED) {
+                count = teacherTopics.filter((r) => r.status === STATUS_CODE.REJECTED).length;
+              }
+
+              return {
+                value: teacherItem.name,
+                label: `${teacherItem.name} (${count})`,
+              };
+            }),
+          ]}
+        />
+      </Form.Item>
+
+      <Form.Item name="status" className="xl:col-span-3 !mb-0">
+        <Select
+          allowClear
+          placeholder={t(getKey('group_status'))}
+          className="!h-11 !w-full"
+          options={[
+            { value: 'all', label: t(getKey('all_tab')) },
+            { value: STATUS_CODE.PENDING, label: t(getKey('status_pending')) },
+            { value: STATUS_CODE.APPROVED, label: t(getKey('status_approved')) },
+            { value: STATUS_CODE.REJECTED, label: t(getKey('status_rejected')) },
+          ]}
+        />
+      </Form.Item>
+    </div>
+  );
+};
+
 const TopicsPage = () => {
   const { t } = useTranslation();
   const { selectedPeriod } = useGlobalVariable();
@@ -245,46 +313,7 @@ const TopicsPage = () => {
             fileUrl: detail.fileUrl || '',
           })}
           formatFormValues={(values: Record<string, unknown>) => values as ICreateTopic | IUpdateTopic}
-          filterRender={() => (
-            <div className="mb-4 grid grid-cols-1 gap-3 xl:grid-cols-12">
-              <Form.Item name="keyword" className="xl:col-span-5 !mb-0">
-                <Input
-                  allowClear
-                  prefix={<SearchOutlined className="text-slate-400" />}
-                  placeholder={t(getKey('search_topics_placeholder'))}
-                  className="!h-11 !rounded-[12px] !border-slate-300"
-                />
-              </Form.Item>
-
-              <Form.Item name="teacher" className="xl:col-span-4 !mb-0">
-                <Select
-                  allowClear
-                  showSearch
-                  placeholder={t(getKey('teacher'))}
-                  className="!h-11 !w-full"
-                  optionFilterProp="label"
-                  options={[
-                    { value: 'all', label: t(getKey('all_tab')) },
-                    ...teachers.map((teacherItem) => ({ value: teacherItem.name, label: teacherItem.name })),
-                  ]}
-                />
-              </Form.Item>
-
-              <Form.Item name="status" className="xl:col-span-3 !mb-0">
-                <Select
-                  allowClear
-                  placeholder={t(getKey('group_status'))}
-                  className="!h-11 !w-full"
-                  options={[
-                    { value: 'all', label: t(getKey('all_tab')) },
-                    { value: STATUS_CODE.PENDING, label: t(getKey('status_pending')) },
-                    { value: STATUS_CODE.APPROVED, label: t(getKey('status_approved')) },
-                    { value: STATUS_CODE.REJECTED, label: t(getKey('status_rejected')) },
-                  ]}
-                />
-              </Form.Item>
-            </div>
-          )}
+          filterRender={() => <TopicFilters teachers={teachers} rows={rows} t={t} />}
         />
       </Card>
     </div>
