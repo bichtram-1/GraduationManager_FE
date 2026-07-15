@@ -161,13 +161,13 @@ export default function TeacherGroupsPage() {
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-slate-600">
               <tr>
-                <th className="px-5 py-3 text-left w-12 font-semibold">STT</th>
-                <th className="px-5 py-3 text-left font-semibold">Đề tài</th>
-                <th className="px-5 py-3 text-left font-semibold">MSSV</th>
-                <th className="px-5 py-3 text-left font-semibold">Thành viên</th>
-                <th className="px-5 py-3 text-left font-semibold">Lớp</th>
-                <th className="px-5 py-3 text-left font-semibold">Trạng thái</th>
-                <th className="px-5 py-3 text-right font-semibold">Hành động</th>
+                <th className="px-5 py-3 text-center w-12 font-semibold">STT</th>
+                <th className="px-5 py-3 text-center font-semibold">Đề tài</th>
+                <th className="px-5 py-3 text-center font-semibold">MSSV</th>
+                <th className="px-5 py-3 text-center font-semibold">Thành viên</th>
+                <th className="px-5 py-3 text-center font-semibold">Lớp</th>
+                <th className="px-5 py-3 text-center font-semibold">Trạng thái</th>
+                <th className="px-5 py-3 text-center font-semibold">Hành động</th>
               </tr>
             </thead>
             <tbody>
@@ -182,42 +182,42 @@ export default function TeacherGroupsPage() {
                   const selected = selectedGroupId === group.id
                   return (
                     <tr key={group.id} className={`border-t border-slate-100 transition hover:bg-slate-50/80 ${selected ? 'bg-blue-50/60' : ''}`}>
-                      <td className="px-5 py-4 font-semibold text-slate-600">
+                      <td className="px-5 py-4 text-center font-semibold text-slate-600">
                         {index + 1}
                       </td>
                       <td className="px-5 py-4 text-slate-900 max-w-md">
-                        <div className="font-semibold text-slate-800 leading-relaxed">{group.topicName}</div>
+                        <div className="font-semibold text-slate-800 leading-relaxed text-left">{group.topicName}</div>
                       </td>
-                      <td className="px-5 py-4 text-slate-700 font-medium">
-                        <div className="flex flex-col gap-1">
+                      <td className="px-5 py-4 text-slate-700 font-medium text-center">
+                        <div className="flex flex-col gap-1 items-center">
                           {group.membersList?.map((member) => (
                             <span key={member.code}>{member.code}</span>
                           ))}
                         </div>
                       </td>
-                      <td className="px-5 py-4 text-slate-800 font-medium">
-                        <div className="flex flex-col gap-1">
+                      <td className="px-5 py-4 text-slate-800 font-medium text-center">
+                        <div className="flex flex-col gap-1 items-center">
                           {group.membersList?.map((member) => (
-                            <span key={member.code}>
-                              {member.name} {member.la_truong_nhom === 1 && <span className="text-xs font-semibold text-amber-500">(TN)</span>}
+                            <span key={member.code} className={member.la_truong_nhom === 1 ? 'font-bold text-slate-900' : ''}>
+                              {member.name}
                             </span>
                           ))}
                         </div>
                       </td>
-                      <td className="px-5 py-4 text-slate-600">
-                        <div className="flex flex-col gap-1">
+                      <td className="px-5 py-4 text-slate-600 text-center">
+                        <div className="flex flex-col gap-1 items-center">
                           {group.membersList?.map((member) => (
                             <span key={member.code}>{member.className || '—'}</span>
                           ))}
                         </div>
                       </td>
-                      <td className="px-5 py-4">
+                      <td className="px-5 py-4 text-center">
                         <TeacherBadge type={APPROVAL_STATUS_META[group.status].badge}>
                           {APPROVAL_STATUS_META[group.status].label}
                         </TeacherBadge>
                       </td>
-                      <td className="px-5 py-4">
-                        <div className="flex justify-end gap-2">
+                      <td className="px-5 py-4 text-center">
+                        <div className="flex justify-center gap-2">
                           <TeacherButton variant="secondary" className="px-3 py-1.5 text-xs" onClick={() => {
                             setSelectedGroupId(group.id)
                             setModalOpen(true)
@@ -230,7 +230,7 @@ export default function TeacherGroupsPage() {
                             disabled={group.status !== 'pending' || savingId === group.id}
                             onClick={() => handleAction(group.id, 'accept')}
                           >
-                            Nhận
+                            Chấp nhận
                           </TeacherButton>
                           <TeacherButton
                             variant="danger"

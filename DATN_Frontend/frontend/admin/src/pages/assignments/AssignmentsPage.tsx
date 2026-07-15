@@ -63,6 +63,21 @@ const AssignmentsPage = () => {
 
   const rows = assignmentList?.rows ?? [];
   const isPeriodClosed = selectedPeriod?.status === STATUS_CODE.CLOSED;
+
+  const isReportStarted = useMemo(() => {
+    if (!selectedPeriod || !selectedPeriod.reportStartDate) return false;
+    const parts = selectedPeriod.reportStartDate.split('/');
+    if (parts.length === 3) {
+      const d = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
+      d.setHours(0, 0, 0, 0);
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      return now >= d;
+    }
+    return false;
+  }, [selectedPeriod]);
+
+  const isActionDisabled = isPeriodClosed || isReportStarted;
   const classOptions = useMemo(
     () => Array.from(new Set(rows.map((r) => r.className))),
     [rows]
@@ -156,7 +171,7 @@ const AssignmentsPage = () => {
   const toggleSelectStudent = (id: string, checked: boolean) => setSelectedStudents((p) => ({ ...p, [id]: checked }));
 
   const confirmAssignSelected = () => {
-    if (isPeriodClosed) return;
+    if (isActionDisabled) return;
     const studentIds = Object.keys(selectedStudents).filter((k) => selectedStudents[k]);
     if (studentIds.length === 0) return message.warning(t(getKey('please_select_student')));
     if (!selectedTeacher) return message.warning(t(getKey('please_select_teacher')));
@@ -200,7 +215,7 @@ const AssignmentsPage = () => {
   };
 
   const unassign = (studentId: string) => {
-    if (isPeriodClosed) return;
+    if (isActionDisabled) return;
     Modal.confirm({
       title: t(getKey('unassign_confirm_title')),
       content: t(getKey('unassign_confirm_content')),
@@ -223,7 +238,7 @@ const AssignmentsPage = () => {
   };
 
   const handlePublishAssignments = () => {
-    if (isPeriodClosed) return;
+    if (isActionDisabled) return;
     const unpublishedCount = filteredAssignedRows.filter((r) => !r.published).length;
     Modal.confirm({
       title: t(getKey('publish_assignment_btn')),
@@ -279,13 +294,16 @@ const AssignmentsPage = () => {
 
       {selectedPeriod && (
         <div className={cn('mb-5 p-4 rounded-[18px] border flex items-center justify-between shadow-[0_12px_28px_rgba(15,23,42,0.02)]',
-          isPeriodClosed ? 'bg-red-50 border-red-200 text-red-700' : 'bg-blue-50 border-blue-200 text-blue-700'
+          isPeriodClosed ? 'bg-red-50 border-red-200 text-red-700' : 
+          isReportStarted ? 'bg-amber-50 border-amber-200 text-amber-800' : 
+          'bg-blue-50 border-blue-200 text-blue-700'
         )}>
           <div>
             {t(getKey('showing'))} {t(getKey('assignment_management'))} {t(getKey('of'))}: <strong className="underline">{selectedPeriod.name}</strong>
             {isPeriodClosed && ` (${t(getKey('read_only_data_locked'))})`}
+            {!isPeriodClosed && isReportStarted && ` (Thời gian nộp báo cáo tiến độ đã bắt đầu từ ${selectedPeriod.reportStartDate} - dữ liệu phân công đã bị khóa)`}
           </div>
-          {isPeriodClosed && <Tag color="error">{t(getKey('read_only_tag'))}</Tag>}
+          {(isPeriodClosed || isReportStarted) && <Tag color="error">{isPeriodClosed ? t(getKey('read_only_tag')) : 'Đã khóa'}</Tag>}
         </div>
       )}
 
@@ -452,7 +470,7 @@ const AssignmentsPage = () => {
               )}
 
               <div className="mt-4 flex flex-col gap-2">
-                <Button type="primary" disabled={isPeriodClosed} onClick={confirmAssignSelected}>{t(getKey('assign_teacher_btn'))}</Button>
+                <Button type="primary" disabled={isActionDisabled} onClick={confirmAssignSelected}>{t(getKey('assign_teacher_btn'))}</Button>
                 <Button onClick={() => setSelectedStudents({})}>{t(getKey('cancel_select_btn'))}</Button>
               </div>
             </Card>
@@ -523,7 +541,7 @@ const AssignmentsPage = () => {
                     type="primary"
                     icon={<SendOutlined />}
                     loading={publishAssignmentsMutation.isPending}
-                    disabled={isPeriodClosed}
+                    disabled={isActionDisabled}
                     onClick={handlePublishAssignments}
                   >
                     {t(getKey('publish_assignment_btn'))}
@@ -532,9 +550,9 @@ const AssignmentsPage = () => {
               </div>
             )}
             actions={{
-              isEdit: !isPeriodClosed,
+              isEdit: !isActionDisabled,
               isDetail: true,
-              customAction: isPeriodClosed ? undefined : (record) => {
+              customAction: isActionDisabled ? undefined : (record) => {
                 const r = record as AssignmentRow;
                 return (
                   <div className="pointer-events-auto">
@@ -552,7 +570,7 @@ const AssignmentsPage = () => {
                 );
               },
             }}
-            updateInfo={isPeriodClosed ? undefined : { type: 'modal', modalInfo: { modalContent: <AssignmentForm mode="edit" />, modalProps: { centered: true, width: 760, title: t(getKey('edit_assignment_title')) }, modalFunc: updateAssignmentMutation } }}
+            updateInfo={isActionDisabled ? undefined : { type: 'modal', modalInfo: { modalContent: <AssignmentForm mode="edit" />, modalProps: { centered: true, width: 760, title: t(getKey('edit_assignment_title')) }, modalFunc: updateAssignmentMutation } }}
             detailInfo={{ type: 'modal', modalInfo: { modalContent: <AssignmentForm mode="detail" />, modalProps: { centered: true, width: 760, title: t(getKey('detail_assignment_title')), footer: null }, modalFunc: assignmentHooks.useFetchDetailAssignment as unknown as (id: string, enable: boolean) => import('@tanstack/react-query').UseQueryResult<IDetailAssignment, Error> } }}
             formatInitialValues={(d) => ({ ...d })}
             formatFormValues={(v: Record<string, unknown>) => v}

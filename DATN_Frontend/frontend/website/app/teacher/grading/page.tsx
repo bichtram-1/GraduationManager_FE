@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Clock, Save, Trophy, Users, FileText, BarChart3, CalendarDays, Building2 } from 'lucide-react'
 import { TeacherPill, TeacherSectionHeader } from '../_components/TeacherShell'
 import { TeacherButton, TeacherCard, TeacherInputClass } from '../_components/TeacherUI'
@@ -151,6 +151,19 @@ export default function TeacherGradingPage() {
   }
 
   const editable = isPeriodEditable()
+
+  const isGradingStarted = useMemo(() => {
+    if (!selectedPeriod || !selectedPeriod.gradingStartDate) return true;
+    const parts = selectedPeriod.gradingStartDate.split('/');
+    if (parts.length === 3) {
+      const d = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
+      d.setHours(0, 0, 0, 0);
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      return now >= d;
+    }
+    return true;
+  }, [selectedPeriod]);
 
   const formatGradingInput = (value: string) => {
     let clean = value.replace(/[^0-9.]/g, '')
@@ -389,7 +402,12 @@ export default function TeacherGradingPage() {
                 )}
               </div>
             </div>
-            {!editable && (
+            {!isGradingStarted && (
+              <div className="mx-5 mt-4 rounded-xl bg-amber-50 border border-amber-200 p-4 text-sm text-amber-800">
+                ⚠️ Chưa tới thời gian bắt đầu chấm điểm của đợt này (từ {selectedPeriod?.gradingStartDate}). Bạn chưa thể thực hiện chấm điểm.
+              </div>
+            )}
+            {isGradingStarted && !editable && (
               <div className="mx-5 mt-4 rounded-xl bg-amber-50 border border-amber-200 p-4 text-sm text-amber-800">
                 ⚠️ Đợt thực tập này đã kết thúc thời gian chấm điểm hoặc đã đóng. Bạn không thể chỉnh sửa điểm.
               </div>
@@ -419,7 +437,7 @@ export default function TeacherGradingPage() {
                           onFocus={() => setSelectedTttnId(row.id)}
                           placeholder="0.00 - 10.00"
                           className={`${TeacherInputClass()} w-28`}
-                          disabled={!editable}
+                          disabled={!editable || !isGradingStarted}
                         />
                         <TeacherButton variant="secondary" className="px-3 py-1.5 text-xs" onClick={() => setSelectedTttnId(row.id)}>
                           Xem
@@ -432,7 +450,7 @@ export default function TeacherGradingPage() {
             </table>
             <div className="flex items-center justify-between border-t border-slate-200 px-5 py-4">
               <div className="text-xs text-slate-500">Điểm chỉ được lưu khi hợp lệ từ 0 đến 10.</div>
-              <TeacherButton variant="primary" disabled={!anyValid || savingTttn || !editable} onClick={handleSaveTttn}>
+              <TeacherButton variant="primary" disabled={!anyValid || savingTttn || !editable || !isGradingStarted} onClick={handleSaveTttn}>
                 <span className="inline-flex items-center gap-2"><Save className="h-4 w-4" /> {savingTttn ? 'Đang lưu...' : 'Lưu điểm'}</span>
               </TeacherButton>
             </div>
@@ -505,11 +523,12 @@ export default function TeacherGradingPage() {
                             role="button"
                             onClick={(e) => {
                               e.stopPropagation();
+                              if (!isGradingStarted) return;
                               setSelectedCouncil(council);
                               setSelectedGroup(g);
                               setShowScoringModal(true);
                             }}
-                            className="flex items-center justify-between gap-3 rounded-md bg-white p-3 ring-1 ring-slate-100 hover:bg-slate-50 cursor-pointer"
+                            className={`flex items-center justify-between gap-3 rounded-md bg-white p-3 ring-1 ring-slate-100 cursor-pointer ${!isGradingStarted ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-50'}`}
                           >
                             <div>
                               <div className="font-medium text-slate-800">
@@ -556,7 +575,12 @@ export default function TeacherGradingPage() {
                 <TeacherPill tone="green">Đang chấm</TeacherPill>
               </div>
             </div>
-              <div className="p-4 overflow-x-auto">
+            {!isGradingStarted && (
+              <div className="mx-5 mt-4 rounded-xl bg-amber-50 border border-amber-200 p-4 text-sm text-amber-800">
+                ⚠️ Chưa tới thời gian bắt đầu chấm điểm của đợt này (từ {selectedPeriod?.gradingStartDate}). Bạn chưa thể thực hiện chấm điểm.
+              </div>
+            )}
+            <div className="p-4 overflow-x-auto">
                 <table className="w-full text-sm min-w-[800px]">
                   <thead className="bg-slate-50 text-slate-600">
                     <tr>
@@ -679,7 +703,12 @@ export default function TeacherGradingPage() {
                             </td>
                             <td className="px-5 py-4">
                               <div className="flex items-center gap-2">
-                                <TeacherButton variant={hasScore ? 'secondary' : 'primary'} onClick={() => { setSelectedGroup(g); setSelectedCouncil(selectedCouncil); setShowScoringModal(true) }}>
+                                <TeacherButton 
+                                  variant={hasScore ? 'secondary' : 'primary'} 
+                                  onClick={() => { setSelectedGroup(g); setSelectedCouncil(selectedCouncil); setShowScoringModal(true) }}
+                                  disabled={!isGradingStarted}
+                                  className={!isGradingStarted ? 'opacity-50 cursor-not-allowed' : ''}
+                                >
                                   {hasScore ? 'Chấm lại' : 'Vào chấm điểm'}
                                 </TeacherButton>
                               </div>

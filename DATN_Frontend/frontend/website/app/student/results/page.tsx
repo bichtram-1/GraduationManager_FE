@@ -241,7 +241,7 @@ export default function StudentResultsPage() {
           </div>
 
           <div className="mt-5 rounded-[24px] bg-white/85 p-4 ring-1 ring-slate-200">
-            <div className="flex items-center gap-2 text-sm font-medium text-slate-900"><Star className="h-4 w-4 text-[#1976D2]" /> Quy đổi nhanh</div>
+            <div className="flex items-center gap-2 text-sm font-medium text-slate-900"><Star className="h-4 w-4 text-[#1976D2]" /> Kết quả gần đây</div>
             <div className="mt-3 space-y-3 text-sm text-slate-600">
               <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3">
                 <span>TTTN</span>

@@ -125,10 +125,6 @@ const ModalCreateEditUser = ({ mode = 'create', role }: IModalCreateEditUser) =>
               rules={[
                 { required: true, message: 'Vui lòng nhập email!' },
                 { type: 'email', message: 'Email không đúng định dạng!' },
-                {
-                  pattern: /^[a-z]+@caothang\.edu\.vn$/,
-                  message: 'Email giảng viên không hợp lệ (phải đúng định dạng tên@caothang.edu.vn)!',
-                },
               ]}
               className="flex-1"
             >

@@ -31,6 +31,20 @@ export const companyHooks = {
     });
   },
 
+  useCreateCompanySilent: () => {
+    const queryClient = useQueryClient();
+    return useMutation<IDetailCompany, AxiosError, { body: ICreateCompany; params: BaseListParams }>({
+      mutationFn: companyApi.createCompany,
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: [QueryKey.companies.list] });
+      },
+      meta: {
+        noGlobalSuccess: true,
+        noGlobalError: true,
+      }
+    });
+  },
+
   useUpdateCompany: () => {
     const queryClient = useQueryClient();
     return useMutation<IDetailCompany, AxiosError, { id: string; body: IUpdateCompany; index: number; params: BaseListParams }>({

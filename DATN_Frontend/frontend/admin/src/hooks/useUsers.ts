@@ -28,11 +28,11 @@ export const userHooks = {
   },
 
   /** Lấy chi tiết 1 user — dùng cho modal edit/detail */
-  useFetchDetailUser: (id: string, enabled: boolean = true) => {
+  useFetchDetailUser: (id: string, enabled: boolean = true, role?: string) => {
     return useQuery({
-      queryKey: [QueryKey.users.detail, id],
+      queryKey: [QueryKey.users.detail, id, role],
       enabled: !!id && enabled, // chỉ fetch khi có id và được phép
-      queryFn: () => userApi.getUserDetail(id),
+      queryFn: () => userApi.getUserDetail(id, role),
     });
   },
 

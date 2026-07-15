@@ -113,6 +113,19 @@ const CouncilsPage: React.FC = () => {
   const [sessionFilter, setSessionFilter] = useState<'all' | 'morning' | 'afternoon'>('all');
   const navigate = useNavigate();
   const isPeriodClosed = selectedPeriod?.status === STATUS_CODE.CLOSED;
+  const isDefenseStarted = useMemo(() => {
+    if (!selectedPeriod || !selectedPeriod.defenseStartDate) return false;
+    const parts = selectedPeriod.defenseStartDate.split('/');
+    if (parts.length === 3) {
+      const d = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
+      d.setHours(0, 0, 0, 0);
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      return now >= d;
+    }
+    return false;
+  }, [selectedPeriod]);
+  const isActionDisabled = isPeriodClosed || isDefenseStarted;
 
   const { data: groupList } = groupHooks.useFetchListGroups();
   const [isUnassignedModalVisible, setIsUnassignedModalVisible] = useState(false);
@@ -127,7 +140,7 @@ const CouncilsPage: React.FC = () => {
   }, [groupList, selectedPeriod]);
 
   const handleUpdateStatus = (councilId: string, status: string, statusName: string) => {
-    if (isPeriodClosed) return;
+    if (isActionDisabled) return;
     Modal.confirm({
       centered: true,
       title: null,
@@ -198,7 +211,7 @@ const CouncilsPage: React.FC = () => {
   };
 
   const handleDeleteCouncil = (councilId: string) => {
-    if (isPeriodClosed) return;
+    if (isActionDisabled) return;
     const council = councilsInPeriod.find((item) => item.id === councilId);
     if (!council) return;
 
@@ -241,7 +254,7 @@ const CouncilsPage: React.FC = () => {
   };
 
   const handleEditCouncil = (councilId: string) => {
-    if (isPeriodClosed) return;
+    if (isActionDisabled) return;
     const council = councilsInPeriod.find((c) => c.id === councilId);
     // navigate to create page with state for editing (CreateCouncilPage can read history.state later)
     navigate(ROUTES.COUNCILS_CREATE, { state: { council } });
@@ -320,9 +333,9 @@ const CouncilsPage: React.FC = () => {
             <Button
               type="primary"
               icon={<PlusOutlined />}
-              disabled={isPeriodClosed}
+              disabled={isActionDisabled}
               onClick={() => navigate(ROUTES.COUNCILS_CREATE)}
-              className="rounded-xl h-[46px] px-6 font-semibold shadow-md flex items-center gap-1.5 bg-[var(--color-primary)] border-none text-white hover:opacity-90"
+              className="rounded-xl h-[46px] px-6 font-semibold shadow-md flex items-center gap-1.5 bg-[var(--color-primary)] border-none text-white hover:opacity-90 animate-none disabled:bg-slate-100 disabled:text-slate-400"
             >
               {t(getKey('create_new_council'))}
             </Button>
@@ -331,13 +344,14 @@ const CouncilsPage: React.FC = () => {
 
         {selectedPeriod && (
           <div className={`mb-5 p-4 rounded-[18px] border flex items-center justify-between shadow-[0_12px_28px_rgba(15,23,42,0.02)] ${
-            isPeriodClosed ? 'bg-red-50 border-red-200 text-red-700' : 'bg-blue-50 border-blue-200 text-blue-700'
+            isActionDisabled ? 'bg-red-50 border-red-200 text-red-700' : 'bg-blue-50 border-blue-200 text-blue-700'
           }`}>
             <div>
               {t(getKey('showing'))} {t(getKey('council_management'))} {t(getKey('of'))}: <strong className="underline">{selectedPeriod.name}</strong>
               {isPeriodClosed && ` (${t(getKey('read_only_data_locked'))})`}
+              {!isPeriodClosed && isDefenseStarted && ' (Thời gian bảo vệ của đợt đã bắt đầu - dữ liệu hội đồng đã bị khóa)'}
             </div>
-            {isPeriodClosed && <Tag color="error">{t(getKey('read_only_tag'))}</Tag>}
+            {isActionDisabled && <Tag color="error">{isPeriodClosed ? t(getKey('read_only_tag')) : 'Đã khóa'}</Tag>}
           </div>
         )}
 
@@ -443,12 +457,12 @@ const CouncilsPage: React.FC = () => {
                     <span className="chip">{(t(getKey('groups_rejected') as string, { count: c.rejected }) as string)}</span>
                   </div>
                   <div className="action-row">
-                    {!isPeriodClosed && (!c.status || c.status === 'NHAP') && (
+                    {!isActionDisabled && (!c.status || c.status === 'NHAP') && (
                       <button className="btn btns btn-icon text-emerald-600 hover:text-emerald-700 font-semibold" onClick={() => handleUpdateStatus(c.id, 'DA_CONG_BO', 'Đã công bố')}>
                         <SendOutlined /> Công bố
                       </button>
                     )}
-                    {!isPeriodClosed && c.status === 'DA_CONG_BO' && (
+                    {!isActionDisabled && c.status === 'DA_CONG_BO' && (
                       <>
                         <button className="btn btns btn-icon text-sky-600 hover:text-sky-700 font-semibold" onClick={() => handleUpdateStatus(c.id, 'DA_KET_THUC', 'Đã kết thúc')}>
                           <LockOutlined /> Kết thúc
@@ -458,7 +472,7 @@ const CouncilsPage: React.FC = () => {
                         </button>
                       </>
                     )}
-                    {!isPeriodClosed && c.status === 'DA_KET_THUC' && (
+                    {!isActionDisabled && c.status === 'DA_KET_THUC' && (
                       <button className="btn btns btn-icon text-amber-600 hover:text-amber-700 font-semibold" onClick={() => handleUpdateStatus(c.id, 'DA_CONG_BO', 'Đã công bố')}>
                         <UndoOutlined /> Mở lại
                       </button>
@@ -466,12 +480,12 @@ const CouncilsPage: React.FC = () => {
                     <button className="btn btns btn-icon" onClick={() => handleViewCouncil(c.id)}>
                       <EyeOutlined /> {t(getKey('view_btn'))}
                     </button>
-                    {!isPeriodClosed && (
+                    {!isActionDisabled && (
                       <button className="btn btns btn-icon" onClick={() => handleEditCouncil(c.id)}>
                         <EditOutlined /> {t(getKey('edit_btn'))}
                       </button>
                     )}
-                    {!isPeriodClosed && (
+                    {!isActionDisabled && (
                       <button className="btn btns btn-icon" onClick={() => handleDeleteCouncil(c.id)}>
                         <DeleteOutlined /> {t(getKey('delete_btn'))}
                       </button>

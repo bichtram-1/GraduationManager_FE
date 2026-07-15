@@ -337,30 +337,30 @@ export default function Page() {
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-slate-600">
             <tr>
-              <th className="px-5 py-3 text-left w-16">STT</th>
-              <th className="px-5 py-3 text-left">Tên đề tài</th>
-              <th className="px-5 py-3 text-left w-28">Số lượng</th>
-              <th className="px-5 py-3 text-left w-32">Đã đăng kí</th>
-              <th className="px-5 py-3 text-left w-1/3">Mô tả</th>
-              <th className="px-5 py-3 text-left w-36">Trạng thái</th>
-              <th className="px-5 py-3 text-right w-36">Hành động</th>
+              <th className="px-5 py-3 text-center w-16">STT</th>
+              <th className="px-5 py-3 text-center">Tên đề tài</th>
+              <th className="px-5 py-3 text-center w-28">Số lượng</th>
+              <th className="px-5 py-3 text-center w-32">Đã đăng kí</th>
+              <th className="px-5 py-3 text-center w-1/3">Mô tả</th>
+              <th className="px-5 py-3 text-center w-36">Trạng thái</th>
+              <th className="px-5 py-3 text-center w-36">Hành động</th>
             </tr>
           </thead>
           <tbody>
             {filtered.map((topic, index) => (
               <tr key={topic.code} className="border-t border-slate-100 transition hover:bg-slate-50/80">
-                <td className="px-5 py-4 font-medium text-slate-500">{index + 1}</td>
-                <td className="px-5 py-4 text-slate-900 font-medium">{topic.name}</td>
-                <td className="px-5 py-4 text-slate-600">{topic.slots.split('/')[1] || topic.slots}</td>
-                <td className="px-5 py-4 text-slate-600">{topic.approvedStudents || 'chưa có'}</td>
-                <td className="px-5 py-4 text-slate-600 max-w-xs truncate" title={topic.summary}>{topic.summary}</td>
-                <td className="px-5 py-4">
+                <td className="px-5 py-4 text-center font-medium text-slate-500">{index + 1}</td>
+                <td className="px-5 py-4 text-slate-900 font-medium text-left">{topic.name}</td>
+                <td className="px-5 py-4 text-center text-slate-600">{topic.slots.split('/')[1] || topic.slots}</td>
+                <td className="px-5 py-4 text-center text-slate-600">{topic.approvedStudents || 'chưa có'}</td>
+                <td className="px-5 py-4 text-slate-600 max-w-xs truncate text-left" title={topic.summary}>{topic.summary}</td>
+                <td className="px-5 py-4 text-center">
                   <TeacherPill tone={getTopicStatusTone(topic.status)}>
                     {topic.status}
                   </TeacherPill>
                 </td>
-                <td className="px-5 py-4 text-right">
-                  <div className="flex justify-end gap-1">
+                <td className="px-5 py-4 text-center">
+                  <div className="flex justify-center gap-1">
                     <button className="rounded-2xl p-2 text-[#1976D2] transition hover:bg-blue-50" title="Xem chi tiết" onClick={() => setViewingTopic(topic)}>
                       <Eye className="h-4 w-4" />
                     </button>

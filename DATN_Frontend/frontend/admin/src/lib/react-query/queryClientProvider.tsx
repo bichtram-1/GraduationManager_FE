@@ -11,13 +11,16 @@ export default function AppQueryProvider({ children }: { children: ReactNode }) 
   // Lấy notification từ AntD thông qua App.useApp() — phải nằm trong <App> của antd
   const { notification } = App.useApp();
 
-  // Tạo MutationCache dùng notification toàn cục
   const mutationCache = new MutationCache({
-    onSuccess: () => {
+    onSuccess: (_data, _variables, _context, mutation) => {
+      const meta = mutation?.meta || mutation?.options?.meta;
+      if (meta?.noGlobalSuccess) return;
       const defaultSuccessMess = configSuccess();
       notification.success(defaultSuccessMess);
     },
-    onError: (error) => {
+    onError: (error, _variables, _context, mutation) => {
+      const meta = mutation?.meta || mutation?.options?.meta;
+      if (meta?.noGlobalError) return;
       const errData = (error as AxiosError<any>).response?.data;
       const customErr = ErrorCode()[errData?.error_id as keyof typeof ErrorCode];
       
