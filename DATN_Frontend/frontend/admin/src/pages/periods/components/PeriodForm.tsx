@@ -529,43 +529,45 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
       </Divider>
 
       <div className="grid grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-2">
-        {tab === 'tttn' && (
-          <Form.Item
-            name="reportStartDate"
-            label="Bắt đầu nộp báo cáo tiến độ"
-            dependencies={['startDate', 'reportDeadline', 'endDate']}
-            rules={[
-              { required: true, message: 'Vui lòng chọn ngày bắt đầu nộp báo cáo tiến độ' },
-              ({ getFieldValue }) => ({
-                validator(_, value) {
-                  const start = getFieldValue('startDate');
-                  const reportDeadline = getFieldValue('reportDeadline');
-                  const end = getFieldValue('endDate');
-                  if (value) {
-                    const valDate = dayjs(value, DATE_DISPLAY_FORMAT, true);
-                    if (start && valDate.isBefore(dayjs(start, DATE_DISPLAY_FORMAT, true))) {
-                      return Promise.reject(new Error('Ngày bắt đầu nộp báo cáo tiến độ không được trước ngày bắt đầu đợt học'));
-                    }
-                    if (reportDeadline && !valDate.isBefore(dayjs(reportDeadline, DATE_DISPLAY_FORMAT, true))) {
-                      return Promise.reject(new Error('Ngày bắt đầu nộp báo cáo tiến độ phải trước hạn nộp báo cáo'));
-                    }
-                    if (end && !valDate.isBefore(dayjs(end, DATE_DISPLAY_FORMAT, true))) {
-                      return Promise.reject(new Error('Ngày bắt đầu nộp báo cáo tiến độ phải trước ngày kết thúc đợt học'));
-                    }
+        <Form.Item
+          name="reportStartDate"
+          label="Bắt đầu nộp báo cáo tiến độ"
+          dependencies={tab === 'datn' ? ['startDate', 'regDeadline', 'reportDeadline', 'endDate'] : ['startDate', 'reportDeadline', 'endDate']}
+          rules={[
+            { required: true, message: 'Vui lòng chọn ngày bắt đầu nộp báo cáo tiến độ' },
+            ({ getFieldValue }) => ({
+              validator(_, value) {
+                const start = getFieldValue('startDate');
+                const regDeadline = getFieldValue('regDeadline');
+                const reportDeadline = getFieldValue('reportDeadline');
+                const end = getFieldValue('endDate');
+                if (value) {
+                  const valDate = dayjs(value, DATE_DISPLAY_FORMAT, true);
+                  if (start && valDate.isBefore(dayjs(start, DATE_DISPLAY_FORMAT, true))) {
+                    return Promise.reject(new Error('Ngày bắt đầu nộp báo cáo tiến độ không được trước ngày bắt đầu đợt học'));
                   }
-                  return Promise.resolve();
-                },
-              }),
-            ]}
-          >
-            <CustomDatePicker disabled={disabled} />
-          </Form.Item>
-        )}
+                  if (tab === 'datn' && regDeadline && valDate.isBefore(dayjs(regDeadline, DATE_DISPLAY_FORMAT, true))) {
+                    return Promise.reject(new Error('Ngày bắt đầu nộp báo cáo tiến độ không được trước hạn đăng ký'));
+                  }
+                  if (reportDeadline && !valDate.isBefore(dayjs(reportDeadline, DATE_DISPLAY_FORMAT, true))) {
+                    return Promise.reject(new Error('Ngày bắt đầu nộp báo cáo tiến độ phải trước hạn nộp báo cáo'));
+                  }
+                  if (end && !valDate.isBefore(dayjs(end, DATE_DISPLAY_FORMAT, true))) {
+                    return Promise.reject(new Error('Ngày bắt đầu nộp báo cáo tiến độ phải trước ngày kết thúc đợt học'));
+                  }
+                }
+                return Promise.resolve();
+              },
+            }),
+          ]}
+        >
+          <CustomDatePicker disabled={disabled} />
+        </Form.Item>
 
         <Form.Item
           name="reportDeadline"
           label="Hạn nộp báo cáo tiến độ"
-          dependencies={tab === 'datn' ? ['regDeadline', 'endDate'] : ['reportStartDate', 'endDate']}
+          dependencies={tab === 'datn' ? ['regDeadline', 'reportStartDate', 'endDate'] : ['reportStartDate', 'endDate']}
           rules={[
             { required: true, message: 'Vui lòng chọn hạn nộp báo cáo tiến độ' },
             ({ getFieldValue }) => ({
@@ -578,7 +580,7 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
                   if (tab === 'datn' && regDeadline && !valDate.isAfter(dayjs(regDeadline, DATE_DISPLAY_FORMAT, true))) {
                     return Promise.reject(new Error('Hạn nộp báo cáo tiến độ phải sau hạn đăng ký'));
                   }
-                  if (tab === 'tttn' && reportStart && !valDate.isAfter(dayjs(reportStart, DATE_DISPLAY_FORMAT, true))) {
+                  if (reportStart && !valDate.isAfter(dayjs(reportStart, DATE_DISPLAY_FORMAT, true))) {
                     return Promise.reject(new Error('Hạn nộp báo cáo tiến độ phải sau ngày bắt đầu nộp báo cáo'));
                   }
                   if (end && !valDate.isBefore(dayjs(end, DATE_DISPLAY_FORMAT, true))) {

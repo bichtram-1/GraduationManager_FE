@@ -15,6 +15,8 @@ export interface IListPeriod {
   numberSV?: number;
   numberTopics?: number;
   numberCouncils?: number;
+  gradingStartDate?: string;
+  gradingEndDate?: string;
 }
 
 export const periodApi = {

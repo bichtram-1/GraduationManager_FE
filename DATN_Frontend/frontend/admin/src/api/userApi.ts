@@ -29,9 +29,10 @@ export const userApi = {
     return response?.data?.results?.objects;
   },
 
-  getUserDetail: async (id: string) => {
+  getUserDetail: async (id: string, role?: string) => {
     const response = await axiosInstance.get<DetailResponseType<IDetailUser>>(
-      `/api/admin/users/${id}`
+      `/api/admin/users/${id}`,
+      { params: { role } }
     );
     return response?.data?.results?.object;
   },
@@ -49,18 +50,19 @@ export const userApi = {
   updateUser: async ({
     id,
     body,
+    params,
   }: {
     id: string;
     body: IUpdateUser;
     index: number;
     params: BaseListParams;
   }) => {
-    const response = await axiosInstance.patch(`/api/admin/users/${id}`, body);
+    const response = await axiosInstance.patch(`/api/admin/users/${id}`, body, { params });
     return response.data?.results?.object;
   },
 
-  deleteUser: async ({ id }: { id: string; params: BaseListParams }) => {
-    const response = await axiosInstance.delete(`/api/admin/users/${id}`);
+  deleteUser: async ({ id, params }: { id: string; params: BaseListParams }) => {
+    const response = await axiosInstance.delete(`/api/admin/users/${id}`, { params });
     return response.data;
   },
 

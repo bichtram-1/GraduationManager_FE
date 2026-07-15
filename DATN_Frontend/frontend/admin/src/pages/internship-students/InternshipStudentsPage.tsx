@@ -192,7 +192,7 @@ const InternshipStudentsPage = () => {
 
   const declarationActions = useMemo(() => ({
     isDetail: true,
-    isEdit: !isPeriodClosed,
+    isEdit: false,
     isDelete: !isPeriodClosed
   }), [isPeriodClosed]);
 
@@ -513,8 +513,6 @@ const InternshipStudentsPage = () => {
     )}
   ];
 
-  const createCompanyMutation = companyHooks.useCreateCompany();
-
   const handleDeclarationAction = (row: IConfirmationRequest, status: ConfirmationStatus) => {
     const meta = getConfirmationStatusMeta(t)[status];
     const targetLabel = meta.label.toLowerCase();
@@ -523,41 +521,6 @@ const InternshipStudentsPage = () => {
       {
         onSuccess: () => {
           message.success(t(getKey('update_confirmation_success'), { name: row.studentName, status: targetLabel }));
-          
-          if (status === STATUS_CODE.APPROVED) {
-            if (!row.taxId?.trim()) {
-              message.warning(`Sinh viên "${row.studentName}" thiếu mã số thuế công ty, vui lòng bổ sung để công ty "${row.companyName}" được tự động thêm vào danh sách đối tác.`);
-              return;
-            }
-            createCompanyMutation.mutate(
-              {
-                body: {
-                  name: row.companyName,
-                  taxId: row.taxId,
-                  field: 'Tự liên hệ',
-                  contact: row.mentor || 'Chưa cập nhật',
-                  phone: '',
-                  email: '',
-                  status: 'active',
-                  reviewStatus: 'approved',
-                },
-                params: { page: 1, limit: 10 },
-              },
-              {
-                onSuccess: () => {
-                  message.success(`Đã tự động thêm công ty "${row.companyName}" vào danh sách đối tác!`);
-                },
-                onError: (err: AxiosError) => {
-                  const msg = (err?.response?.data as { message?: string } | undefined)?.message || '';
-                  if (msg.includes('tồn tại') || msg.includes('exist')) {
-                    message.info(`Công ty "${row.companyName}" đã có sẵn trong danh sách.`);
-                  } else {
-                    message.warning(`Không thể tự động thêm công ty vào danh sách (Lỗi: ${msg || err.message}).`);
-                  }
-                },
-              }
-            );
-          }
         },
       }
     );
@@ -874,7 +837,7 @@ const InternshipStudentsPage = () => {
                 </div>
               </div>
             )}
-            actions={{ isDetail: true, isEdit: !isPeriodClosed, isDelete: !isPeriodClosed }}
+            actions={{ isDetail: true, isEdit: false, isDelete: !isPeriodClosed }}
           />
         </Card>
       )}

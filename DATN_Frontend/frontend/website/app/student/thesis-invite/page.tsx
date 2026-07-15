@@ -73,6 +73,8 @@ export default function InvitePage() {
   const [loading, setLoading] = useState(true)
   const [cancelInviteId, setCancelInviteId] = useState<string | null>(null)
   const [cancelling, setCancelling] = useState(false)
+  const [leaveGroupConfirmOpen, setLeaveGroupConfirmOpen] = useState(false)
+  const [leaving, setLeaving] = useState(false)
 
   const outgoingCount = outgoingInvites.length
   const incomingCount = incomingInvites.length
@@ -183,6 +185,29 @@ export default function InvitePage() {
     }
   }
 
+  const doLeaveGroup = async () => {
+    setLeaving(true)
+    try {
+      setLoading(true)
+      await studentApi.leaveGroup()
+      setRegistration(null)
+      // Refresh lists
+      const [outgoingData, incomingData] = await Promise.all([
+        studentApi.getOutgoingInvitations(selectedPeriod?.id),
+        studentApi.getIncomingInvitations(selectedPeriod?.id)
+      ])
+      setOutgoingInvites(outgoingData)
+      setIncomingInvites(incomingData)
+      message.success('Rời/giải tán nhóm thành công!')
+    } catch (err: unknown) {
+      message.error((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Có lỗi xảy ra khi giải tán nhóm.')
+    } finally {
+      setLoading(false)
+      setLeaving(false)
+      setLeaveGroupConfirmOpen(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex min-h-[400px] flex-col items-center justify-center gap-3">
@@ -253,10 +278,21 @@ export default function InvitePage() {
 
       {registration ? (
         <div className="mb-6 rounded-[28px] border border-emerald-100 bg-emerald-50/30 p-5 shadow-[0_12px_40px_rgba(16,185,129,0.03)]">
-          <h3 className="text-sm font-semibold text-emerald-950 flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            Đã tạo nhóm thành công ({registration.groupName})
-          </h3>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <h3 className="text-sm font-semibold text-emerald-950 flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              Đã tạo nhóm thành công ({registration.groupName})
+            </h3>
+            {registration.status !== 'accepted' && !isActionDisabled && (
+              <button
+                type="button"
+                onClick={() => setLeaveGroupConfirmOpen(true)}
+                className="rounded-2xl border border-red-200 bg-white px-4 py-2 text-xs font-medium text-red-600 transition hover:bg-red-50"
+              >
+                Rời/Giải tán nhóm
+              </button>
+            )}
+          </div>
           <div className="mt-3 flex flex-wrap gap-2">
             {registration.members?.map((member) => (
               <span key={member.studentCode} className="inline-flex items-center gap-1.5 rounded-xl bg-white border border-emerald-200 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm">
@@ -419,6 +455,24 @@ export default function InvitePage() {
       >
         <div className="text-sm leading-relaxed text-slate-600">
           Bạn có chắc chắn muốn hủy lời mời này không? Hành động này không thể hoàn tác.
+        </div>
+      </StudentModal>
+
+      <StudentModal
+        open={leaveGroupConfirmOpen}
+        title="Xác nhận rời/giải tán nhóm"
+        onClose={() => setLeaveGroupConfirmOpen(false)}
+        footer={
+          <>
+            <StudentButton variant="secondary" disabled={leaving} onClick={() => setLeaveGroupConfirmOpen(false)}>{COMMON_LABELS.CLOSE}</StudentButton>
+            <StudentButton variant="danger" disabled={leaving} onClick={doLeaveGroup}>
+              {leaving ? 'Đang xử lý...' : 'Xác nhận'}
+            </StudentButton>
+          </>
+        }
+      >
+        <div className="text-sm leading-relaxed text-slate-600">
+          Bạn có chắc chắn muốn rời nhóm hoặc giải tán nhóm không? Hành động này không thể hoàn tác.
         </div>
       </StudentModal>
     </>

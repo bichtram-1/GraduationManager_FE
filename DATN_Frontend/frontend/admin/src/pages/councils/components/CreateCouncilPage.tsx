@@ -258,7 +258,13 @@ const CreateCouncilPage = () => {
   useEffect(() => {
     if (!editingId && councilsList && councilsList.length > 0) {
       let maxNum = 0;
-      councilsList.forEach((c) => {
+      const currentPeriodName = form.batch || selectedPeriod?.name || '';
+      const councilsInPeriod = councilsList.filter((c: any) => 
+        String(c.dot_id) === String(selectedPeriod?.id) || 
+        c.batch === currentPeriodName
+      );
+
+      councilsInPeriod.forEach((c) => {
         const match = c.title?.match(/^Hội\s+đồng\s+(\d+)$/i);
         if (match) {
           const num = parseInt(match[1], 10);
@@ -268,7 +274,7 @@ const CreateCouncilPage = () => {
         }
       });
       if (maxNum === 0) {
-        maxNum = councilsList.length;
+        maxNum = councilsInPeriod.length;
       }
       setForm((current) => ({
         ...current,
@@ -280,7 +286,7 @@ const CreateCouncilPage = () => {
         name: 'Hội đồng 1',
       }));
     }
-  }, [councilsList, editingId]);
+  }, [councilsList, editingId, form.batch, selectedPeriod]);
 
   const roomOptions = useMemo(() => {
     return Array.from({ length: 15 }, (_, i) => ({
@@ -531,8 +537,11 @@ const CreateCouncilPage = () => {
   const getOtherCouncilAssignment = (teacherId: string) => {
     if (!teacherId) return null;
     const teacherName = teacherNameById(teacherId);
+    const currentPeriodName = form.batch || selectedPeriod?.name || '';
     const matchedCouncil = councilsList.find((c: any) => {
       if (editingId && String(c.id) === String(editingId)) return false;
+      const isCurrentPeriod = String(c.dot_id) === String(selectedPeriod?.id) || c.batch === currentPeriodName;
+      if (!isCurrentPeriod) return false;
       const isChair = c.chair && c.chair.includes(teacherName);
       const isSec = c.secretary && c.secretary.includes(teacherName);
       return isChair || isSec;

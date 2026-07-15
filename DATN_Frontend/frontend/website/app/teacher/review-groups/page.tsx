@@ -31,6 +31,7 @@ type GuidanceGroup = {
   evaluation: EvaluationValue
   note: string
   members_list?: IGroupMemberInfo[]
+  reviewerEvaluation?: string | null
 }
 
 type ReviewGroup = {
@@ -346,10 +347,14 @@ export default function TeacherReviewGroupsPage() {
                             <div className="flex justify-start">
                               <select
                                 value={group.evaluation}
-                                disabled={savingId === group.id}
+                                disabled={savingId === group.id || !!group.reviewerEvaluation}
                                 onChange={(event) => {
                                   if (selectedPeriod?.status === 'closed') {
                                     message.warning('Đợt học/tốt nghiệp đã đóng, không thể chỉnh sửa đánh giá!')
+                                    return
+                                  }
+                                  if (group.reviewerEvaluation) {
+                                    message.warning('Không thể đánh giá vì giảng viên phản biện đã đánh giá trước đó!')
                                     return
                                   }
                                   const val = event.target.value as EvaluationValue

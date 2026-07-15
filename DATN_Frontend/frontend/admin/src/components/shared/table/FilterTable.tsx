@@ -201,7 +201,11 @@ const FilterTable = <
 
   const detailHook = detailInfo?.type === InfoModalType && detailInfo?.modalInfo?.modalFunc;
   const { data: detail, isLoading: isLoadingDetail } = detailHook
-    ? detailHook(openModal?.id, openModal?.type === UpdateModalType || openModal?.type === DetailModalType)
+    ? detailHook(
+        openModal?.id,
+        openModal?.type === UpdateModalType || openModal?.type === DetailModalType,
+        (internalParams as Record<string, unknown>)?.role as string | undefined
+      )
     : { data: undefined, isLoading: false };
 
   const exportMutation = exportInfo?.type === InfoModalType && exportInfo?.modalInfo?.modalFunc;
@@ -313,9 +317,14 @@ const FilterTable = <
             if (validationErrors) {
               const firstErrorKey = Object.keys(validationErrors)[0];
               const firstError = validationErrors[firstErrorKey][0];
-              message.error(firstError);
+              if (!firstError.toLowerCase().includes('mã số thuế') && !firstError.toLowerCase().includes('tồn tại')) {
+                message.error(firstError);
+              }
             } else {
-              message.error(errData?.message || error?.message || 'Cập nhật thất bại!');
+              const errMsg = errData?.message || error?.message || 'Cập nhật thất bại!';
+              if (!errMsg.toLowerCase().includes('mã số thuế') && !errMsg.toLowerCase().includes('tồn tại')) {
+                message.error(errMsg);
+              }
             }
           }
         }
@@ -333,9 +342,14 @@ const FilterTable = <
             if (validationErrors) {
               const firstErrorKey = Object.keys(validationErrors)[0];
               const firstError = validationErrors[firstErrorKey][0];
-              message.error(firstError);
+              if (!firstError.toLowerCase().includes('mã số thuế') && !firstError.toLowerCase().includes('tồn tại')) {
+                message.error(firstError);
+              }
             } else {
-              message.error(errData?.message || error?.message || 'Thêm mới thất bại!');
+              const errMsg = errData?.message || error?.message || 'Thêm mới thất bại!';
+              if (!errMsg.toLowerCase().includes('mã số thuế') && !errMsg.toLowerCase().includes('tồn tại')) {
+                message.error(errMsg);
+              }
             }
           }
         }

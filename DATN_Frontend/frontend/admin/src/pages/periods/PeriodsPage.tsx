@@ -45,6 +45,13 @@ const PeriodsPage = () => {
     return tabPeriods[0].status === STATUS_CODE.CLOSED;
   }, [allPeriodsData, tab]);
 
+  const isCreatePeriodDisabled = useMemo(() => {
+    if (!allPeriodsData || !allPeriodsData.rows) return false;
+    const tabPeriods = allPeriodsData.rows.filter((p: IListPeriod) => p.type === tab);
+    // Vô hiệu hóa nút tạo đợt mới nếu có bất kỳ đợt nào đang mở (chưa đóng)
+    return tabPeriods.some((p: IListPeriod) => p.status !== STATUS_CODE.CLOSED);
+  }, [allPeriodsData, tab]);
+
   const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
   const [addStudentForm] = Form.useForm();
   const [studentSearchKeyword, setStudentSearchKeyword] = useState('');
@@ -202,7 +209,7 @@ const PeriodsPage = () => {
           title={t(getKey('period_list'))}
           pageTitle={t(getKey('period_management'))}
           createButtonLabel={tab === 'tttn' ? 'Tạo đợt TTTN mới' : 'Tạo đợt ĐATN mới'}
-          isCreateDisabled={isTabPeriodClosed}
+          isCreateDisabled={isCreatePeriodDisabled}
           columns={columns}
           useQueryHook={periodHooks.useFetchListPeriods}
           paramVariables={listParams}
