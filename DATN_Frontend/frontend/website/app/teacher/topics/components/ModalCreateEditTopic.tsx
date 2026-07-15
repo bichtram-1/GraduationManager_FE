@@ -231,7 +231,7 @@ export default function ModalCreateEditTopic(props: ModalCreateEditTopicProps) {
           )}
         </TeacherField>
 
-        <TeacherField label="File mô tả đính kèm (.pdf, .docx, .doc, .zip)" required={!editingCode}>
+        <TeacherField label="File mô tả đính kèm (.pdf, .docx, .doc)" required={!editingCode}>
           <div className="mt-1 space-y-2">
             {fileUrl ? (
               <div className="flex items-center justify-between rounded-2xl bg-blue-50/50 px-4 py-3 border border-blue-100">
@@ -263,7 +263,7 @@ export default function ModalCreateEditTopic(props: ModalCreateEditTopicProps) {
                 <span>{uploadingFile ? 'Đang tải file lên...' : 'Chọn file tài liệu mô tả để tải lên'}</span>
                 <input
                   type="file"
-                  accept=".pdf,.docx,.doc,.zip,.rar"
+                  accept=".pdf,.docx"
                   className="hidden"
                   onChange={handleUploadFile}
                   disabled={uploadingFile}

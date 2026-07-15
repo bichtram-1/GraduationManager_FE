@@ -548,7 +548,7 @@ export default function StudentReportsDATNPage() {
                       ? `Đã chọn: ${submitForm.fileName}`
                       : 'Kéo thả hoặc nhấp để chọn file'}
                   </p>
-                  <p className="text-xs text-slate-400 mt-1">Hỗ trợ PDF, Word, ZIP (tối đa 20MB)</p>
+                  <p className="text-xs text-slate-400 mt-1">Hỗ trợ PDF, Word (tối đa 20MB)</p>
                 </div>
                 <input
                   type="file"
