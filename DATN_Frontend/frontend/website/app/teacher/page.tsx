@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { CalendarDays, CheckCircle2, Clock3, Trophy, TrendingUp, Users } from 'lucide-react'
+import { CalendarDays, CheckCircle2, Trophy, Users } from 'lucide-react'
 import { TeacherPill, TeacherSectionHeader, TeacherStatCard } from './_components/TeacherShell'
 import { getTopicStatusTone } from './_components/TeacherUI'
 import { usePeriod } from '@/lib/providers/PeriodProvider'
@@ -326,27 +326,7 @@ export default function TeacherIndexPage() {
             </div>
           </section>
 
-          <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
-            <div className="text-sm font-semibold text-slate-900">Chỉ số tức thì</div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-              <div className="rounded-2xl bg-slate-50 p-4">
-                <div className="flex items-center gap-2 text-xs text-slate-500">
-                  <Clock3 className="h-4 w-4 text-[#1976D2]" />
-                  <span>Tiến độ thực tập</span>
-                </div>
-                <div className="mt-2 text-2xl font-semibold text-slate-900">{tttnSubmissionRate}%</div>
-                <div className="text-xs text-slate-500">sinh viên đã nộp báo cáo tuần này</div>
-              </div>
-              <div className="rounded-2xl bg-slate-50 p-4">
-                <div className="flex items-center gap-2 text-xs text-slate-500">
-                  <TrendingUp className="h-4 w-4 text-[#1976D2]" />
-                  <span>Quy mô hướng dẫn</span>
-                </div>
-                <div className="mt-2 text-2xl font-semibold text-slate-900">{totalDatnStudents}</div>
-                <div className="text-xs text-slate-500">sinh viên làm ĐATN đợt này</div>
-              </div>
-            </div>
-          </section>
+
         </aside>
       </div>
     </>
