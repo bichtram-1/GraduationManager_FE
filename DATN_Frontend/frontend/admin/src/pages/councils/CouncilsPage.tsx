@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { getKey } from '@shared/types/I18nKeyType';
 import { formatNumber } from '@shared/utils/numberUtils';
 import { useGlobalVariable } from '../../hooks/GlobalVariableProvider';
-import { STATUS_CODE } from '../../constants/commonConst';
+import { STATUS_CODE, isPeriodClosedForAdmin } from '../../constants/commonConst';
 
 type CouncilCard = {
   id: string;
@@ -112,7 +112,7 @@ const CouncilsPage: React.FC = () => {
   const [roomFilter, setRoomFilter] = useState('all');
   const [sessionFilter, setSessionFilter] = useState<'all' | 'morning' | 'afternoon'>('all');
   const navigate = useNavigate();
-  const isPeriodClosed = selectedPeriod?.status === STATUS_CODE.CLOSED;
+  const isPeriodClosed = isPeriodClosedForAdmin(selectedPeriod);
   const isDefenseStarted = useMemo(() => {
     if (!selectedPeriod || !selectedPeriod.defenseStartDate) return false;
     const parts = selectedPeriod.defenseStartDate.split('/');

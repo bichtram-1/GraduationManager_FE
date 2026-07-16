@@ -1604,7 +1604,7 @@ const CreateCouncilPage = () => {
                     Chưa có đề tài nào đủ điều kiện hoặc không có giảng viên hướng dẫn nào của đề tài tham gia hội đồng này.
                   </div>
                 ) : (
-                  <div ref={pickContainerRef} onWheel={handleScrollPropagation} className="overflow-auto max-h-[400px] rounded-xl border border-gray-200 bg-white no-scrollbar">
+                  <div ref={pickContainerRef} onWheel={handleScrollPropagation} className="overflow-auto max-h-[400px] rounded-xl border border-gray-200 bg-white">
                     <table className="w-full min-w-[800px] border-collapse text-sm">
                       <thead className="bg-gray-50 text-gray-600 sticky top-0 z-10">
                         <tr>
@@ -1699,7 +1699,7 @@ const CreateCouncilPage = () => {
                     </Button>
                   </div>
                 )}
-                <div ref={sortContainerRef} onWheel={handleScrollPropagation} className="overflow-auto max-h-[450px] rounded-xl border border-gray-200 bg-white no-scrollbar">
+                <div ref={sortContainerRef} onWheel={handleScrollPropagation} className="overflow-auto max-h-[450px] rounded-xl border border-gray-200 bg-white">
                   <table className="w-full min-w-[1200px] border-collapse text-sm">
                     <thead className="bg-gray-50 text-gray-600 sticky top-0 z-10">
                       <tr>

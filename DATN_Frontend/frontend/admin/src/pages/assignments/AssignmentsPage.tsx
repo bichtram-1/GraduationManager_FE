@@ -8,7 +8,7 @@ import FilterTable from '../../components/shared/table/FilterTable';
 import { assignmentHooks } from '../../hooks/useAssignments';
 import { useGlobalVariable } from '../../hooks/GlobalVariableProvider';
 import { useTranslation } from 'react-i18next';
-import { cn, STATUS_CODE } from '../../constants/commonConst';
+import { cn, STATUS_CODE, isPeriodClosedForAdmin } from '../../constants/commonConst';
 import { getKey } from '@shared/types/I18nKeyType';
 import type {
   AssignmentRow as AssignmentRowType,
@@ -62,7 +62,7 @@ const AssignmentsPage = () => {
   const publishAssignmentsMutation = assignmentHooks.usePublishAssignments();
 
   const rows = assignmentList?.rows ?? [];
-  const isPeriodClosed = selectedPeriod?.status === STATUS_CODE.CLOSED;
+  const isPeriodClosed = isPeriodClosedForAdmin(selectedPeriod);
 
   const isReportStarted = useMemo(() => {
     if (!selectedPeriod || !selectedPeriod.reportStartDate) return false;

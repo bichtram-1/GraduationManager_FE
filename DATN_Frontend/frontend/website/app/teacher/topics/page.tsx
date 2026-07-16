@@ -25,43 +25,6 @@ type Topic = {
   fileUrl?: string
 }
 
-type SaveTopicPayload = {
-  code: string
-  name: string
-  summary: string
-  maxSlots: number
-}
-
-async function mockUpdateTopic(current: Topic[], payload: SaveTopicPayload): Promise<Topic[]> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve(
-        current.map((topic) => {
-          if (topic.code !== payload.code) return topic
-          const registered = Number.parseInt(topic.slots.split('/')[0] ?? '0', 10)
-          const boundedRegistered = Number.isNaN(registered) ? 0 : Math.min(registered, payload.maxSlots)
-          const progress = Math.max(0, Math.min(100, Math.round((boundedRegistered / payload.maxSlots) * 100)))
-          return {
-            ...topic,
-            name: payload.name,
-            summary: payload.summary,
-            slots: `${boundedRegistered}/${payload.maxSlots}`,
-            progress,
-          }
-        })
-      )
-    }, 180)
-  })
-}
-
-async function mockDeleteTopic(current: Topic[], code: string): Promise<Topic[]> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve(current.filter((topic) => topic.code !== code))
-    }, 180)
-  })
-}
-
 export default function Page() {
   const { selectedPeriod } = usePeriod()
   const [topicList, setTopicList] = useState<Topic[]>([])
@@ -79,7 +42,6 @@ export default function Page() {
   const [slots, setSlots] = useState('2')
   const [direction, setDirection] = useState('Phát triển phần mềm')
   const [fileUrl, setFileUrl] = useState('')
-  const [loading, setLoading] = useState(false)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
 
   const showNotification = (message: string, type: 'success' | 'error' = 'success') => {
@@ -90,13 +52,12 @@ export default function Page() {
   useEffect(() => {
     let mounted = true
     
-    const fetchTopics = async (showLoading = false) => {
-      if (showLoading) setLoading(true)
+    const fetchTopics = async () => {
       try {
         const data = await topicApi.getTeacherTopics({ periodId: selectedPeriod?.id });
         if (mounted) {
           setTopicList(data);
-          
+
           setSelectedTopic((curr) => {
             if (curr && data.some((t: Topic) => t.id === curr.id)) {
               return data.find((t: Topic) => t.id === curr.id) || data[0];
@@ -114,20 +75,18 @@ export default function Page() {
         }
       } catch (e) {
         console.error(e);
-      } finally {
-        if (mounted && showLoading) setLoading(false)
       }
     };
 
-    fetchTopics(true);
+    fetchTopics();
 
     const handleSync = () => {
-      fetchTopics(false);
+      fetchTopics();
     }
     window.addEventListener('realtime-topic-updated', handleSync)
 
     const intervalId = setInterval(() => {
-      fetchTopics(false);
+      fetchTopics();
     }, 5000);
 
     return () => {
@@ -232,16 +191,17 @@ export default function Page() {
     }
   }
 
-  const handleSave = async () => {
+  const handleSave = async (overrideFileUrl?: string) => {
     const trimmedName = name.trim()
     const trimmedSummary = description.trim()
     const maxSlots = Number.parseInt(slots, 10)
+    const finalFileUrl = overrideFileUrl ?? fileUrl
 
     if (!trimmedName || trimmedName.length > 255 || !trimmedSummary || trimmedSummary.length > 5000 || Number.isNaN(maxSlots) || maxSlots < 2 || maxSlots % 2 !== 0) {
       return
     }
 
-    if (!editingCode && !fileUrl) {
+    if (!editingCode && !finalFileUrl) {
       return
     }
 
@@ -256,7 +216,7 @@ export default function Page() {
             description: trimmedSummary,
             slots: String(maxSlots),
             direction: direction,
-            fileUrl: fileUrl,
+            fileUrl: finalFileUrl,
             teacher: 'TS. Nguyễn Văn X',
           });
         }
@@ -266,7 +226,7 @@ export default function Page() {
           description: trimmedSummary,
           slots: String(maxSlots),
           direction: direction,
-          fileUrl: fileUrl,
+          fileUrl: finalFileUrl,
           teacher: 'TS. Nguyễn Văn X',
           periodId: selectedPeriod?.id
         });

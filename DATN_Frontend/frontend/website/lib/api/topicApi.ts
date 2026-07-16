@@ -1,20 +1,39 @@
 import axiosInstance from '../axios/axios-config';
 
+export interface ITopicDirection {
+  id: string;
+  name: string;
+}
+
 export const topicApi = {
-  getTopics: async (params?: { periodId?: string }) => {
+  getDirections: async (): Promise<ITopicDirection[]> => {
+    const response = await axiosInstance.get('/private/v1/topic-directions');
+    return response?.data?.results?.objects || [];
+  },
+
+  getTopics: async (params?: { periodId?: string; page?: number; limit?: number; direction?: string; keyword?: string; teacher?: string }) => {
     const response = await axiosInstance.get('/private/v1/topics', { params });
     const resData = response?.data?.results?.objects || response?.data?.results?.object || response?.data;
     const rawList = (resData && typeof resData === 'object' && 'rows' in resData) ? resData.rows : (Array.isArray(resData) ? resData : []);
+    const pagination = response?.data?.pagination || { total: rawList.length, totalPages: 1, limit: params?.limit || 10 };
 
-    return rawList.map((t: { id?: string | number; code?: string; name?: string; title?: string; teacher?: string; module?: string; status?: string; published?: boolean; slots?: string; approved_students?: string }) => ({
+    const rows = rawList.map((t: any) => ({
       id: String(t.id ?? ''),
       code: t.code || `DA${String(t.id || '').padStart(3, '0')}`,
       title: t.name || t.title || '',
       module: t.teacher || t.module || '',
-      published: t.status === 'approved',
+      published: t.status === 'approved' || t.status === 'DA_DUYET' || t.published === true,
       slots: t.slots || '0/4',
-      approvedStudents: t.approved_students || 'chưa có'
+      approvedStudents: t.approved_students || 'chưa có',
+      description: t.description || '',
+      direction: t.direction || '',
+      fileUrl: t.fileUrl || '',
     }));
+
+    return {
+      rows,
+      pagination
+    };
   },
 
   getTeacherTopics: async (params?: { periodId?: string }) => {

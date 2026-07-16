@@ -72,4 +72,9 @@ export const teacherApi = {
     });
     return response?.data;
   },
+
+  getHistory: async (limit?: number): Promise<any[]> => {
+    const response = await axiosInstance.get('/private/v1/teacher/history', { params: limit ? { limit } : undefined });
+    return response?.data?.results?.objects || [];
+  },
 };

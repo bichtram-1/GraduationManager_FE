@@ -79,4 +79,17 @@ export const groupHooks = {
       }
     );
   },
+
+  useSwapMembers: () => {
+    const queryClient = useQueryClient();
+    return useMutation<{ success: boolean; message: string }, AxiosError, { studentIdA: string; studentIdB: string }>(
+      {
+        mutationFn: ({ studentIdA, studentIdB }) => groupApi.swapMembers({ studentIdA, studentIdB }),
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: [QueryKey.groups.list] });
+          queryClient.invalidateQueries({ queryKey: [QueryKey.assignments.list] });
+        },
+      }
+    );
+  },
 };

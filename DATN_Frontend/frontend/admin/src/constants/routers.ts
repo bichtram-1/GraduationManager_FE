@@ -20,6 +20,7 @@ export const ROUTES = {
   GROUPS_SCORES: '/groups/scores',
   PERIODS: '/periods',
   FORGOTPW: '/forgot-password',
+  HISTORY: '/history',
 };
 
 type RoutePath = typeof ROUTES[keyof typeof ROUTES];
@@ -44,6 +45,7 @@ export const HEADER_TITLES: Record<RoutePath, keyof I18nKey> = {
   [ROUTES.INTERNSHIP_STUDENTS_SCORES]: 'internship_score_management',
   [ROUTES.GROUPS_SCORES]: 'project_score_management',
   [ROUTES.FORGOTPW]: 'forgot_password_title',
+  [ROUTES.HISTORY]: 'history_logs',
 };
 
 export const DYNAMIC_ROUTES: string[] = [];

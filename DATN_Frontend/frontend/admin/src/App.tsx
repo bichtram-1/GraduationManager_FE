@@ -32,6 +32,7 @@ const InternshipStudents = lazy(() => import('./pages/internship-students/Intern
 const Periods = lazy(() => import('./pages/periods/PeriodsPage'));
 const StudentScores = lazy(() => import('./pages/student-scores/StudentScoresPage'));
 const ClassesAdmin = lazy(() => import('./pages/classes/ClassesAdminPage'));
+const History = lazy(() => import('./pages/history/HistoryPage'));
 
 function App() {
   
@@ -91,6 +92,7 @@ function App() {
                 <Route path={ROUTES.INTERNSHIP_STUDENTS_SCORES} element={<StudentScores fixedMode="internship" />} />
                 <Route path={ROUTES.GROUPS_SCORES} element={<StudentScores fixedMode="project" />} />
                 <Route path={ROUTES.PERIODS} element={<Periods />} />
+                <Route path={ROUTES.HISTORY} element={<History />} />
               </Route>
               {/* Những route cần bọc Auth Layout */}
               <Route

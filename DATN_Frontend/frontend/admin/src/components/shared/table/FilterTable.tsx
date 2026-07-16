@@ -117,7 +117,7 @@ export interface FilterTableProps<
   >;
   exportInfo?: CRUDTableInfoType<UseMutationResult<TList, AxiosError>>;
   formatInitialValues?: (data: TDetail) => Record<string, unknown>;
-  formatFormValues?: (values: Record<string, unknown>) => TCreate | TUpdate;
+  formatFormValues?: (values: Record<string, unknown>) => TCreate | TUpdate | Promise<TCreate | TUpdate>;
   enableSelectRow?: boolean;
   extraHeaderActions?: ReactNode;
   extraActions?: ReactNode;
@@ -294,8 +294,14 @@ const FilterTable = <
     });
   };
 
-  const handleSubmitModal = (values: Record<string, unknown>) => {
-    const transformedValues = formatFormValues?.(values) || values;
+  const handleSubmitModal = async (values: Record<string, unknown>) => {
+    let transformedValues: Record<string, unknown>;
+    try {
+      transformedValues = (await formatFormValues?.(values)) || values;
+    } catch (error) {
+      message.error((error as Error)?.message || 'Có lỗi xảy ra khi xử lý dữ liệu trước khi lưu!');
+      return;
+    }
     const initialBody = detail || {};
     const body = deepCompareObjects(transformedValues, initialBody);
 

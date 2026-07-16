@@ -37,4 +37,8 @@ export const groupApi = {
     const response = await axiosInstance.post(`/private/v1/groups/${id}/reject`);
     return response?.data?.results?.object;
   },
+  swapMembers: async ({ studentIdA, studentIdB }: { studentIdA: string; studentIdB: string }): Promise<{ success: boolean; message: string }> => {
+    const response = await axiosInstance.post('/private/v1/groups/swap-members', { studentIdA, studentIdB });
+    return response?.data;
+  },
 };

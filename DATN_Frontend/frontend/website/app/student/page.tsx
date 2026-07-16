@@ -1,62 +1,85 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import Link from 'next/link'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowRight, CalendarDays, CheckCircle2, FileText, Trophy, Upload, Building2, Clock3, TrendingUp } from 'lucide-react'
 import { StudentPill, StudentSectionHeader, StudentStatCard } from './_components/StudentShell'
-import { studentApi, IStudentDashboardData } from '@/lib/api/studentApi'
-import { App, Spin } from 'antd'
+import { studentApi } from '@/lib/api/studentApi'
+import { App, Skeleton } from 'antd'
+
+const DASHBOARD_KEY = ['student-dashboard']
+const HISTORY_KEY = ['student-history']
 
 export default function StudentIndexPage() {
   const { message } = App.useApp()
-  const [data, setData] = useState<IStudentDashboardData | null>(null)
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
+
+  const dashboardQuery = useQuery({ queryKey: DASHBOARD_KEY, queryFn: studentApi.getDashboard })
+  const historyQuery = useQuery({ queryKey: HISTORY_KEY, queryFn: () => studentApi.getHistory() })
+
+  const loading = dashboardQuery.isLoading || historyQuery.isLoading
+  const data = dashboardQuery.data
+  const history = historyQuery.data ?? []
+
+  const formatTime = (timeStr: string) => {
+    try {
+      const date = new Date(timeStr)
+      return date.toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' })
+    } catch {
+      return timeStr
+    }
+  }
 
   useEffect(() => {
-    let mounted = true
-    setLoading(true)
-    const load = () => {
-      studentApi.getDashboard()
-        .then((res) => {
-          if (mounted) {
-            setData(res)
-            setLoading(false)
-          }
-        })
-        .catch((err) => {
-          console.error('Failed to fetch student dashboard:', err)
-          if (mounted) {
-            setLoading(false)
-          }
-        })
-    }
-
-    load()
-
     const handleSync = () => {
-      load()
+      queryClient.invalidateQueries({ queryKey: DASHBOARD_KEY })
+      queryClient.invalidateQueries({ queryKey: HISTORY_KEY })
     }
     const handleAssignmentPublished = () => {
       message.success('Bạn vừa được công bố giảng viên hướng dẫn TTTN!')
-      load()
+      handleSync()
     }
     window.addEventListener('realtime-group-updated', handleSync)
     window.addEventListener('realtime-topic-updated', handleSync)
     window.addEventListener('realtime-assignment-published', handleAssignmentPublished)
 
     return () => {
-      mounted = false
       window.removeEventListener('realtime-group-updated', handleSync)
       window.removeEventListener('realtime-topic-updated', handleSync)
       window.removeEventListener('realtime-assignment-published', handleAssignmentPublished)
     }
-  }, [message])
+  }, [message, queryClient])
 
   if (loading) {
     return (
-      <div className="flex min-h-[400px] flex-col items-center justify-center gap-3">
-        <Spin size="large" />
-        <div className="text-sm text-slate-500">Đang tải thông tin trang chủ sinh viên...</div>
+      <div className="space-y-6">
+        <div className="rounded-[28px] border border-white/70 bg-white/90 p-6 shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
+          <Skeleton active title paragraph={{ rows: 2 }} />
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+              <Skeleton active title={false} paragraph={{ rows: 2 }} />
+            </div>
+          ))}
+        </div>
+        <div className="grid gap-6 xl:grid-cols-3">
+          <div className="space-y-6 xl:col-span-2">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
+                <Skeleton active paragraph={{ rows: 3 }} />
+              </div>
+            ))}
+          </div>
+          <div className="space-y-6">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
+                <Skeleton active paragraph={{ rows: 3 }} />
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     )
   }
@@ -129,29 +152,29 @@ export default function StudentIndexPage() {
       </section>
 
       <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StudentStatCard 
-          title="TTTN" 
-          value={tttn.status} 
-          hint={tttn.companyName || (tttn.hasPeriod ? "Đã mở đăng ký" : "Chưa mở")} 
-          accent="blue" 
+        <StudentStatCard
+          title="TTTN"
+          value={tttn.status}
+          hint={tttn.companyName || (tttn.hasPeriod ? "Đã mở đăng ký" : "Chưa mở")}
+          accent="blue"
         />
-        <StudentStatCard 
-          title="ĐATN" 
-          value={datn.status === 'Đã đăng ký' ? '1 đề tài' : datn.status} 
-          hint={datn.topicTitle || "Đề tài tốt nghiệp"} 
-          accent="green" 
+        <StudentStatCard
+          title="ĐATN"
+          value={datn.status === 'Đã đăng ký' ? '1 đề tài' : datn.status}
+          hint={datn.topicTitle || "Đề tài tốt nghiệp"}
+          accent="green"
         />
-        <StudentStatCard 
-          title="Báo cáo" 
-          value={String(reportsCount).padStart(2, '0')} 
-          hint="Báo cáo tiến độ đã nộp" 
-          accent="orange" 
+        <StudentStatCard
+          title="Báo cáo"
+          value={String(reportsCount).padStart(2, '0')}
+          hint="Báo cáo tiến độ đã nộp"
+          accent="orange"
         />
-        <StudentStatCard 
-          title="Kết quả" 
-          value={expectedScore > 0 ? String(expectedScore) : 'Chưa có'} 
-          hint="Điểm tổng kết dự kiến" 
-          accent="violet" 
+        <StudentStatCard
+          title="Kết quả"
+          value={expectedScore > 0 ? String(expectedScore) : 'Chưa có'}
+          hint="Điểm tổng kết dự kiến"
+          accent="violet"
         />
       </div>
 
@@ -198,6 +221,31 @@ export default function StudentIndexPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          </section>
+
+          <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
+            <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-5 py-4">
+              <div>
+                <div className="text-sm font-semibold text-slate-900">Lịch sử hoạt động</div>
+                <div className="text-xs text-slate-500">Quá trình tạo nhóm, duyệt đề tài & khai báo TTTN</div>
+              </div>
+              <StudentPill tone="blue">Nhật ký</StudentPill>
+            </div>
+            <div className="max-h-96 overflow-y-auto space-y-3 p-5">
+              {history.length === 0 ? (
+                <div className="text-center text-xs text-slate-400 py-4">Chưa có lịch sử hoạt động nào được ghi nhận.</div>
+              ) : (
+                history.map((log) => (
+                  <div key={log.log_id} className="flex flex-col gap-1 rounded-2xl border border-slate-100 bg-slate-50/50 p-3 hover:bg-slate-50 transition">
+                    <div className="text-sm font-medium text-slate-800 leading-relaxed">{log.description}</div>
+                    <div className="text-[10px] text-slate-400 flex items-center gap-1 mt-1">
+                      <Clock3 className="h-3 w-3" />
+                      {formatTime(log.created_at)}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </section>
         </div>

@@ -1,47 +1,44 @@
 'use client'
 
 import { useMemo, useState, useEffect, ChangeEvent } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { CalendarDays, CheckCircle2, FileText, Plus, Upload, Clock3, MessageSquareQuote, Building2, GraduationCap, ShieldCheck } from 'lucide-react'
 import { StudentPill, StudentSectionHeader } from '../../_components/StudentShell'
 import { StudentButton, StudentField, StudentFilterTabs, StudentInputClass, StudentModal, getReportStatusTone } from '../../_components/StudentUI'
-import { studentApi, IProgressReport, IStudentDashboardData } from '@/lib/api/studentApi'
+import { studentApi } from '@/lib/api/studentApi'
 import { uploadApi } from '@/lib/api/uploadApi'
 import { usePeriod } from '@/lib/providers/PeriodProvider'
 import { COMMON_LABELS } from '@/constants/commonLabels'
+import { getFileUrl } from '@/lib/utils/fileUrl'
 import { App, Spin } from 'antd'
 
 type StatusFilter = 'all' | 'Đã nộp' | 'Thiếu' | 'Chưa nộp'
 
-const getFileUrl = (url: string | null | undefined) => {
-  if (!url || url === '—') return null;
-  const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
-  if (url.startsWith('http')) {
-    try {
-      const urlObj = new URL(url);
-      const backendUrlObj = new URL(backendUrl);
-      if (urlObj.hostname === 'localhost' || urlObj.hostname === '127.0.0.1') {
-        urlObj.protocol = backendUrlObj.protocol;
-        urlObj.host = backendUrlObj.host;
-      }
-      return urlObj.toString();
-    } catch (_) {
-      return url;
-    }
-  }
-  return `${backendUrl.replace(/\/$/, '')}/storage/${url}`;
-};
+const REPORTS_KEY = ['tttn-reports']
+// Cùng key với app/student/page.tsx — chuyển qua lại giữa 2 trang trong lúc còn "tươi"
+// (staleTime) sẽ dùng chung cache, khỏi gọi lại API.
+const DASHBOARD_KEY = ['student-dashboard']
 
 export default function StudentReportsTTTNPage() {
   const { message } = App.useApp()
   const { selectedPeriod } = usePeriod()
+  const queryClient = useQueryClient()
   const isPeriodLocked = selectedPeriod?.status === 'grading' || selectedPeriod?.status === 'closed'
-  const [reports, setReports] = useState<IProgressReport[]>([])
-  const [hasGvhd, setHasGvhd] = useState(true)
-  const [isInternshipApproved, setIsInternshipApproved] = useState(true)
+
+  const reportsQuery = useQuery({ queryKey: REPORTS_KEY, queryFn: studentApi.getTttnReports })
+  const dashboardQuery = useQuery({ queryKey: DASHBOARD_KEY, queryFn: studentApi.getDashboard })
+
+  const reports = useMemo(() => reportsQuery.data?.reports ?? [], [reportsQuery.data])
+  const hasGvhd = reportsQuery.data?.hasGvhd !== false
+  const isInternshipApproved = reportsQuery.data?.isInternshipApproved !== false
+  const internshipInfo = dashboardQuery.data?.tttn ?? null
+  const loading = reportsQuery.isLoading || dashboardQuery.isLoading
+
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [submitOpen, setSubmitOpen] = useState(false)
-  const [uploadingFile, setUploadingFile] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [submitting, setSubmitting] = useState(false)
   const [submitForm, setSubmitForm] = useState<{
     week: string
     title: string
@@ -55,61 +52,37 @@ export default function StudentReportsTTTNPage() {
     fileName: '',
     fileUrl: '',
   })
-  const [loading, setLoading] = useState(true)
-  const [internshipInfo, setInternshipInfo] = useState<IStudentDashboardData['tttn'] | null>(null)
 
+  // Mặc định chọn tuần đầu tiên khi báo cáo tải xong lần đầu — không ghi đè lựa chọn
+  // hiện tại của người dùng khi dữ liệu chỉ đơn thuần được refetch (realtime/mutation).
   useEffect(() => {
-    let mounted = true
-    setLoading(true)
-    async function load() {
-      try {
-        const [resReports, dashboard] = await Promise.all([
-          studentApi.getTttnReports(),
-          studentApi.getDashboard()
-        ])
-        if (!mounted) return
-        const data = resReports.reports || []
-        const okGvhd = resReports.hasGvhd !== false
-        const okInternship = resReports.isInternshipApproved !== false
-        setReports(data)
-        setHasGvhd(okGvhd)
-        setIsInternshipApproved(okInternship)
-        setInternshipInfo(dashboard?.tttn ?? null)
-        if (data.length > 0) {
-          setSelectedWeek(data[0].week)
-        }
-      } catch (_err) {
-        if (!mounted) return
-        setReports([])
-        setHasGvhd(true)
-        setIsInternshipApproved(true)
-        setInternshipInfo(null)
-      } finally {
-        if (mounted) {
-          setLoading(false)
-        }
-      }
+    if (selectedWeek === null && reports.length > 0) {
+      setSelectedWeek(reports[0].week)
     }
-    load()
+  }, [reports, selectedWeek])
 
+  // Sự kiện realtime chỉ cần đánh dấu cache cũ (invalidate) — react-query tự refetch lại,
+  // không cần tự viết lại hàm load() thủ công như trước.
+  useEffect(() => {
     const handleSync = () => {
-      load()
+      queryClient.invalidateQueries({ queryKey: REPORTS_KEY })
+      queryClient.invalidateQueries({ queryKey: DASHBOARD_KEY })
     }
     window.addEventListener('realtime-group-updated', handleSync)
     window.addEventListener('realtime-topic-updated', handleSync)
 
     return () => {
-      mounted = false
       window.removeEventListener('realtime-group-updated', handleSync)
       window.removeEventListener('realtime-topic-updated', handleSync)
     }
-  }, [])
+  }, [queryClient])
 
   // Prefill form when week changes (for editing/updating existing reports)
   useEffect(() => {
     if (!submitOpen) return
     const wNum = Number(submitForm.week)
     if (!wNum) return
+    setSelectedFile(null)
     const existing = reports.find((r) => r.week === wNum)
     if (existing && existing.status === 'Đã nộp') {
       setSubmitForm((current) => ({
@@ -174,27 +147,18 @@ export default function StudentReportsTTTNPage() {
       fileName: '',
       fileUrl: '',
     })
+    setSelectedFile(null)
     setSubmitOpen(true)
   }
 
-  const handleUploadFile = async (e: ChangeEvent<HTMLInputElement>) => {
+  // Chỉ giữ file cục bộ ở đây, chưa gửi lên server — file thật sự chỉ được tải lên
+  // khi sinh viên bấm "Gửi nhật ký" (handleSubmitReport), tránh trường hợp file mồ côi
+  // trên storage nếu sinh viên chọn file rồi đóng modal mà không nộp.
+  const handleUploadFile = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    setUploadingFile(true)
-    try {
-      const res = await uploadApi.uploadFile(file)
-      if (res?.cloudFrontUrl) {
-        setSubmitForm((current) => ({ ...current, fileName: file.name, fileUrl: res.cloudFrontUrl }))
-        message.success('Tải file lên thành công!')
-      } else {
-        message.error('Tải file lên thất bại!')
-      }
-    } catch (err: unknown) {
-      const errorMsg = (err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Tải file lên thất bại!'
-      message.error(errorMsg)
-    } finally {
-      setUploadingFile(false)
-    }
+    setSelectedFile(file)
+    setSubmitForm((current) => ({ ...current, fileName: file.name }))
   }
 
   const handleSubmitReport = async () => {
@@ -217,28 +181,41 @@ export default function StudentReportsTTTNPage() {
       return
     }
 
+    setSubmitting(true)
     try {
-      setLoading(true)
+      let fileUrl = submitForm.fileUrl
+      let fileName = submitForm.fileName
+
+      // Chỉ tải file lên storage ngay lúc gửi, gộp cùng một lần với dữ liệu báo cáo
+      if (selectedFile) {
+        const res = await uploadApi.uploadFile(selectedFile)
+        if (!res?.cloudFrontUrl) {
+          message.error('Tải file đính kèm lên thất bại!')
+          return
+        }
+        fileUrl = res.cloudFrontUrl
+        fileName = selectedFile.name
+      }
+
       const nextReport = await studentApi.submitTttnReport({
         week: nextWeek,
         title,
         note,
-        file: submitForm.fileUrl || undefined,
-        fileName: submitForm.fileName || undefined
+        file: fileUrl || undefined,
+        fileName: fileName || undefined
       })
 
-      setReports((current) => {
-        const withoutWeek = current.filter((report) => report.week !== nextReport.week)
-        return [nextReport, ...withoutWeek]
-      })
+      // Thao tác do chính mình vừa làm — invalidate ngay, không chờ realtime hay hết staleTime.
+      queryClient.invalidateQueries({ queryKey: REPORTS_KEY })
       setSelectedWeek(nextReport.week)
       setSubmitOpen(false)
+      setSelectedFile(null)
       message.success('Nộp nhật ký thành công!')
     } catch (err: unknown) {
       const errorMsg = (err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Có lỗi xảy ra khi nộp báo cáo.'
       message.error(errorMsg)
     } finally {
-      setLoading(false)
+      setSubmitting(false)
     }
   }
 
@@ -519,10 +496,10 @@ export default function StudentReportsTTTNPage() {
         onClose={() => setSubmitOpen(false)}
         footer={
           <>
-            <StudentButton variant="secondary" onClick={() => setSubmitOpen(false)}>{COMMON_LABELS.CANCEL}</StudentButton>
-            <StudentButton variant="primary" onClick={handleSubmitReport}>
+            <StudentButton variant="secondary" disabled={submitting} onClick={() => setSubmitOpen(false)}>{COMMON_LABELS.CANCEL}</StudentButton>
+            <StudentButton variant="primary" disabled={submitting} onClick={handleSubmitReport}>
               <Upload className="h-4 w-4" />
-              Gửi nhật ký
+              {submitting ? 'Đang gửi...' : 'Gửi nhật ký'}
             </StudentButton>
           </>
         }
@@ -567,23 +544,21 @@ export default function StudentReportsTTTNPage() {
                 <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center">
                   <Upload className="h-8 w-8 text-slate-400 mb-2" />
                   <p className="text-sm text-slate-500 font-medium">
-                    {uploadingFile
-                      ? 'Đang tải file lên...'
-                      : submitForm.fileName
+                    {submitForm.fileName
                       ? `Đã chọn: ${submitForm.fileName}`
                       : 'Kéo thả hoặc nhấp để chọn file nhật ký'}
                   </p>
-                  <p className="text-xs text-slate-400 mt-1">Hỗ trợ PDF, Word, ZIP (tối đa 20MB)</p>
+                  <p className="text-xs text-slate-400 mt-1">Hỗ trợ PDF, Word (tối đa 20MB) — file chỉ được gửi lên khi bạn bấm &quot;Gửi nhật ký&quot;</p>
                 </div>
                 <input
                   type="file"
                   className="hidden"
-                  disabled={uploadingFile}
+                  disabled={submitting}
                   onChange={handleUploadFile}
                 />
               </label>
             </div>
-            {submitForm.fileUrl && (
+            {submitForm.fileUrl && !selectedFile && (
               <div className="mt-2 text-right">
                 <a
                   href={submitForm.fileUrl}

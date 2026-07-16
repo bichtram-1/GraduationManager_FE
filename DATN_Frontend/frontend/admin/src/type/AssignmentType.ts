@@ -16,6 +16,7 @@ interface IBaseAssignment {
   hasIneligibleMember?: boolean;
   hasTopic?: boolean;
   topicStatus?: 'approved' | 'no_registration' | 'all_rejected' | 'pending_registration' | null;
+  dieuKienLamDoAn?: string;
 }
 
 export type IListAssignment = IBaseAssignment & {

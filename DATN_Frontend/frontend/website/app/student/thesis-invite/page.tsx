@@ -5,7 +5,7 @@ import { CheckCircle2, Clock3, Mail, Plus, XCircle } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
 import { StudentPill, StudentSectionHeader } from '../_components/StudentShell'
 import { StudentButton, StudentModal } from '../_components/StudentUI'
-import { studentApi, IThesisRegistration } from '@/lib/api/studentApi'
+import { studentApi, IThesisRegistration, IStudentSearchResult } from '@/lib/api/studentApi'
 import { usePeriod } from '@/lib/providers/PeriodProvider'
 import { COMMON_LABELS } from '@/constants/commonLabels'
 import { App, Spin } from 'antd'
@@ -64,9 +64,12 @@ export default function InvitePage() {
     }
     return { isOpen, isClosed }
   }, [selectedPeriod])
-  const isActionDisabled = isPeriodLocked || !isRegistrationTime.isOpen || isRegistrationTime.isClosed
+  const isPeriodDisabled = isPeriodLocked || !isRegistrationTime.isOpen || isRegistrationTime.isClosed
+  const isActionDisabled = isPeriodDisabled
 
   const [newId, setNewId] = useState('')
+  const [suggestions, setSuggestions] = useState<IStudentSearchResult[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
   const [outgoingInvites, setOutgoingInvites] = useState<Invite[]>([])
   const [incomingInvites, setIncomingInvites] = useState<Invite[]>([])
   const [registration, setRegistration] = useState<IThesisRegistration | null>(null)
@@ -80,10 +83,56 @@ export default function InvitePage() {
   const incomingCount = incomingInvites.length
   const pendingOutgoing = useMemo(() => outgoingInvites.filter((item) => item.status === 'pending').length, [outgoingInvites])
 
+  const isInviteDisabled = useMemo(() => {
+    if (isPeriodDisabled) return true
+    if (!registration) return false
+
+    const currentMember = registration.members?.find(m => m.isCurrent)
+    const isLeader = !currentMember || currentMember.isLeader
+    const groupMembersCount = registration.members?.length || 0
+    const isGroupFull = (groupMembersCount + pendingOutgoing) >= 2
+    const isTopicDuyet = registration.status === 'accepted' || registration.status === 'rejected'
+
+    return !isLeader || isGroupFull || isTopicDuyet
+  }, [isPeriodDisabled, registration, pendingOutgoing])
+
+  // Gõ tới đâu tìm tới đó (giống cơ chế tìm kiếm ở trang Quản lý đề tài bên admin),
+  // nhập tên hoặc mã số sinh viên đều tìm được.
+  useEffect(() => {
+    const keyword = newId.trim()
+    if (!keyword) {
+      setSuggestions([])
+      setShowSuggestions(false)
+      return
+    }
+    let mounted = true
+    const handler = setTimeout(async () => {
+      try {
+        const res = await studentApi.searchStudents(keyword)
+        if (!mounted) return
+        setSuggestions(res)
+        setShowSuggestions(true)
+      } catch (_err) {
+        if (!mounted) return
+        setSuggestions([])
+      }
+    }, 300)
+    return () => {
+      mounted = false
+      clearTimeout(handler)
+    }
+  }, [newId])
+
+  const selectSuggestion = (student: IStudentSearchResult) => {
+    setNewId(student.code)
+    setSuggestions([])
+    setShowSuggestions(false)
+  }
+
   useEffect(() => {
     let mounted = true
-    setLoading(true)
-    async function load() {
+    const load = async (showLoading = true) => {
+      if (showLoading) setLoading(true)
       try {
         const [outgoingData, incomingData, regData] = await Promise.all([
           studentApi.getOutgoingInvitations(selectedPeriod?.id),
@@ -100,28 +149,39 @@ export default function InvitePage() {
         setIncomingInvites([])
         setRegistration(null)
       } finally {
-        if (mounted) {
+        if (mounted && showLoading) {
           setLoading(false)
         }
       }
     }
-    load()
+
+    load(true)
+
+    const handleSync = () => {
+      load(false)
+    }
+
+    window.addEventListener('realtime-group-updated', handleSync)
+    window.addEventListener('realtime-topic-updated', handleSync)
+
     return () => {
       mounted = false
+      window.removeEventListener('realtime-group-updated', handleSync)
+      window.removeEventListener('realtime-topic-updated', handleSync)
     }
   }, [selectedPeriod?.id])
 
   const addInvite = async () => {
     const id = newId.trim()
     if (!id) {
-      message.error('Vui lòng nhập mã số sinh viên!')
+      message.error('Vui lòng nhập mã số sinh viên hoặc họ tên!')
       return
     }
-    if (!/^[a-zA-Z0-9]{5,15}$/.test(id)) {
-      message.error('Mã số sinh viên không hợp lệ (chỉ chứa chữ và số, độ dài từ 5-15 ký tự)!')
+    if (id.length < 2 || id.length > 50) {
+      message.error('Họ tên hoặc mã số sinh viên không hợp lệ (độ dài từ 2-50 ký tự)!')
       return
     }
-    if (outgoingInvites.some((item) => item.id === id && item.status === 'pending')) {
+    if (outgoingInvites.some((item) => item.id.toLowerCase() === id.toLowerCase() && item.status === 'pending')) {
       message.warning('Sinh viên này đã được mời, đang chờ phản hồi!')
       setNewId('')
       return
@@ -295,10 +355,17 @@ export default function InvitePage() {
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
             {registration.members?.map((member) => (
-              <span key={member.studentCode} className="inline-flex items-center gap-1.5 rounded-xl bg-white border border-emerald-200 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm">
+              <span key={member.studentCode} className="inline-flex items-center gap-2 rounded-xl bg-white border border-emerald-200 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                 <span className="font-semibold text-slate-900">{member.name}</span>
                 <span className="text-slate-400">({member.studentCode})</span>
+                <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-bold ${
+                  member.isLeader 
+                    ? 'bg-blue-50 text-blue-700 border border-blue-200' 
+                    : 'bg-slate-50 text-slate-600 border border-slate-200'
+                }`}>
+                  {member.isLeader ? 'Trưởng nhóm' : 'Thành viên'}
+                </span>
               </span>
             ))}
           </div>
@@ -343,22 +410,48 @@ export default function InvitePage() {
               </div>
             </div>
 
-            <div className="flex gap-2">
+            <div className="relative flex gap-2">
               <input
                 value={newId}
                 onChange={(event) => setNewId(event.target.value)}
-                placeholder="Nhập MSSV thành viên, ví dụ 20520005"
-                disabled={isActionDisabled}
+                onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                placeholder="Nhập MSSV hoặc họ tên thành viên..."
+                disabled={isInviteDisabled}
+                autoComplete="off"
                 className="flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-white disabled:cursor-not-allowed disabled:opacity-60"
               />
               <button
                 onClick={addInvite}
-                disabled={isActionDisabled}
+                disabled={isInviteDisabled}
                 className="inline-flex items-center gap-2 rounded-2xl bg-[#2196F3] px-4 py-2 text-white shadow-lg shadow-blue-200 transition hover:bg-[#1976D2] disabled:cursor-not-allowed disabled:bg-slate-300"
               >
                 <Plus className="h-4 w-4" />
                 Thêm
               </button>
+
+              {showSuggestions && suggestions.length > 0 && (
+                <div className="absolute left-0 right-14 top-full z-10 mt-1 max-h-64 overflow-y-auto rounded-2xl border border-slate-200 bg-white py-1.5 shadow-lg">
+                  {suggestions.map((student) => (
+                    <button
+                      type="button"
+                      key={student.code}
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => selectSuggestion(student)}
+                      className="flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left transition hover:bg-blue-50"
+                    >
+                      <span className="text-sm font-semibold text-slate-900">{student.name}</span>
+                      <span className="text-xs text-slate-500">MSSV: {student.code}{student.className ? ` • Lớp: ${student.className}` : ''}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {showSuggestions && newId.trim() && suggestions.length === 0 && (
+                <div className="absolute left-0 right-14 top-full z-10 mt-1 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-400 shadow-lg">
+                  Không tìm thấy sinh viên phù hợp.
+                </div>
+              )}
             </div>
 
             <div className="max-h-96 space-y-2 overflow-y-auto pr-1">
