@@ -111,28 +111,6 @@ export default function TeacherGroupsPage() {
         actions={<TeacherBadge type="info">{pendingCount} nhóm chờ duyệt</TeacherBadge>}
       />
 
-      <div className="mb-4 flex flex-wrap gap-2 rounded-[28px] border border-slate-200 bg-white p-2 shadow-[0_12px_40px_rgba(15,23,42,0.05)]">
-        {[
-          { key: 'all', label: 'Tất cả', count: groups.length },
-          { key: 'pending', label: 'Chờ duyệt', count: pendingCount },
-          { key: 'accepted', label: 'Đã chấp nhận', count: acceptedCount },
-          { key: 'rejected', label: 'Đã từ chối', count: rejectedCount },
-        ].map((tab) => {
-          const active = statusFilter === tab.key
-          return (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => setStatusFilter(tab.key as typeof statusFilter)}
-              className={`inline-flex items-center gap-2 rounded-[20px] px-4 py-2.5 text-sm font-medium transition ${active ? 'bg-[#2196F3] text-white shadow-lg shadow-blue-200' : 'text-slate-600 hover:bg-slate-50'}`}
-            >
-              {tab.label}
-              <span className={`rounded-full px-2 py-0.5 text-xs ${active ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'}`}>{tab.count}</span>
-            </button>
-          )
-        })}
-      </div>
-
       <TeacherCard>
         <div className="flex flex-col gap-3 border-b border-slate-200 bg-slate-50 px-5 py-4 sm:flex-row sm:items-center">
           <div className="relative w-full max-w-xs">
@@ -151,6 +129,18 @@ export default function TeacherGroupsPage() {
               className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-[#2196F3] focus:ring-1 focus:ring-[#2196F3]/30"
             />
           </div>
+          <div className="relative w-full max-w-xs">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
+              className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-[#2196F3] focus:ring-1 focus:ring-[#2196F3]/30 cursor-pointer appearance-none pr-8 bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23666666%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-[length:10px_10px] bg-[right_16px_center] bg-no-repeat"
+            >
+              <option value="all">Tất cả ({groups.length})</option>
+              <option value="pending">Chờ duyệt ({pendingCount})</option>
+              <option value="accepted">Đã chấp nhận ({acceptedCount})</option>
+              <option value="rejected">Đã từ chối ({rejectedCount})</option>
+            </select>
+          </div>
           <div className="ml-auto flex flex-wrap items-center gap-2">
             <TeacherBadge type="info">Tất cả đề tài</TeacherBadge>
             <TeacherBadge type="warning">{pendingCount} chờ duyệt</TeacherBadge>
@@ -164,7 +154,7 @@ export default function TeacherGroupsPage() {
                 <th className="px-5 py-3 text-center w-12 font-semibold">STT</th>
                 <th className="px-5 py-3 text-center font-semibold">Đề tài</th>
                 <th className="px-5 py-3 text-center font-semibold">MSSV</th>
-                <th className="px-5 py-3 text-center font-semibold">Thành viên</th>
+                <th className="px-5 py-3 text-center font-semibold">SVTH</th>
                 <th className="px-5 py-3 text-center font-semibold">Lớp</th>
                 <th className="px-5 py-3 text-center font-semibold">Trạng thái</th>
                 <th className="px-5 py-3 text-center font-semibold">Hành động</th>
@@ -196,22 +186,24 @@ export default function TeacherGroupsPage() {
                         </div>
                       </td>
                       <td className="px-5 py-4 text-slate-800 font-medium text-center">
-                        <div className="flex flex-col gap-1 items-center">
-                          {group.membersList?.map((member) => (
-                            <span key={member.code} className={member.la_truong_nhom === 1 ? 'font-bold text-slate-900' : ''}>
-                              {member.name}
-                            </span>
-                          ))}
+                        <div className="flex flex-col items-center gap-1">
+                          {group.membersList?.map((member) => {
+                            const isLeader = member.la_truong_nhom === 1
+                            return (
+                              <span
+                                key={member.code}
+                                className={`whitespace-nowrap inline-flex items-center gap-1 ${isLeader ? 'font-bold text-blue-600' : 'text-slate-700 font-medium'}`}
+                              >
+                                {member.name}
+                              </span>
+                            )
+                          })}
                         </div>
                       </td>
-                      <td className="px-5 py-4 text-slate-600 text-center">
-                        <div className="flex flex-col gap-1 items-center">
-                          {group.membersList?.map((member) => (
-                            <span key={member.code}>{member.className || '—'}</span>
-                          ))}
-                        </div>
+                      <td className="px-5 py-4 text-slate-600 text-center whitespace-nowrap">
+                        {Array.from(new Set(group.membersList?.map((member) => member.className).filter(Boolean) || [])).join(', ') || '—'}
                       </td>
-                      <td className="px-5 py-4 text-center">
+                      <td className="px-5 py-4 text-center whitespace-nowrap">
                         <TeacherBadge type={APPROVAL_STATUS_META[group.status].badge}>
                           {APPROVAL_STATUS_META[group.status].label}
                         </TeacherBadge>

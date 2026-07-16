@@ -337,23 +337,23 @@ export default function Page() {
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-slate-600">
             <tr>
-              <th className="px-5 py-3 text-center w-16">STT</th>
-              <th className="px-5 py-3 text-center">Tên đề tài</th>
-              <th className="px-5 py-3 text-center w-28">Số lượng</th>
-              <th className="px-5 py-3 text-center w-32">Đã đăng kí</th>
-              <th className="px-5 py-3 text-center w-1/3">Mô tả</th>
-              <th className="px-5 py-3 text-center w-36">Trạng thái</th>
-              <th className="px-5 py-3 text-center w-36">Hành động</th>
+              <th className="px-5 py-3 text-center w-14 font-semibold">STT</th>
+              <th className="px-5 py-3 text-center w-1/3 font-semibold">Tên đề tài</th>
+              <th className="px-5 py-3 text-center w-24 font-semibold">Số lượng</th>
+              <th className="px-5 py-3 text-center w-44 font-semibold">Đã đăng kí</th>
+              <th className="px-5 py-3 text-center w-52 font-semibold">Mô tả</th>
+              <th className="px-5 py-3 text-center w-32 font-semibold">Trạng thái</th>
+              <th className="px-5 py-3 text-center w-32 font-semibold">Hành động</th>
             </tr>
           </thead>
           <tbody>
             {filtered.map((topic, index) => (
               <tr key={topic.code} className="border-t border-slate-100 transition hover:bg-slate-50/80">
-                <td className="px-5 py-4 text-center font-medium text-slate-500">{index + 1}</td>
-                <td className="px-5 py-4 text-slate-900 font-medium text-left">{topic.name}</td>
-                <td className="px-5 py-4 text-center text-slate-600">{topic.slots.split('/')[1] || topic.slots}</td>
-                <td className="px-5 py-4 text-center text-slate-600">{topic.approvedStudents || 'chưa có'}</td>
-                <td className="px-5 py-4 text-slate-600 max-w-xs truncate text-left" title={topic.summary}>{topic.summary}</td>
+                <td className="px-5 py-4 font-medium text-slate-500 text-center">{index + 1}</td>
+                <td className="px-5 py-4 text-slate-900 font-medium">{topic.name}</td>
+                <td className="px-5 py-4 text-slate-600 text-center">{topic.slots.split('/')[1] || topic.slots}</td>
+                <td className="px-5 py-4 text-slate-600 text-center">{topic.approvedStudents || 'chưa có'}</td>
+                <td className="px-5 py-4 text-slate-600 max-w-xs truncate" title={topic.summary}>{topic.summary}</td>
                 <td className="px-5 py-4 text-center">
                   <TeacherPill tone={getTopicStatusTone(topic.status)}>
                     {topic.status}

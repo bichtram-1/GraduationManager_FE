@@ -26,6 +26,96 @@ type ModalCreateEditTopicProps = {
   onImportFile?: (file: File) => void
 }
 
+// Custom Multi-select Dropdown for Directions
+const DirectionSelector = ({ value, onChange }: { value: string; onChange: (val: string) => void }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const options = [
+    { id: 1, label: 'Lập trình di động' },
+    { id: 2, label: 'Lập trình Web' },
+    { id: 3, label: 'Mạng máy tính' },
+  ];
+
+  const selected = useMemo(() => {
+    if (!value) return [];
+    const valClean = value === 'Phát triển phần mềm' ? 'Lập trình Web' : value;
+    return valClean.split(',').map(s => s.trim()).filter(Boolean);
+  }, [value]);
+
+  const handleToggleOption = (label: string) => {
+    let nextSelected = [...selected];
+    if (nextSelected.includes(label)) {
+      nextSelected = nextSelected.filter(item => item !== label);
+    } else {
+      if (nextSelected.length >= 2) return;
+      nextSelected.push(label);
+    }
+    onChange(nextSelected.join(', '));
+  };
+
+  const isWebOrMobileSelected = selected.includes('Lập trình Web') || selected.includes('Lập trình di động');
+  const isNetSelected = selected.includes('Mạng máy tính');
+
+  const getOptionDisabled = (label: string) => {
+    if (label === 'Mạng máy tính') {
+      return isWebOrMobileSelected;
+    }
+    if (label === 'Lập trình Web' || label === 'Lập trình di động') {
+      return isNetSelected;
+    }
+    return false;
+  };
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-left text-sm text-slate-700 shadow-sm outline-none focus:border-[#1976D2] focus:ring-1 focus:ring-[#1976D2] flex justify-between items-center transition"
+      >
+        <span className="truncate">
+          {selected.length > 0 ? selected.join(', ') : 'Chọn hướng đề tài (tối đa 2)'}
+        </span>
+        <svg className={`h-4 w-4 text-slate-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {isOpen && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
+          <div className="absolute left-0 right-0 mt-2 z-20 rounded-2xl border border-slate-200 bg-white py-2 shadow-lg max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-1 duration-150">
+            {options.map(opt => {
+              const isSelected = selected.includes(opt.label);
+              const isDisabled = getOptionDisabled(opt.label);
+              return (
+                <label
+                  key={opt.id}
+                  className={`flex items-center gap-3 px-4 py-2.5 text-sm cursor-pointer transition select-none ${
+                    isDisabled 
+                      ? 'opacity-40 cursor-not-allowed bg-slate-50 text-slate-400' 
+                      : 'hover:bg-slate-50 text-slate-700'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    disabled={isDisabled}
+                    onChange={() => handleToggleOption(opt.label)}
+                    className="h-4 w-4 rounded border-slate-300 text-[#1976D2] focus:ring-[#1976D2] cursor-pointer disabled:cursor-not-allowed"
+                  />
+                  <span className={isSelected ? 'font-medium text-slate-900' : ''}>
+                    {opt.label}
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
 export default function ModalCreateEditTopic(props: ModalCreateEditTopicProps) {
   const {
     open,
@@ -182,15 +272,9 @@ export default function ModalCreateEditTopic(props: ModalCreateEditTopicProps) {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <TeacherField label="Hướng đề tài" required>
-            <select
-              value={direction}
-              onChange={(e) => onChangeDirection(e.target.value)}
-              className={TeacherInputClass()}
-            >
-              <option value="Phát triển phần mềm">Phát triển phần mềm</option>
-              <option value="Mạng máy tính">Mạng máy tính</option>
-            </select>
+            <DirectionSelector value={direction} onChange={onChangeDirection} />
           </TeacherField>
+
 
           <TeacherField label="Số lượng thành viên tối đa" required>
             <input
