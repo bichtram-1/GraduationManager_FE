@@ -41,7 +41,8 @@ export default function StudentReportsTTTNPage() {
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [submitOpen, setSubmitOpen] = useState(false)
-  const [uploadingFile, setUploadingFile] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [submitting, setSubmitting] = useState(false)
   const [submitForm, setSubmitForm] = useState<{
     week: string
     title: string
@@ -110,6 +111,7 @@ export default function StudentReportsTTTNPage() {
     if (!submitOpen) return
     const wNum = Number(submitForm.week)
     if (!wNum) return
+    setSelectedFile(null)
     const existing = reports.find((r) => r.week === wNum)
     if (existing && existing.status === 'Đã nộp') {
       setSubmitForm((current) => ({
@@ -174,27 +176,18 @@ export default function StudentReportsTTTNPage() {
       fileName: '',
       fileUrl: '',
     })
+    setSelectedFile(null)
     setSubmitOpen(true)
   }
 
-  const handleUploadFile = async (e: ChangeEvent<HTMLInputElement>) => {
+  // Chỉ giữ file cục bộ ở đây, chưa gửi lên server — file thật sự chỉ được tải lên
+  // khi sinh viên bấm "Gửi nhật ký" (handleSubmitReport), tránh trường hợp file mồ côi
+  // trên storage nếu sinh viên chọn file rồi đóng modal mà không nộp.
+  const handleUploadFile = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    setUploadingFile(true)
-    try {
-      const res = await uploadApi.uploadFile(file)
-      if (res?.cloudFrontUrl) {
-        setSubmitForm((current) => ({ ...current, fileName: file.name, fileUrl: res.cloudFrontUrl }))
-        message.success('Tải file lên thành công!')
-      } else {
-        message.error('Tải file lên thất bại!')
-      }
-    } catch (err: unknown) {
-      const errorMsg = (err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Tải file lên thất bại!'
-      message.error(errorMsg)
-    } finally {
-      setUploadingFile(false)
-    }
+    setSelectedFile(file)
+    setSubmitForm((current) => ({ ...current, fileName: file.name }))
   }
 
   const handleSubmitReport = async () => {
@@ -217,14 +210,28 @@ export default function StudentReportsTTTNPage() {
       return
     }
 
+    setSubmitting(true)
     try {
-      setLoading(true)
+      let fileUrl = submitForm.fileUrl
+      let fileName = submitForm.fileName
+
+      // Chỉ tải file lên storage ngay lúc gửi, gộp cùng một lần với dữ liệu báo cáo
+      if (selectedFile) {
+        const res = await uploadApi.uploadFile(selectedFile)
+        if (!res?.cloudFrontUrl) {
+          message.error('Tải file đính kèm lên thất bại!')
+          return
+        }
+        fileUrl = res.cloudFrontUrl
+        fileName = selectedFile.name
+      }
+
       const nextReport = await studentApi.submitTttnReport({
         week: nextWeek,
         title,
         note,
-        file: submitForm.fileUrl || undefined,
-        fileName: submitForm.fileName || undefined
+        file: fileUrl || undefined,
+        fileName: fileName || undefined
       })
 
       setReports((current) => {
@@ -233,12 +240,13 @@ export default function StudentReportsTTTNPage() {
       })
       setSelectedWeek(nextReport.week)
       setSubmitOpen(false)
+      setSelectedFile(null)
       message.success('Nộp nhật ký thành công!')
     } catch (err: unknown) {
       const errorMsg = (err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Có lỗi xảy ra khi nộp báo cáo.'
       message.error(errorMsg)
     } finally {
-      setLoading(false)
+      setSubmitting(false)
     }
   }
 
@@ -519,10 +527,10 @@ export default function StudentReportsTTTNPage() {
         onClose={() => setSubmitOpen(false)}
         footer={
           <>
-            <StudentButton variant="secondary" onClick={() => setSubmitOpen(false)}>{COMMON_LABELS.CANCEL}</StudentButton>
-            <StudentButton variant="primary" onClick={handleSubmitReport}>
+            <StudentButton variant="secondary" disabled={submitting} onClick={() => setSubmitOpen(false)}>{COMMON_LABELS.CANCEL}</StudentButton>
+            <StudentButton variant="primary" disabled={submitting} onClick={handleSubmitReport}>
               <Upload className="h-4 w-4" />
-              Gửi nhật ký
+              {submitting ? 'Đang gửi...' : 'Gửi nhật ký'}
             </StudentButton>
           </>
         }
@@ -567,23 +575,21 @@ export default function StudentReportsTTTNPage() {
                 <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center">
                   <Upload className="h-8 w-8 text-slate-400 mb-2" />
                   <p className="text-sm text-slate-500 font-medium">
-                    {uploadingFile
-                      ? 'Đang tải file lên...'
-                      : submitForm.fileName
+                    {submitForm.fileName
                       ? `Đã chọn: ${submitForm.fileName}`
                       : 'Kéo thả hoặc nhấp để chọn file nhật ký'}
                   </p>
-                  <p className="text-xs text-slate-400 mt-1">Hỗ trợ PDF, Word, ZIP (tối đa 20MB)</p>
+                  <p className="text-xs text-slate-400 mt-1">Hỗ trợ PDF, Word (tối đa 20MB) — file chỉ được gửi lên khi bạn bấm &quot;Gửi nhật ký&quot;</p>
                 </div>
                 <input
                   type="file"
                   className="hidden"
-                  disabled={uploadingFile}
+                  disabled={submitting}
                   onChange={handleUploadFile}
                 />
               </label>
             </div>
-            {submitForm.fileUrl && (
+            {submitForm.fileUrl && !selectedFile && (
               <div className="mt-2 text-right">
                 <a
                   href={submitForm.fileUrl}

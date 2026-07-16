@@ -1,11 +1,13 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { CalendarDays, CheckCircle2, Trophy, Users } from 'lucide-react'
 import { TeacherPill, TeacherSectionHeader, TeacherStatCard } from './_components/TeacherShell'
 import { getTopicStatusTone } from './_components/TeacherUI'
 import { usePeriod } from '@/lib/providers/PeriodProvider'
 import { teacherApi } from '@/lib/api/teacherApi'
+import { Skeleton } from 'antd'
 
 interface ITopicItem {
   id?: string | number;
@@ -42,85 +44,55 @@ interface ICouncilItem {
   room?: string;
 }
 
+const DASHBOARD_KEY = ['teacher-dashboard']
+const STUDENTS_KEY = ['teacher-students']
+const GRADING_KEY = ['teacher-grading']
+
 export default function TeacherIndexPage() {
   const { selectedPeriod } = usePeriod()
-  const [stats, setStats] = useState({ topics: 0, tttn: 0, datn: 0, councils: 0 })
-  const [topics, setTopics] = useState<ITopicItem[]>([])
-  const [tttnList, setTttnList] = useState<ITttnItem[]>([])
-  const [datnList, setDatnList] = useState<IDatnGroupItem[]>([])
-  const [councilsList, setCouncilsList] = useState<ICouncilItem[]>([])
-  const [loading, setLoading] = useState(false)
+  const queryClient = useQueryClient()
 
-  const load = () => {
-    let mounted = true
-    setLoading(true)
+  const dashboardQuery = useQuery({
+    queryKey: [...DASHBOARD_KEY, selectedPeriod?.id],
+    queryFn: () => teacherApi.getDashboardData({ periodId: selectedPeriod?.id }),
+  })
+  const studentsQuery = useQuery({
+    queryKey: [...STUDENTS_KEY, selectedPeriod?.id],
+    queryFn: () => teacherApi.getStudents({ periodId: selectedPeriod?.id }),
+  })
+  const gradingQuery = useQuery({
+    queryKey: [...GRADING_KEY, selectedPeriod?.id],
+    queryFn: () => teacherApi.getGradingData({ periodId: selectedPeriod?.id }),
+  })
 
-    Promise.all([
-      teacherApi.getDashboardData({ periodId: selectedPeriod?.id }),
-      teacherApi.getStudents({ periodId: selectedPeriod?.id }),
-      teacherApi.getGradingData({ periodId: selectedPeriod?.id })
-    ])
-      .then(([dashRes, studentsRes, gradingRes]) => {
-        if (!mounted) return
+  const loading = dashboardQuery.isLoading || studentsQuery.isLoading || gradingQuery.isLoading
 
-        if (dashRes?.success) {
-          setStats(dashRes.stats)
-          setTopics(dashRes.topics || [])
-        } else {
-          setStats({ topics: 0, tttn: 0, datn: 0, councils: 0 })
-          setTopics([])
-        }
+  const dashRes = dashboardQuery.data
+  const studentsRes = studentsQuery.data
+  const gradingRes = gradingQuery.data
 
-        if (studentsRes?.success) {
-          setTttnList(studentsRes.tttn || [])
-          setDatnList(studentsRes.datn || [])
-        } else {
-          setTttnList([])
-          setDatnList([])
-        }
-
-        if (gradingRes?.councilGroups) {
-          setCouncilsList(gradingRes.councilGroups || [])
-        } else {
-          setCouncilsList([])
-        }
-      })
-      .catch((err) => {
-        console.error('Error loading dashboard data:', err)
-        if (mounted) {
-          setStats({ topics: 0, tttn: 0, datn: 0, councils: 0 })
-          setTopics([])
-          setTttnList([])
-          setDatnList([])
-          setCouncilsList([])
-        }
-      })
-      .finally(() => {
-        if (mounted) setLoading(false)
-      })
-
-    return () => {
-      mounted = false
-    }
-  }
+  const stats = dashRes?.success ? dashRes.stats : { topics: 0, tttn: 0, datn: 0, councils: 0 }
+  const topics: ITopicItem[] = dashRes?.success ? (dashRes.topics || []) : []
+  const tttnList: ITttnItem[] = studentsRes?.success ? (studentsRes.tttn || []) : []
+  const datnList: IDatnGroupItem[] = studentsRes?.success ? (studentsRes.datn || []) : []
+  const councilsList: ICouncilItem[] = gradingRes?.councilGroups || []
 
   useEffect(() => {
-    const cleanup = load()
-
     const handleSync = () => {
-      load()
+      queryClient.invalidateQueries({ queryKey: DASHBOARD_KEY })
+      queryClient.invalidateQueries({ queryKey: STUDENTS_KEY })
+      queryClient.invalidateQueries({ queryKey: GRADING_KEY })
     }
     window.addEventListener('realtime-group-updated', handleSync)
     window.addEventListener('realtime-topic-updated', handleSync)
     window.addEventListener('realtime-assignment-published', handleSync)
 
     return () => {
-      cleanup()
       window.removeEventListener('realtime-group-updated', handleSync)
       window.removeEventListener('realtime-topic-updated', handleSync)
       window.removeEventListener('realtime-assignment-published', handleSync)
     }
-  }, [selectedPeriod?.id])
+  }, [queryClient])
 
   // Tự động sinh danh sách việc cần xử lý dựa trên dữ liệu thực tế
   const getDynamicReminders = () => {
@@ -142,12 +114,6 @@ export default function TeacherIndexPage() {
     const pendingTopics = topics.filter(t => t.status === 'Chờ duyệt')
     if (pendingTopics.length > 0) {
       list.push(`Đề xuất "${pendingTopics[0].name.substring(0, 30)}..." của bạn hiện đang chờ phê duyệt.`)
-    }
-
-    // Nếu không có công việc nào tồn đọng
-    if (list.length === 0) {
-      list.push('Đã hoàn thành đánh giá toàn bộ báo cáo tiến độ tuần này.')
-      list.push('Kiểm tra và đôn đốc các sinh viên hoàn thiện tiến độ đúng thời hạn.')
     }
 
     return list
@@ -190,10 +156,6 @@ export default function TeacherIndexPage() {
 
   // Tính toán các chỉ số tức thì dựa trên dữ liệu thực tế
   const totalTttnStudents = tttnList.length
-  const submittedTttn = tttnList.filter(s => s.status === 'Đã nộp').length
-  const tttnSubmissionRate = totalTttnStudents > 0 ? Math.round((submittedTttn / totalTttnStudents) * 100) : 0
-
-  const totalDatnStudents = datnList.reduce((acc, g) => acc + (g.members_list?.length || g.members || 0), 0)
 
   return (
     <>
@@ -203,10 +165,20 @@ export default function TeacherIndexPage() {
       />
 
       <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <TeacherStatCard title="Đề tài" value={String(stats.topics)} hint="Đề tài đã đề xuất" accent="blue" />
-        <TeacherStatCard title="TTTN" value={String(stats.tttn)} hint="Sinh viên đang hướng dẫn" accent="green" />
-        <TeacherStatCard title="ĐATN" value={String(stats.datn)} hint="Nhóm chấm phản biện" accent="orange" />
-        <TeacherStatCard title="Hội đồng" value={String(stats.councils)} hint="Lịch chấm hội đồng" accent="violet" />
+        {loading ? (
+          Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+              <Skeleton active title={false} paragraph={{ rows: 2 }} />
+            </div>
+          ))
+        ) : (
+          <>
+            <TeacherStatCard title="Đề tài" value={String(stats.topics)} hint="Đề tài đã đề xuất" accent="blue" />
+            <TeacherStatCard title="TTTN" value={String(stats.tttn)} hint="Sinh viên đang hướng dẫn" accent="green" />
+            <TeacherStatCard title="ĐATN" value={String(stats.datn)} hint="Nhóm chấm phản biện" accent="orange" />
+            <TeacherStatCard title="Hội đồng" value={String(stats.councils)} hint="Lịch chấm hội đồng" accent="violet" />
+          </>
+        )}
       </div>
 
       <div className="grid gap-6 xl:grid-cols-3">
@@ -219,8 +191,13 @@ export default function TeacherIndexPage() {
               </div>
               <TeacherPill tone="blue">{selectedPeriod?.name || 'Học kỳ hiện tại'}</TeacherPill>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[600px]">
+            {loading ? (
+              <div className="p-5">
+                <Skeleton active paragraph={{ rows: 4 }} />
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm min-w-[600px]">
                 <thead className="bg-slate-50 text-slate-600">
                   <tr>
                     <th className="px-5 py-3 text-left w-16">STT</th>
@@ -231,11 +208,7 @@ export default function TeacherIndexPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {loading ? (
-                    <tr>
-                      <td colSpan={5} className="px-5 py-8 text-center text-slate-500">Đang tải danh sách đề tài...</td>
-                    </tr>
-                  ) : topics.length > 0 ? (
+                  {topics.length > 0 ? (
                     topics.map((topic, index) => (
                       <tr key={topic.code} className="border-t border-slate-100 transition hover:bg-slate-50/80">
                         <td className="px-5 py-4 font-medium text-slate-500">{index + 1}</td>
@@ -270,7 +243,7 @@ export default function TeacherIndexPage() {
             </div>
             <div className="space-y-3 p-5">
               {loading ? (
-                <div className="py-4 text-center text-slate-500 text-sm">Đang tải danh sách công việc cần xử lý...</div>
+                <Skeleton active paragraph={{ rows: 3 }} />
               ) : dynamicReminders.map((item, index) => (
                 <div key={item} className="flex gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
                   <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-full bg-[#eff6ff] text-[#1976D2] font-semibold text-sm">
@@ -297,7 +270,7 @@ export default function TeacherIndexPage() {
             </div>
             <div className="mt-4 space-y-3">
               {loading ? (
-                <div className="py-4 text-center text-slate-500 text-sm">Đang tải lịch tuần...</div>
+                <Skeleton active paragraph={{ rows: 3 }} />
               ) : dynamicTimeline.map(([day, title, time]) => (
                 <div key={title} className="rounded-2xl bg-slate-50 p-4">
                   <div className="flex items-center justify-between text-xs text-slate-500">
@@ -327,8 +300,6 @@ export default function TeacherIndexPage() {
               </div>
             </div>
           </section>
-
-
         </aside>
       </div>
     </>

@@ -17,8 +17,11 @@ import { getKey, I18nKey } from '@shared/types/I18nKeyType';
 import { STATUS_CODE, cn } from '../../constants/commonConst';
 import { formatNumber } from '@shared/utils/numberUtils';
 import { useGlobalVariable } from '../../hooks/GlobalVariableProvider';
+import { useScrollContainer } from '../../hooks/ScrollContainerProvider';
 import { scoreHooks } from '../../hooks/useScores';
 import { useSearchParams } from 'react-router-dom';
+
+const STICKY_PAGINATION_HEIGHT = 57;
 
 type ScoreMode = 'internship' | 'project';
 type ScoreStatus = 'draft' | 'reviewing' | 'finalized';
@@ -69,6 +72,7 @@ const StudentScoresPage: React.FC<Props> = ({ fixedMode }) => {
   const { t } = useTranslation();
 
   const { selectedPeriod } = useGlobalVariable();
+  const scrollContainerRef = useScrollContainer();
   const [searchParams, setSearchParams] = useSearchParams();
   const mode = fixedMode || (searchParams.get('mode') as ScoreMode) || 'internship';
   const setMode = (newMode: ScoreMode) => {
@@ -213,7 +217,7 @@ const StudentScoresPage: React.FC<Props> = ({ fixedMode }) => {
         </Card>
       </div>
 
-      <div className="mb-5 rounded-[20px] border border-slate-100 bg-white px-4 pt-3 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
+      <div className="filter-table-card mb-5 rounded-[20px] border border-slate-100 bg-white px-4 pt-3 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
         {!fixedMode && (
           <Tabs activeKey={mode} onChange={(k) => setMode(k as ScoreMode)} items={[
             { key: 'internship', label: t(getKey('internship_score_management')) },
@@ -255,7 +259,19 @@ const StudentScoresPage: React.FC<Props> = ({ fixedMode }) => {
             </div>
           </div>
 
-          <Table rowKey="id" dataSource={filteredRows} columns={columns} scroll={{ x: 1300 }} loading={isLoading} />
+          <Table
+            rowKey="id"
+            dataSource={filteredRows}
+            columns={columns}
+            scroll={{ x: 1300 }}
+            loading={isLoading}
+            pagination={{ position: ['bottomCenter'] }}
+            sticky={{
+              offsetHeader: 0,
+              offsetScroll: STICKY_PAGINATION_HEIGHT,
+              getContainer: () => scrollContainerRef?.current || window,
+            }}
+          />
         </div>
       </div>
 

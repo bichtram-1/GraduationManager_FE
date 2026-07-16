@@ -67,4 +67,15 @@ export const assignmentHooks = {
       queryFn: () => assignmentApi.getTeachers(periodId),
     });
   },
+
+  useUpdateEligibility: () => {
+    const queryClient = useQueryClient();
+    return useMutation<{ success: boolean; message: string }, AxiosError, { studentId: string; eligibility: 'DAT' | 'CHUA_DAT'; periodId?: string }>({
+      mutationFn: ({ studentId, eligibility, periodId }) => assignmentApi.updateEligibility(studentId, eligibility, periodId),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: [QueryKey.assignments.list] });
+        queryClient.invalidateQueries({ queryKey: [QueryKey.groups.list] });
+      },
+    });
+  },
 };

@@ -1,11 +1,12 @@
-import React, { useMemo } from 'react';
-import { Form, Input, Select, Card } from 'antd';
+import React, { useMemo, useRef } from 'react';
+import { Form, Input, Select, Card, message } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import FilterTable from '../../components/shared/table/FilterTable';
 import ClassForm from './components/ClassForm';
 import { classHooks } from '../../hooks/useClasses';
 import { periodHooks } from '../../hooks/usePeriods';
 import { useGlobalVariable } from '../../hooks/GlobalVariableProvider';
+import { uploadApi } from '../../api/uploadApi';
 import type { IListClass, ICreateClass, IUpdateClass, IDetailClass } from '../../type/ClassType';
 import { useTranslation } from 'react-i18next';
 import { getKey } from '@shared/types/I18nKeyType';
@@ -16,6 +17,9 @@ import dayjs from 'dayjs';
 const ClassesAdminPage = () => {
   const { t } = useTranslation();
   const { selectedPeriod } = useGlobalVariable();
+  // Giữ file Excel/CSV danh sách sinh viên được chọn ở modal tạo lớp — chỉ thật sự
+  // upload lên server trong formatFormValues, ngay lúc submit (xem ClassForm.tsx).
+  const pendingStudentListFileRef = useRef<File | null>(null);
   const { useFetchListClasses, useUpdateClass, useDeleteClass, useCreateClass } = classHooks;
   const { data: classList } = useFetchListClasses();
   const { data: periodsData } = periodHooks.useFetchListPeriods({ page: 1, limit: 100 });
@@ -105,7 +109,7 @@ const ClassesAdminPage = () => {
               </Form.Item>
             </div>
           )}
-          createInfo={{ type: 'modal', modalInfo: { modalContent: <ClassForm />, modalProps: { centered: true, width: 720, title: t(getKey('create_class')) || 'Thêm lớp học mới' }, modalFunc: create as unknown as import('@tanstack/react-query').UseMutationResult<IDetailClass, import('axios').AxiosError, { body: ICreateClass; params: import('@shared/types/GeneralType').BaseListParams }> } }}
+          createInfo={{ type: 'modal', modalInfo: { modalContent: <ClassForm onFileSelected={(file) => { pendingStudentListFileRef.current = file }} />, modalProps: { centered: true, width: 720, title: t(getKey('create_class')) || 'Thêm lớp học mới' }, modalFunc: create as unknown as import('@tanstack/react-query').UseMutationResult<IDetailClass, import('axios').AxiosError, { body: ICreateClass; params: import('@shared/types/GeneralType').BaseListParams }> } }}
           updateInfo={{ type: 'modal', modalInfo: { modalContent: <ClassForm />, modalProps: { centered: true, width: 720, title: t(getKey('edit_class')) }, modalFunc: update as unknown as import('@tanstack/react-query').UseMutationResult<IDetailClass, import('axios').AxiosError, { id: string; body: IUpdateClass; index: number; params: import('@shared/types/GeneralType').BaseListParams }> } }}
           detailInfo={{ type: 'modal', modalInfo: { modalContent: <ClassForm disabled />, modalProps: { centered: true, width: 720, title: t(getKey('detail_class')), footer: null }, modalFunc: classHooks.useFetchDetailClass as unknown as (id: string, enable: boolean) => import('@tanstack/react-query').UseQueryResult<IDetailClass, Error> } }}
           deleteInfo={{ type: 'modal', modalInfo: { modalContent: null, modalProps: {}, modalFunc: del as unknown as import('@tanstack/react-query').UseMutationResult<IListClass, import('axios').AxiosError, { id: string; params: import('@shared/types/GeneralType').BaseListParams }> } }}
@@ -121,13 +125,33 @@ const ClassesAdminPage = () => {
             maxStudents: c?.maxStudents ?? 40,
             status: c?.status ?? STATUS_CODE.ACTIVE_UP,
           })}
-          formatFormValues={(v: any) => ({
-            ...v,
-            members: (v.members ?? []).map((m: any) => ({
-              ...m,
-              dateOfBirth: m.dateOfBirth ? dayjs(m.dateOfBirth).format('YYYY-MM-DD') : undefined,
-            })),
-          } as unknown as ICreateClass)}
+          formatFormValues={async (v: any) => {
+            let studentListUrl = v.studentListUrl;
+            const pendingFile = pendingStudentListFileRef.current;
+
+            // Chỉ thật sự tải file danh sách sinh viên lên server ngay lúc submit —
+            // gộp cùng một lần với việc tạo lớp, tránh file mồ côi nếu admin đóng modal
+            // giữa chừng sau khi chọn file mà chưa tạo lớp.
+            if (pendingFile) {
+              try {
+                studentListUrl = await uploadApi.uploadSingleAndGetUrl(pendingFile, 'users');
+              } catch {
+                message.error('Tải file danh sách sinh viên lên thất bại!');
+                throw new Error('Tải file danh sách sinh viên lên thất bại!');
+              } finally {
+                pendingStudentListFileRef.current = null;
+              }
+            }
+
+            return {
+              ...v,
+              studentListUrl,
+              members: (v.members ?? []).map((m: any) => ({
+                ...m,
+                dateOfBirth: m.dateOfBirth ? dayjs(m.dateOfBirth).format('YYYY-MM-DD') : undefined,
+              })),
+            } as unknown as ICreateClass;
+          }}
           actions={{ isDetail: true, isEdit: true, isDelete: true }}
         />
       </Card>

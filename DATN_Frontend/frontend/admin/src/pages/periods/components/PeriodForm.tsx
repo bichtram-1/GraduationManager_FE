@@ -61,6 +61,18 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
   const externalStudents: ExternalStudent[] = Form.useWatch('externalStudents', form) || [];
   const externalStudentIds: string[] = Form.useWatch('externalStudentIds', form) || [];
   const selectedClassIds: string[] = Form.useWatch('classIds', form) || [];
+  
+  const startDateValue = Form.useWatch('startDate', form);
+  const endDateValue = Form.useWatch('endDate', form);
+  const regOpenDateValue = Form.useWatch('regOpenDate', form);
+  const regDeadlineValue = Form.useWatch('regDeadline', form);
+  const reportStartDateValue = Form.useWatch('reportStartDate', form);
+  const reportDeadlineValue = Form.useWatch('reportDeadline', form);
+  const reviewStartDateValue = Form.useWatch('reviewStartDate', form);
+  const reviewEndDateValue = Form.useWatch('reviewEndDate', form);
+  const defenseStartDateValue = Form.useWatch('defenseStartDate', form);
+  const defenseEndDateValue = Form.useWatch('defenseEndDate', form);
+  const gradingStartDateValue = Form.useWatch('gradingStartDate', form);
 
   // Filter selected classes to check if student is already in them
   const selectedClasses = React.useMemo(() => {
@@ -462,7 +474,14 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
             }),
           ]}
         >
-          <CustomDatePicker disabled={disabled} />
+          <CustomDatePicker
+            disabled={disabled}
+            disabledDate={(current) => {
+              if (!startDateValue || !current) return false;
+              const start = dayjs(startDateValue, DATE_DISPLAY_FORMAT, true);
+              return current.isBefore(start, 'day') || current.isSame(start, 'day');
+            }}
+          />
         </Form.Item>
         {tab === 'datn' && (
           <Form.Item
@@ -490,7 +509,21 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
               }),
             ]}
           >
-            <CustomDatePicker disabled={disabled} />
+            <CustomDatePicker
+              disabled={disabled}
+              disabledDate={(current) => {
+                if (!current) return false;
+                if (startDateValue) {
+                  const start = dayjs(startDateValue, DATE_DISPLAY_FORMAT, true);
+                  if (current.isBefore(start, 'day')) return true;
+                }
+                if (endDateValue) {
+                  const end = dayjs(endDateValue, DATE_DISPLAY_FORMAT, true);
+                  if (current.isAfter(end, 'day') || current.isSame(end, 'day')) return true;
+                }
+                return false;
+              }}
+            />
           </Form.Item>
         )}
 
@@ -519,7 +552,24 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
               }),
             ]}
           >
-            <CustomDatePicker disabled={disabled} />
+            <CustomDatePicker
+              disabled={disabled}
+              disabledDate={(current) => {
+                if (!current) return false;
+                if (regOpenDateValue) {
+                  const regOpen = dayjs(regOpenDateValue, DATE_DISPLAY_FORMAT, true);
+                  if (current.isBefore(regOpen, 'day') || current.isSame(regOpen, 'day')) return true;
+                } else if (startDateValue) {
+                  const start = dayjs(startDateValue, DATE_DISPLAY_FORMAT, true);
+                  if (current.isBefore(start, 'day') || current.isSame(start, 'day')) return true;
+                }
+                if (endDateValue) {
+                  const end = dayjs(endDateValue, DATE_DISPLAY_FORMAT, true);
+                  if (current.isAfter(end, 'day') || current.isSame(end, 'day')) return true;
+                }
+                return false;
+              }}
+            />
           </Form.Item>
         )}
       </div>
@@ -561,7 +611,29 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
             }),
           ]}
         >
-          <CustomDatePicker disabled={disabled} />
+          <CustomDatePicker
+            disabled={disabled}
+            disabledDate={(current) => {
+              if (!current) return false;
+              if (startDateValue) {
+                const start = dayjs(startDateValue, DATE_DISPLAY_FORMAT, true);
+                if (current.isBefore(start, 'day')) return true;
+              }
+              if (tab === 'datn' && regDeadlineValue) {
+                const regDeadline = dayjs(regDeadlineValue, DATE_DISPLAY_FORMAT, true);
+                if (current.isBefore(regDeadline, 'day')) return true;
+              }
+              if (reportDeadlineValue) {
+                const reportDeadline = dayjs(reportDeadlineValue, DATE_DISPLAY_FORMAT, true);
+                if (current.isAfter(reportDeadline, 'day') || current.isSame(reportDeadline, 'day')) return true;
+              }
+              if (endDateValue) {
+                const end = dayjs(endDateValue, DATE_DISPLAY_FORMAT, true);
+                if (current.isAfter(end, 'day') || current.isSame(end, 'day')) return true;
+              }
+              return false;
+            }}
+          />
         </Form.Item>
 
         <Form.Item
@@ -592,7 +664,29 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
             }),
           ]}
         >
-          <CustomDatePicker disabled={disabled} />
+          <CustomDatePicker
+            disabled={disabled}
+            disabledDate={(current) => {
+              if (!current) return false;
+              if (reportStartDateValue) {
+                const reportStart = dayjs(reportStartDateValue, DATE_DISPLAY_FORMAT, true);
+                if (current.isBefore(reportStart, 'day') || current.isSame(reportStart, 'day')) return true;
+              } else {
+                if (tab === 'datn' && regDeadlineValue) {
+                  const regDeadline = dayjs(regDeadlineValue, DATE_DISPLAY_FORMAT, true);
+                  if (current.isBefore(regDeadline, 'day') || current.isSame(regDeadline, 'day')) return true;
+                } else if (startDateValue) {
+                  const start = dayjs(startDateValue, DATE_DISPLAY_FORMAT, true);
+                  if (current.isBefore(start, 'day') || current.isSame(start, 'day')) return true;
+                }
+              }
+              if (endDateValue) {
+                const end = dayjs(endDateValue, DATE_DISPLAY_FORMAT, true);
+                if (current.isAfter(end, 'day') || current.isSame(end, 'day')) return true;
+              }
+              return false;
+            }}
+          />
         </Form.Item>
 
         {tab === 'datn' && (
@@ -621,7 +715,21 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
                 }),
               ]}
             >
-              <CustomDatePicker disabled={disabled} />
+              <CustomDatePicker
+                disabled={disabled}
+                disabledDate={(current) => {
+                  if (!current) return false;
+                  if (reportDeadlineValue) {
+                    const reportDeadline = dayjs(reportDeadlineValue, DATE_DISPLAY_FORMAT, true);
+                    if (current.isBefore(reportDeadline, 'day') || current.isSame(reportDeadline, 'day')) return true;
+                  }
+                  if (endDateValue) {
+                    const end = dayjs(endDateValue, DATE_DISPLAY_FORMAT, true);
+                    if (current.isAfter(end, 'day') || current.isSame(end, 'day')) return true;
+                  }
+                  return false;
+                }}
+              />
             </Form.Item>
 
             <Form.Item
@@ -675,7 +783,21 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
                 }),
               ]}
             >
-              <CustomDatePicker disabled={disabled} />
+              <CustomDatePicker
+                disabled={disabled}
+                disabledDate={(current) => {
+                  if (!current) return false;
+                  if (reviewEndDateValue) {
+                    const reviewEnd = dayjs(reviewEndDateValue, DATE_DISPLAY_FORMAT, true);
+                    if (current.isBefore(reviewEnd, 'day') || current.isSame(reviewEnd, 'day')) return true;
+                  }
+                  if (endDateValue) {
+                    const end = dayjs(endDateValue, DATE_DISPLAY_FORMAT, true);
+                    if (current.isAfter(end, 'day') || current.isSame(end, 'day')) return true;
+                  }
+                  return false;
+                }}
+              />
             </Form.Item>
 
             <Form.Item
@@ -702,7 +824,21 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
                 }),
               ]}
             >
-              <CustomDatePicker disabled={disabled} />
+              <CustomDatePicker
+                disabled={disabled}
+                disabledDate={(current) => {
+                  if (!current) return false;
+                  if (defenseStartDateValue) {
+                    const defenseStart = dayjs(defenseStartDateValue, DATE_DISPLAY_FORMAT, true);
+                    if (current.isBefore(defenseStart, 'day') || current.isSame(defenseStart, 'day')) return true;
+                  }
+                  if (endDateValue) {
+                    const end = dayjs(endDateValue, DATE_DISPLAY_FORMAT, true);
+                    if (current.isAfter(end, 'day') || current.isSame(end, 'day')) return true;
+                  }
+                  return false;
+                }}
+              />
             </Form.Item>
           </>
         )}
@@ -742,7 +878,31 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
             }),
           ]}
         >
-          <CustomDatePicker disabled={disabled} />
+          <CustomDatePicker
+            disabled={disabled}
+            disabledDate={(current) => {
+              if (!current) return false;
+              if (tab === 'datn') {
+                if (defenseStartDateValue) {
+                  const defenseStart = dayjs(defenseStartDateValue, DATE_DISPLAY_FORMAT, true);
+                  if (current.isBefore(defenseStart, 'day')) return true;
+                }
+              } else {
+                if (reportDeadlineValue) {
+                  const reportDeadline = dayjs(reportDeadlineValue, DATE_DISPLAY_FORMAT, true);
+                  if (current.isBefore(reportDeadline, 'day') || current.isSame(reportDeadline, 'day')) return true;
+                } else if (reportStartDateValue) {
+                  const reportStart = dayjs(reportStartDateValue, DATE_DISPLAY_FORMAT, true);
+                  if (current.isBefore(reportStart, 'day') || current.isSame(reportStart, 'day')) return true;
+                }
+              }
+              if (endDateValue) {
+                const end = dayjs(endDateValue, DATE_DISPLAY_FORMAT, true);
+                if (current.isAfter(end, 'day') || current.isSame(end, 'day')) return true;
+              }
+              return false;
+            }}
+          />
         </Form.Item>
 
         <Form.Item
@@ -773,7 +933,25 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
             }),
           ]}
         >
-          <CustomDatePicker disabled={disabled} />
+          <CustomDatePicker
+            disabled={disabled}
+            disabledDate={(current) => {
+              if (!current) return false;
+              if (gradingStartDateValue) {
+                const gradingStart = dayjs(gradingStartDateValue, DATE_DISPLAY_FORMAT, true);
+                if (current.isBefore(gradingStart, 'day') || current.isSame(gradingStart, 'day')) return true;
+              }
+              if (tab === 'datn' && defenseEndDateValue) {
+                const defenseEnd = dayjs(defenseEndDateValue, DATE_DISPLAY_FORMAT, true);
+                if (current.isBefore(defenseEnd, 'day') || current.isSame(defenseEnd, 'day')) return true;
+              }
+              if (endDateValue) {
+                const end = dayjs(endDateValue, DATE_DISPLAY_FORMAT, true);
+                if (current.isAfter(end, 'day') || current.isSame(end, 'day')) return true;
+              }
+              return false;
+            }}
+          />
         </Form.Item>
       </div>
     </>

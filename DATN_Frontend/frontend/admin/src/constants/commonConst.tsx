@@ -97,3 +97,31 @@ export const RoleLevel = () => [
 
 export const BrandCountryKorea = () => ({ value: 'KR', label: 'Korea' });
 export const BrandCountryVietnam = () => ({ value: 'VN', label: 'Vietnam' });
+
+export function isPeriodClosedForAdmin(selectedPeriod: any): boolean {
+  if (!selectedPeriod) return false;
+  if (selectedPeriod.status !== STATUS_CODE.CLOSED) return false;
+
+  // Nếu trạng thái là closed, nhưng chưa quá 7 ngày kể từ ngày kết thúc (endDate)
+  const endDateStr = selectedPeriod.endDate;
+  if (endDateStr) {
+    const parts = endDateStr.split('/');
+    if (parts.length === 3) {
+      const day = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const year = parseInt(parts[2], 10);
+      
+      const closedDate = new Date(year, month, day);
+      closedDate.setHours(23, 59, 59, 999);
+      
+      const gracePeriodEndDate = new Date(closedDate.getTime() + 7 * 24 * 60 * 60 * 1000); // Thêm 7 ngày
+      const today = new Date();
+      
+      if (today.getTime() <= gracePeriodEndDate.getTime()) {
+        return false; // Chưa quá 1 tuần -> chưa disable
+      }
+    }
+  }
+  
+  return true; // Quá 1 tuần -> disable
+}

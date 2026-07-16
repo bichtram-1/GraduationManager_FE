@@ -243,16 +243,17 @@ export default function Page() {
     }
   }
 
-  const handleSave = async () => {
+  const handleSave = async (overrideFileUrl?: string) => {
     const trimmedName = name.trim()
     const trimmedSummary = description.trim()
     const maxSlots = Number.parseInt(slots, 10)
+    const finalFileUrl = overrideFileUrl ?? fileUrl
 
     if (!trimmedName || trimmedName.length > 255 || !trimmedSummary || trimmedSummary.length > 5000 || Number.isNaN(maxSlots) || maxSlots < 2 || maxSlots % 2 !== 0) {
       return
     }
 
-    if (!editingCode && !fileUrl) {
+    if (!editingCode && !finalFileUrl) {
       return
     }
 
@@ -267,7 +268,7 @@ export default function Page() {
             description: trimmedSummary,
             slots: String(maxSlots),
             direction: direction,
-            fileUrl: fileUrl,
+            fileUrl: finalFileUrl,
             teacher: 'TS. Nguyễn Văn X',
           });
         }
@@ -277,7 +278,7 @@ export default function Page() {
           description: trimmedSummary,
           slots: String(maxSlots),
           direction: direction,
-          fileUrl: fileUrl,
+          fileUrl: finalFileUrl,
           teacher: 'TS. Nguyễn Văn X',
           periodId: selectedPeriod?.id
         });

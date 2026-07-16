@@ -1,5 +1,5 @@
 import { SearchOutlined, TeamOutlined } from '@ant-design/icons';
-import { Form, Input, Select, Tag, Typography, Card, Empty, Modal, message, Button, Radio } from 'antd';
+import { Form, Input, Select, Tag, Typography, Card, Empty, Modal, message, Radio } from 'antd';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import FilterTable from '../../components/shared/table/FilterTable';
@@ -15,8 +15,6 @@ import { useQueryClient } from '@tanstack/react-query';
 import { QueryKey } from '../../constants/queryKey';
 import { topicHooks } from '../../hooks/useTopics';
 import { groupHooks } from '../../hooks/useGroups';
-import { Link } from 'react-router-dom';
-import { ROUTES } from '../../constants/routers';
 import type { IListTopic } from '../../type/TopicType';
 import type { IListGroup, IGroupMember, IUpdateGroup, ICreateGroup } from '../../type/GroupType';
 
@@ -199,6 +197,33 @@ const ThesisStudentsPage = () => {
     });
   };
 
+  const updateEligibilityMutation = assignmentHooks.useUpdateEligibility();
+  const handleToggleEligibility = (studentId: string, newEligibility: 'DAT' | 'CHUA_DAT') => {
+    Modal.confirm({
+      title: 'Xác nhận thay đổi điều kiện',
+      content: newEligibility === 'CHUA_DAT'
+        ? 'Nếu sinh viên bị đánh giá Không đạt, sinh viên này sẽ tự động bị ẩn khỏi nhóm hiện tại của đợt này. Bạn có chắc chắn muốn thay đổi?'
+        : 'Bạn có chắc chắn muốn cho phép sinh viên này đủ điều kiện làm đồ án?',
+      centered: true,
+      onOk: async () => {
+        try {
+          await updateEligibilityMutation.mutateAsync({ 
+            studentId, 
+            eligibility: newEligibility,
+            periodId: selectedPeriod?.id
+          });
+          message.success('Cập nhật điều kiện làm đồ án thành công!');
+        } catch (err: unknown) {
+          const errorMessage =
+            typeof err === 'object' && err !== null && 'response' in err
+              ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+              : undefined;
+          message.error(errorMessage || 'Có lỗi xảy ra!');
+        }
+      }
+    });
+  };
+
   const columns = useMemo(
     () => [
       {
@@ -268,55 +293,24 @@ const ThesisStudentsPage = () => {
         }
       },
       {
-        title: 'Hành động',
-        key: 'allocation',
-        width: 140,
+        title: 'Điều kiện làm đồ án',
+        key: 'dieuKienLamDoAn',
+        width: 150,
         render: (_: unknown, r: AssignmentRow) => {
-          const status = r.groupStatus || 'no_group';
-          
-          if (status === 'no_group') {
-            return (
-              <Button 
-                type="link" 
-                onClick={() => {
-                  setAllocationStudent(r);
-                  setAllocationType('existing');
-                  setSelectedGroupId('');
-                  setSelectedPartnerStudentId('');
-                  setSelectedAllocationTopicId('');
-                }}
-                className="p-0 text-blue-600 hover:text-blue-800 font-semibold text-xs h-auto leading-none"
-              >
-                Phân vào nhóm
-              </Button>
-            );
-          }
-          if (status === 'ineligible_member') {
-            return (
-              <Link to={`/admin${ROUTES.GROUPS}`} className="text-amber-600 hover:text-amber-800 font-semibold text-xs">
-                Ghép/Điều chỉnh nhóm
-              </Link>
-            );
-          }
-          if (status === 'no_topic' || status === 'topic_rejected') {
-            return (
-              <Button 
-                type="link" 
-                onClick={() => handleAssignTopic(r.groupId, r.groupCode)} 
-                className="p-0 text-blue-600 hover:text-blue-800 font-semibold text-xs h-auto leading-none"
-              >
-                Gán đề tài
-              </Button>
-            );
-          }
-          if (status === 'topic_pending') {
-            return (
-              <Link to={`/admin${ROUTES.GROUPS_REVIEW}`} className="text-blue-600 hover:text-blue-800 font-semibold text-xs">
-                Đi duyệt đề tài
-              </Link>
-            );
-          }
-          return <span className="text-emerald-600 font-medium text-xs">Đã hoàn tất</span>;
+          const eligibility = r.dieuKienLamDoAn ?? 'DAT';
+          return (
+            <Select
+              value={eligibility}
+              size="small"
+              className="w-28 font-medium"
+              onChange={(value) => handleToggleEligibility(r.studentId, value as 'DAT' | 'CHUA_DAT')}
+              options={[
+                { value: 'DAT', label: 'Đạt' },
+                { value: 'CHUA_DAT', label: 'Không đạt' },
+              ]}
+              status={eligibility === 'DAT' ? undefined : 'error'}
+            />
+          );
         }
       },
       {
@@ -444,7 +438,6 @@ const ThesisStudentsPage = () => {
           columns={columns}
           useQueryHook={useFilteredStudentsQuery}
           paramVariables={listParams}
-          showSizeChanger={false}
           actions={{
             isDetail: false,
             isEdit: false,

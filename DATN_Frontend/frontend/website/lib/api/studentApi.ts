@@ -84,6 +84,12 @@ export interface IGroupInviteIncoming {
   status: 'pending' | 'accepted' | 'rejected';
 }
 
+export interface IStudentSearchResult {
+  code: string;
+  name: string;
+  className: string;
+}
+
 export interface IProgressReport {
   week: number;
   title: string;
@@ -137,7 +143,7 @@ export interface IThesisRegistration {
   status: 'pending' | 'accepted' | 'rejected';
   note: string;
   instructor?: string | null;
-  members?: { studentCode: string; name: string }[];
+  members?: { studentCode: string; name: string; isLeader?: boolean; isCurrent?: boolean }[];
 }
 
 export const studentApi = {
@@ -194,6 +200,11 @@ export const studentApi = {
   getOutgoingInvitations: async (periodId?: number | string): Promise<IGroupInviteOutgoing[]> => {
     const response = await axiosInstance.get('/private/v1/student/thesis/invitations/outgoing', { params: { periodId } });
     return response?.data?.results?.objects || response?.data?.results?.object || [];
+  },
+
+  searchStudents: async (keyword: string): Promise<IStudentSearchResult[]> => {
+    const response = await axiosInstance.get('/private/v1/student/students/search', { params: { keyword } });
+    return response?.data?.results?.objects || [];
   },
 
   sendInvitation: async (studentCode: string, topicId?: string | null): Promise<IGroupInviteOutgoing> => {
@@ -256,5 +267,10 @@ export const studentApi = {
   getStudentResults: async (): Promise<IStudentResults> => {
     const response = await axiosInstance.get('/private/v1/student/results');
     return response?.data?.results?.object || response?.data;
+  },
+
+  getHistory: async (limit?: number): Promise<{ log_id: number; sinh_vien_id?: number; ma_so_sinh_vien?: string; nhom_id?: number; role: string; user_name: string; action_type: string; description: string; details?: string; created_at: string }[]> => {
+    const response = await axiosInstance.get('/private/v1/student/history', { params: limit ? { limit } : undefined });
+    return response?.data?.results?.objects || [];
   }
 };

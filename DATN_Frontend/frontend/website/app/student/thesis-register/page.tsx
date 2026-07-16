@@ -1,7 +1,7 @@
 "use client"
 
 import { usePeriod } from '@/lib/providers/PeriodProvider'
-import { topicApi } from '@/lib/api/topicApi'
+import { topicApi, ITopicDirection } from '@/lib/api/topicApi'
 import { studentApi, IThesisRegistration } from '@/lib/api/studentApi'
 import Link from 'next/link'
 import { CalendarDays, CheckCircle2, Clock3, Users } from 'lucide-react'
@@ -11,7 +11,7 @@ import { StudentButton, StudentModal } from '../_components/StudentUI'
 import { COMMON_LABELS } from '@/constants/commonLabels'
 import { App } from 'antd'
 
-type Topic = { id: string; code?: string; title: string; module: string; published: boolean; slots?: string }
+type Topic = { id: string; code?: string; title: string; module: string; published: boolean; slots?: string; description?: string; direction?: string; fileUrl?: string }
 
 type Registration = IThesisRegistration;
 
@@ -99,42 +99,128 @@ export default function ThesisRegisterPage() {
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null)
   const [confirming, setConfirming] = useState(false)
 
+  // Pagination and search/filter states
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [direction, setDirection] = useState('all')
+  const [directionOptions, setDirectionOptions] = useState<ITopicDirection[]>([])
+  const [teacher, setTeacher] = useState('all')
+  const [teacherOptions, setTeacherOptions] = useState<string[]>([])
+  const [searchInput, setSearchInput] = useState('')
+  const [keyword, setKeyword] = useState('')
+  const [detailTopic, setDetailTopic] = useState<Topic | null>(null)
+
+  // Gõ tới đâu lọc tới đó, không cần bấm nút "Tìm kiếm"
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setKeyword(searchInput)
+      setPage(1)
+    }, 400)
+    return () => clearTimeout(handler)
+  }, [searchInput])
+
+  // Danh sách hướng đề tài để lọc, lấy đúng dữ liệu thật từ bảng huongdetai (không đoán theo tên)
   useEffect(() => {
     let mounted = true
-    setLoading(true)
-    async function load() {
+    async function loadDirections() {
       try {
-        const [topicsData, regData] = await Promise.all([
-          topicApi.getTopics({ periodId: selectedPeriod?.id }),
-          studentApi.getMyThesisRegistration(selectedPeriod?.id)
-        ])
+        const res = await topicApi.getDirections()
         if (!mounted) return
-        setTopics(topicsData)
+        setDirectionOptions(res)
+      } catch (_err) {
+        if (!mounted) return
+        setDirectionOptions([])
+      }
+    }
+    loadDirections()
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  // Danh sách giảng viên để lọc, lấy từ toàn bộ đề tài của đợt (không phụ thuộc trang/bộ lọc hiện tại)
+  useEffect(() => {
+    let mounted = true
+    async function loadTeachers() {
+      try {
+        const res = await topicApi.getTopics({ periodId: selectedPeriod?.id, page: 1, limit: 1000 })
+        if (!mounted) return
+        const names = Array.from(new Set(res.rows.map((t: Topic) => t.module).filter(Boolean))) as string[]
+        setTeacherOptions(names.sort((a, b) => a.localeCompare(b)))
+      } catch (_err) {
+        if (!mounted) return
+        setTeacherOptions([])
+      }
+    }
+    loadTeachers()
+    return () => {
+      mounted = false
+    }
+  }, [selectedPeriod?.id])
+
+  // Load registration
+  useEffect(() => {
+    let mounted = true
+    async function loadRegistration() {
+      try {
+        const regData = await studentApi.getMyThesisRegistration(selectedPeriod?.id)
+        if (!mounted) return
         setRegistration(regData)
       } catch (_err) {
         if (!mounted) return
-        setTopics([])
         setRegistration(null)
+      }
+    }
+    loadRegistration()
+
+    const handleSync = () => {
+      loadRegistration()
+    }
+    window.addEventListener('realtime-group-updated', handleSync)
+    return () => {
+      mounted = false
+      window.removeEventListener('realtime-group-updated', handleSync)
+    }
+  }, [selectedPeriod?.id])
+
+  // Load topics
+  useEffect(() => {
+    let mounted = true
+    setLoading(true)
+    async function loadTopics() {
+      try {
+        const res = await topicApi.getTopics({
+          periodId: selectedPeriod?.id,
+          page,
+          limit: 12,
+          direction,
+          teacher: teacher !== 'all' ? teacher : undefined,
+          keyword: keyword.trim() || undefined
+        })
+        if (!mounted) return
+        setTopics(res.rows)
+        setTotalPages(res.pagination.totalPages || 1)
+      } catch (_err) {
+        if (!mounted) return
+        setTopics([])
+        setTotalPages(1)
       } finally {
         if (mounted) {
           setLoading(false)
         }
       }
     }
-    load()
+    loadTopics()
 
     const handleSync = () => {
-      load()
+      loadTopics()
     }
     window.addEventListener('realtime-topic-updated', handleSync)
-    window.addEventListener('realtime-group-updated', handleSync)
-
     return () => {
       mounted = false
       window.removeEventListener('realtime-topic-updated', handleSync)
-      window.removeEventListener('realtime-group-updated', handleSync)
     }
-  }, [selectedPeriod?.id])
+  }, [selectedPeriod?.id, page, direction, teacher, keyword])
 
   const handleRegister = (id: string) => {
     if (registration && registration.topicId) {
@@ -150,8 +236,16 @@ export default function ThesisRegisterPage() {
       const res = await studentApi.registerThesis(Number(id))
       setRegistration(res)
       // refresh topics to update slot status if needed
-      const topicsData = await topicApi.getTopics({ periodId: selectedPeriod?.id })
-      setTopics(topicsData)
+      const resTopics = await topicApi.getTopics({
+        periodId: selectedPeriod?.id,
+        page,
+        limit: 12,
+        direction,
+        teacher: teacher !== 'all' ? teacher : undefined,
+        keyword: keyword.trim() || undefined
+      })
+      setTopics(resTopics.rows)
+      setTotalPages(resTopics.pagination.totalPages || 1)
       message.success('Đăng ký đề tài thành công!')
     } catch (err: unknown) {
       message.error((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Có lỗi xảy ra khi đăng ký đề tài.')
@@ -166,8 +260,16 @@ export default function ThesisRegisterPage() {
       await studentApi.leaveGroup()
       setRegistration(null)
       // refresh topics to update slot status if needed
-      const topicsData = await topicApi.getTopics({ periodId: selectedPeriod?.id })
-      setTopics(topicsData)
+      const resTopics = await topicApi.getTopics({
+        periodId: selectedPeriod?.id,
+        page,
+        limit: 12,
+        direction,
+        teacher: teacher !== 'all' ? teacher : undefined,
+        keyword: keyword.trim() || undefined
+      })
+      setTopics(resTopics.rows)
+      setTotalPages(resTopics.pagination.totalPages || 1)
       message.success('Rời/giải tán nhóm thành công!')
     } catch (err: unknown) {
       message.error((err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Có lỗi xảy ra khi giải tán nhóm.')
@@ -180,11 +282,19 @@ export default function ThesisRegisterPage() {
     try {
       setLoading(true)
       await studentApi.cancelThesisRegistration()
-      const [topicsData, regData] = await Promise.all([
-        topicApi.getTopics({ periodId: selectedPeriod?.id }),
+      const [resTopics, regData] = await Promise.all([
+        topicApi.getTopics({
+          periodId: selectedPeriod?.id,
+          page,
+          limit: 12,
+          direction,
+          teacher: teacher !== 'all' ? teacher : undefined,
+          keyword: keyword.trim() || undefined
+        }),
         studentApi.getMyThesisRegistration(selectedPeriod?.id)
       ])
-      setTopics(topicsData)
+      setTopics(resTopics.rows)
+      setTotalPages(resTopics.pagination.totalPages || 1)
       setRegistration(regData)
       message.success('Hủy đăng ký đề tài thành công!')
     } catch (err: unknown) {
@@ -316,75 +426,8 @@ export default function ThesisRegisterPage() {
         </div>
       </section>
 
-      <section className="rounded-[12px] p-1">
-        {loading ? (
-          <div className="p-8 text-center text-sm text-slate-500">Đang tải danh sách đề tài…</div>
-        ) : topics.length === 0 ? (
-          <div className="p-8 text-center text-sm text-slate-500">Không có đề tài nào.</div>
-        ) : (
-          <div className="max-h-180 overflow-y-auto pr-1">
-          <div className="grid gap-4 md:grid-cols-2">
-            {topics.map((t) => {
-              const teacher = t.module ? `GV: ${t.module}` : 'GV: Chưa phân công'
-              const slotsStr = t.slots || '0/4'
-              const [used, maxSlots] = slotsStr.split('/').map(Number)
-              const hasSlot = used < maxSlots && t.published
-              const isCurrentTopic = registration?.topicId === t.id
-              return (
-                <div key={t.id} className="rounded-[18px] border border-slate-100 bg-white p-6 shadow-sm">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <a className="text-[#2196F3] font-medium text-sm">{t.code || t.id}</a>
-                      <h3 className="mt-2 text-lg font-semibold text-slate-900">{t.title}</h3>
-                      <div className="mt-2 text-xs text-slate-500">{teacher} • Số lượng: {used}/{maxSlots} sinh viên</div>
-                      {isCurrentTopic && registration && (
-                        <div className="mt-3 flex flex-wrap items-center gap-2">
-                          <StudentPill tone={registrationTone}>{registration.status === 'accepted' ? 'Nhóm đã duyệt' : registration.status === 'rejected' ? 'Nhóm bị từ chối' : 'Nhóm đang chờ duyệt'}</StudentPill>
-                          <span className="text-xs text-slate-500">{registration.groupName}</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="shrink-0">
-                      <div className={`whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium ${hasSlot ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
-                        {hasSlot ? 'Còn nhận' : 'Đủ số lượng'}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-6 flex items-center gap-3">
-                    <button className="flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Xem chi tiết</button>
-                    {!isCurrentTopic ? (
-                      <button
-                        disabled={(!!registration && registration.status === 'accepted') || isActionDisabled}
-                        onClick={() => handleRegister(t.id)}
-                        className={`flex-1 rounded-2xl px-4 py-2 text-sm font-medium shadow-sm transition ${(!!registration && registration.status === 'accepted') || isActionDisabled ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-[#2196F3] text-white hover:bg-[#1976D2]'}`}
-                      >
-                        Đăng ký
-                      </button>
-                    ) : (
-                      <button
-                        disabled={registration?.status === 'accepted' || isActionDisabled}
-                        onClick={() => setConfirmAction({ type: 'cancelTopic' })}
-                        className={`flex-1 rounded-2xl border px-4 py-2 text-sm font-medium transition ${registration?.status === 'accepted' || isActionDisabled ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
-                      >
-                        {registration?.status === 'accepted' ? 'Đã khóa đề tài' : 'Hủy đăng ký'}
-                      </button>
-                    )}
-                  </div>
-                  {isCurrentTopic && registration && (
-                    <div className="mt-4 rounded-2xl bg-[#eff6ff] px-4 py-3 text-xs leading-6 text-slate-600 ring-1 ring-blue-100">
-                      Hồ sơ nhóm của bạn đang ở trạng thái <span className="font-semibold text-slate-900">{registration.status === 'accepted' ? 'đã duyệt' : registration.status === 'rejected' ? 'đã từ chối' : 'chờ duyệt'}</span>. Khi giảng viên cập nhật, badge ở đây sẽ đổi ngay.
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-          </div>
-        )}
-      </section>
-
-      <section className="mt-6 rounded-[28px] border border-blue-100 bg-[linear-gradient(135deg,#eff6ff_0%,#ffffff_100%)] p-5 shadow-[0_12px_40px_rgba(15,23,42,0.05)]">
+      {/* CỐ ĐỊNH BANNER TẠO NHÓM Ở ĐÂY CHO DỄ XEM */}
+      <section className="mb-6 rounded-[28px] border border-blue-100 bg-[linear-gradient(135deg,#eff6ff_0%,#ffffff_100%)] p-5 shadow-[0_12px_40px_rgba(15,23,42,0.05)]">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="text-sm font-semibold text-slate-900">Cần tạo nhóm trước khi đăng ký?</div>
@@ -407,6 +450,220 @@ export default function ThesisRegisterPage() {
           )}
         </div>
       </section>
+
+      {/* BỘ LỌC ĐỀ TÀI & TÌM KIẾM */}
+      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between bg-slate-50 p-4 rounded-[22px] border border-slate-200">
+        <div className="flex flex-wrap items-center gap-4 flex-1">
+          {/* Direction Filter */}
+          <div className="w-64">
+            <label className="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">Hướng đề tài</label>
+            <select
+              value={direction}
+              onChange={(e) => {
+                setDirection(e.target.value)
+                setPage(1)
+              }}
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-400 transition"
+            >
+              <option value="all">Tất cả hướng đề tài</option>
+              {directionOptions.map((d) => (
+                <option key={d.id} value={d.id}>{d.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Teacher Filter */}
+          <div className="w-64">
+            <label className="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">Giảng viên hướng dẫn</label>
+            <select
+              value={teacher}
+              onChange={(e) => {
+                setTeacher(e.target.value)
+                setPage(1)
+              }}
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-400 transition"
+            >
+              <option value="all">Tất cả giảng viên</option>
+              {teacherOptions.map((name) => (
+                <option key={name} value={name}>{name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Search Input */}
+          <div className="flex-1 min-w-[240px]">
+            <label className="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">Tìm kiếm đề tài</label>
+            <input
+              type="text"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Nhập tên đề tài, tên giảng viên..."
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-400 transition"
+            />
+          </div>
+        </div>
+      </div>
+
+      <section className="rounded-[12px] p-1">
+        {loading ? (
+          <div className="p-8 text-center text-sm text-slate-500">Đang tải danh sách đề tài…</div>
+        ) : topics.length === 0 ? (
+          <div className="p-8 text-center text-sm text-slate-500">Không có đề tài nào.</div>
+        ) : (
+          <div>
+            <div className="grid gap-4 md:grid-cols-2">
+              {topics.map((t) => {
+                const teacher = t.module ? `GV: ${t.module}` : 'GV: Chưa phân công'
+                const slotsStr = t.slots || '0/4'
+                const [used, maxSlots] = slotsStr.split('/').map(Number)
+                const hasSlot = used < maxSlots && t.published
+                const isCurrentTopic = registration?.topicId === t.id
+                return (
+                  <div key={t.id} className="rounded-[18px] border border-slate-100 bg-white p-6 shadow-sm flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <a className="text-[#2196F3] font-medium text-sm">{t.code || t.id}</a>
+                          <h3 className="mt-2 text-lg font-semibold text-slate-900 line-clamp-2" title={t.title}>{t.title}</h3>
+                          <div className="mt-2 text-xs text-slate-500">{teacher} • Số lượng: {used}/{maxSlots} sinh viên</div>
+                          <div className="mt-1 text-xs text-blue-600 font-semibold">Hướng đề tài: {t.direction || 'Phát triển phần mềm'}</div>
+                          {isCurrentTopic && registration && (
+                            <div className="mt-3 flex flex-wrap items-center gap-2">
+                              <StudentPill tone={registrationTone}>{registration.status === 'accepted' ? 'Nhóm đã duyệt' : registration.status === 'rejected' ? 'Nhóm bị từ chối' : 'Nhóm đang chờ duyệt'}</StudentPill>
+                              <span className="text-xs text-slate-500">{registration.groupName}</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="shrink-0">
+                          <div className={`whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium ${hasSlot ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
+                            {hasSlot ? 'Còn nhận' : 'Đủ số lượng'}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-6 flex items-center gap-3">
+                      <button
+                        onClick={() => setDetailTopic(t)}
+                        className="flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition"
+                      >
+                        Xem chi tiết
+                      </button>
+                      {!isCurrentTopic ? (
+                        <button
+                          disabled={(!!registration && registration.status === 'accepted') || isActionDisabled}
+                          onClick={() => handleRegister(t.id)}
+                          className={`flex-1 rounded-2xl px-4 py-2 text-sm font-medium shadow-sm transition ${(!!registration && registration.status === 'accepted') || isActionDisabled ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-[#2196F3] text-white hover:bg-[#1976D2]'}`}
+                        >
+                          Đăng ký
+                        </button>
+                      ) : (
+                        <button
+                          disabled={registration?.status === 'accepted' || isActionDisabled}
+                          onClick={() => setConfirmAction({ type: 'cancelTopic' })}
+                          className={`flex-1 rounded-2xl border px-4 py-2 text-sm font-medium transition ${registration?.status === 'accepted' || isActionDisabled ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
+                        >
+                          {registration?.status === 'accepted' ? 'Đã khóa đề tài' : 'Hủy đăng ký'}
+                        </button>
+                      )}
+                    </div>
+                    {isCurrentTopic && registration && (
+                      <div className="mt-4 rounded-2xl bg-[#eff6ff] px-4 py-3 text-xs leading-6 text-slate-600 ring-1 ring-blue-100">
+                        Hồ sơ nhóm của bạn đang ở trạng thái <span className="font-semibold text-slate-900">{registration.status === 'accepted' ? 'đã duyệt' : registration.status === 'rejected' ? 'đã từ chối' : 'chờ duyệt'}</span>. Khi giảng viên cập nhật, badge ở đây sẽ đổi ngay.
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* PHÂN TRANG CHO 200+ ĐỀ TÀI */}
+            {totalPages > 1 && (
+              <div className="mt-8 flex items-center justify-center gap-3 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm w-fit mx-auto">
+                <button
+                  disabled={page === 1}
+                  onClick={() => {
+                    setPage((p) => Math.max(p - 1, 1))
+                    window.scrollTo({ top: 400, behavior: 'smooth' })
+                  }}
+                  className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Trang trước
+                </button>
+                <span className="text-sm font-bold text-slate-600">
+                  Trang {page} / {totalPages}
+                </span>
+                <button
+                  disabled={page === totalPages}
+                  onClick={() => {
+                    setPage((p) => Math.min(p + 1, totalPages))
+                    window.scrollTo({ top: 400, behavior: 'smooth' })
+                  }}
+                  className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Trang sau
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </section>
+
+      {/* MODAL XEM CHI TIẾT ĐỀ TÀI */}
+      <StudentModal
+        open={detailTopic !== null}
+        title="Chi tiết đề tài đồ án tốt nghiệp"
+        onClose={() => setDetailTopic(null)}
+        footer={
+          <div className="flex justify-end">
+            <StudentButton variant="secondary" onClick={() => setDetailTopic(null)}>
+              Đóng
+            </StudentButton>
+          </div>
+        }
+      >
+        {detailTopic && (
+          <div className="space-y-4 py-2">
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Mã đề tài</span>
+              <div className="mt-1 text-sm font-bold text-slate-800">{detailTopic.code || detailTopic.id}</div>
+            </div>
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Tên đề tài</span>
+              <div className="mt-1 text-base font-bold text-[#1976D2]">{detailTopic.title}</div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Giảng viên hướng dẫn</span>
+                <div className="mt-1 text-sm font-semibold text-slate-800">{detailTopic.module || 'Chưa phân công'}</div>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Hướng đề tài</span>
+                <div className="mt-1 text-sm font-semibold text-indigo-600">{detailTopic.direction || 'Phát triển phần mềm'}</div>
+              </div>
+            </div>
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Mô tả chi tiết</span>
+              <div className="mt-1 text-sm text-slate-600 whitespace-pre-wrap leading-relaxed bg-slate-50 p-4 rounded-2xl border border-slate-100 max-h-60 overflow-y-auto">
+                {detailTopic.description || 'Không có mô tả chi tiết cho đề tài này.'}
+              </div>
+            </div>
+            {detailTopic.fileUrl && (
+              <div className="pt-2">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Tài liệu đính kèm</span>
+                <a
+                  href={detailTopic.fileUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 rounded-xl bg-blue-50 px-4 py-2.5 text-xs font-bold text-blue-600 border border-blue-100 transition hover:bg-blue-100 shadow-sm"
+                >
+                  📂 Tải xuống tài liệu mô tả đề tài
+                </a>
+              </div>
+            )}
+          </div>
+        )}
+      </StudentModal>
 
       <StudentModal
         open={confirmAction !== null}

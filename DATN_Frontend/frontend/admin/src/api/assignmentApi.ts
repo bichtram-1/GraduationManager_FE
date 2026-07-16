@@ -48,4 +48,12 @@ export const assignmentApi = {
     const response = await axiosInstance.get('/private/v1/teachers', { params: { periodId } });
     return response?.data?.results?.objects || response?.data?.results?.object || [];
   },
+  updateEligibility: async (studentId: string, eligibility: 'DAT' | 'CHUA_DAT', periodId?: string): Promise<{ success: boolean; message: string }> => {
+    const response = await axiosInstance.patch(`/private/v1/students/${studentId}/eligibility`, {
+      dieuKienLamDoAn: eligibility,
+    }, {
+      params: { periodId },
+    });
+    return response?.data;
+  },
 };

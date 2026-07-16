@@ -2,8 +2,9 @@ import React, { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getKey } from '@shared/types/I18nKeyType';
 import { Button, Modal, Tooltip, Tag, Input, Select, Space, message, Form, Card } from 'antd';
-import { SwapOutlined, SearchOutlined, TeamOutlined, CheckCircleOutlined, ExclamationCircleOutlined, UserOutlined } from '@ant-design/icons';
+import { SwapOutlined, SearchOutlined, TeamOutlined, CheckCircleOutlined, ExclamationCircleOutlined, UserOutlined, HistoryOutlined } from '@ant-design/icons';
 import MergeModal from './components/MergeModal';
+import { HistoryTimelineModal } from '../../components/general/HistoryTimelineModal';
 import FilterTable from '../../components/shared/table/FilterTable';
 import GroupForm from './components/GroupForm';
 import type { GroupStatus, IGroupMember, IListGroup, IDetailGroup, ICreateGroup, IUpdateGroup } from '../../type/GroupType';
@@ -12,7 +13,7 @@ import type { BaseListParams, ListResponseTypeObject } from '@shared/types/Gener
 import type { UseQueryResult, UseMutationResult } from '@tanstack/react-query';
 import { AxiosError } from 'axios';
 import type { TFunction } from 'i18next';
-import { STATUS_CODE } from '../../constants/commonConst';
+import { STATUS_CODE, isPeriodClosedForAdmin } from '../../constants/commonConst';
 import { formatNumber } from '@shared/utils/numberUtils';
 import { useGlobalVariable } from '../../hooks/GlobalVariableProvider';
 
@@ -43,11 +44,13 @@ const GroupsAdminPage: React.FC = () => {
   const [mergeMode, setMergeMode] = useState(false);
   const [mergeLeft, setMergeLeft] = useState<string | null>(null);
   const [mergeRight, setMergeRight] = useState<string | null>(null);
+  const [selectedGroupId, setSelectedGroupId] = useState<string | undefined>(undefined);
+  const [historyVisible, setHistoryVisible] = useState(false);
   const { data: groupList } = groupHooks.useFetchListGroups();
   const updateGroupMutation = groupHooks.useUpdateGroup();
   const deleteGroupMutation = groupHooks.useDeleteGroup();
   
-  const isPeriodClosed = selectedPeriod?.status === STATUS_CODE.CLOSED;
+  const isPeriodClosed = isPeriodClosedForAdmin(selectedPeriod);
   const rawGroups = (groupList?.rows as Group[] | undefined) ?? [];
   const groups = useMemo(() => {
     if (!selectedPeriod) return rawGroups;
@@ -167,6 +170,24 @@ const GroupsAdminPage: React.FC = () => {
         const meta = getStatusMeta(t)[r.status as Group['status']];
         return <Tag color={meta?.color || 'default'} className="!px-2 !py-[2px] !text-xs !font-medium">{meta?.label || r.status}</Tag>;
       },
+    },
+    {
+      title: 'Lịch sử',
+      key: 'history_log',
+      width: 100,
+      render: (_: unknown, record: IListGroup) => (
+        <Button
+          type="link"
+          size="small"
+          icon={<HistoryOutlined />}
+          onClick={() => {
+            setSelectedGroupId(String(record.id));
+            setHistoryVisible(true);
+          }}
+        >
+          Lịch sử
+        </Button>
+      ),
     },
   ];
 
@@ -377,6 +398,16 @@ const GroupsAdminPage: React.FC = () => {
           groups={groups}
         />
       )}
+
+      <HistoryTimelineModal
+        visible={historyVisible}
+        onCancel={() => {
+          setHistoryVisible(false);
+          setSelectedGroupId(undefined);
+        }}
+        title={`Lịch sử hoạt động của Nhóm #${selectedGroupId}`}
+        filters={{ nhom_id: selectedGroupId }}
+      />
     </div>
   );
 };

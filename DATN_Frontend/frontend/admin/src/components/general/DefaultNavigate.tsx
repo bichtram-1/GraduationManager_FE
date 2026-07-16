@@ -10,6 +10,7 @@ import {
   SolutionOutlined,
   UserOutlined,
   DashboardOutlined,
+  ClockCircleOutlined,
 } from '@ant-design/icons';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -119,6 +120,11 @@ const DefaultNavigate = ({ collapsed, onToggle }: IDefaultNavigate) => {
         { key: ROUTES.GROUPS_STUDENTS, label: t(getKey('thesis_students_management')) || 'Danh sách sinh viên ĐATN' },
         { key: ROUTES.GROUPS_SCORES, label: t(getKey('project_score_management')) },
       ],
+    },
+    {
+      key: ROUTES.HISTORY,
+      label: t(getKey('history_logs')),
+      icon: <ClockCircleOutlined style={{ fontSize: 20 }} />,
     },
     // Courses menu removed
     // Achievements menu removed

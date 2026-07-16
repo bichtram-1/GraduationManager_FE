@@ -4,7 +4,6 @@ import { UploadOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { IDetailClass } from '../../../type/ClassType';
 import { useTranslation } from 'react-i18next';
 import { getKey } from '@shared/types/I18nKeyType';
-import { uploadApi } from '../../../api/uploadApi';
 import * as XLSX from 'xlsx';
 import { classHooks } from '../../../hooks/useClasses';
 import CustomDatePicker from '../../../components/shared/input/CustomDatePicker';
@@ -13,9 +12,13 @@ import dayjs from 'dayjs';
 type Props = {
   disabled?: boolean;
   detail?: IDetailClass | null;
+  // File Excel/CSV được giữ cục bộ ở đây (không phải trong antd Form) và chỉ thật sự được
+  // tải lên server ở bước submit cuối cùng (xem formatFormValues trong ClassesAdminPage.tsx),
+  // tránh trường hợp file mồ côi trên storage nếu admin chọn file rồi đóng modal mà không tạo lớp.
+  onFileSelected?: (file: File | null) => void;
 };
 
-const ClassForm: React.FC<Props> = ({ disabled = false, detail }) => {
+const ClassForm: React.FC<Props> = ({ disabled = false, detail, onFileSelected }) => {
   const { t } = useTranslation();
   const form = Form.useFormInstance();
   const [studentListFileName, setStudentListFileName] = React.useState('');
@@ -39,6 +42,7 @@ const ClassForm: React.FC<Props> = ({ disabled = false, detail }) => {
   }, [metadata]);
 
   React.useEffect(() => {
+    onFileSelected?.(null);
     if (detail) {
       form.setFieldsValue(detail as unknown as Record<string, unknown>);
       setStudentListFileName(detail.studentListFileName || '');
@@ -46,6 +50,7 @@ const ClassForm: React.FC<Props> = ({ disabled = false, detail }) => {
       form.resetFields();
       setStudentListFileName('');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [detail, form]);
 
   const parseExcelFile = (file: File): Promise<Array<{ id: string; name: string; code: string; phone?: string; gender?: string; dateOfBirth?: dayjs.Dayjs }>> => {
@@ -230,6 +235,10 @@ const ClassForm: React.FC<Props> = ({ disabled = false, detail }) => {
     });
   };
 
+  // Chỉ đọc/parse file Excel cục bộ (không cần mạng) để hiển thị ngay danh sách sinh viên.
+  // File thật sự chỉ được tải lên server ở bước submit cuối cùng (xem formatFormValues ở
+  // ClassesAdminPage.tsx, đọc field ẩn "studentListFile"), tránh trường hợp file mồ côi trên
+  // storage nếu admin chọn file rồi đóng modal mà không bấm "Tạo lớp".
   const handleStudentListUpload = async (file: File) => {
     const isValidFile = /\.(csv|xls|xlsx)$/i.test(file.name);
     if (!isValidFile) {
@@ -239,21 +248,22 @@ const ClassForm: React.FC<Props> = ({ disabled = false, detail }) => {
 
     try {
       const parsedMembers = await parseExcelFile(file);
-      const uploadedUrl = await uploadApi.uploadSingleAndGetUrl(file, 'users');
 
       form.setFieldsValue({
-        studentListUrl: uploadedUrl,
+        studentListUrl: undefined,
         studentListFileName: file.name,
         members: parsedMembers,
       });
+      onFileSelected?.(file);
       setStudentListFileName(file.name);
-      message.success(t(getKey('upload_student_list_success')) || 'Tải danh sách sinh viên thành công!');
+      message.success(t(getKey('upload_student_list_success')) || 'Đã đọc danh sách sinh viên, file sẽ được lưu khi bạn tạo lớp!');
     } catch (err) {
       form.setFieldsValue({
         studentListUrl: undefined,
         studentListFileName: undefined,
         members: [],
       });
+      onFileSelected?.(null);
       setStudentListFileName('');
       message.error((err as Error)?.message || t(getKey('upload_student_list_error')) || 'Lỗi khi tải file!');
     }
