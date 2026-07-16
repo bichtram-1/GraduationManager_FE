@@ -16,7 +16,7 @@ export default function StudentIndexPage() {
   const queryClient = useQueryClient()
 
   const dashboardQuery = useQuery({ queryKey: DASHBOARD_KEY, queryFn: studentApi.getDashboard })
-  const historyQuery = useQuery({ queryKey: HISTORY_KEY, queryFn: studentApi.getHistory })
+  const historyQuery = useQuery({ queryKey: HISTORY_KEY, queryFn: () => studentApi.getHistory() })
 
   const loading = dashboardQuery.isLoading || historyQuery.isLoading
   const data = dashboardQuery.data

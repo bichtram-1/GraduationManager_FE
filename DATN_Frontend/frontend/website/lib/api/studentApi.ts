@@ -269,8 +269,8 @@ export const studentApi = {
     return response?.data?.results?.object || response?.data;
   },
 
-  getHistory: async (): Promise<{ log_id: number; sinh_vien_id?: number; ma_so_sinh_vien?: string; nhom_id?: number; role: string; user_name: string; action_type: string; description: string; details?: string; created_at: string }[]> => {
-    const response = await axiosInstance.get('/private/v1/student/history');
+  getHistory: async (limit?: number): Promise<{ log_id: number; sinh_vien_id?: number; ma_so_sinh_vien?: string; nhom_id?: number; role: string; user_name: string; action_type: string; description: string; details?: string; created_at: string }[]> => {
+    const response = await axiosInstance.get('/private/v1/student/history', { params: limit ? { limit } : undefined });
     return response?.data?.results?.objects || [];
   }
 };

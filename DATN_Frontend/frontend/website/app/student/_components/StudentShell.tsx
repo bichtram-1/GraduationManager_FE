@@ -69,19 +69,17 @@ export function StudentShell({ children }: { children: ReactNode }) {
 
   const fetchNotifications = async () => {
     try {
-      const data = await studentApi.getHistory()
-      // Chuông thông báo chỉ giữ hoạt động trong 1 tuần gần nhất — lịch sử đầy đủ vẫn
-      // xem được ở trang "Lịch sử hoạt động", chuông chỉ là bản xem nhanh, không nên
-      // tồn đọng thông báo cũ mãi mãi.
-      const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
-      const recentData = data.filter((n) => new Date(n.created_at).getTime() > oneWeekAgo)
-      setNotifications(recentData)
+      // Chuông chỉ hiển thị top gần nhất nên chỉ cần xin backend đúng số dòng đó
+      // (không tải toàn bộ lịch sử) — trang "Lịch sử hoạt động" đầy đủ vẫn gọi
+      // getHistory() không giới hạn.
+      const data = await studentApi.getHistory(20)
+      setNotifications(data)
       const lastSeen = localStorage.getItem('student_last_seen_notif')
       if (lastSeen) {
-        const count = recentData.filter(n => new Date(n.created_at) > new Date(lastSeen)).length
+        const count = data.filter(n => new Date(n.created_at) > new Date(lastSeen)).length
         setUnreadCount(count)
       } else {
-        setUnreadCount(recentData.length)
+        setUnreadCount(data.length)
       }
     } catch (err) {
       console.error('Failed to fetch notifications:', err)
