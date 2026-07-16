@@ -54,7 +54,7 @@ export default function TeacherIndexPage() {
   const load = () => {
     let mounted = true
     setLoading(true)
-    
+
     Promise.all([
       teacherApi.getDashboardData({ periodId: selectedPeriod?.id }),
       teacherApi.getStudents({ periodId: selectedPeriod?.id }),
@@ -62,7 +62,7 @@ export default function TeacherIndexPage() {
     ])
       .then(([dashRes, studentsRes, gradingRes]) => {
         if (!mounted) return
-        
+
         if (dashRes?.success) {
           setStats(dashRes.stats)
           setTopics(dashRes.topics || [])
@@ -70,7 +70,7 @@ export default function TeacherIndexPage() {
           setStats({ topics: 0, tttn: 0, datn: 0, councils: 0 })
           setTopics([])
         }
-        
+
         if (studentsRes?.success) {
           setTttnList(studentsRes.tttn || [])
           setDatnList(studentsRes.datn || [])
@@ -78,7 +78,7 @@ export default function TeacherIndexPage() {
           setTttnList([])
           setDatnList([])
         }
-        
+
         if (gradingRes?.councilGroups) {
           setCouncilsList(gradingRes.councilGroups || [])
         } else {
@@ -135,7 +135,7 @@ export default function TeacherIndexPage() {
     // 2. Nhận xét tiến độ đồ án (nếu có nhóm 'Đã nộp' mà giảng viên chưa nhận xét)
     const pendingDatn = datnList.filter(g => g.status === 'Đã nộp' && (!g.comment || g.comment.trim() === ''))
     if (pendingDatn.length > 0) {
-      list.push(`Nhận xét báo cáo tiến độ ĐATN của nhóm ${pendingDatn[0].group} (Đề tài: ${pendingDatn[0].topic}).`)
+      list.push(`Nhận xét báo cáo tiến độ ĐATN (Đề tài: ${pendingDatn[0].topic}).`)
     }
 
     // 3. Đề tài đang ở trạng thái chờ duyệt của Khoa
@@ -173,7 +173,7 @@ export default function TeacherIndexPage() {
     datnList.forEach((g: IDatnGroupItem) => {
       list.push([
         'Đợt này',
-        `Hướng dẫn ĐATN nhóm ${g.group}`,
+        'Hướng dẫn ĐATN',
         `Đề tài: ${g.topic} (${g.members_list?.length || g.members || 0} SV)`
       ])
     })
@@ -219,43 +219,45 @@ export default function TeacherIndexPage() {
               </div>
               <TeacherPill tone="blue">{selectedPeriod?.name || 'Học kỳ hiện tại'}</TeacherPill>
             </div>
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 text-slate-600">
-                <tr>
-                  <th className="px-5 py-3 text-left w-16">STT</th>
-                  <th className="px-5 py-3 text-left">Tên đề tài</th>
-                  <th className="px-5 py-3 text-left">SLTV</th>
-                  <th className="px-5 py-3 text-left">SV đăng ký</th>
-                  <th className="px-5 py-3 text-left">Trạng thái</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[600px]">
+                <thead className="bg-slate-50 text-slate-600">
                   <tr>
-                    <td colSpan={5} className="px-5 py-8 text-center text-slate-500">Đang tải danh sách đề tài...</td>
+                    <th className="px-5 py-3 text-left w-16">STT</th>
+                    <th className="px-5 py-3 text-left">Tên đề tài</th>
+                    <th className="px-5 py-3 text-left">SLTV</th>
+                    <th className="px-5 py-3 text-left">SV đăng ký</th>
+                    <th className="px-5 py-3 text-left">Trạng thái</th>
                   </tr>
-                ) : topics.length > 0 ? (
-                  topics.map((topic, index) => (
-                    <tr key={topic.code} className="border-t border-slate-100 transition hover:bg-slate-50/80">
-                      <td className="px-5 py-4 font-medium text-slate-500">{index + 1}</td>
-                      <td className="px-5 py-4 text-slate-900">
-                        <div className="font-medium">{topic.name}</div>
-                        {topic.note && <div className="mt-1 text-xs text-slate-500">{topic.note}</div>}
-                      </td>
-                      <td className="px-5 py-4 text-slate-600">{topic.slot}</td>
-                      <td className="px-5 py-4 text-slate-600">{topic.students}</td>
-                      <td className="px-5 py-4">
-                        <TeacherPill tone={getTopicStatusTone(topic.status)}>{topic.status}</TeacherPill>
-                      </td>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr>
+                      <td colSpan={5} className="px-5 py-8 text-center text-slate-500">Đang tải danh sách đề tài...</td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={5} className="px-5 py-8 text-center text-slate-500">Không có đề tài nào phụ trách trong đợt này.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                  ) : topics.length > 0 ? (
+                    topics.map((topic, index) => (
+                      <tr key={topic.code} className="border-t border-slate-100 transition hover:bg-slate-50/80">
+                        <td className="px-5 py-4 font-medium text-slate-500">{index + 1}</td>
+                        <td className="px-5 py-4 text-slate-900">
+                          <div className="font-medium">{topic.name}</div>
+                          {topic.note && <div className="mt-1 text-xs text-slate-500">{topic.note}</div>}
+                        </td>
+                        <td className="px-5 py-4 text-slate-600">{topic.slot}</td>
+                        <td className="px-5 py-4 text-slate-600">{topic.students}</td>
+                        <td className="px-5 py-4">
+                          <TeacherPill tone={getTopicStatusTone(topic.status)}>{topic.status}</TeacherPill>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={5} className="px-5 py-8 text-center text-slate-500">Không có đề tài nào phụ trách trong đợt này.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </section>
 
           <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.06)]">

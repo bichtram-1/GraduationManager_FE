@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Search, ShieldCheck, Users } from 'lucide-react'
 import { App } from 'antd'
 import { TeacherSectionHeader, TeacherPill } from '../_components/TeacherShell'
-import { TeacherCard, TeacherInputClass } from '../_components/TeacherUI'
+import { TeacherCard, TeacherInputClass, TeacherPagination } from '../_components/TeacherUI'
 import { usePeriod } from '@/lib/providers/PeriodProvider'
 import { teacherApi } from '@/lib/api/teacherApi'
 
@@ -71,6 +71,33 @@ export default function TeacherReviewGroupsPage() {
   const { selectedPeriod } = usePeriod()
   const [segment, setSegment] = useState<Segment>('Nhóm hướng dẫn')
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'reviewed'>('all')
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      const segmentParam = params.get('segment')
+      if (segmentParam === 'review') {
+        setSegment('Nhóm phản biện')
+      } else {
+        setSegment('Nhóm hướng dẫn')
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    const handleSegmentEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<string>
+      if (customEvent.detail === 'review') {
+        setSegment('Nhóm phản biện')
+      } else if (customEvent.detail === 'guidance') {
+        setSegment('Nhóm hướng dẫn')
+      }
+    }
+    window.addEventListener('segment-changed', handleSegmentEvent)
+    return () => {
+      window.removeEventListener('segment-changed', handleSegmentEvent)
+    }
+  }, [])
   const [searchName, setSearchName] = useState('')
   const [searchTopic, setSearchTopic] = useState('')
   const [guidanceGroups, setGuidanceGroups] = useState<GuidanceGroup[]>(defaultGuidanceGroups)
@@ -78,6 +105,16 @@ export default function TeacherReviewGroupsPage() {
   const [selectedGuidanceId, setSelectedGuidanceId] = useState<string | null>(null)
   const [selectedReviewId, setSelectedReviewId] = useState<string | null>(null)
   const [savingId, setSavingId] = useState<string | null>(null)
+  const [currentPageGuidance, setCurrentPageGuidance] = useState(1)
+  const [currentPageReview, setCurrentPageReview] = useState(1)
+
+  useEffect(() => {
+    setCurrentPageGuidance(1)
+  }, [segment, statusFilter, searchName, searchTopic, selectedPeriod?.id])
+
+  useEffect(() => {
+    setCurrentPageReview(1)
+  }, [segment, statusFilter, searchName, searchTopic, selectedPeriod?.id])
 
   const reviewedCount = useMemo(() => {
     return guidanceGroups.filter((g) => g.status === 'reviewed').length + reviewGroups.filter((g) => g.status === 'reviewed').length
@@ -162,6 +199,17 @@ export default function TeacherReviewGroupsPage() {
     })
   }, [searchName, searchTopic, statusFilter, reviewGroups])
 
+  const itemsPerPage = 10
+  const paginatedGuidanceGroups = useMemo(() => {
+    const startIndex = (currentPageGuidance - 1) * itemsPerPage
+    return filteredGuidanceGroups.slice(startIndex, startIndex + itemsPerPage)
+  }, [filteredGuidanceGroups, currentPageGuidance])
+
+  const paginatedReviewGroups = useMemo(() => {
+    const startIndex = (currentPageReview - 1) * itemsPerPage
+    return filteredReviewGroups.slice(startIndex, startIndex + itemsPerPage)
+  }, [filteredReviewGroups, currentPageReview])
+
   const selectedGuidanceGroup = filteredGuidanceGroups.find((group) => group.id === selectedGuidanceId) ?? filteredGuidanceGroups[0] ?? null
   const selectedReviewGroup = filteredReviewGroups.find((group) => group.id === selectedReviewId) ?? filteredReviewGroups[0] ?? null
 
@@ -202,32 +250,6 @@ export default function TeacherReviewGroupsPage() {
         title="Đánh giá"
         description="Theo dõi và đánh giá các nhóm Nhóm hướng dẫn, Nhóm phản biện do giảng viên đang quản lý."
       />
-
-      {/* Main segment tabs (Nhóm hướng dẫn / Nhóm phản biện) in Pill style */}
-      <section className="mb-5 flex flex-wrap items-center gap-2 rounded-3xl border border-slate-200 bg-white p-2 shadow-[0_12px_40px_rgba(15,23,42,0.05)] mt-4">
-        {([
-          { key: 'Nhóm hướng dẫn', label: 'Nhóm hướng dẫn', count: guidanceGroups.length, icon: <Users className="h-4 w-4" /> },
-          { key: 'Nhóm phản biện', label: 'Nhóm phản biện', count: reviewGroups.length, icon: <ShieldCheck className="h-4 w-4" /> },
-        ] as const).map((item) => {
-          const active = segment === item.key
-          return (
-            <button
-              key={item.key}
-              type="button"
-              onClick={() => setSegment(item.key)}
-              className={`inline-flex items-center gap-2 rounded-[20px] px-4 py-2.5 text-sm font-medium transition ${
-                active 
-                  ? 'bg-[#2196F3] text-white shadow-lg shadow-blue-200' 
-                  : 'text-slate-600 hover:bg-slate-50'
-              }`}
-            >
-              {item.icon}
-              {item.label}
-              <span className={`rounded-full px-2 py-0.5 text-xs ${active ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'}`}>{item.count}</span>
-            </button>
-          )
-        })}
-      </section>
 
       {/* Sub-filters & Search Toolbar */}
       <section className="mb-6 flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_8px_30px_rgba(15,23,42,0.04)]">
@@ -288,9 +310,9 @@ export default function TeacherReviewGroupsPage() {
               <TeacherPill tone="orange">{filteredGuidanceGroups.length} nhóm</TeacherPill>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto max-h-[600px] overflow-y-auto relative">
               <table className="min-w-245 w-full text-sm">
-                <thead className="bg-slate-50 text-slate-600">
+                <thead className="bg-slate-50 text-slate-600 sticky top-0 z-10 shadow-[0_1px_0_rgba(226,232,240,1)]">
                   <tr>
                     <th className="px-5 py-3 text-left w-16">STT</th>
                     <th className="px-5 py-3 text-left">Đề tài</th>
@@ -307,8 +329,9 @@ export default function TeacherReviewGroupsPage() {
                       </td>
                     </tr>
                   ) : (
-                    filteredGuidanceGroups.map((group, index) => {
+                    paginatedGuidanceGroups.map((group, index) => {
                       const selected = selectedGuidanceId === group.id
+                      const globalIndex = (currentPageGuidance - 1) * itemsPerPage + index + 1
                       return (
                         <tr
                           key={group.id}
@@ -317,7 +340,7 @@ export default function TeacherReviewGroupsPage() {
                             selected ? 'bg-blue-100/70 text-blue-900 font-semibold shadow-sm' : 'hover:bg-blue-50/50'
                           }`}
                         >
-                          <td className="px-5 py-4 font-medium text-slate-500">{index + 1}</td>
+                          <td className="px-5 py-4 font-medium text-slate-500">{globalIndex}</td>
                           <td className="px-5 py-4 text-slate-800 font-medium">
                             {group.topicName ?? group.latestSubmission ?? ''}
                           </td>
@@ -378,6 +401,12 @@ export default function TeacherReviewGroupsPage() {
                 </tbody>
               </table>
             </div>
+            <TeacherPagination
+              currentPage={currentPageGuidance}
+              totalItems={filteredGuidanceGroups.length}
+              itemsPerPage={itemsPerPage}
+              onChangePage={setCurrentPageGuidance}
+            />
           </TeacherCard>
 
           <TeacherCard className="space-y-4 p-5 bg-[linear-gradient(135deg,#f0fdf4_0%,#ffffff_100%)] h-fit">
@@ -424,9 +453,9 @@ export default function TeacherReviewGroupsPage() {
               <TeacherPill tone="green">{filteredReviewGroups.length} nhóm</TeacherPill>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto max-h-[600px] overflow-y-auto relative">
               <table className="min-w-245 w-full text-sm">
-                <thead className="bg-slate-50 text-slate-600">
+                <thead className="bg-slate-50 text-slate-600 sticky top-0 z-10 shadow-[0_1px_0_rgba(226,232,240,1)]">
                   <tr>
                     <th className="px-5 py-3 text-left w-16">STT</th>
                     <th className="px-5 py-3 text-left">Đề tài</th>
@@ -444,8 +473,9 @@ export default function TeacherReviewGroupsPage() {
                       </td>
                     </tr>
                   ) : (
-                    filteredReviewGroups.map((group, index) => {
+                    paginatedReviewGroups.map((group, index) => {
                       const selected = selectedReviewId === group.id
+                      const globalIndex = (currentPageReview - 1) * itemsPerPage + index + 1
                       return (
                         <tr
                           key={group.id}
@@ -454,7 +484,7 @@ export default function TeacherReviewGroupsPage() {
                             selected ? 'bg-blue-100/70 text-blue-900 font-semibold shadow-sm' : 'hover:bg-blue-50/50'
                           }`}
                         >
-                          <td className="px-5 py-4 font-medium text-slate-500">{index + 1}</td>
+                          <td className="px-5 py-4 font-medium text-slate-500">{globalIndex}</td>
                           <td className="px-5 py-4 text-slate-800 font-medium">
                             <span
                               className="hover:text-[#1976D2] hover:underline cursor-pointer transition-colors"
@@ -519,6 +549,12 @@ export default function TeacherReviewGroupsPage() {
                 </tbody>
               </table>
             </div>
+            <TeacherPagination
+              currentPage={currentPageReview}
+              totalItems={filteredReviewGroups.length}
+              itemsPerPage={itemsPerPage}
+              onChangePage={setCurrentPageReview}
+            />
           </TeacherCard>
 
           <TeacherCard className="space-y-4 bg-[linear-gradient(135deg,#eff6ff_0%,#ffffff_100%)] p-5 h-fit">

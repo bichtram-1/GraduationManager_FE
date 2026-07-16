@@ -108,7 +108,10 @@ const RealtimeListener = () => {
       };
     };
 
-    connectSSE();
+    const disableSSE = import.meta.env.VITE_DISABLE_SSE === 'true';
+    if (!disableSSE) {
+      connectSSE();
+    }
 
     return () => {
       if (eventSource) {
