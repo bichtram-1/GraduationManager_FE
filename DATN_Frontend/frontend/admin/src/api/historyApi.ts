@@ -20,6 +20,7 @@ export const historyApi = {
     nhom_id?: string;
     action_type?: string;
     role?: string;
+    keyword?: string;
   }): Promise<IHistoryLog[]> => {
     const response = await axiosInstance.get('/private/v1/admin/history', { params });
     return response?.data?.results?.objects || [];

@@ -1,7 +1,7 @@
 "use client"
 
 import { usePeriod } from '@/lib/providers/PeriodProvider'
-import { topicApi } from '@/lib/api/topicApi'
+import { topicApi, ITopicDirection } from '@/lib/api/topicApi'
 import { studentApi, IThesisRegistration } from '@/lib/api/studentApi'
 import Link from 'next/link'
 import { CalendarDays, CheckCircle2, Clock3, Users } from 'lucide-react'
@@ -103,9 +103,60 @@ export default function ThesisRegisterPage() {
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [direction, setDirection] = useState('all')
+  const [directionOptions, setDirectionOptions] = useState<ITopicDirection[]>([])
+  const [teacher, setTeacher] = useState('all')
+  const [teacherOptions, setTeacherOptions] = useState<string[]>([])
   const [searchInput, setSearchInput] = useState('')
   const [keyword, setKeyword] = useState('')
   const [detailTopic, setDetailTopic] = useState<Topic | null>(null)
+
+  // Gõ tới đâu lọc tới đó, không cần bấm nút "Tìm kiếm"
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setKeyword(searchInput)
+      setPage(1)
+    }, 400)
+    return () => clearTimeout(handler)
+  }, [searchInput])
+
+  // Danh sách hướng đề tài để lọc, lấy đúng dữ liệu thật từ bảng huongdetai (không đoán theo tên)
+  useEffect(() => {
+    let mounted = true
+    async function loadDirections() {
+      try {
+        const res = await topicApi.getDirections()
+        if (!mounted) return
+        setDirectionOptions(res)
+      } catch (_err) {
+        if (!mounted) return
+        setDirectionOptions([])
+      }
+    }
+    loadDirections()
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  // Danh sách giảng viên để lọc, lấy từ toàn bộ đề tài của đợt (không phụ thuộc trang/bộ lọc hiện tại)
+  useEffect(() => {
+    let mounted = true
+    async function loadTeachers() {
+      try {
+        const res = await topicApi.getTopics({ periodId: selectedPeriod?.id, page: 1, limit: 1000 })
+        if (!mounted) return
+        const names = Array.from(new Set(res.rows.map((t: Topic) => t.module).filter(Boolean))) as string[]
+        setTeacherOptions(names.sort((a, b) => a.localeCompare(b)))
+      } catch (_err) {
+        if (!mounted) return
+        setTeacherOptions([])
+      }
+    }
+    loadTeachers()
+    return () => {
+      mounted = false
+    }
+  }, [selectedPeriod?.id])
 
   // Load registration
   useEffect(() => {
@@ -143,6 +194,7 @@ export default function ThesisRegisterPage() {
           page,
           limit: 12,
           direction,
+          teacher: teacher !== 'all' ? teacher : undefined,
           keyword: keyword.trim() || undefined
         })
         if (!mounted) return
@@ -168,7 +220,7 @@ export default function ThesisRegisterPage() {
       mounted = false
       window.removeEventListener('realtime-topic-updated', handleSync)
     }
-  }, [selectedPeriod?.id, page, direction, keyword])
+  }, [selectedPeriod?.id, page, direction, teacher, keyword])
 
   const handleRegister = (id: string) => {
     if (registration && registration.topicId) {
@@ -189,6 +241,7 @@ export default function ThesisRegisterPage() {
         page,
         limit: 12,
         direction,
+        teacher: teacher !== 'all' ? teacher : undefined,
         keyword: keyword.trim() || undefined
       })
       setTopics(resTopics.rows)
@@ -212,6 +265,7 @@ export default function ThesisRegisterPage() {
         page,
         limit: 12,
         direction,
+        teacher: teacher !== 'all' ? teacher : undefined,
         keyword: keyword.trim() || undefined
       })
       setTopics(resTopics.rows)
@@ -234,6 +288,7 @@ export default function ThesisRegisterPage() {
           page,
           limit: 12,
           direction,
+          teacher: teacher !== 'all' ? teacher : undefined,
           keyword: keyword.trim() || undefined
         }),
         studentApi.getMyThesisRegistration(selectedPeriod?.id)
@@ -411,38 +466,40 @@ export default function ThesisRegisterPage() {
               className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-400 transition"
             >
               <option value="all">Tất cả hướng đề tài</option>
-              <option value="PHAN_MEM">Phát triển phần mềm</option>
-              <option value="MANG_MAY_TINH">Mạng máy tính</option>
+              {directionOptions.map((d) => (
+                <option key={d.id} value={d.id}>{d.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Teacher Filter */}
+          <div className="w-64">
+            <label className="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">Giảng viên hướng dẫn</label>
+            <select
+              value={teacher}
+              onChange={(e) => {
+                setTeacher(e.target.value)
+                setPage(1)
+              }}
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-400 transition"
+            >
+              <option value="all">Tất cả giảng viên</option>
+              {teacherOptions.map((name) => (
+                <option key={name} value={name}>{name}</option>
+              ))}
             </select>
           </div>
 
           {/* Search Input */}
           <div className="flex-1 min-w-[240px]">
             <label className="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">Tìm kiếm đề tài</label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    setKeyword(searchInput)
-                    setPage(1)
-                  }
-                }}
-                placeholder="Nhập tên đề tài, tên giảng viên..."
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-400 transition"
-              />
-              <button
-                onClick={() => {
-                  setKeyword(searchInput)
-                  setPage(1)
-                }}
-                className="rounded-xl bg-[#2196F3] text-white px-5 text-sm font-semibold hover:bg-[#1976D2] transition shadow-md shadow-blue-100"
-              >
-                Tìm kiếm
-              </button>
-            </div>
+            <input
+              type="text"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Nhập tên đề tài, tên giảng viên..."
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-400 transition"
+            />
           </div>
         </div>
       </div>

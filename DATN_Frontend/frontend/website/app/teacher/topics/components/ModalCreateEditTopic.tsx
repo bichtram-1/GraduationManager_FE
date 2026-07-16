@@ -22,7 +22,7 @@ type ModalCreateEditTopicProps = {
   onChangeDirection: (value: string) => void
   onChangeFileUrl: (value: string) => void
   onClose: () => void
-  onSave: () => void
+  onSave: (overrideFileUrl?: string) => void
   onImportFile?: (file: File) => void
 }
 
@@ -49,23 +49,15 @@ export default function ModalCreateEditTopic(props: ModalCreateEditTopicProps) {
   } = props
 
   const [uploadingFile, setUploadingFile] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
 
-  const handleUploadFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Chỉ giữ file cục bộ ở đây, chưa gửi lên server — file thật sự chỉ được tải lên
+  // ngay lúc bấm nút lưu (handleSaveClick), tránh trường hợp file mồ côi trên storage
+  // nếu giảng viên chọn file rồi đóng modal mà không lưu.
+  const handleUploadFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    setUploadingFile(true)
-    try {
-      const res = await topicApi.uploadFile(file)
-      if (res?.cloudFrontUrl) {
-        onChangeFileUrl(res.cloudFrontUrl)
-      } else {
-        alert('Tải file lên thất bại!')
-      }
-    } catch {
-      alert('Có lỗi xảy ra khi tải file!')
-    } finally {
-      setUploadingFile(false)
-    }
+    setSelectedFile(file)
   }
 
   const [hasTriedSave, setHasTriedSave] = useState(false)
@@ -73,6 +65,7 @@ export default function ModalCreateEditTopic(props: ModalCreateEditTopicProps) {
   useEffect(() => {
     if (open) {
       setHasTriedSave(false)
+      setSelectedFile(null)
     }
   }, [open])
 
@@ -118,18 +111,37 @@ export default function ModalCreateEditTopic(props: ModalCreateEditTopicProps) {
 
   const fileError = useMemo(() => {
     if (!open) return null
-    if (!editingCode && !fileUrl) {
+    if (!editingCode && !fileUrl && !selectedFile) {
       return 'Vui lòng tải lên file tài liệu mô tả đính kèm!'
     }
     return null
-  }, [fileUrl, editingCode, open])
+  }, [fileUrl, selectedFile, editingCode, open])
 
-  const handleSaveClick = () => {
+  const handleSaveClick = async () => {
     setHasTriedSave(true)
     if (nameError || slotsError || descriptionError || fileError) {
       return
     }
-    onSave()
+
+    if (!selectedFile) {
+      onSave()
+      return
+    }
+
+    // Gộp việc tải file lên cùng lúc với lưu đề tài — chỉ thật sự upload khi bấm nút lưu
+    setUploadingFile(true)
+    try {
+      const res = await topicApi.uploadFile(selectedFile)
+      if (!res?.cloudFrontUrl) {
+        alert('Tải file lên thất bại!')
+        return
+      }
+      onSave(res.cloudFrontUrl)
+    } catch {
+      alert('Có lỗi xảy ra khi tải file!')
+    } finally {
+      setUploadingFile(false)
+    }
   }
 
   return (
@@ -233,7 +245,22 @@ export default function ModalCreateEditTopic(props: ModalCreateEditTopicProps) {
 
         <TeacherField label="File mô tả đính kèm (.pdf, .docx, .doc)" required={!editingCode}>
           <div className="mt-1 space-y-2">
-            {fileUrl ? (
+            {selectedFile ? (
+              <div className="flex items-center justify-between rounded-2xl bg-blue-50/50 px-4 py-3 border border-blue-100">
+                <span className="inline-flex items-center gap-2 text-sm font-medium text-[#1976D2] max-w-[85%] truncate">
+                  <FileText className="h-4.5 w-4.5 shrink-0" />
+                  Đã chọn: {selectedFile.name}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedFile(null)}
+                  className="rounded-xl p-1.5 text-red-500 hover:bg-red-50 transition shrink-0"
+                  title="Bỏ chọn file"
+                >
+                  <Trash2 className="h-4.5 w-4.5" />
+                </button>
+              </div>
+            ) : fileUrl ? (
               <div className="flex items-center justify-between rounded-2xl bg-blue-50/50 px-4 py-3 border border-blue-100">
                 <a
                   href={fileUrl}
@@ -260,7 +287,7 @@ export default function ModalCreateEditTopic(props: ModalCreateEditTopicProps) {
                 fileError && hasTriedSave ? 'border-red-500 bg-red-50/10' : 'border-slate-300'
               }`}>
                 <Upload className="h-4 w-4 text-[#1976D2]" />
-                <span>{uploadingFile ? 'Đang tải file lên...' : 'Chọn file tài liệu mô tả để tải lên'}</span>
+                <span>Chọn file tài liệu mô tả (sẽ tải lên khi lưu)</span>
                 <input
                   type="file"
                   accept=".pdf,.docx"
@@ -279,7 +306,7 @@ export default function ModalCreateEditTopic(props: ModalCreateEditTopicProps) {
         <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
           <TeacherButton variant="secondary" onClick={onClose}>{COMMON_LABELS.CANCEL}</TeacherButton>
           <TeacherButton variant="primary" onClick={handleSaveClick} disabled={submitting || uploadingFile}>
-            {submitting ? 'Đang lưu...' : editingCode ? 'Lưu cập nhật' : 'Gửi yêu cầu duyệt'}
+            {uploadingFile ? 'Đang tải file lên...' : submitting ? 'Đang lưu...' : editingCode ? 'Lưu cập nhật' : 'Gửi yêu cầu duyệt'}
           </TeacherButton>
         </div>
       </div>

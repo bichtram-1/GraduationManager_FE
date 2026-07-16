@@ -42,6 +42,7 @@ const ViTranslation = {
   company_management_desc: 'Quản lý doanh nghiệp tiếp nhận thực tập và đồ án',
   topic_management: 'Quản lý đề tài',
   group_management: 'Quản lý SV ĐATN',
+  history_logs: 'Lịch sử hệ thống',
   thesis_students_management: 'Danh sách sinh viên ĐATN',
   group_management_desc: 'Quản lý nhóm sinh viên, trạng thái, thành viên và thao tác nhanh.',
   group_review: 'Duyệt nhóm đồ án',

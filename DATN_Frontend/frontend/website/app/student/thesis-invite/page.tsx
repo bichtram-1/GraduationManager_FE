@@ -5,7 +5,7 @@ import { CheckCircle2, Clock3, Mail, Plus, XCircle } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
 import { StudentPill, StudentSectionHeader } from '../_components/StudentShell'
 import { StudentButton, StudentModal } from '../_components/StudentUI'
-import { studentApi, IThesisRegistration } from '@/lib/api/studentApi'
+import { studentApi, IThesisRegistration, IStudentSearchResult } from '@/lib/api/studentApi'
 import { usePeriod } from '@/lib/providers/PeriodProvider'
 import { COMMON_LABELS } from '@/constants/commonLabels'
 import { App, Spin } from 'antd'
@@ -68,6 +68,8 @@ export default function InvitePage() {
   const isActionDisabled = isPeriodDisabled
 
   const [newId, setNewId] = useState('')
+  const [suggestions, setSuggestions] = useState<IStudentSearchResult[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
   const [outgoingInvites, setOutgoingInvites] = useState<Invite[]>([])
   const [incomingInvites, setIncomingInvites] = useState<Invite[]>([])
   const [registration, setRegistration] = useState<IThesisRegistration | null>(null)
@@ -93,6 +95,39 @@ export default function InvitePage() {
 
     return !isLeader || isGroupFull || isTopicDuyet
   }, [isPeriodDisabled, registration, pendingOutgoing])
+
+  // Gõ tới đâu tìm tới đó (giống cơ chế tìm kiếm ở trang Quản lý đề tài bên admin),
+  // nhập tên hoặc mã số sinh viên đều tìm được.
+  useEffect(() => {
+    const keyword = newId.trim()
+    if (!keyword) {
+      setSuggestions([])
+      setShowSuggestions(false)
+      return
+    }
+    let mounted = true
+    const handler = setTimeout(async () => {
+      try {
+        const res = await studentApi.searchStudents(keyword)
+        if (!mounted) return
+        setSuggestions(res)
+        setShowSuggestions(true)
+      } catch (_err) {
+        if (!mounted) return
+        setSuggestions([])
+      }
+    }, 300)
+    return () => {
+      mounted = false
+      clearTimeout(handler)
+    }
+  }, [newId])
+
+  const selectSuggestion = (student: IStudentSearchResult) => {
+    setNewId(student.code)
+    setSuggestions([])
+    setShowSuggestions(false)
+  }
 
   useEffect(() => {
     let mounted = true
@@ -375,12 +410,15 @@ export default function InvitePage() {
               </div>
             </div>
 
-            <div className="flex gap-2">
+            <div className="relative flex gap-2">
               <input
                 value={newId}
                 onChange={(event) => setNewId(event.target.value)}
-                placeholder="Nhập MSSV thành viên, ví dụ 20520005"
+                onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                placeholder="Nhập MSSV hoặc họ tên thành viên..."
                 disabled={isInviteDisabled}
+                autoComplete="off"
                 className="flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-white disabled:cursor-not-allowed disabled:opacity-60"
               />
               <button
@@ -391,6 +429,29 @@ export default function InvitePage() {
                 <Plus className="h-4 w-4" />
                 Thêm
               </button>
+
+              {showSuggestions && suggestions.length > 0 && (
+                <div className="absolute left-0 right-14 top-full z-10 mt-1 max-h-64 overflow-y-auto rounded-2xl border border-slate-200 bg-white py-1.5 shadow-lg">
+                  {suggestions.map((student) => (
+                    <button
+                      type="button"
+                      key={student.code}
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => selectSuggestion(student)}
+                      className="flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left transition hover:bg-blue-50"
+                    >
+                      <span className="text-sm font-semibold text-slate-900">{student.name}</span>
+                      <span className="text-xs text-slate-500">MSSV: {student.code}{student.className ? ` • Lớp: ${student.className}` : ''}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {showSuggestions && newId.trim() && suggestions.length === 0 && (
+                <div className="absolute left-0 right-14 top-full z-10 mt-1 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-400 shadow-lg">
+                  Không tìm thấy sinh viên phù hợp.
+                </div>
+              )}
             </div>
 
             <div className="max-h-96 space-y-2 overflow-y-auto pr-1">

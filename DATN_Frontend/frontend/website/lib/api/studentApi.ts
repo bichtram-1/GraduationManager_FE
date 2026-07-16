@@ -84,6 +84,12 @@ export interface IGroupInviteIncoming {
   status: 'pending' | 'accepted' | 'rejected';
 }
 
+export interface IStudentSearchResult {
+  code: string;
+  name: string;
+  className: string;
+}
+
 export interface IProgressReport {
   week: number;
   title: string;
@@ -194,6 +200,11 @@ export const studentApi = {
   getOutgoingInvitations: async (periodId?: number | string): Promise<IGroupInviteOutgoing[]> => {
     const response = await axiosInstance.get('/private/v1/student/thesis/invitations/outgoing', { params: { periodId } });
     return response?.data?.results?.objects || response?.data?.results?.object || [];
+  },
+
+  searchStudents: async (keyword: string): Promise<IStudentSearchResult[]> => {
+    const response = await axiosInstance.get('/private/v1/student/students/search', { params: { keyword } });
+    return response?.data?.results?.objects || [];
   },
 
   sendInvitation: async (studentCode: string, topicId?: string | null): Promise<IGroupInviteOutgoing> => {

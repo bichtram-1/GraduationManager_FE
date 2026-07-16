@@ -70,13 +70,18 @@ export function StudentShell({ children }: { children: ReactNode }) {
   const fetchNotifications = async () => {
     try {
       const data = await studentApi.getHistory()
-      setNotifications(data)
+      // Chuông thông báo chỉ giữ hoạt động trong 1 tuần gần nhất — lịch sử đầy đủ vẫn
+      // xem được ở trang "Lịch sử hoạt động", chuông chỉ là bản xem nhanh, không nên
+      // tồn đọng thông báo cũ mãi mãi.
+      const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
+      const recentData = data.filter((n) => new Date(n.created_at).getTime() > oneWeekAgo)
+      setNotifications(recentData)
       const lastSeen = localStorage.getItem('student_last_seen_notif')
       if (lastSeen) {
-        const count = data.filter(n => new Date(n.created_at) > new Date(lastSeen)).length
+        const count = recentData.filter(n => new Date(n.created_at) > new Date(lastSeen)).length
         setUnreadCount(count)
       } else {
-        setUnreadCount(data.length)
+        setUnreadCount(recentData.length)
       }
     } catch (err) {
       console.error('Failed to fetch notifications:', err)
@@ -291,7 +296,7 @@ export function StudentShell({ children }: { children: ReactNode }) {
             <button
               type="button"
               onClick={() => setMenuOpen((value) => !value)}
-              className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-700 transition hover:bg-slate-200 lg:hidden"
+              className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-700 transition hover:bg-slate-200 sm:hidden"
               aria-label="Mở menu"
             >
               <Menu className="h-4 w-4" />

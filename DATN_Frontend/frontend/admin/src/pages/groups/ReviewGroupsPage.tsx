@@ -6,8 +6,11 @@ import { getKey, I18nKey } from '@shared/types/I18nKeyType';
 import { STATUS_CODE } from '../../constants/commonConst';
 import { formatNumber } from '@shared/utils/numberUtils';
 import { useGlobalVariable } from '../../hooks/GlobalVariableProvider';
+import { useScrollContainer } from '../../hooks/ScrollContainerProvider';
 import { TeamOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import type { IListGroup, IGroupMember } from '../../type/GroupType';
+
+const STICKY_PAGINATION_HEIGHT = 57;
 
 const { Search } = Input;
 
@@ -23,6 +26,7 @@ const STATUS_META: Record<string, { labelKey: keyof I18nKey; color: string }> = 
 const ReviewGroupsPage: React.FC = () => {
   const { t } = useTranslation();
   const { selectedPeriod } = useGlobalVariable();
+  const scrollContainerRef = useScrollContainer();
   const { data: q } = groupHooks.useFetchListGroups();
   const approveGroup = groupHooks.useApproveGroup();
   const rejectGroup = groupHooks.useRejectGroup();
@@ -191,7 +195,7 @@ const ReviewGroupsPage: React.FC = () => {
       </div>
 
       {/* Synchronized Card and table style */}
-      <Card className="overflow-hidden rounded-[18px] border border-slate-100 bg-white shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
+      <Card className="filter-table-card rounded-[18px] border border-slate-100 bg-white shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
         <div className="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4 p-5 pb-0">
           <Search
             placeholder="Tìm kiếm theo mã nhóm, tên đề tài, giảng viên hoặc thành viên..."
@@ -224,6 +228,11 @@ const ReviewGroupsPage: React.FC = () => {
             }}
             className="border border-slate-100 rounded-xl overflow-hidden"
             scroll={{ x: 'max-content' }}
+            sticky={{
+              offsetHeader: 0,
+              offsetScroll: STICKY_PAGINATION_HEIGHT,
+              getContainer: () => scrollContainerRef?.current || window,
+            }}
           />
         </div>
       </Card>

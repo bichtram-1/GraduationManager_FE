@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useMemo } from 'react'
-import { studentApi } from '@/lib/api/studentApi'
+import { teacherApi } from '@/lib/api/teacherApi'
 import { Spin, message, Empty } from 'antd'
 import { Clock, Search, User, Users, ClipboardCheck, AlertTriangle, BookOpen } from 'lucide-react'
 
@@ -19,19 +19,16 @@ interface IHistoryLog {
 }
 
 const ACTION_META: Record<string, { label: string; color: string; icon: React.ComponentType<{ className?: string }> }> = {
-  KHAI_BAO_TTTN: { label: 'Khai báo TTTN', color: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: ClipboardCheck },
-  DANG_KY_DE_TAI: { label: 'Đăng ký đề tài', color: 'bg-indigo-50 text-indigo-700 border-indigo-200', icon: BookOpen },
-  HUY_DANG_KY_DE_TAI: { label: 'Hủy đăng ký đề tài', color: 'bg-rose-50 text-rose-700 border-rose-200', icon: BookOpen },
-  GUI_LOI_MOI: { label: 'Gửi lời mời', color: 'bg-blue-50 text-blue-700 border-blue-200', icon: Users },
-  HUY_LOI_MOI: { label: 'Hủy lời mời', color: 'bg-orange-50 text-orange-700 border-orange-200', icon: AlertTriangle },
-  CHAP_NHAN_LOI_MOI: { label: 'Gia nhập nhóm', color: 'bg-teal-50 text-teal-700 border-teal-200', icon: User },
-  TU_CHOI_LOI_MOI: { label: 'Từ chối lời mời', color: 'bg-rose-50 text-rose-700 border-rose-200', icon: AlertTriangle },
+  DE_XUAT_DE_TAI: { label: 'Đề xuất đề tài', color: 'bg-blue-50 text-blue-700 border-blue-200', icon: BookOpen },
+  DUYET_DE_TAI: { label: 'Duyệt nhóm đồ án', color: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: ClipboardCheck },
+  TU_CHOI_DE_TAI: { label: 'Từ chối đề tài', color: 'bg-rose-50 text-rose-700 border-rose-200', icon: AlertTriangle },
   TAO_NHOM: { label: 'Tạo nhóm', color: 'bg-purple-50 text-purple-700 border-purple-200', icon: Users },
   GIAI_TAN_NHOM: { label: 'Giải tán nhóm', color: 'bg-red-50 text-red-700 border-red-200', icon: AlertTriangle },
   ROI_NHOM: { label: 'Rời nhóm', color: 'bg-orange-50 text-orange-700 border-orange-200', icon: AlertTriangle },
+  CAP_NHAT_NHOM: { label: 'Cập nhật nhóm', color: 'bg-indigo-50 text-indigo-700 border-indigo-200', icon: Users },
 }
 
-export default function StudentHistoryPage() {
+export default function TeacherHistoryPage() {
   const [logs, setLogs] = useState<IHistoryLog[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -40,12 +37,12 @@ export default function StudentHistoryPage() {
     let mounted = true
     async function loadHistory() {
       try {
-        const data = await studentApi.getHistory()
+        const data = await teacherApi.getHistory()
         if (mounted) {
           setLogs(data)
         }
       } catch (err) {
-        console.error('Failed to load student history:', err)
+        console.error('Failed to load lecturer history:', err)
         message.error('Không thể tải lịch sử hoạt động.')
       } finally {
         if (mounted) {
@@ -96,7 +93,7 @@ export default function StudentHistoryPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Lịch sử hoạt động</h1>
           <p className="mt-1 text-sm text-slate-500">
-            Xem lại toàn bộ quá trình khai báo thực tập, tương tác nhóm và lời mời ĐATN của bạn.
+            Xem lại toàn bộ quá trình đề xuất đề tài, duyệt nhóm và các tương tác học thuật của bạn.
           </p>
         </div>
         <div className="relative w-full sm:max-w-xs">
@@ -105,7 +102,7 @@ export default function StudentHistoryPage() {
             placeholder="Tìm kiếm hoạt động..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-2xl border border-slate-200 bg-white py-2 pl-10 pr-4 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            className="w-full rounded-2xl border border-slate-200 bg-white py-2 pl-10 pr-4 text-sm outline-none transition placeholder:text-slate-400 focus:border-[#2196F3] focus:ring-1 focus:ring-[#2196F3]"
           />
           <Search className="absolute left-3.5 top-2.5 h-4 w-4 text-slate-400" />
         </div>
@@ -151,24 +148,24 @@ export default function StudentHistoryPage() {
                   </div>
 
                   {/* Main Description */}
-                  <p className="mt-3 text-sm leading-relaxed text-slate-700 font-medium">
+                  <p className="mt-3 text-sm font-medium text-slate-700 leading-relaxed">
                     {log.description}
                   </p>
 
-                  {/* Details block if any */}
+                  {/* Detail details if any */}
                   {log.details && (
-                    <div className="mt-3 rounded-xl bg-slate-50 p-3 text-xs leading-relaxed text-slate-500 border border-slate-100/50">
+                    <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50/50 p-3 text-xs text-slate-500 font-mono overflow-x-auto leading-relaxed">
                       {log.details}
                     </div>
                   )}
 
-                  {/* Operator */}
-                  <div className="mt-4 flex items-center gap-2 text-xs text-slate-400 border-t border-slate-50 pt-3">
-                    <User className="h-3.5 w-3.5 text-slate-300" />
+                  {/* User footer */}
+                  <div className="mt-4 flex items-center gap-2 border-t border-slate-50 pt-3 text-[11px] text-slate-400">
+                    <User className="h-3.5 w-3.5" />
                     <span>Thực hiện bởi:</span>
                     <span className="font-semibold text-slate-600">{log.user_name}</span>
-                    <span className="text-slate-300">|</span>
-                    <span className="capitalize">{log.role === 'sinh_vien' ? 'Sinh viên' : log.role}</span>
+                    <span>|</span>
+                    <span className="capitalize">{log.role === 'giang_vien' ? 'Giảng viên' : log.role}</span>
                   </div>
                 </div>
               </div>
@@ -176,8 +173,8 @@ export default function StudentHistoryPage() {
           })}
         </div>
       ) : (
-        <div className="rounded-[28px] border border-dashed border-slate-200 bg-white p-12 text-center">
-          <Empty description={search ? 'Không tìm thấy hoạt động nào phù hợp.' : 'Bạn chưa có lịch sử hoạt động nào.'} />
+        <div className="mt-12">
+          <Empty description="Không có lịch sử hoạt động nào phù hợp." />
         </div>
       )}
     </div>

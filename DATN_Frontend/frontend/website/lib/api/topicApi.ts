@@ -1,7 +1,17 @@
 import axiosInstance from '../axios/axios-config';
 
+export interface ITopicDirection {
+  id: string;
+  name: string;
+}
+
 export const topicApi = {
-  getTopics: async (params?: { periodId?: string; page?: number; limit?: number; direction?: string; keyword?: string }) => {
+  getDirections: async (): Promise<ITopicDirection[]> => {
+    const response = await axiosInstance.get('/private/v1/topic-directions');
+    return response?.data?.results?.objects || [];
+  },
+
+  getTopics: async (params?: { periodId?: string; page?: number; limit?: number; direction?: string; keyword?: string; teacher?: string }) => {
     const response = await axiosInstance.get('/private/v1/topics', { params });
     const resData = response?.data?.results?.objects || response?.data?.results?.object || response?.data;
     const rawList = (resData && typeof resData === 'object' && 'rows' in resData) ? resData.rows : (Array.isArray(resData) ? resData : []);

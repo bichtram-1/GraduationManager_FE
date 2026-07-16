@@ -1,17 +1,26 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import Link from 'next/link'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowRight, CalendarDays, CheckCircle2, FileText, Trophy, Upload, Building2, Clock3, TrendingUp } from 'lucide-react'
 import { StudentPill, StudentSectionHeader, StudentStatCard } from './_components/StudentShell'
-import { studentApi, IStudentDashboardData } from '@/lib/api/studentApi'
-import { App, Spin } from 'antd'
+import { studentApi } from '@/lib/api/studentApi'
+import { App, Skeleton } from 'antd'
+
+const DASHBOARD_KEY = ['student-dashboard']
+const HISTORY_KEY = ['student-history']
 
 export default function StudentIndexPage() {
   const { message } = App.useApp()
-  const [data, setData] = useState<IStudentDashboardData | null>(null)
-  const [history, setHistory] = useState<{ log_id: number; description: string; created_at: string }[]>([])
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
+
+  const dashboardQuery = useQuery({ queryKey: DASHBOARD_KEY, queryFn: studentApi.getDashboard })
+  const historyQuery = useQuery({ queryKey: HISTORY_KEY, queryFn: studentApi.getHistory })
+
+  const loading = dashboardQuery.isLoading || historyQuery.isLoading
+  const data = dashboardQuery.data
+  const history = historyQuery.data ?? []
 
   const formatTime = (timeStr: string) => {
     try {
@@ -23,53 +32,54 @@ export default function StudentIndexPage() {
   }
 
   useEffect(() => {
-    let mounted = true
-    setLoading(true)
-    const load = async () => {
-      try {
-        const [dashData, historyData] = await Promise.all([
-          studentApi.getDashboard(),
-          studentApi.getHistory()
-        ])
-        if (mounted) {
-          setData(dashData)
-          setHistory(historyData)
-          setLoading(false)
-        }
-      } catch (err) {
-        console.error('Failed to load student dashboard or history:', err)
-        if (mounted) {
-          setLoading(false)
-        }
-      }
-    }
-
-    load()
-
     const handleSync = () => {
-      load()
+      queryClient.invalidateQueries({ queryKey: DASHBOARD_KEY })
+      queryClient.invalidateQueries({ queryKey: HISTORY_KEY })
     }
     const handleAssignmentPublished = () => {
       message.success('Bạn vừa được công bố giảng viên hướng dẫn TTTN!')
-      load()
+      handleSync()
     }
     window.addEventListener('realtime-group-updated', handleSync)
     window.addEventListener('realtime-topic-updated', handleSync)
     window.addEventListener('realtime-assignment-published', handleAssignmentPublished)
 
     return () => {
-      mounted = false
       window.removeEventListener('realtime-group-updated', handleSync)
       window.removeEventListener('realtime-topic-updated', handleSync)
       window.removeEventListener('realtime-assignment-published', handleAssignmentPublished)
     }
-  }, [message])
+  }, [message, queryClient])
 
   if (loading) {
     return (
-      <div className="flex min-h-[400px] flex-col items-center justify-center gap-3">
-        <Spin size="large" />
-        <div className="text-sm text-slate-500">Đang tải thông tin trang chủ sinh viên...</div>
+      <div className="space-y-6">
+        <div className="rounded-[28px] border border-white/70 bg-white/90 p-6 shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
+          <Skeleton active title paragraph={{ rows: 2 }} />
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+              <Skeleton active title={false} paragraph={{ rows: 2 }} />
+            </div>
+          ))}
+        </div>
+        <div className="grid gap-6 xl:grid-cols-3">
+          <div className="space-y-6 xl:col-span-2">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
+                <Skeleton active paragraph={{ rows: 3 }} />
+              </div>
+            ))}
+          </div>
+          <div className="space-y-6">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
+                <Skeleton active paragraph={{ rows: 3 }} />
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     )
   }
@@ -142,29 +152,29 @@ export default function StudentIndexPage() {
       </section>
 
       <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StudentStatCard 
-          title="TTTN" 
-          value={tttn.status} 
-          hint={tttn.companyName || (tttn.hasPeriod ? "Đã mở đăng ký" : "Chưa mở")} 
-          accent="blue" 
+        <StudentStatCard
+          title="TTTN"
+          value={tttn.status}
+          hint={tttn.companyName || (tttn.hasPeriod ? "Đã mở đăng ký" : "Chưa mở")}
+          accent="blue"
         />
-        <StudentStatCard 
-          title="ĐATN" 
-          value={datn.status === 'Đã đăng ký' ? '1 đề tài' : datn.status} 
-          hint={datn.topicTitle || "Đề tài tốt nghiệp"} 
-          accent="green" 
+        <StudentStatCard
+          title="ĐATN"
+          value={datn.status === 'Đã đăng ký' ? '1 đề tài' : datn.status}
+          hint={datn.topicTitle || "Đề tài tốt nghiệp"}
+          accent="green"
         />
-        <StudentStatCard 
-          title="Báo cáo" 
-          value={String(reportsCount).padStart(2, '0')} 
-          hint="Báo cáo tiến độ đã nộp" 
-          accent="orange" 
+        <StudentStatCard
+          title="Báo cáo"
+          value={String(reportsCount).padStart(2, '0')}
+          hint="Báo cáo tiến độ đã nộp"
+          accent="orange"
         />
-        <StudentStatCard 
-          title="Kết quả" 
-          value={expectedScore > 0 ? String(expectedScore) : 'Chưa có'} 
-          hint="Điểm tổng kết dự kiến" 
-          accent="violet" 
+        <StudentStatCard
+          title="Kết quả"
+          value={expectedScore > 0 ? String(expectedScore) : 'Chưa có'}
+          hint="Điểm tổng kết dự kiến"
+          accent="violet"
         />
       </div>
 

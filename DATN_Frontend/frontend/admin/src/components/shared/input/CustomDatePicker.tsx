@@ -13,6 +13,7 @@ type Props = {
   placeholder?: string;
   className?: string;
   format?: string;
+  disabledDate?: (current: dayjs.Dayjs) => boolean;
 };
 
 /**
@@ -27,6 +28,7 @@ const CustomDatePicker: React.FC<Props> = ({
   placeholder,
   className,
   format = DATE_DISPLAY_FORMAT,
+  disabledDate,
 }) => {
   const parsed = value ? dayjs(value, format, true) : null;
 
@@ -39,6 +41,7 @@ const CustomDatePicker: React.FC<Props> = ({
       placeholder={placeholder || format}
       className={className}
       style={{ width: '100%' }}
+      disabledDate={disabledDate}
     />
   );
 };
