@@ -137,7 +137,7 @@ export interface IThesisRegistration {
   status: 'pending' | 'accepted' | 'rejected';
   note: string;
   instructor?: string | null;
-  members?: { studentCode: string; name: string }[];
+  members?: { studentCode: string; name: string; isLeader?: boolean; isCurrent?: boolean }[];
 }
 
 export const studentApi = {
@@ -256,5 +256,10 @@ export const studentApi = {
   getStudentResults: async (): Promise<IStudentResults> => {
     const response = await axiosInstance.get('/private/v1/student/results');
     return response?.data?.results?.object || response?.data;
+  },
+
+  getHistory: async (): Promise<{ log_id: number; sinh_vien_id?: number; ma_so_sinh_vien?: string; nhom_id?: number; role: string; user_name: string; action_type: string; description: string; details?: string; created_at: string }[]> => {
+    const response = await axiosInstance.get('/private/v1/student/history');
+    return response?.data?.results?.objects || [];
   }
 };

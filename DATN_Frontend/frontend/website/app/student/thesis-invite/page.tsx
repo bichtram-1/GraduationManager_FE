@@ -64,7 +64,8 @@ export default function InvitePage() {
     }
     return { isOpen, isClosed }
   }, [selectedPeriod])
-  const isActionDisabled = isPeriodLocked || !isRegistrationTime.isOpen || isRegistrationTime.isClosed
+  const isPeriodDisabled = isPeriodLocked || !isRegistrationTime.isOpen || isRegistrationTime.isClosed
+  const isActionDisabled = isPeriodDisabled
 
   const [newId, setNewId] = useState('')
   const [outgoingInvites, setOutgoingInvites] = useState<Invite[]>([])
@@ -80,10 +81,23 @@ export default function InvitePage() {
   const incomingCount = incomingInvites.length
   const pendingOutgoing = useMemo(() => outgoingInvites.filter((item) => item.status === 'pending').length, [outgoingInvites])
 
+  const isInviteDisabled = useMemo(() => {
+    if (isPeriodDisabled) return true
+    if (!registration) return false
+
+    const currentMember = registration.members?.find(m => m.isCurrent)
+    const isLeader = !currentMember || currentMember.isLeader
+    const groupMembersCount = registration.members?.length || 0
+    const isGroupFull = (groupMembersCount + pendingOutgoing) >= 2
+    const isTopicDuyet = registration.status === 'accepted' || registration.status === 'rejected'
+
+    return !isLeader || isGroupFull || isTopicDuyet
+  }, [isPeriodDisabled, registration, pendingOutgoing])
+
   useEffect(() => {
     let mounted = true
-    setLoading(true)
-    async function load() {
+    const load = async (showLoading = true) => {
+      if (showLoading) setLoading(true)
       try {
         const [outgoingData, incomingData, regData] = await Promise.all([
           studentApi.getOutgoingInvitations(selectedPeriod?.id),
@@ -100,14 +114,25 @@ export default function InvitePage() {
         setIncomingInvites([])
         setRegistration(null)
       } finally {
-        if (mounted) {
+        if (mounted && showLoading) {
           setLoading(false)
         }
       }
     }
-    load()
+
+    load(true)
+
+    const handleSync = () => {
+      load(false)
+    }
+
+    window.addEventListener('realtime-group-updated', handleSync)
+    window.addEventListener('realtime-topic-updated', handleSync)
+
     return () => {
       mounted = false
+      window.removeEventListener('realtime-group-updated', handleSync)
+      window.removeEventListener('realtime-topic-updated', handleSync)
     }
   }, [selectedPeriod?.id])
 
@@ -295,10 +320,17 @@ export default function InvitePage() {
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
             {registration.members?.map((member) => (
-              <span key={member.studentCode} className="inline-flex items-center gap-1.5 rounded-xl bg-white border border-emerald-200 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm">
+              <span key={member.studentCode} className="inline-flex items-center gap-2 rounded-xl bg-white border border-emerald-200 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                 <span className="font-semibold text-slate-900">{member.name}</span>
                 <span className="text-slate-400">({member.studentCode})</span>
+                <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-bold ${
+                  member.isLeader 
+                    ? 'bg-blue-50 text-blue-700 border border-blue-200' 
+                    : 'bg-slate-50 text-slate-600 border border-slate-200'
+                }`}>
+                  {member.isLeader ? 'Trưởng nhóm' : 'Thành viên'}
+                </span>
               </span>
             ))}
           </div>
@@ -348,12 +380,12 @@ export default function InvitePage() {
                 value={newId}
                 onChange={(event) => setNewId(event.target.value)}
                 placeholder="Nhập MSSV thành viên, ví dụ 20520005"
-                disabled={isActionDisabled}
+                disabled={isInviteDisabled}
                 className="flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-white disabled:cursor-not-allowed disabled:opacity-60"
               />
               <button
                 onClick={addInvite}
-                disabled={isActionDisabled}
+                disabled={isInviteDisabled}
                 className="inline-flex items-center gap-2 rounded-2xl bg-[#2196F3] px-4 py-2 text-white shadow-lg shadow-blue-200 transition hover:bg-[#1976D2] disabled:cursor-not-allowed disabled:bg-slate-300"
               >
                 <Plus className="h-4 w-4" />

@@ -10,25 +10,38 @@ import { App, Spin } from 'antd'
 export default function StudentIndexPage() {
   const { message } = App.useApp()
   const [data, setData] = useState<IStudentDashboardData | null>(null)
+  const [history, setHistory] = useState<{ log_id: number; description: string; created_at: string }[]>([])
   const [loading, setLoading] = useState(true)
+
+  const formatTime = (timeStr: string) => {
+    try {
+      const date = new Date(timeStr)
+      return date.toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' })
+    } catch {
+      return timeStr
+    }
+  }
 
   useEffect(() => {
     let mounted = true
     setLoading(true)
-    const load = () => {
-      studentApi.getDashboard()
-        .then((res) => {
-          if (mounted) {
-            setData(res)
-            setLoading(false)
-          }
-        })
-        .catch((err) => {
-          console.error('Failed to fetch student dashboard:', err)
-          if (mounted) {
-            setLoading(false)
-          }
-        })
+    const load = async () => {
+      try {
+        const [dashData, historyData] = await Promise.all([
+          studentApi.getDashboard(),
+          studentApi.getHistory()
+        ])
+        if (mounted) {
+          setData(dashData)
+          setHistory(historyData)
+          setLoading(false)
+        }
+      } catch (err) {
+        console.error('Failed to load student dashboard or history:', err)
+        if (mounted) {
+          setLoading(false)
+        }
+      }
     }
 
     load()
@@ -198,6 +211,31 @@ export default function StudentIndexPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          </section>
+
+          <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
+            <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-5 py-4">
+              <div>
+                <div className="text-sm font-semibold text-slate-900">Lịch sử hoạt động</div>
+                <div className="text-xs text-slate-500">Quá trình tạo nhóm, duyệt đề tài & khai báo TTTN</div>
+              </div>
+              <StudentPill tone="blue">Nhật ký</StudentPill>
+            </div>
+            <div className="max-h-96 overflow-y-auto space-y-3 p-5">
+              {history.length === 0 ? (
+                <div className="text-center text-xs text-slate-400 py-4">Chưa có lịch sử hoạt động nào được ghi nhận.</div>
+              ) : (
+                history.map((log) => (
+                  <div key={log.log_id} className="flex flex-col gap-1 rounded-2xl border border-slate-100 bg-slate-50/50 p-3 hover:bg-slate-50 transition">
+                    <div className="text-sm font-medium text-slate-800 leading-relaxed">{log.description}</div>
+                    <div className="text-[10px] text-slate-400 flex items-center gap-1 mt-1">
+                      <Clock3 className="h-3 w-3" />
+                      {formatTime(log.created_at)}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </section>
         </div>

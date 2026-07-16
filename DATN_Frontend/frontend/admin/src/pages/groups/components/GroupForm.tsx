@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Form, Input, InputNumber, Button, Modal, Table, Tag, Tooltip } from 'antd';
 import type { FormListFieldData } from 'antd';
-import { ExclamationCircleOutlined } from '@ant-design/icons';
+import { ExclamationCircleOutlined, SwapOutlined } from '@ant-design/icons';
 import type { IDetailGroup, IGroupMember } from '../../../type/GroupType';
 import type { AssignmentRow } from '../../../type/AssignmentType';
 import { useTranslation } from 'react-i18next';
@@ -11,6 +11,9 @@ import AddMemberModal from './AddMemberModal';
 import { useGlobalVariable } from '../../../hooks/GlobalVariableProvider';
 import { assignmentHooks } from '../../../hooks/useAssignments';
 import { groupHooks } from '../../../hooks/useGroups';
+import SwapMemberModal from './SwapMemberModal';
+import { useQueryClient } from '@tanstack/react-query';
+import { QueryKey } from '../../../constants/queryKey';
 
 interface Props {
   detail?: IDetailGroup;
@@ -22,7 +25,17 @@ const GroupForm: React.FC<Props> = ({ detail, disabled }) => {
   const { t } = useTranslation();
   const { selectedPeriod } = useGlobalVariable();
   const [adding, setAdding] = useState(false);
+  const [swapping, setSwapping] = useState(false);
   const formInstance = Form.useFormInstance();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (detail) {
+      formInstance.setFieldsValue({
+        members: detail.members || []
+      });
+    }
+  }, [detail, formInstance]);
 
   // Load all groups in the period
   const { data: groupList } = groupHooks.useFetchListGroups();
@@ -38,6 +51,12 @@ const GroupForm: React.FC<Props> = ({ detail, disabled }) => {
     limit: 1000,
     periodId: selectedPeriod?.id ?? 'none'
   });
+
+  const otherGroupStudents = useMemo(() => {
+    const rows = (assignmentList?.rows ?? []) as AssignmentRow[];
+    const currentGroupId = detail?.id;
+    return rows.filter((r) => r.groupId && String(r.groupId) !== String(currentGroupId) && (r.dieuKienLamDoAn ?? 'DAT') === 'DAT');
+  }, [assignmentList, detail?.id]);
 
   const dbStudents = useMemo(() => {
     const rows = (assignmentList?.rows ?? []) as AssignmentRow[];
@@ -238,31 +257,17 @@ const GroupForm: React.FC<Props> = ({ detail, disabled }) => {
                   );
                 }
               },
-              {
-                title: 'Hành động',
-                key: 'action',
-                width: 100,
-                render: (_: unknown, field: FormListFieldData) => (
-                  <Button
-                    type="link"
-                    danger
-                    onClick={() => {
-                      onRemove(() => remove(field.name));
-                    }}
-                  >
-                    Xóa
-                  </Button>
-                ),
-              },
             ];
 
             return (
               <div>
                 <div className="mb-3 flex items-center justify-between">
                   <div className="text-sm font-semibold text-slate-800">Thành viên nhóm</div>
-                  <Button type="dashed" size="small" onClick={() => setAdding(true)}>
-                    Thêm thành viên
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button type="primary" size="small" ghost icon={<SwapOutlined />} onClick={() => setSwapping(true)}>
+                      Hoán đổi
+                    </Button>
+                  </div>
                 </div>
                 <Table
                   dataSource={fields}
@@ -287,6 +292,21 @@ const GroupForm: React.FC<Props> = ({ detail, disabled }) => {
           groups={allGroupsList}
           currentGroupMembers={formInstance.getFieldValue('members') || []}
           onAdd={onAdd}
+        />
+      )}
+
+      {!disabled && (
+        <SwapMemberModal
+          open={swapping}
+          onCancel={() => setSwapping(false)}
+          currentGroupMembers={formInstance.getFieldValue('members') || []}
+          otherGroupStudents={otherGroupStudents}
+          onSwapSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: [QueryKey.groups.list] });
+            if (detail?.id) {
+              queryClient.invalidateQueries({ queryKey: [QueryKey.groups.detail, detail.id] });
+            }
+          }}
         />
       )}
     </>

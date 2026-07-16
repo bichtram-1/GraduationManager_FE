@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation'
 import { studentApi } from '@/lib/api/studentApi'
 import {
   Award,
+  Bell,
   BookOpen,
   ClipboardList,
   FileText,
@@ -20,6 +21,7 @@ import {
   User,
   Users,
   X,
+  History,
 } from 'lucide-react'
 
 import { Select } from 'antd'
@@ -33,6 +35,7 @@ const NAV_ITEMS = [
   { key: 'reports-tttn', href: '/student/reports/tttn', label: 'Báo cáo TTTN', icon: FileText },
   { key: 'reports-datn', href: '/student/reports/datn', label: 'Báo cáo ĐATN', icon: GraduationCap },
   { key: 'results', href: '/student/results', label: 'Kết quả', icon: Award },
+  { key: 'history', href: '/student/history', label: 'Lịch sử hoạt động', icon: History },
 ]
 
 function getActiveKey(pathname: string) {
@@ -42,6 +45,7 @@ function getActiveKey(pathname: string) {
   if (pathname.startsWith('/student/reports/tttn')) return 'reports-tttn'
   if (pathname.startsWith('/student/reports/datn')) return 'reports-datn'
   if (pathname.startsWith('/student/results')) return 'results'
+  if (pathname.startsWith('/student/history')) return 'history'
   return 'home'
 }
 
@@ -58,6 +62,38 @@ export function StudentShell({ children }: { children: ReactNode }) {
     phone: string
     className: string
   } | null>(null)
+
+  const [notifications, setNotifications] = useState<any[]>([])
+  const [unreadCount, setUnreadCount] = useState(0)
+  const [notifOpen, setNotifOpen] = useState(false)
+
+  const fetchNotifications = async () => {
+    try {
+      const data = await studentApi.getHistory()
+      setNotifications(data)
+      const lastSeen = localStorage.getItem('student_last_seen_notif')
+      if (lastSeen) {
+        const count = data.filter(n => new Date(n.created_at) > new Date(lastSeen)).length
+        setUnreadCount(count)
+      } else {
+        setUnreadCount(data.length)
+      }
+    } catch (err) {
+      console.error('Failed to fetch notifications:', err)
+    }
+  }
+
+  useEffect(() => {
+    fetchNotifications()
+    window.addEventListener('realtime-group-updated', fetchNotifications)
+    window.addEventListener('realtime-topic-updated', fetchNotifications)
+    window.addEventListener('realtime-score-updated', fetchNotifications)
+    return () => {
+      window.removeEventListener('realtime-group-updated', fetchNotifications)
+      window.removeEventListener('realtime-topic-updated', fetchNotifications)
+      window.removeEventListener('realtime-score-updated', fetchNotifications)
+    }
+  }, [])
 
   useEffect(() => {
     let mounted = true
@@ -186,6 +222,56 @@ export function StudentShell({ children }: { children: ReactNode }) {
               <div className="text-sm font-medium leading-tight">{student?.name || 'Đang tải...'}</div>
               <div className="text-xs text-slate-500">{student ? `${student.studentCode} · ${student.className}` : ''}</div>
             </div>
+
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  setNotifOpen(!notifOpen);
+                  if (!notifOpen) {
+                    localStorage.setItem('student_last_seen_notif', new Date().toISOString());
+                    setUnreadCount(0);
+                  }
+                }}
+                className="relative flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-700 transition hover:bg-slate-200"
+                title="Thông báo"
+              >
+                <Bell className="h-4 w-4" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-2 right-2 flex h-2 w-2 rounded-full bg-red-500 ring-2 ring-white animate-pulse" />
+                )}
+              </button>
+
+              {notifOpen && (
+                <div className="absolute right-0 mt-2 w-80 rounded-2xl border border-slate-200 bg-white p-4 shadow-xl z-50 ring-1 ring-black/5 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <span className="text-sm font-semibold text-slate-900">Thông báo quan trọng</span>
+                    <button 
+                      onClick={() => setNotifOpen(false)}
+                      className="text-xs text-[#1976D2] hover:underline bg-transparent border-0 cursor-pointer"
+                    >
+                      Đóng
+                    </button>
+                  </div>
+                  <div className="mt-2 max-h-72 overflow-y-auto space-y-2.5 pr-1">
+                    {notifications.length === 0 ? (
+                      <div className="text-center text-xs text-slate-400 py-6">Chưa có thông báo nào.</div>
+                    ) : (
+                      notifications.slice(0, 8).map((n) => (
+                        <div key={n.log_id} className="text-xs leading-normal border-b border-slate-50 pb-2 last:border-0 last:pb-0">
+                          <div className="font-medium text-slate-800">{n.description}</div>
+                          <div className="text-[10px] text-slate-400 mt-1 flex items-center gap-1">
+                            <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500" />
+                            {new Date(n.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} - {new Date(n.created_at).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <button
               type="button"
               onClick={() => setProfileOpen((value) => !value)}

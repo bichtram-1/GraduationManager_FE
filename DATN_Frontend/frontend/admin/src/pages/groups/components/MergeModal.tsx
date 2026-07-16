@@ -83,7 +83,7 @@ const MergeModal: React.FC<Props> = ({ open, onCancel, onOk, mergeLeft, mergeRig
       cancelText="Hủy bỏ"
       width={920}
       centered
-      okButtonProps={{ disabled: !mergeRight || (selectedMembers && selectedMembers.length === 0) }}
+      okButtonProps={{ disabled: !mergeRight }}
     >
       <div className="grid grid-cols-12 gap-4 items-center py-4">
         
@@ -206,35 +206,7 @@ const MergeModal: React.FC<Props> = ({ open, onCancel, onOk, mergeLeft, mergeRig
             )}
           </div>
 
-          {/* Members Transfer selector if selected */}
-          {rightGroup && (
-            <div className="mt-3 pt-3 border-t border-slate-100">
-              <div className="text-[11px] font-bold text-slate-500 mb-1.5">Chọn thành viên muốn chuyển:</div>
-              <div className="flex flex-wrap gap-2">
-                {rightGroup.members.map((m) => {
-                  const isChecked = selectedMembers ? selectedMembers.includes(m.id) : false;
-                  return (
-                    <Checkbox
-                      key={m.id}
-                      checked={isChecked}
-                      disabled={m.eligible === false}
-                      onChange={(e) => {
-                        const checked = e.target.checked;
-                        setSelectedMembers((prev) => {
-                          const base = prev ?? [];
-                          if (checked) return Array.from(new Set([...base, m.id]));
-                          return base.filter((id) => id !== m.id);
-                        });
-                      }}
-                      className="text-xs font-medium"
-                    >
-                      {m.name}
-                    </Checkbox>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+          {/* Tự động ghép toàn bộ thành viên hợp lệ của nhóm được chọn */}
         </div>
         
       </div>

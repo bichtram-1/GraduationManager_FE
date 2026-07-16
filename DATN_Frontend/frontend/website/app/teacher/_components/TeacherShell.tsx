@@ -13,8 +13,8 @@ const NAV_ITEMS = [
   { key: 'home', href: '/teacher', label: 'Trang chủ', icon: Home },
   { key: 'topics', href: '/teacher/topics', label: 'Đề tài của tôi', icon: BookOpen },
   { key: 'groups', href: '/teacher/groups', label: 'Duyệt nhóm', icon: Users },
-  { key: 'review-groups', href: '/teacher/review-groups', label: 'Đánh giá', icon: ClipboardCheck },
   { key: 'students', href: '/teacher/students', label: 'Hướng dẫn sinh viên', icon: Users },
+  { key: 'review-groups', href: '/teacher/review-groups', label: 'Đánh giá', icon: ClipboardCheck },
   { key: 'grading', href: '/teacher/grading', label: 'Chấm điểm', icon: Trophy },
   { key: 'councils', href: '/teacher/councils', label: 'Hội đồng', icon: Building2 },
 ]

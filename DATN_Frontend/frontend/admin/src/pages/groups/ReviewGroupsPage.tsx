@@ -216,7 +216,7 @@ const ReviewGroupsPage: React.FC = () => {
             columns={columns} 
             pagination={{
               pageSize: 10,
-              showSizeChanger: false,
+              showSizeChanger: true,
               position: ['bottomCenter'],
               showTotal(total, range) {
                 return <span className="pl-2">{`${t('showing')} ${range[0]} ${t('to')} ${range[1]} ${t('of')} ${total} ${t('entries')}`}</span>;

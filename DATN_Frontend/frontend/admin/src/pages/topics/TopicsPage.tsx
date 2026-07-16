@@ -9,7 +9,7 @@ import { useMemo, useCallback } from 'react';
 import { useGlobalVariable } from '../../hooks/GlobalVariableProvider';
 import { useTranslation } from 'react-i18next';
 import { getKey } from '@shared/types/I18nKeyType';
-import { STATUS_CODE, cn } from '../../constants/commonConst';
+import { STATUS_CODE, cn, isPeriodClosedForAdmin } from '../../constants/commonConst';
 import { formatNumber } from '@shared/utils/numberUtils';
 
 const getTopicStatusMeta = (t: (key: string) => string) => ({
@@ -99,7 +99,7 @@ const TopicsPage = () => {
   const { data: teachers = [] } = assignmentHooks.useFetchTeachers();
 
   const rows = topicList?.rows ?? [];
-  const isPeriodClosed = selectedPeriod?.status === STATUS_CODE.CLOSED;
+  const isPeriodClosed = isPeriodClosedForAdmin(selectedPeriod);
 
   const confirmStatusChange = useCallback((record: IListTopic, status: TopicStatus) => {
     const meta = getTopicStatusMeta(t)[status];

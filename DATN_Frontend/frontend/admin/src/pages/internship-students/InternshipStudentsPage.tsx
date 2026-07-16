@@ -5,7 +5,7 @@ import RemindModal from './components/RemindModal';
 import { useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { cn, STATUS_CODE } from '../../constants/commonConst';
+import { cn, STATUS_CODE, isPeriodClosedForAdmin } from '../../constants/commonConst';
 import { getKey } from '@shared/types/I18nKeyType';
 import { internshipHooks } from '../../hooks/useInternships';
 import { companyHooks } from '../../hooks/useCompanies';
@@ -118,7 +118,7 @@ const InternshipStudentsPage = () => {
   const confirmationRows = confirmationList?.rows ?? INITIAL_CONFIRMATIONS;
   const declarationsRows = declarationsList?.rows ?? INITIAL_CONFIRMATIONS;
   const noCompanyRows = noCompanyList?.rows ?? INITIAL_NO_COMPANY_STUDENTS;
-  const isPeriodClosed = selectedPeriod?.status === STATUS_CODE.CLOSED;
+  const isPeriodClosed = isPeriodClosedForAdmin(selectedPeriod);
 
   const summary = useMemo(() => {
     if (mode === 'declarations') {
