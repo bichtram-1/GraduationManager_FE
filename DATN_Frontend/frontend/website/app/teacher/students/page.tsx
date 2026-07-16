@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState, useEffect } from 'react'
-import { BookOpen, Eye, Mail, MapPin, Phone, Search, ShieldCheck, Users, Building2 } from 'lucide-react'
+import { BookOpen, Eye, Mail, MapPin, Phone, Search, Users, Building2 } from 'lucide-react'
 import { TeacherPill, TeacherSectionHeader } from '../_components/TeacherShell'
 import { TeacherButton, TeacherCard, TeacherPagination } from '../_components/TeacherUI'
 import { usePeriod } from '@/lib/providers/PeriodProvider'

@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from 'react'
-import { Search, ShieldCheck, Users } from 'lucide-react'
+import { Search, Users } from 'lucide-react'
 import { App } from 'antd'
 import { TeacherSectionHeader, TeacherPill } from '../_components/TeacherShell'
 import { TeacherCard, TeacherInputClass, TeacherPagination } from '../_components/TeacherUI'

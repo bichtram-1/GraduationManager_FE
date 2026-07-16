@@ -287,7 +287,6 @@ export default function ModalCreateEditTopic(props: ModalCreateEditTopicProps) {
             <DirectionSelector value={direction} onChange={onChangeDirection} />
           </TeacherField>
 
-
           <TeacherField label="Số lượng thành viên tối đa" required>
             <input
               value={slots}
