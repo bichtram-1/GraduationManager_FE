@@ -114,7 +114,7 @@ export interface FilterTableProps<
     UseMutationResult<TList, AxiosError, DeleteVariables<BaseListParams>>
   >;
   detailInfo?: CRUDTableInfoType<
-    (id: string, enable: boolean) => UseQueryResult<TDetail, Error>
+    (id: string, enable: boolean, role?: string) => UseQueryResult<TDetail, Error>
   >;
   exportInfo?: CRUDTableInfoType<UseMutationResult<TList, AxiosError>>;
   formatInitialValues?: (data: TDetail) => Record<string, unknown>;
@@ -211,7 +211,7 @@ const FilterTable = <
     ? detailHook(
         openModal?.id,
         openModal?.type === UpdateModalType || openModal?.type === DetailModalType,
-        (internalParams as Record<string, unknown>)?.role as string | undefined
+        (internalParams as unknown as Record<string, unknown>)?.role as string | undefined
       )
     : { data: undefined, isLoading: false };
 

@@ -9,7 +9,7 @@ export interface IValueLabel {
   label: string;
 }
 
-export type UserRoleType = 'student' | 'teacher';
+export type UserRoleType = 'student' | 'teacher' | 'admin';
 export type UserStatusType = 'active' | 'inactive' | 'deleted';
 
 /** Fields chung cho tất cả user interfaces — không export (chỉ dùng làm base) */
