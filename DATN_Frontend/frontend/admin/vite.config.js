@@ -14,6 +14,7 @@ export default defineConfig({
     alias: {
       '@shared': path.resolve(__dirname, '../shared/src'),
     },
+    dedupe: ['react', 'react-dom', 'antd', '@tanstack/react-query', 'i18next', 'react-i18next'],
   },
   server: {
     port: 5001,

@@ -8,6 +8,7 @@ import { usePeriod } from '@/lib/providers/PeriodProvider'
 import { teacherApi } from '@/lib/api/teacherApi'
 import { App } from 'antd'
 import { COMMON_LABELS } from '@/constants/commonLabels'
+import { getFileUrl } from '@/lib/utils/fileUrl'
 
 export default function TeacherStudentsPage() {
   const { message } = App.useApp()
@@ -735,26 +736,8 @@ export default function TeacherStudentsPage() {
                 <div className="text-sm font-medium text-slate-900">File báo cáo</div>
                 <div className="mt-2 rounded-md border border-slate-100 bg-white p-3 text-sm text-slate-700">
                   {(() => {
-                    const getFileUrlHelper = (path: string | undefined) => {
-                      if (!path || path === '—') return null;
-                      const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
-                      if (path.startsWith('http')) {
-                        try {
-                          const urlObj = new URL(path);
-                          const backendUrlObj = new URL(backendUrl);
-                          if (urlObj.hostname === 'localhost' || urlObj.hostname === '127.0.0.1') {
-                            urlObj.protocol = backendUrlObj.protocol;
-                            urlObj.host = backendUrlObj.host;
-                          }
-                          return urlObj.toString();
-                        } catch (_) {
-                          return path;
-                        }
-                      }
-                      return `${backendUrl}/storage/${path}`;
-                    };
                     const fileName = selectedReport?.duong_dan_file || (selectedReport ? `tuan_${selectedReport.tuan_so}.pdf` : 'report.pdf');
-                    const fileUrl = getFileUrlHelper(selectedReport?.duong_dan_file);
+                    const fileUrl = getFileUrl(selectedReport?.duong_dan_file);
                     return fileUrl ? (
                       <a href={fileUrl} target="_blank" rel="noreferrer" className="text-blue-600 underline font-semibold hover:text-blue-800">
                         {fileName}

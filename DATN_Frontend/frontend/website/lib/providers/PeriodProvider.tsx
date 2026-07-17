@@ -100,8 +100,7 @@ export const PeriodProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       eventSource.addEventListener('connected', (e: MessageEvent) => {
         try {
-          const res = JSON.parse(e.data);
-          console.log('Realtime SSE connected:', res);
+          JSON.parse(e.data);
         } catch (err) {
           console.error(err);
         }
@@ -110,8 +109,7 @@ export const PeriodProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       eventSource.addEventListener('notification', (e: MessageEvent) => {
         try {
           const data = JSON.parse(e.data);
-          console.log('Realtime notification:', data);
-          
+
           if (data.type === 'topic_proposed' || data.type === 'topic_updated' || data.type === 'topic_deleted') {
             window.dispatchEvent(new CustomEvent('realtime-topic-updated'));
           } else if (
@@ -135,8 +133,7 @@ export const PeriodProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       eventSource.addEventListener('slot_updated', (e: MessageEvent) => {
         try {
           const data = JSON.parse(e.data);
-          console.log('Realtime slot/group updated:', data);
-          
+
           if (data.type === 'topic_updated' || data.type === 'topic_deleted' || data.type === 'topic_proposed') {
             window.dispatchEvent(new CustomEvent('realtime-topic-updated'));
           }
@@ -159,7 +156,6 @@ export const PeriodProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       eventSource.addEventListener('score_updated', (e: MessageEvent) => {
         try {
           const data = JSON.parse(e.data);
-          console.log('Realtime score updated:', data);
           window.dispatchEvent(new CustomEvent('realtime-score-updated', { detail: data }));
         } catch (err) {
           console.error(err);
@@ -168,8 +164,7 @@ export const PeriodProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       eventSource.addEventListener('period_updated', (e: MessageEvent) => {
         try {
-          const data = JSON.parse(e.data);
-          console.log('Realtime period updated:', data);
+          JSON.parse(e.data);
           window.dispatchEvent(new CustomEvent('realtime-period-updated'));
         } catch (err) {
           console.error(err);

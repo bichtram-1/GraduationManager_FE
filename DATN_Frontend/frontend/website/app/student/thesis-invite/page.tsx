@@ -174,14 +174,14 @@ export default function InvitePage() {
   const addInvite = async () => {
     const id = newId.trim()
     if (!id) {
-      message.error('Vui lòng nhập mã số sinh viên!')
+      message.error('Vui lòng nhập mã số sinh viên hoặc họ tên!')
       return
     }
-    if (!/^[a-zA-Z0-9]{5,15}$/.test(id)) {
-      message.error('Mã số sinh viên không hợp lệ (chỉ chứa chữ và số, độ dài từ 5-15 ký tự)!')
+    if (id.length < 2 || id.length > 50) {
+      message.error('Họ tên hoặc mã số sinh viên không hợp lệ (độ dài từ 2-50 ký tự)!')
       return
     }
-    if (outgoingInvites.some((item) => item.id === id && item.status === 'pending')) {
+    if (outgoingInvites.some((item) => item.id.toLowerCase() === id.toLowerCase() && item.status === 'pending')) {
       message.warning('Sinh viên này đã được mời, đang chờ phản hồi!')
       setNewId('')
       return

@@ -1,28 +1,14 @@
-import { STORAGES } from '@/lib/constants/storage';
-import { decrypted } from '@/lib/utils/cookie';
 import ViMessages from './messages/vi';
 import { getRequestConfig } from 'next-intl/server';
-import { cookies } from 'next/headers';
 
-const SUPPORTED_LOCALES = ['vi'] as const;
 const DEFAULT_LOCALE = 'vi';
 
-// Locale → messages map. All locales now resolve from the shared translation package.
-const MESSAGES_BY_LOCALE = {
-  vi: ViMessages,
-} as const;
-
+// Hệ thống chỉ hỗ trợ 1 locale (vi) nên không cần đọc cookie mỗi request để chọn locale —
+// đọc cookie() ở đây từng khiến toàn bộ route bị ép render dynamic (không thể cache/prerender)
+// dù kết quả luôn là 'vi' bất kể cookie chứa gì.
 export default getRequestConfig(async () => {
-  const cookieStore = await cookies();
-  const localeRaw = cookieStore.get(STORAGES.LANGUAGE)?.value;
-  const localeFromCookie =
-    (localeRaw ? decrypted(localeRaw) : DEFAULT_LOCALE) || DEFAULT_LOCALE;
-  const locale = SUPPORTED_LOCALES.includes(localeFromCookie as 'vi')
-    ? localeFromCookie
-    : DEFAULT_LOCALE;
-
   return {
-    locale,
-    messages: MESSAGES_BY_LOCALE[locale as keyof typeof MESSAGES_BY_LOCALE],
+    locale: DEFAULT_LOCALE,
+    messages: ViMessages,
   };
 });

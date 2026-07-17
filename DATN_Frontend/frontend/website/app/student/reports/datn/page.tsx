@@ -2,42 +2,36 @@
 
 import { useMemo, useState, useEffect, ChangeEvent } from 'react'
 import Link from 'next/link'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { CheckCircle2, FileText, Plus, Upload, Clock3, MessageSquareQuote, Rocket, Users, GraduationCap, ShieldCheck } from 'lucide-react'
 import { StudentPill, StudentSectionHeader } from '../../_components/StudentShell'
 import { StudentButton, StudentField, StudentFilterTabs, StudentInputClass, StudentModal, getReportStatusTone } from '../../_components/StudentUI'
-import { studentApi, IDatnProgressReport, IThesisRegistration } from '@/lib/api/studentApi'
+import { studentApi } from '@/lib/api/studentApi'
 import { uploadApi } from '@/lib/api/uploadApi'
 import { usePeriod } from '@/lib/providers/PeriodProvider'
 import { COMMON_LABELS } from '@/constants/commonLabels'
+import { getFileUrl } from '@/lib/utils/fileUrl'
 import { App } from 'antd'
 
 type StatusFilter = 'all' | 'Đã nộp' | 'Thiếu' | 'Chưa nộp'
 
-const getFileUrl = (url: string | null | undefined) => {
-  if (!url || url === '—') return null;
-  const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
-  if (url.startsWith('http')) {
-    try {
-      const urlObj = new URL(url);
-      const backendUrlObj = new URL(backendUrl);
-      if (urlObj.hostname === 'localhost' || urlObj.hostname === '127.0.0.1') {
-        urlObj.protocol = backendUrlObj.protocol;
-        urlObj.host = backendUrlObj.host;
-      }
-      return urlObj.toString();
-    } catch (_) {
-      return url;
-    }
-  }
-  return `${backendUrl.replace(/\/$/, '')}/storage/${url}`;
-};
+const MILESTONES_KEY = ['datn-reports']
+const REGISTRATION_KEY = ['thesis-registration']
 
 export default function StudentReportsDATNPage() {
   const { message } = App.useApp()
   const { selectedPeriod } = usePeriod()
+  const queryClient = useQueryClient()
   const isPeriodLocked = selectedPeriod?.status === 'grading' || selectedPeriod?.status === 'closed'
-  const [milestones, setMilestones] = useState<IDatnProgressReport[]>([])
-  const [isTopicApproved, setIsTopicApproved] = useState(true)
+
+  const reportsQuery = useQuery({ queryKey: MILESTONES_KEY, queryFn: studentApi.getDatnReports })
+  const registrationQuery = useQuery({ queryKey: REGISTRATION_KEY, queryFn: () => studentApi.getMyThesisRegistration() })
+
+  const milestones = useMemo(() => reportsQuery.data?.reports ?? [], [reportsQuery.data])
+  const isTopicApproved = reportsQuery.data?.isTopicApproved !== false
+  const registration = registrationQuery.data ?? null
+  const loading = reportsQuery.isLoading || registrationQuery.isLoading
+
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [submitOpen, setSubmitOpen] = useState(false)
@@ -50,51 +44,29 @@ export default function StudentReportsDATNPage() {
     fileUrl: '',
     note: '',
   })
-  const [loading, setLoading] = useState(true)
-  const [registration, setRegistration] = useState<IThesisRegistration | null>(null)
 
+  // Mặc định chọn tuần đầu tiên khi báo cáo tải xong lần đầu — không ghi đè lựa chọn
+  // hiện tại của người dùng khi dữ liệu chỉ đơn thuần được refetch (realtime/mutation).
   useEffect(() => {
-    let mounted = true
-    setLoading(true)
-    async function load() {
-      try {
-        const [reportsData, regData] = await Promise.all([
-          studentApi.getDatnReports(),
-          studentApi.getMyThesisRegistration()
-        ])
-        if (!mounted) return
-        setMilestones(reportsData.reports || [])
-        setIsTopicApproved(reportsData.isTopicApproved !== false)
-        setRegistration(regData)
-        if (reportsData.reports && reportsData.reports.length > 0) {
-          setSelectedWeek(reportsData.reports[0].week)
-        }
-      } catch (_err) {
-        if (!mounted) return
-        setMilestones([])
-        setIsTopicApproved(true)
-        setRegistration(null)
-      } finally {
-        if (mounted) {
-          setLoading(false)
-        }
-      }
+    if (selectedWeek === null && milestones.length > 0) {
+      setSelectedWeek(milestones[0].week)
     }
+  }, [milestones, selectedWeek])
 
-    load()
-
+  // Sự kiện realtime chỉ cần đánh dấu cache cũ (invalidate) — react-query tự refetch lại.
+  useEffect(() => {
     const handleSync = () => {
-      load()
+      queryClient.invalidateQueries({ queryKey: MILESTONES_KEY })
+      queryClient.invalidateQueries({ queryKey: REGISTRATION_KEY })
     }
     window.addEventListener('realtime-group-updated', handleSync)
     window.addEventListener('realtime-topic-updated', handleSync)
 
     return () => {
-      mounted = false
       window.removeEventListener('realtime-group-updated', handleSync)
       window.removeEventListener('realtime-topic-updated', handleSync)
     }
-  }, [])
+  }, [queryClient])
 
   // Prefill form when week changes (for editing/updating existing reports)
   useEffect(() => {
@@ -229,10 +201,8 @@ export default function StudentReportsDATNPage() {
         fileName
       })
 
-      setMilestones((current) => {
-        const withoutMilestone = current.filter((item) => item.week !== nextMilestone.week)
-        return [nextMilestone, ...withoutMilestone]
-      })
+      // Thao tác do chính mình vừa làm — invalidate ngay, không chờ realtime hay hết staleTime.
+      queryClient.invalidateQueries({ queryKey: MILESTONES_KEY })
       setSelectedWeek(nextMilestone.week)
       setSubmitOpen(false)
       setSelectedFile(null)
