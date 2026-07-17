@@ -94,11 +94,11 @@ const ModalCreateEditUser = ({ mode = 'create', role }: IModalCreateEditUser) =>
       </p>
 
       {role === USER_ROLE.STUDENT ? (
-        <Form.Item name="role" hidden initialValue={USER_ROLE.STUDENT}>
+        <Form.Item name="role" hidden initialValue={isCreateMode ? USER_ROLE.STUDENT : undefined}>
           <Input />
         </Form.Item>
       ) : (
-        <Form.Item name="role" hidden initialValue={USER_ROLE.TEACHER}>
+        <Form.Item name="role" hidden initialValue={isCreateMode ? USER_ROLE.TEACHER : undefined}>
           <Input />
         </Form.Item>
       )}
