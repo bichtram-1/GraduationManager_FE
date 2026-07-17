@@ -152,3 +152,109 @@ export function TeacherModal({
     </div>
   )
 }
+
+export function TeacherPagination({
+  currentPage,
+  totalItems,
+  itemsPerPage = 10,
+  onChangePage,
+}: {
+  currentPage: number
+  totalItems: number
+  itemsPerPage?: number
+  onChangePage: (page: number) => void
+}) {
+  const totalPages = Math.ceil(totalItems / itemsPerPage)
+  if (totalPages <= 1) return null
+
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = Math.min(startIndex + itemsPerPage, totalItems)
+
+  const pages: Array<number | string> = []
+  for (let i = 1; i <= totalPages; i++) {
+    if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
+      pages.push(i)
+    } else if (pages[pages.length - 1] !== '...') {
+      pages.push('...')
+    }
+  }
+
+  return (
+    <div className="flex items-center justify-between border-t border-slate-200 bg-white px-5 py-4">
+      <div className="flex flex-1 justify-between sm:hidden">
+        <button
+          type="button"
+          onClick={() => onChangePage(Math.max(currentPage - 1, 1))}
+          disabled={currentPage === 1}
+          className="relative inline-flex items-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+        >
+          Trước
+        </button>
+        <button
+          type="button"
+          onClick={() => onChangePage(Math.min(currentPage + 1, totalPages))}
+          disabled={currentPage === totalPages}
+          className="relative ml-3 inline-flex items-center rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+        >
+          Sau
+        </button>
+      </div>
+      <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs text-slate-500 font-medium">
+            Hiển thị <span className="font-semibold text-slate-800">{startIndex + 1}</span> đến{' '}
+            <span className="font-semibold text-slate-800">{endIndex}</span> trong số{' '}
+            <span className="font-semibold text-slate-800">{totalItems}</span> kết quả
+          </p>
+        </div>
+        <div>
+          <nav className="isolate inline-flex -space-x-px rounded-xl shadow-sm border border-slate-200 bg-white" aria-label="Pagination">
+            <button
+              type="button"
+              onClick={() => onChangePage(Math.max(currentPage - 1, 1))}
+              disabled={currentPage === 1}
+              className="relative inline-flex items-center rounded-l-xl px-2.5 py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-50 disabled:opacity-50"
+            >
+              &laquo;
+            </button>
+            {pages.map((page, index) => {
+              if (page === '...') {
+                return (
+                  <span
+                    key={`ellipsis-${index}`}
+                    className="relative inline-flex items-center px-3 py-1.5 text-xs font-semibold text-slate-400"
+                  >
+                    ...
+                  </span>
+                )
+              }
+              const active = page === currentPage
+              return (
+                <button
+                  key={page}
+                  type="button"
+                  onClick={() => onChangePage(page as number)}
+                  className={`relative inline-flex items-center px-3 py-1.5 text-xs font-semibold ${
+                    active
+                      ? 'z-10 bg-[#2196F3] text-white border-[#2196F3]'
+                      : 'text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  {page}
+                </button>
+              )
+            })}
+            <button
+              type="button"
+              onClick={() => onChangePage(Math.min(currentPage + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="relative inline-flex items-center rounded-r-xl px-2.5 py-1.5 text-slate-500 hover:bg-slate-50 disabled:opacity-50"
+            >
+              &raquo;
+            </button>
+          </nav>
+        </div>
+      </div>
+    </div>
+  )
+}

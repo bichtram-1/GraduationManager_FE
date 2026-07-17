@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Clock, Save, Trophy, Users, FileText, BarChart3, CalendarDays, Building2 } from 'lucide-react'
 import { TeacherPill, TeacherSectionHeader } from '../_components/TeacherShell'
-import { TeacherButton, TeacherCard, TeacherInputClass } from '../_components/TeacherUI'
+import { TeacherButton, TeacherCard, TeacherInputClass, TeacherPagination } from '../_components/TeacherUI'
 import ScoringTable from './ScoringTable'
 import { usePeriod } from '@/lib/providers/PeriodProvider'
 import { teacherApi } from '@/lib/api/teacherApi'
@@ -62,6 +62,16 @@ export default function TeacherGradingPage() {
   const [lastUpdatedTime, setLastUpdatedTime] = useState<string>('Chưa cập nhật')
   const [datnFilter, setDatnFilter] = useState<'all' | 'graded' | 'grading' | 'ungraded'>('all')
   const [roleFilter, setRoleFilter] = useState<'all' | 'reviewer' | 'member' | 'advisor'>('all')
+  const [currentPageTTTN, setCurrentPageTTTN] = useState(1)
+  const [currentPageDATN, setCurrentPageDATN] = useState(1)
+
+  useEffect(() => {
+    setCurrentPageTTTN(1)
+  }, [gradingTab, selectedPeriod?.id])
+
+  useEffect(() => {
+    setCurrentPageDATN(1)
+  }, [selectedCouncil?.code, datnFilter, roleFilter, selectedPeriod?.id])
 
   const notify = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type })
@@ -117,6 +127,56 @@ export default function TeacherGradingPage() {
       mounted = false
     }
   }, [selectedPeriod?.id])
+
+  const itemsPerPage = 10
+  const paginatedTttnScores = useMemo(() => {
+    const startIndex = (currentPageTTTN - 1) * itemsPerPage
+    return tttnScores.slice(startIndex, startIndex + itemsPerPage)
+  }, [tttnScores, currentPageTTTN])
+
+  const filteredDATNGroups = useMemo(() => {
+    return (selectedCouncil?.groups || []).filter((g) => {
+      const totalMembers = (g.students || []).length
+      const studentStatuses = (g.students || []).map((s) => {
+        const r = scoreList.find((row) => row.id === s.id)
+        if (!r) return 'ungraded'
+        const isAdvOrRev = r.isAdvisor || r.isReviewer
+        if (isAdvOrRev) {
+          if (r.hasDefense && r.hasReport) return 'graded'
+          if (r.hasDefense || r.hasReport) return 'grading'
+          return 'ungraded'
+        } else {
+          return r.hasDefense ? 'graded' : 'ungraded'
+        }
+      })
+
+      const gradedCount = studentStatuses.filter(st => st === 'graded').length
+      const gradingCount = studentStatuses.filter(st => st === 'grading').length
+
+      let currentStatus: 'ungraded' | 'grading' | 'graded' = 'ungraded'
+      if (gradedCount === totalMembers && totalMembers > 0) {
+        currentStatus = 'graded'
+      } else if (gradingCount > 0 || (gradedCount > 0 && gradedCount < totalMembers)) {
+        currentStatus = 'grading'
+      }
+
+      if (datnFilter !== 'all' && datnFilter !== currentStatus) return false
+      
+      const isReviewer = g.reviewerId === currentTeacherId
+      const isAdvisor = g.advisorId === currentTeacherId
+      const isMember = selectedCouncil?.role === 'Ủy viên' || selectedCouncil?.role === 'Chủ tịch'
+      
+      if (roleFilter === 'reviewer' && !isReviewer) return false
+      if (roleFilter === 'advisor' && !isAdvisor) return false
+      if (roleFilter === 'member' && !isMember) return false
+      return true
+    })
+  }, [selectedCouncil, scoreList, datnFilter, roleFilter, currentTeacherId])
+
+  const paginatedDATNGroups = useMemo(() => {
+    const startIndex = (currentPageDATN - 1) * itemsPerPage
+    return filteredDATNGroups.slice(startIndex, startIndex + itemsPerPage)
+  }, [filteredDATNGroups, currentPageDATN])
 
   // Listen for realtime score updates to re-fetch
   useEffect(() => {
@@ -412,42 +472,54 @@ export default function TeacherGradingPage() {
                 ⚠️ Đợt thực tập này đã kết thúc thời gian chấm điểm hoặc đã đóng. Bạn không thể chỉnh sửa điểm.
               </div>
             )}
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 text-slate-600">
-                <tr>
-                  <th className="px-5 py-3 text-left w-12">STT</th>
-                  <th className="px-5 py-3 text-left">MSSV</th>
-                  <th className="px-5 py-3 text-left">Họ tên</th>
-                  <th className="px-5 py-3 text-left">Lớp</th>
-                  <th className="px-5 py-3 text-left">Điểm tổng</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tttnScores.map((row, index) => (
-                  <tr key={row.id} className={`border-t border-slate-100 transition hover:bg-slate-50/80 ${selectedTttnId === row.id ? 'bg-blue-50/60' : ''}`}>
-                    <td className="px-5 py-4 text-slate-500 font-medium">{index + 1}</td>
-                    <td className="px-5 py-4 font-medium text-[#1976D2]">{row.id}</td>
-                    <td className="px-5 py-4 text-slate-900">{row.name}</td>
-                    <td className="px-5 py-4 text-slate-600">{row.class}</td>
-                    <td className="px-5 py-4">
-                      <div className="flex items-center gap-2">
-                        <input
-                          value={row.score}
-                          onChange={(e) => updateTttn(index, e.target.value)}
-                          onFocus={() => setSelectedTttnId(row.id)}
-                          placeholder="0.00 - 10.00"
-                          className={`${TeacherInputClass()} w-28`}
-                          disabled={!editable || !isGradingStarted}
-                        />
-                        <TeacherButton variant="secondary" className="px-3 py-1.5 text-xs" onClick={() => setSelectedTttnId(row.id)}>
-                          Xem
-                        </TeacherButton>
-                      </div>
-                    </td>
+            <div className="overflow-x-auto max-h-[600px] overflow-y-auto relative">
+              <table className="w-full text-sm min-w-[600px]">
+                <thead className="bg-slate-50 text-slate-600 sticky top-0 z-10 shadow-[0_1px_0_rgba(226,232,240,1)]">
+                  <tr>
+                    <th className="px-5 py-3 text-left w-12">STT</th>
+                    <th className="px-5 py-3 text-left">MSSV</th>
+                    <th className="px-5 py-3 text-left">Họ tên</th>
+                    <th className="px-5 py-3 text-left">Lớp</th>
+                    <th className="px-5 py-3 text-left">Điểm tổng</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {paginatedTttnScores.map((row, index) => {
+                    const globalIndex = (currentPageTTTN - 1) * itemsPerPage + index + 1
+                    const originalIndex = tttnScores.findIndex((s) => s.id === row.id)
+                    return (
+                      <tr key={row.id} className={`border-t border-slate-100 transition hover:bg-slate-50/80 ${selectedTttnId === row.id ? 'bg-blue-50/60' : ''}`}>
+                        <td className="px-5 py-4 text-slate-500 font-medium">{globalIndex}</td>
+                        <td className="px-5 py-4 font-medium text-[#1976D2]">{row.id}</td>
+                        <td className="px-5 py-4 text-slate-900">{row.name}</td>
+                        <td className="px-5 py-4 text-slate-600">{row.class}</td>
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-2">
+                            <input
+                              value={row.score}
+                              onChange={(e) => updateTttn(originalIndex, e.target.value)}
+                              onFocus={() => setSelectedTttnId(row.id)}
+                              placeholder="0.00 - 10.00"
+                              className={`${TeacherInputClass()} w-28`}
+                              disabled={!editable || !isGradingStarted}
+                            />
+                            <TeacherButton variant="secondary" className="px-3 py-1.5 text-xs" onClick={() => setSelectedTttnId(row.id)}>
+                              Xem
+                            </TeacherButton>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <TeacherPagination
+              currentPage={currentPageTTTN}
+              totalItems={tttnScores.length}
+              itemsPerPage={itemsPerPage}
+              onChangePage={setCurrentPageTTTN}
+            />
             <div className="flex items-center justify-between border-t border-slate-200 px-5 py-4">
               <div className="text-xs text-slate-500">Điểm chỉ được lưu khi hợp lệ từ 0 đến 10.</div>
               <TeacherButton variant="primary" disabled={!anyValid || savingTttn || !editable || !isGradingStarted} onClick={handleSaveTttn}>
@@ -580,9 +652,9 @@ export default function TeacherGradingPage() {
                 ⚠️ Chưa tới thời gian bắt đầu chấm điểm của đợt này (từ {selectedPeriod?.gradingStartDate}). Bạn chưa thể thực hiện chấm điểm.
               </div>
             )}
-            <div className="p-4 overflow-x-auto">
+            <div className="p-4 overflow-x-auto max-h-[600px] overflow-y-auto relative">
                 <table className="w-full text-sm min-w-[800px]">
-                  <thead className="bg-slate-50 text-slate-600">
+                  <thead className="bg-slate-50 text-slate-600 sticky top-0 z-10 shadow-[0_1px_0_rgba(226,232,240,1)]">
                     <tr>
                       <th className="px-5 py-3 text-left w-12">STT</th>
                       <th className="px-5 py-3 text-left">Tên đề tài</th>
@@ -593,55 +665,14 @@ export default function TeacherGradingPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {(() => {
-                      const list = (selectedCouncil?.groups || []).filter((g) => {
-                        const totalMembers = (g.students || []).length;
-                        const studentStatuses = (g.students || []).map((s) => {
-                          const r = scoreList.find((row) => row.id === s.id);
-                          if (!r) return 'ungraded';
-                          const isAdvOrRev = r.isAdvisor || r.isReviewer;
-                          if (isAdvOrRev) {
-                            if (r.hasDefense && r.hasReport) return 'graded';
-                            if (r.hasDefense || r.hasReport) return 'grading';
-                            return 'ungraded';
-                          } else {
-                            return r.hasDefense ? 'graded' : 'ungraded';
-                          }
-                        });
-
-                        const gradedCount = studentStatuses.filter(st => st === 'graded').length;
-                        const gradingCount = studentStatuses.filter(st => st === 'grading').length;
-
-                        let currentStatus: 'ungraded' | 'grading' | 'graded' = 'ungraded';
-                        if (gradedCount === totalMembers && totalMembers > 0) {
-                          currentStatus = 'graded';
-                        } else if (gradingCount > 0 || (gradedCount > 0 && gradedCount < totalMembers)) {
-                          currentStatus = 'grading';
-                        }
-
-                        if (datnFilter !== 'all' && datnFilter !== currentStatus) return false;
-                        
-                        const isReviewer = g.reviewerId === currentTeacherId;
-                        const isAdvisor = g.advisorId === currentTeacherId;
-                        const isMember = selectedCouncil?.role === 'Ủy viên' || selectedCouncil?.role === 'Chủ tịch';
-                        
-                        if (roleFilter === 'reviewer' && !isReviewer) return false;
-                        if (roleFilter === 'advisor' && !isAdvisor) return false;
-                        if (roleFilter === 'member' && !isMember) return false;
-                        return true;
-                      });
-
-                      if (list.length === 0) {
-                        return (
-                          <tr>
-                            <td colSpan={6} className="px-5 py-8 text-center text-slate-500">
-                              Không tìm thấy đề tài nào phù hợp với bộ lọc.
-                            </td>
-                          </tr>
-                        );
-                      }
-
-                      return list.map((g, index) => {
+                    {paginatedDATNGroups.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="px-5 py-8 text-center text-slate-500">
+                          Không tìm thấy đề tài nào phù hợp với bộ lọc.
+                        </td>
+                      </tr>
+                    ) : (
+                      paginatedDATNGroups.map((g, index) => {
                         const totalMembers = (g.students || []).length;
                         const studentStatuses = (g.students || []).map((s) => {
                           const r = scoreList.find((row) => row.id === s.id);
@@ -682,9 +713,11 @@ export default function TeacherGradingPage() {
                           hasScore = true;
                         }
 
+                        const globalIndex = (currentPageDATN - 1) * itemsPerPage + index + 1;
+
                         return (
                           <tr key={g.groupCode || g.id} className="border-t border-slate-100 transition hover:bg-slate-50/80">
-                            <td className="px-5 py-4 text-slate-500 font-medium">{index + 1}</td>
+                            <td className="px-5 py-4 text-slate-500 font-medium">{globalIndex}</td>
                             <td className="px-5 py-4 text-slate-900">
                               <div className="text-sm font-semibold text-[#1976D2]">{g.topic}</div>
                             </td>
@@ -715,11 +748,17 @@ export default function TeacherGradingPage() {
                             </td>
                           </tr>
                         )
-                      });
-                    })()}
+                      })
+                    )}
                   </tbody>
                 </table>
               </div>
+              <TeacherPagination
+                currentPage={currentPageDATN}
+                totalItems={filteredDATNGroups.length}
+                itemsPerPage={itemsPerPage}
+                onChangePage={setCurrentPageDATN}
+              />
             <div className="flex items-center justify-between border-t border-slate-200 px-5 py-4">
               <div className="text-xs text-slate-500">Điểm theo từng vai trò của hội đồng sẽ được cập nhật khi bạn vào phiên chấm.</div>
             </div>

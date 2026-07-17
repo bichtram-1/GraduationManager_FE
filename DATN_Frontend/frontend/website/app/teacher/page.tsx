@@ -107,7 +107,7 @@ export default function TeacherIndexPage() {
     // 2. Nhận xét tiến độ đồ án (nếu có nhóm 'Đã nộp' mà giảng viên chưa nhận xét)
     const pendingDatn = datnList.filter(g => g.status === 'Đã nộp' && (!g.comment || g.comment.trim() === ''))
     if (pendingDatn.length > 0) {
-      list.push(`Nhận xét báo cáo tiến độ ĐATN của nhóm ${pendingDatn[0].group} (Đề tài: ${pendingDatn[0].topic}).`)
+      list.push(`Nhận xét báo cáo tiến độ ĐATN (Đề tài: ${pendingDatn[0].topic}).`)
     }
 
     // 3. Đề tài đang ở trạng thái chờ duyệt của Khoa
@@ -139,7 +139,7 @@ export default function TeacherIndexPage() {
     datnList.forEach((g: IDatnGroupItem) => {
       list.push([
         'Đợt này',
-        `Hướng dẫn ĐATN nhóm ${g.group}`,
+        'Hướng dẫn ĐATN',
         `Đề tài: ${g.topic} (${g.members_list?.length || g.members || 0} SV)`
       ])
     })
@@ -196,7 +196,8 @@ export default function TeacherIndexPage() {
                 <Skeleton active paragraph={{ rows: 4 }} />
               </div>
             ) : (
-              <table className="w-full text-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm min-w-[600px]">
                 <thead className="bg-slate-50 text-slate-600">
                   <tr>
                     <th className="px-5 py-3 text-left w-16">STT</th>
@@ -222,13 +223,14 @@ export default function TeacherIndexPage() {
                         </td>
                       </tr>
                     ))
-                  ) : (
-                    <tr>
-                      <td colSpan={5} className="px-5 py-8 text-center text-slate-500">Không có đề tài nào phụ trách trong đợt này.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                    ) : (
+                      <tr>
+                        <td colSpan={5} className="px-5 py-8 text-center text-slate-500">Không có đề tài nào phụ trách trong đợt này.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             )}
           </section>
 

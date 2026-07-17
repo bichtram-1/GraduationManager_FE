@@ -4,8 +4,8 @@ import type { ReactNode } from 'react'
 import { useMemo, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { BookOpen, Building2, CalendarDays, ClipboardCheck, GraduationCap, Home, LogOut, Menu, Trophy, Users, Clock, Bell } from 'lucide-react'
-import { Select } from 'antd'
+import { BookOpen, Building2, CalendarDays, ClipboardCheck, GraduationCap, Home, LogOut, Menu, ShieldCheck, Trophy, Users, Clock, Bell } from 'lucide-react'
+import { Select, Dropdown } from 'antd'
 import { usePeriod } from '@/lib/providers/PeriodProvider'
 import { teacherApi } from '@/lib/api/teacherApi'
 
@@ -156,8 +156,90 @@ export function TeacherShell({ children }: { children: ReactNode }) {
     return lastWord.substring(0, 2).toUpperCase()
   }, [teacher])
 
+  const [currentSegment, setCurrentSegment] = useState<'guidance' | 'review'>('guidance')
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      const segmentParam = params.get('segment')
+      if (segmentParam === 'review') {
+        setCurrentSegment('review')
+      } else {
+        setCurrentSegment('guidance')
+      }
+    }
+  }, [pathname])
+
+  useEffect(() => {
+    const handleSegmentEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<string>
+      if (customEvent.detail === 'review') {
+        setCurrentSegment('review')
+      } else if (customEvent.detail === 'guidance') {
+        setCurrentSegment('guidance')
+      }
+    }
+    window.addEventListener('segment-changed', handleSegmentEvent)
+    return () => {
+      window.removeEventListener('segment-changed', handleSegmentEvent)
+    }
+  }, [])
+
   const handleLogout = () => {
     window.location.assign('/api/logout?from=/login')
+  }
+
+  const handleNavSegment = (e: React.MouseEvent, segmentVal: 'guidance' | 'review') => {
+    e.preventDefault()
+    if (window.location.pathname.startsWith('/teacher/review-groups')) {
+      const url = new URL(window.location.href)
+      url.searchParams.set('segment', segmentVal)
+      window.history.replaceState({}, '', url.toString())
+      window.dispatchEvent(new CustomEvent('segment-changed', { detail: segmentVal }))
+    } else {
+      window.location.assign(`/teacher/review-groups?segment=${segmentVal}`)
+    }
+  }
+
+  const [currentStudentSegment, setCurrentStudentSegment] = useState<'TTTN' | 'DATN'>('TTTN')
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      const tabParam = params.get('studentsTab')
+      if (tabParam === 'DATN') {
+        setCurrentStudentSegment('DATN')
+      } else {
+        setCurrentStudentSegment('TTTN')
+      }
+    }
+  }, [pathname])
+
+  useEffect(() => {
+    const handleStudentSegmentEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<string>
+      if (customEvent.detail === 'DATN') {
+        setCurrentStudentSegment('DATN')
+      } else if (customEvent.detail === 'TTTN') {
+        setCurrentStudentSegment('TTTN')
+      }
+    }
+    window.addEventListener('student-segment-changed', handleStudentSegmentEvent)
+    return () => {
+      window.removeEventListener('student-segment-changed', handleStudentSegmentEvent)
+    }
+  }, [])
+
+  const handleNavStudentSegment = (e: React.MouseEvent, tabVal: 'TTTN' | 'DATN') => {
+    e.preventDefault()
+    if (window.location.pathname.startsWith('/teacher/students')) {
+      const url = new URL(window.location.href)
+      url.searchParams.set('studentsTab', tabVal)
+      window.history.replaceState({}, '', url.toString())
+      window.dispatchEvent(new CustomEvent('student-segment-changed', { detail: tabVal }))
+    } else {
+      window.location.assign(`/teacher/students?studentsTab=${tabVal}`)
+    }
   }
 
   return (
@@ -322,6 +404,131 @@ export function TeacherShell({ children }: { children: ReactNode }) {
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon
             const isActive = activeKey === item.key
+            
+            if (item.key === 'review-groups') {
+              const isOnReviewPage = pathname.startsWith('/teacher/review-groups')
+              const isGuidanceActive = isOnReviewPage && currentSegment === 'guidance'
+              const isReviewActive = isOnReviewPage && currentSegment === 'review'
+
+              return (
+                <Dropdown
+                  popupRender={() => (
+                    <div className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_12px_40px_rgba(15,23,42,0.12)] p-1.5 w-[220px] z-50 space-y-0.5">
+                      <a
+                        href="/teacher/review-groups?segment=guidance"
+                        onClick={(e) => handleNavSegment(e, 'guidance')}
+                        className={`flex items-center gap-2.5 px-3 py-2 text-sm transition duration-150 rounded-xl cursor-pointer ${
+                          isGuidanceActive 
+                            ? 'bg-blue-50/80' 
+                            : 'hover:bg-slate-50'
+                        }`}
+                      >
+                        <Users className={`h-4 w-4 ${isGuidanceActive ? 'text-[#1976D2]' : 'text-slate-400'}`} />
+                        <span className={isGuidanceActive ? 'text-[#1976D2] font-bold' : 'text-slate-700 hover:text-blue-600 font-semibold'}>
+                          Nhóm hướng dẫn
+                        </span>
+                      </a>
+                      <a
+                        href="/teacher/review-groups?segment=review"
+                        onClick={(e) => handleNavSegment(e, 'review')}
+                        className={`flex items-center gap-2.5 px-3 py-2 text-sm transition duration-150 rounded-xl cursor-pointer ${
+                          isReviewActive 
+                            ? 'bg-blue-50/80' 
+                            : 'hover:bg-slate-50'
+                        }`}
+                      >
+                        <ClipboardCheck className={`h-4 w-4 ${isReviewActive ? 'text-[#1976D2]' : 'text-slate-400'}`} />
+                        <span className={isReviewActive ? 'text-[#1976D2] font-bold' : 'text-slate-700 hover:text-blue-600 font-semibold'}>
+                          Nhóm phản biện
+                        </span>
+                      </a>
+                    </div>
+                  )}
+                  trigger={['hover', 'click']}
+                  placement="bottomLeft"
+                  key={item.key}
+                >
+                  <Link
+                    href="/teacher/review-groups"
+                    prefetch
+                    className={`flex min-w-max items-center gap-1.5 border-b-2 px-4 py-3 text-sm font-medium transition ${
+                      isActive
+                        ? 'border-[#2196F3] text-[#2196F3]'
+                        : 'border-transparent text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {item.label}
+                    <svg className="h-3 w-3 text-slate-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                  </Link>
+                </Dropdown>
+              )
+            }
+
+            if (item.key === 'students') {
+              const isOnStudentsPage = pathname.startsWith('/teacher/students')
+              const isTTTNActive = isOnStudentsPage && currentStudentSegment === 'TTTN'
+              const isDATNActive = isOnStudentsPage && currentStudentSegment === 'DATN'
+
+              return (
+                <Dropdown
+                  popupRender={() => (
+                    <div className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_12px_40px_rgba(15,23,42,0.12)] p-1.5 w-[220px] z-50 space-y-0.5">
+                      <a
+                        href="/teacher/students?studentsTab=TTTN"
+                        onClick={(e) => handleNavStudentSegment(e, 'TTTN')}
+                        className={`flex items-center gap-2.5 px-3 py-2 text-sm transition duration-150 rounded-xl cursor-pointer ${
+                          isTTTNActive 
+                            ? 'bg-blue-50/80' 
+                            : 'hover:bg-slate-50'
+                        }`}
+                      >
+                        <ShieldCheck className={`h-4 w-4 ${isTTTNActive ? 'text-[#1976D2]' : 'text-slate-400'}`} />
+                        <span className={isTTTNActive ? 'text-[#1976D2] font-bold' : 'text-slate-700 hover:text-blue-600 font-semibold'}>
+                          Sinh viên thực tập
+                        </span>
+                      </a>
+                      <a
+                        href="/teacher/students?studentsTab=DATN"
+                        onClick={(e) => handleNavStudentSegment(e, 'DATN')}
+                        className={`flex items-center gap-2.5 px-3 py-2 text-sm transition duration-150 rounded-xl cursor-pointer ${
+                          isDATNActive 
+                            ? 'bg-blue-50/80' 
+                            : 'hover:bg-slate-50'
+                        }`}
+                      >
+                        <Users className={`h-4 w-4 ${isDATNActive ? 'text-[#1976D2]' : 'text-slate-400'}`} />
+                        <span className={isDATNActive ? 'text-[#1976D2] font-bold' : 'text-slate-700 hover:text-blue-600 font-semibold'}>
+                          Sinh viên đồ án
+                        </span>
+                      </a>
+                    </div>
+                  )}
+                  trigger={['hover', 'click']}
+                  placement="bottomLeft"
+                  key={item.key}
+                >
+                  <Link
+                    href="/teacher/students"
+                    prefetch
+                    className={`flex min-w-max items-center gap-1.5 border-b-2 px-4 py-3 text-sm font-medium transition ${
+                      isActive
+                        ? 'border-[#2196F3] text-[#2196F3]'
+                        : 'border-transparent text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {item.label}
+                    <svg className="h-3 w-3 text-slate-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                  </Link>
+                </Dropdown>
+              )
+            }
+
             return (
               <Link
                 href={item.href}
