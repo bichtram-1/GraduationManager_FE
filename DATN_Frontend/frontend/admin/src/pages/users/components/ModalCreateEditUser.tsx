@@ -12,6 +12,7 @@ import { USER_ROLE, STATUS_CODE, DATE_FORMAT } from '../../../constants/commonCo
 import { classHooks } from '../../../hooks/useClasses';
 import { IDetailUser, UserRoleType } from 'src/type/UserType';
 import type { IListClass } from '../../../type/ClassType';
+import { useGlobalVariable } from '../../../hooks/GlobalVariableProvider';
 
 // I prefix cho interface (convention của dự án)
 interface IModalCreateEditUser {
@@ -21,10 +22,14 @@ interface IModalCreateEditUser {
   role: UserRoleType;
 }
 
-const ModalCreateEditUser = ({ mode = 'create', role }: IModalCreateEditUser) => {
+const ModalCreateEditUser = ({ mode = 'create', role, detail }: IModalCreateEditUser) => {
   const isDetailMode = mode === 'detail';
   const isEditMode = mode === 'edit';
   const isCreateMode = mode === 'create';
+
+  const { user: currentUser } = useGlobalVariable();
+  const currentUserId = currentUser?.giang_vien_id || currentUser?.id;
+  const isSelf = detail && currentUserId && String(detail.id) === String(currentUserId);
 
   // form instance dùng để set/validate field password từ bên ngoài Form.Item
   const form = Form.useFormInstance();
@@ -127,10 +132,11 @@ const ModalCreateEditUser = ({ mode = 'create', role }: IModalCreateEditUser) =>
                 { type: 'email', message: 'Email không đúng định dạng!' },
               ]}
               className="flex-1"
+              extra={isSelf ? "Bạn không thể tự thay đổi Email của chính mình để tránh mất quyền đăng nhập." : undefined}
             >
               <CustomInput
                 placeholder="Nhập email"
-                readOnly={isDetailMode}
+                readOnly={isDetailMode || isSelf}
               />
             </Form.Item>
           </Flex>
@@ -232,9 +238,14 @@ const ModalCreateEditUser = ({ mode = 'create', role }: IModalCreateEditUser) =>
             </Form.Item>
 
             {!isCreateMode ? (
-              <Form.Item label="Trạng thái hoạt động" name="status" className="flex-1">
+              <Form.Item
+                label="Trạng thái hoạt động"
+                name="status"
+                className="flex-1"
+                extra={isSelf ? "Bạn không thể tự khóa tài khoản của chính mình." : undefined}
+              >
                 <Select
-                  disabled={isDetailMode}
+                  disabled={isDetailMode || isSelf}
                   placeholder="Chọn trạng thái"
                   options={[
                     { value: STATUS_CODE.ACTIVE, label: 'Đang hoạt động' },

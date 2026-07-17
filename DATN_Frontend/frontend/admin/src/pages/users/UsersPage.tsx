@@ -8,6 +8,8 @@ import {
   FileExcelOutlined,
   UploadOutlined,
   ExclamationCircleFilled,
+  LockOutlined,
+  UnlockOutlined,
 } from '@ant-design/icons';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -279,7 +281,29 @@ const UsersPage = () => {
           isDetail: true,
           isEdit: true,
           isDelete: true,
+          isEditDisabled: (record) => (record as IListUser).status === STATUS_CODE.INACTIVE,
           isDeleteDisabled: (record) => (record as IListUser).status === STATUS_CODE.DELETED,
+          isDeleteVisible: (record) => (record as IListUser).role !== 'admin',
+        }}
+        deleteIcon={(record) => {
+          const userRec = record as IListUser;
+          return userRec.status === STATUS_CODE.ACTIVE ? (
+            <LockOutlined className="text-orange-500 text-base" />
+          ) : (
+            <UnlockOutlined className="text-green-500 text-base" />
+          );
+        }}
+        deleteConfirmTitle={(record) => {
+          const userRec = record as IListUser;
+          return userRec.status === STATUS_CODE.ACTIVE ? 'Khóa tài khoản' : 'Mở khóa tài khoản';
+        }}
+        deleteConfirmContent={(record) => {
+          const userRec = record as IListUser;
+          return userRec.status === STATUS_CODE.ACTIVE ? (
+            <span>Bạn có chắc chắn muốn khóa tài khoản của <strong>{userRec.name}</strong>?</span>
+          ) : (
+            <span>Bạn có chắc chắn muốn mở khóa tài khoản của <strong>{userRec.name}</strong>?</span>
+          );
         }}
         deleteInfo={{
           type: 'modal',

@@ -68,9 +68,10 @@ interface ActionTableInfoProps {
   isDetail?: boolean;
   isEdit?: boolean;
   isDelete?: boolean;
-  isEditDisabled?: (record: unknown) => boolean;
-  isDeleteDisabled?: (record: unknown) => boolean;
-  customAction?: (record: unknown, index: number) => ReactNode;
+  isEditDisabled?: (record: any) => boolean;
+  isDeleteDisabled?: (record: any) => boolean;
+  isDeleteVisible?: (record: any) => boolean;
+  customAction?: (record: any, index: number) => ReactNode;
   detailInfo?: CRUDTableInfoType<(id: string, enable: boolean) => UseQueryResult<unknown, Error>>;
 }
 
@@ -121,6 +122,9 @@ export interface FilterTableProps<
   enableSelectRow?: boolean;
   extraHeaderActions?: ReactNode;
   extraActions?: ReactNode;
+  deleteIcon?: (record: TList) => ReactNode;
+  deleteConfirmTitle?: (record: TList) => string;
+  deleteConfirmContent?: (record: TList) => ReactNode;
 }
 
 const initParams = { page: 1, limit: 10 };
@@ -162,6 +166,9 @@ const FilterTable = <
   extraHeaderActions,
   extraActions,
   showSizeChanger = true,
+  deleteIcon,
+  deleteConfirmTitle,
+  deleteConfirmContent,
 }: FilterTableProps<TList, TDetail, TCreate, TUpdate>) => {
   const hasPageHeader = !!pageTitle;
 
@@ -250,28 +257,37 @@ const FilterTable = <
       name = r.title || r.code || r.name || '';
     }
 
+    const titleText = deleteConfirmTitle ? deleteConfirmTitle(record as any) : t('delete_title');
+    const contentElement = deleteConfirmContent ? deleteConfirmContent(record as any) : (
+      name ? (
+        <span>Bạn có chắc chắn muốn xóa <strong>&quot;{name}&quot;</strong>? Hành động này không thể hoàn tác.</span>
+      ) : (
+        t('delete_content')
+      )
+    );
+
+    const isLocking = (record as any)?.status === 'active';
+    const okText = deleteConfirmTitle ? (isLocking ? 'Khóa' : 'Mở khóa') : t('delete');
+    const isDanger = !deleteConfirmTitle;
+
     confirm({
       centered: true,
       title: null,
       icon: null,
       content: (
         <div className="text-center">
-          <ExclamationCircleFilled className="text-[40px] leading-none text-btnDelete" />
+          <ExclamationCircleFilled className={`text-[40px] leading-none ${isDanger ? 'text-btnDelete' : 'text-primary'}`} />
           <div className="mt-3 font-bold text-xl">
-            {t('delete_title')}
+            {titleText}
           </div>
           <div className="text-sm mt-2">
-            {name ? (
-              <span>Bạn có chắc chắn muốn xóa <strong>&quot;{name}&quot;</strong>? Hành động này không thể hoàn tác.</span>
-            ) : (
-              t('delete_content')
-            )}
+            {contentElement}
           </div>
         </div>
       ),
-      okText: t('delete'),
-      okButtonProps: { type: 'primary', danger: true },
-      cancelButtonProps: { type: 'default', danger: true },
+      okText: okText,
+      okButtonProps: { type: 'primary', danger: isDanger },
+      cancelButtonProps: { type: 'default', danger: isDanger },
       cancelText: t('cancel_btn'),
       className: 'custom-confirm-modal',
       onOk() {
@@ -442,7 +458,7 @@ const FilterTable = <
                 })()
               }
 
-              {actions?.isDelete &&
+              {actions?.isDelete && (!actions?.isDeleteVisible || actions?.isDeleteVisible(record)) &&
                 (() => {
                   const disabled = actions?.isDeleteDisabled?.(record) ?? false;
                   return (
@@ -460,7 +476,7 @@ const FilterTable = <
                           : 'cursor-pointer pointer-events-auto'
                       }`}
                     >
-                      <DeleteOutlined className="text-red-500" />
+                      {deleteIcon ? deleteIcon(record) : <DeleteOutlined className="text-red-500" />}
                     </div>
                   );
                 })()
