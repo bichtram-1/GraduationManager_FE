@@ -155,13 +155,6 @@ export default function StudentHistoryPage() {
                     {log.description}
                   </p>
 
-                  {/* Details block if any */}
-                  {log.details && (
-                    <div className="mt-3 rounded-xl bg-slate-50 p-3 text-xs leading-relaxed text-slate-500 border border-slate-100/50">
-                      {log.details}
-                    </div>
-                  )}
-
                   {/* Operator */}
                   <div className="mt-4 flex items-center gap-2 text-xs text-slate-400 border-t border-slate-50 pt-3">
                     <User className="h-3.5 w-3.5 text-slate-300" />
