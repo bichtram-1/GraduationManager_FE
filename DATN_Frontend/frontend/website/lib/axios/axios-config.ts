@@ -99,7 +99,7 @@ axiosInstance.interceptors.response.use(
         const currentToken = getCookie(STORAGES.ACCESS_TOKEN);
         const headers = error.config?.headers;
         let authHeader: string | undefined;
-        
+
         if (headers) {
           if (typeof headers.get === 'function') {
             authHeader = headers.get('Authorization') || headers.get('authorization');
@@ -107,7 +107,7 @@ axiosInstance.interceptors.response.use(
             authHeader = headers.Authorization || headers.authorization || headers['Authorization'] || headers['authorization'];
           }
         }
-        
+
         const requestToken = typeof authHeader === 'string' ? authHeader.replace('Bearer ', '') : '';
 
         if (currentToken !== requestToken) {

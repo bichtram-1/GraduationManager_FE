@@ -1,9 +1,9 @@
 'use client'
 
 import { useMemo, useState, useEffect } from 'react'
-import { BookOpen, Eye, Mail, MapPin, Phone, Search, ShieldCheck, Users, Building2 } from 'lucide-react'
+import { BookOpen, Eye, Mail, MapPin, Phone, Search, Users, Building2 } from 'lucide-react'
 import { TeacherPill, TeacherSectionHeader } from '../_components/TeacherShell'
-import { TeacherButton, TeacherCard } from '../_components/TeacherUI'
+import { TeacherButton, TeacherCard, TeacherPagination } from '../_components/TeacherUI'
 import { usePeriod } from '@/lib/providers/PeriodProvider'
 import { teacherApi } from '@/lib/api/teacherApi'
 import { App } from 'antd'
@@ -95,6 +95,43 @@ export default function TeacherStudentsPage() {
   const [loading, setLoading] = useState(false)
   const [selectedReport, setSelectedReport] = useState<IStudentReport | null>(null)
   const [reportCommentText, setReportCommentText] = useState('')
+  const [currentPageTTTN, setCurrentPageTTTN] = useState(1)
+  const [currentPageDATN, setCurrentPageDATN] = useState(1)
+
+  useEffect(() => {
+    setCurrentPageTTTN(1)
+  }, [searchName, searchCompany, selectedPeriod?.id])
+
+  useEffect(() => {
+    setCurrentPageDATN(1)
+  }, [searchName, searchTopic, selectedPeriod?.id])
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      const tabParam = params.get('studentsTab')
+      if (tabParam === 'DATN') {
+        setStudentsTab('DATN')
+      } else if (tabParam === 'TTTN') {
+        setStudentsTab('TTTN')
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    const handleStudentSegmentEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<string>
+      if (customEvent.detail === 'DATN') {
+        setStudentsTab('DATN')
+      } else if (customEvent.detail === 'TTTN') {
+        setStudentsTab('TTTN')
+      }
+    }
+    window.addEventListener('student-segment-changed', handleStudentSegmentEvent)
+    return () => {
+      window.removeEventListener('student-segment-changed', handleStudentSegmentEvent)
+    }
+  }, [])
 
   const formatCompanyInfo = (val?: string | null) => {
     if (!val || val === '—' || val === 'Chưa có' || val === 'chưa có' || val === 'Chưa cập nhật') {
@@ -254,7 +291,7 @@ export default function TeacherStudentsPage() {
     const student = tttnList.find((s) => s.id === commentModal.id)
     if (student) return `${student.name} · ${student.id}`
     const group = datnList.find((g) => g.group === commentModal.id)
-    if (group) return `${group.topic} · ${group.group}`
+    if (group) return group.topic || 'Đồ án tốt nghiệp'
     return commentModal.id
   }, [commentModal.id, tttnList, datnList])
 
@@ -297,6 +334,17 @@ export default function TeacherStudentsPage() {
     })
   }, [searchName, searchTopic, datnList, selectedPeriod?.id])
 
+  const itemsPerPage = 10
+  const paginatedTTTN = useMemo(() => {
+    const startIndex = (currentPageTTTN - 1) * itemsPerPage
+    return filteredTTTN.slice(startIndex, startIndex + itemsPerPage)
+  }, [filteredTTTN, currentPageTTTN])
+
+  const paginatedDATN = useMemo(() => {
+    const startIndex = (currentPageDATN - 1) * itemsPerPage
+    return filteredDATN.slice(startIndex, startIndex + itemsPerPage)
+  }, [filteredDATN, currentPageDATN])
+
   return (
     <>
       <TeacherSectionHeader
@@ -310,13 +358,10 @@ export default function TeacherStudentsPage() {
         )}
       />
 
-      <section className="mb-5 flex flex-wrap items-center gap-2 rounded-3xl border border-slate-200 bg-white p-2 shadow-[0_12px_40px_rgba(15,23,42,0.05)]">
-        {(['TTTN', 'ĐATN'] as const).map((item) => (
-          <button key={item} type="button" onClick={() => setSegment(item)} className={`inline-flex items-center gap-2 rounded-[20px] px-4 py-2.5 text-sm font-medium transition ${segment === item ? 'bg-[#2196F3] text-white shadow-lg shadow-blue-200' : 'text-slate-600 hover:bg-slate-50'}`}>
-            {item === 'TTTN' ? <ShieldCheck /> : <Users />}
-            {item === 'TTTN' ? 'Sinh viên thực tập' : 'Sinh viên đồ án'}
-          </button>
-        ))}
+      <section className="mb-5 flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_8px_30px_rgba(15,23,42,0.04)]">
+        <div className="text-sm font-semibold text-slate-800">
+          {segment === 'TTTN' ? 'Danh sách sinh viên thực tập tốt nghiệp' : 'Danh sách sinh viên đồ án tốt nghiệp'}
+        </div>
 
         <div className="ml-auto flex flex-wrap items-center gap-3">
           {segment === 'TTTN' ? (
@@ -376,60 +421,71 @@ export default function TeacherStudentsPage() {
               <TeacherPill tone="orange">{filteredTTTN.length} sinh viên</TeacherPill>
             </div>
 
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 text-slate-600">
-                <tr>
-                  <th className="px-5 py-3 text-left w-12">STT</th>
-                  <th className="px-5 py-3 text-left">MSSV</th>
-                  <th className="px-5 py-3 text-left">Họ tên</th>
-                  <th className="px-5 py-3 text-left">Công ty</th>
-                  <th className="px-5 py-3 text-left">Báo cáo</th>
-                  <th className="px-5 py-3 text-right">Hành động</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredTTTN.length === 0 ? (
+            <div className="overflow-x-auto max-h-[600px] overflow-y-auto relative">
+              <table className="w-full text-sm min-w-[800px]">
+                <thead className="bg-slate-50 text-slate-600 sticky top-0 z-10 shadow-[0_1px_0_rgba(226,232,240,1)]">
                   <tr>
-                    <td colSpan={6} className="px-5 py-8 text-center text-slate-400 italic bg-white">
-                      Không có dữ liệu
-                    </td>
+                    <th className="px-5 py-3 text-left w-12">STT</th>
+                    <th className="px-5 py-3 text-left">MSSV</th>
+                    <th className="px-5 py-3 text-left">Họ tên</th>
+                    <th className="px-5 py-3 text-left">Công ty</th>
+                    <th className="px-5 py-3 text-left">Báo cáo</th>
+                    <th className="px-5 py-3 text-right">Hành động</th>
                   </tr>
-                ) : (
-                  filteredTTTN.map((student, index) => (
-                    <tr key={student.id} className={`border-t border-slate-100 transition hover:bg-slate-50/80 ${selectedTTTN?.id === student.id ? 'bg-blue-50/50' : ''}`}>
-                      <td className="px-5 py-4 text-slate-500 font-medium">{index + 1}</td>
-                      <td className="px-5 py-4 font-medium text-[#1976D2]">{student.id}</td>
-                      <td className="px-5 py-4 text-slate-900">{student.name}</td>
-                      <td className="px-5 py-4 text-slate-600">{student.company || student.companyName || 'Chưa có'}</td>
-                      <td className="px-5 py-4">
-                        <button
-                          onClick={() => {
-                            setSelectedTTTN(student);
-                            document.getElementById('quick-view-teacher-tttn')?.scrollIntoView({ behavior: 'smooth' });
-                          }}
-                          className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 transition-all duration-200 transform hover:scale-105 shadow-sm active:scale-95"
-                        >
-                          Xem chi tiết
-                        </button>
-                      </td>
-                      <td className="px-5 py-4">
-                        <div className="flex justify-end gap-2">
-                          <TeacherButton
-                            variant="secondary"
-                            className="px-3 py-1.5 text-xs"
-                            onClick={() => {
-                              setCompanyModal({ open: true, student });
-                            }}
-                          >
-                            <span className="inline-flex items-center gap-1"><Building2 className="h-4 w-4" /> Xem chi tiết công ty</span>
-                          </TeacherButton>
-                        </div>
+                </thead>
+                <tbody>
+                  {filteredTTTN.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-5 py-8 text-center text-slate-400 italic bg-white">
+                        Không có dữ liệu
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    paginatedTTTN.map((student, index) => {
+                      const globalIndex = (currentPageTTTN - 1) * itemsPerPage + index + 1
+                      return (
+                        <tr key={student.id} className={`border-t border-slate-100 transition hover:bg-slate-50/80 ${selectedTTTN?.id === student.id ? 'bg-blue-50/50' : ''}`}>
+                          <td className="px-5 py-4 text-slate-500 font-medium">{globalIndex}</td>
+                          <td className="px-5 py-4 font-medium text-[#1976D2]">{student.id}</td>
+                          <td className="px-5 py-4 text-slate-900">{student.name}</td>
+                          <td className="px-5 py-4 text-slate-600">{student.company || student.companyName || 'Chưa có'}</td>
+                          <td className="px-5 py-4">
+                            <button
+                              onClick={() => {
+                                setSelectedTTTN(student);
+                                document.getElementById('quick-view-teacher-tttn')?.scrollIntoView({ behavior: 'smooth' });
+                              }}
+                              className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 transition-all duration-200 transform hover:scale-105 shadow-sm active:scale-95"
+                            >
+                              Xem chi tiết
+                            </button>
+                          </td>
+                          <td className="px-5 py-4">
+                            <div className="flex justify-end gap-2">
+                              <TeacherButton
+                                variant="secondary"
+                                className="px-3 py-1.5 text-xs"
+                                onClick={() => {
+                                  setCompanyModal({ open: true, student });
+                                }}
+                              >
+                                <span className="inline-flex items-center gap-1"><Building2 className="h-4 w-4" /> Xem chi tiết công ty</span>
+                              </TeacherButton>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <TeacherPagination
+              currentPage={currentPageTTTN}
+              totalItems={filteredTTTN.length}
+              itemsPerPage={itemsPerPage}
+              onChangePage={setCurrentPageTTTN}
+            />
           </TeacherCard>
 
           <TeacherCard id="quick-view-teacher-tttn" className="space-y-4 p-5">
@@ -506,72 +562,81 @@ export default function TeacherStudentsPage() {
               <TeacherPill tone="blue">{filteredDATN.length} nhóm</TeacherPill>
             </div>
 
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 text-slate-600">
-                <tr>
-                  <th className="px-5 py-3 text-left w-12">STT</th>
-                  <th className="px-5 py-3 text-left">Tên đề tài</th>
-                  <th className="px-5 py-3 text-left">Thành viên</th>
-                  <th className="px-5 py-3 text-left">Báo cáo</th>
-                  <th className="px-5 py-3 text-right">Hành động</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredDATN.length === 0 ? (
+            <div className="overflow-x-auto max-h-[600px] overflow-y-auto relative">
+              <table className="w-full text-sm min-w-[800px]">
+                <thead className="bg-slate-50 text-slate-600 sticky top-0 z-10 shadow-[0_1px_0_rgba(226,232,240,1)]">
                   <tr>
-                    <td colSpan={5} className="px-5 py-8 text-center text-slate-400 italic bg-white">
-                      Không có dữ liệu
-                    </td>
+                    <th className="px-5 py-3 text-left w-12">STT</th>
+                    <th className="px-5 py-3 text-left">Tên đề tài</th>
+                    <th className="px-5 py-3 text-left">Thành viên</th>
+                    <th className="px-5 py-3 text-left">Báo cáo</th>
+                    <th className="px-5 py-3 text-right">Hành động</th>
                   </tr>
-                ) : (
-                  filteredDATN.map((group, index) => {
-                    const nextGroup = filteredDATN[index + 1];
-                    const isLastOfTopic = nextGroup && (group.topic_details?.name || group.topic) !== (nextGroup.topic_details?.name || nextGroup.topic);
-                    const active = selectedDATN?.group === group.group;
-                    return (
-                      <tr 
-                        key={group.group} 
-                        className={`border-t border-slate-200/80 transition hover:bg-slate-50/80 ${active ? 'bg-blue-50/50' : ''} ${isLastOfTopic ? 'border-b-2 border-slate-300/80' : ''}`}
-                      >
-                        <td className="px-5 py-4 text-slate-500 font-medium">{index + 1}</td>
-                        <td className="px-5 py-4 font-medium text-slate-900">{group.topic_details?.name || group.topic}</td>
-                        <td className="px-5 py-4 text-slate-600">
-                          {group.members_list && group.members_list.length > 0 ? (
-                            <div className="space-y-1">
-                              {group.members_list.map((m: IGroupMemberInfo) => (
-                                <div key={m.id} className="text-xs text-slate-700">
-                                  <span className="font-semibold whitespace-nowrap">{m.name}</span>
-                                </div>
-                              ))}
+                </thead>
+                <tbody>
+                  {filteredDATN.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-5 py-8 text-center text-slate-400 italic bg-white">
+                        Không có dữ liệu
+                      </td>
+                    </tr>
+                  ) : (
+                    paginatedDATN.map((group, index) => {
+                      const nextGroup = filteredDATN[index + 1];
+                      const isLastOfTopic = nextGroup && (group.topic_details?.name || group.topic) !== (nextGroup.topic_details?.name || nextGroup.topic);
+                      const active = selectedDATN?.group === group.group;
+                      const globalIndex = (currentPageDATN - 1) * itemsPerPage + index + 1
+                      return (
+                        <tr 
+                          key={group.group} 
+                          className={`border-t border-slate-200/80 transition hover:bg-slate-50/80 ${active ? 'bg-blue-50/50' : ''} ${isLastOfTopic ? 'border-b-2 border-slate-300/80' : ''}`}
+                        >
+                          <td className="px-5 py-4 text-slate-500 font-medium">{globalIndex}</td>
+                          <td className="px-5 py-4 font-medium text-slate-900">{group.topic_details?.name || group.topic}</td>
+                          <td className="px-5 py-4 text-slate-600">
+                            {group.members_list && group.members_list.length > 0 ? (
+                              <div className="space-y-1">
+                                {group.members_list.map((m: IGroupMemberInfo) => (
+                                  <div key={m.id} className="text-xs text-slate-700">
+                                    <span className="font-semibold whitespace-nowrap">{m.name}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              `${group.members || 0} thành viên`
+                            )}
+                          </td>
+                          <td className="px-5 py-4">
+                            <button
+                              onClick={() => {
+                                setSelectedDATN(group);
+                                document.getElementById('quick-view-teacher-datn')?.scrollIntoView({ behavior: 'smooth' });
+                              }}
+                              className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 transition-all duration-200 transform hover:scale-105 shadow-sm active:scale-95"
+                            >
+                              Xem báo cáo
+                            </button>
+                          </td>
+                          <td className="px-5 py-4">
+                            <div className="flex justify-end gap-2">
+                              <TeacherButton variant="secondary" className="px-3 py-1.5 text-xs" onClick={() => { setGroupDetailModal({ open: true, group }); }}>
+                                <span className="inline-flex items-center gap-1"><Eye className="h-4 w-4" /> Xem chi tiết</span>
+                              </TeacherButton>
                             </div>
-                          ) : (
-                            `${group.members || 0} thành viên`
-                          )}
-                        </td>
-                        <td className="px-5 py-4">
-                          <button
-                            onClick={() => {
-                              setSelectedDATN(group);
-                              document.getElementById('quick-view-teacher-datn')?.scrollIntoView({ behavior: 'smooth' });
-                            }}
-                            className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 transition-all duration-200 transform hover:scale-105 shadow-sm active:scale-95"
-                          >
-                            Xem báo cáo
-                          </button>
-                        </td>
-                        <td className="px-5 py-4">
-                          <div className="flex justify-end gap-2">
-                            <TeacherButton variant="secondary" className="px-3 py-1.5 text-xs" onClick={() => { setGroupDetailModal({ open: true, group }); }}>
-                              <span className="inline-flex items-center gap-1"><Eye className="h-4 w-4" /> Xem chi tiết</span>
-                            </TeacherButton>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <TeacherPagination
+              currentPage={currentPageDATN}
+              totalItems={filteredDATN.length}
+              itemsPerPage={itemsPerPage}
+              onChangePage={setCurrentPageDATN}
+            />
           </TeacherCard>
 
           <TeacherCard id="quick-view-teacher-datn" className="space-y-4 p-5 bg-[linear-gradient(135deg,#f0fdf4_0%,#ffffff_100%)]">
@@ -856,7 +921,7 @@ export default function TeacherStudentsPage() {
                 </div>
                 <div>
                   <h3 className="text-xl font-bold text-slate-900 font-sans">Chi tiết Đề tài & Nhóm Đồ án</h3>
-                  <p className="text-xs text-slate-500 font-sans">Thông tin đề tài và các thành viên thực hiện nhóm {groupDetailModal.group.group}</p>
+                  <p className="text-xs text-slate-500 font-sans">Thông tin đề tài và các thành viên thực hiện</p>
                 </div>
               </div>
               <button 

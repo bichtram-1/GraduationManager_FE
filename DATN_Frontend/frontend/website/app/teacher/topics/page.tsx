@@ -3,7 +3,7 @@
 import { useMemo, useState, useEffect } from 'react'
 import { Edit2, Eye, Plus, Trash2 } from 'lucide-react'
 import { TeacherPill, TeacherSectionHeader } from '../_components/TeacherShell'
-import { TeacherButton, TeacherCard, TeacherToolbar, TeacherModal, getTopicStatusTone } from '../_components/TeacherUI'
+import { TeacherButton, TeacherCard, TeacherToolbar, TeacherModal, getTopicStatusTone, TeacherPagination } from '../_components/TeacherUI'
 import ModalCreateEditTopic from './components/ModalCreateEditTopic'
 import ModalDetailTopic from './components/ModalDetailTopic'
 import { usePeriod } from '@/lib/providers/PeriodProvider'
@@ -43,11 +43,16 @@ export default function Page() {
   const [direction, setDirection] = useState('Phát triển phần mềm')
   const [fileUrl, setFileUrl] = useState('')
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
 
   const showNotification = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type })
     setTimeout(() => setToast(null), 3000)
   }
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [query, statusFilter, selectedPeriod?.id])
 
   useEffect(() => {
     let mounted = true
@@ -116,6 +121,12 @@ export default function Page() {
     }),
     [topicList]
   )
+
+  const itemsPerPage = 10
+  const paginatedTopics = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage
+    return filtered.slice(startIndex, startIndex + itemsPerPage)
+  }, [filtered, currentPage])
 
   const resetForm = () => {
     setName('')
@@ -294,63 +305,74 @@ export default function Page() {
           <TeacherPill tone="blue">{selectedPeriod?.name || 'Đợt hiện tại'}</TeacherPill>
         </TeacherToolbar>
 
-        <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-slate-600">
-            <tr>
-              <th className="px-5 py-3 text-center w-16">STT</th>
-              <th className="px-5 py-3 text-center">Tên đề tài</th>
-              <th className="px-5 py-3 text-center w-28">Số lượng</th>
-              <th className="px-5 py-3 text-center w-32">Đã đăng kí</th>
-              <th className="px-5 py-3 text-center w-1/3">Mô tả</th>
-              <th className="px-5 py-3 text-center w-36">Trạng thái</th>
-              <th className="px-5 py-3 text-center w-36">Hành động</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((topic, index) => (
-              <tr key={topic.code} className="border-t border-slate-100 transition hover:bg-slate-50/80">
-                <td className="px-5 py-4 text-center font-medium text-slate-500">{index + 1}</td>
-                <td className="px-5 py-4 text-slate-900 font-medium text-left">{topic.name}</td>
-                <td className="px-5 py-4 text-center text-slate-600">{topic.slots.split('/')[1] || topic.slots}</td>
-                <td className="px-5 py-4 text-center text-slate-600">{topic.approvedStudents || 'chưa có'}</td>
-                <td className="px-5 py-4 text-slate-600 max-w-xs truncate text-left" title={topic.summary}>{topic.summary}</td>
-                <td className="px-5 py-4 text-center">
-                  <TeacherPill tone={getTopicStatusTone(topic.status)}>
-                    {topic.status}
-                  </TeacherPill>
-                </td>
-                <td className="px-5 py-4 text-center">
-                  <div className="flex justify-center gap-1">
-                    <button className="rounded-2xl p-2 text-[#1976D2] transition hover:bg-blue-50" title="Xem chi tiết" onClick={() => setViewingTopic(topic)}>
-                      <Eye className="h-4 w-4" />
-                    </button>
-                    <button
-                      className="rounded-2xl p-2 text-amber-600 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-30"
-                      title={topic.status === 'Đã duyệt' ? 'Đề tài đã duyệt không được chỉnh sửa' : 'Sửa'}
-                      onClick={() => handleEdit(topic)}
-                      disabled={topic.status === 'Đã duyệt'}
-                    >
-                      <Edit2 className="h-4 w-4" />
-                    </button>
-                    <button
-                      className="rounded-2xl p-2 text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-30"
-                      title={topic.status === 'Đã duyệt' ? 'Đề tài đã duyệt không được xóa' : 'Xóa'}
-                      onClick={() => setDeletingTopic(topic)}
-                      disabled={deletingCode === topic.code || topic.status === 'Đã duyệt'}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {filtered.length === 0 && (
+        <div className="overflow-x-auto max-h-[600px] overflow-y-auto relative">
+          <table className="w-full text-sm min-w-[800px]">
+            <thead className="bg-slate-50 text-slate-600 sticky top-0 z-10 shadow-[0_1px_0_rgba(226,232,240,1)]">
               <tr>
-                <td colSpan={7} className="px-5 py-8 text-center text-slate-500">Không có đề tài nào phù hợp bộ lọc.</td>
+                <th className="px-5 py-3 text-center w-14 font-semibold">STT</th>
+                <th className="px-5 py-3 text-center w-1/3 font-semibold">Tên đề tài</th>
+                <th className="px-5 py-3 text-center w-24 font-semibold">Số lượng</th>
+                <th className="px-5 py-3 text-center w-44 font-semibold">Đã đăng kí</th>
+                <th className="px-5 py-3 text-center w-52 font-semibold">Mô tả</th>
+                <th className="px-5 py-3 text-center w-32 font-semibold">Trạng thái</th>
+                <th className="px-5 py-3 text-center w-32 font-semibold">Hành động</th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {paginatedTopics.map((topic, index) => {
+                const globalIndex = (currentPage - 1) * itemsPerPage + index + 1
+                return (
+                  <tr key={topic.code} className="border-t border-slate-100 transition hover:bg-slate-50/80">
+                    <td className="px-5 py-4 font-medium text-slate-500 text-center">{globalIndex}</td>
+                    <td className="px-5 py-4 text-slate-900 font-medium">{topic.name}</td>
+                    <td className="px-5 py-4 text-slate-600 text-center">{topic.slots.split('/')[1] || topic.slots}</td>
+                    <td className="px-5 py-4 text-slate-600 text-center">{topic.approvedStudents || 'chưa có'}</td>
+                    <td className="px-5 py-4 text-slate-600 max-w-xs truncate" title={topic.summary}>{topic.summary}</td>
+                    <td className="px-5 py-4 text-center">
+                      <TeacherPill tone={getTopicStatusTone(topic.status)}>
+                        {topic.status}
+                      </TeacherPill>
+                    </td>
+                    <td className="px-5 py-4 text-center">
+                      <div className="flex justify-center gap-1">
+                        <button className="rounded-2xl p-2 text-[#1976D2] transition hover:bg-blue-50" title="Xem chi tiết" onClick={() => setViewingTopic(topic)}>
+                          <Eye className="h-4 w-4" />
+                        </button>
+                        <button
+                          className="rounded-2xl p-2 text-amber-600 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-30"
+                          title={topic.status === 'Đã duyệt' ? 'Đề tài đã duyệt không được chỉnh sửa' : 'Sửa'}
+                          onClick={() => handleEdit(topic)}
+                          disabled={topic.status === 'Đã duyệt'}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </button>
+                        <button
+                          className="rounded-2xl p-2 text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-30"
+                          title={topic.status === 'Đã duyệt' ? 'Đề tài đã duyệt không được xóa' : 'Xóa'}
+                          onClick={() => setDeletingTopic(topic)}
+                          disabled={deletingCode === topic.code || topic.status === 'Đã duyệt'}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="px-5 py-8 text-center text-slate-500">Không có đề tài nào phù hợp bộ lọc.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        <TeacherPagination
+          currentPage={currentPage}
+          totalItems={filtered.length}
+          itemsPerPage={itemsPerPage}
+          onChangePage={setCurrentPage}
+        />
       </TeacherCard>
 
       <ModalCreateEditTopic

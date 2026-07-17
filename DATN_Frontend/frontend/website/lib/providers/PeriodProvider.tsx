@@ -176,7 +176,10 @@ export const PeriodProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       };
     };
 
-    connectSSE();
+    const disableSSE = process.env.NEXT_PUBLIC_DISABLE_SSE === 'true';
+    if (!disableSSE) {
+      connectSSE();
+    }
 
     return () => {
       if (eventSource) {
