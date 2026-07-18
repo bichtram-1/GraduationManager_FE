@@ -49,6 +49,7 @@ export default function TeacherGradingPage() {
   }
 
   const { selectedPeriod, gradingTab, setGradingTab } = usePeriod()
+  const isPeriodClosed = selectedPeriod?.status === 'closed'
   const [tttnScores, setTttnScores] = useState<TttnScoreRow[]>([])
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const [selectedCouncil, setSelectedCouncil] = useState<Council | null>(null)
@@ -362,6 +363,12 @@ export default function TeacherGradingPage() {
         }
       />
 
+      {isPeriodClosed && (
+        <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+          ⚠️ Đợt &quot;{selectedPeriod?.name}&quot; đã đóng — bạn chỉ có thể xem, không thể chấm điểm.
+        </div>
+      )}
+
       {gradingTab === 'DATN' && (
         <div className="mb-6 grid gap-4 grid-cols-1 sm:grid-cols-3">
           <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-4 shadow-sm text-center flex flex-col justify-center items-center">
@@ -595,12 +602,12 @@ export default function TeacherGradingPage() {
                             role="button"
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (!isGradingStarted) return;
+                              if (!isGradingStarted || !editable) return;
                               setSelectedCouncil(council);
                               setSelectedGroup(g);
                               setShowScoringModal(true);
                             }}
-                            className={`flex items-center justify-between gap-3 rounded-md bg-white p-3 ring-1 ring-slate-100 cursor-pointer ${!isGradingStarted ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-50'}`}
+                            className={`flex items-center justify-between gap-3 rounded-md bg-white p-3 ring-1 ring-slate-100 cursor-pointer ${!isGradingStarted || !editable ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-50'}`}
                           >
                             <div>
                               <div className="font-medium text-slate-800">
@@ -650,6 +657,11 @@ export default function TeacherGradingPage() {
             {!isGradingStarted && (
               <div className="mx-5 mt-4 rounded-xl bg-amber-50 border border-amber-200 p-4 text-sm text-amber-800">
                 ⚠️ Chưa tới thời gian bắt đầu chấm điểm của đợt này (từ {selectedPeriod?.gradingStartDate}). Bạn chưa thể thực hiện chấm điểm.
+              </div>
+            )}
+            {isGradingStarted && !editable && (
+              <div className="mx-5 mt-4 rounded-xl bg-amber-50 border border-amber-200 p-4 text-sm text-amber-800">
+                ⚠️ Đợt đồ án này đã kết thúc thời gian chấm điểm hoặc đã đóng. Bạn không thể chỉnh sửa điểm.
               </div>
             )}
             <div className="p-4 overflow-x-auto max-h-[600px] overflow-y-auto relative">
@@ -736,11 +748,11 @@ export default function TeacherGradingPage() {
                             </td>
                             <td className="px-5 py-4">
                               <div className="flex items-center gap-2">
-                                <TeacherButton 
-                                  variant={hasScore ? 'secondary' : 'primary'} 
+                                <TeacherButton
+                                  variant={hasScore ? 'secondary' : 'primary'}
                                   onClick={() => { setSelectedGroup(g); setSelectedCouncil(selectedCouncil); setShowScoringModal(true) }}
-                                  disabled={!isGradingStarted}
-                                  className={!isGradingStarted ? 'opacity-50 cursor-not-allowed' : ''}
+                                  disabled={!isGradingStarted || !editable}
+                                  className={!isGradingStarted || !editable ? 'opacity-50 cursor-not-allowed' : ''}
                                 >
                                   {hasScore ? 'Chấm lại' : 'Vào chấm điểm'}
                                 </TeacherButton>
@@ -796,6 +808,7 @@ export default function TeacherGradingPage() {
               students={(selectedGroup.students || []).map((s) => ({ id: s.id, name: s.name, class: s.class }))}
               canEditReport={selectedGroup.reviewerId === currentTeacherId || selectedGroup.advisorId === currentTeacherId}
               notify={(msg, type) => notify(msg, type)}
+              readOnly={!editable}
             />
           </div>
         </div>

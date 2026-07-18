@@ -69,6 +69,7 @@ const defaultReviewGroups: ReviewGroup[] = []
 export default function TeacherReviewGroupsPage() {
   const { message } = App.useApp()
   const { selectedPeriod } = usePeriod()
+  const isPeriodClosed = selectedPeriod?.status === 'closed'
   const [segment, setSegment] = useState<Segment>('Nhóm hướng dẫn')
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'reviewed'>('all')
 
@@ -251,6 +252,12 @@ export default function TeacherReviewGroupsPage() {
         description="Theo dõi và đánh giá các nhóm Nhóm hướng dẫn, Nhóm phản biện do giảng viên đang quản lý."
       />
 
+      {isPeriodClosed && (
+        <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+          ⚠️ Đợt &quot;{selectedPeriod?.name}&quot; đã đóng — bạn chỉ có thể xem, không thể chỉnh sửa đánh giá.
+        </div>
+      )}
+
       {/* Sub-filters & Search Toolbar */}
       <section className="mb-6 flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_8px_30px_rgba(15,23,42,0.04)]">
         <div className="flex flex-wrap gap-1.5 bg-slate-50 p-1 rounded-xl">
@@ -370,7 +377,7 @@ export default function TeacherReviewGroupsPage() {
                             <div className="flex justify-start">
                               <select
                                 value={group.evaluation}
-                                disabled={savingId === group.id || !!group.reviewerEvaluation}
+                                disabled={isPeriodClosed || savingId === group.id || !!group.reviewerEvaluation}
                                 onChange={(event) => {
                                   if (selectedPeriod?.status === 'closed') {
                                     message.warning('Đợt học/tốt nghiệp đã đóng, không thể chỉnh sửa đánh giá!')
@@ -522,7 +529,7 @@ export default function TeacherReviewGroupsPage() {
                             <div className="flex justify-start">
                               <select
                                 value={group.evaluation}
-                                disabled={savingId === group.id}
+                                disabled={isPeriodClosed || savingId === group.id}
                                 onChange={(event) => {
                                   if (selectedPeriod?.status === 'closed') {
                                     message.warning('Đợt học/tốt nghiệp đã đóng, không thể chỉnh sửa đánh giá!')

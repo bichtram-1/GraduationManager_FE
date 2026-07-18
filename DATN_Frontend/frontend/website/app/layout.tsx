@@ -7,6 +7,7 @@ import ViMessages from '@/lib/i18/messages/vi';
 import QueryProvider from '@/lib/providers/QueryProvider';
 import AntdProvider from '@/lib/providers/AntdProvider';
 import { PeriodProvider } from '@/lib/providers/PeriodProvider';
+import ChunkErrorHandler from '@/lib/providers/ChunkErrorHandler';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,6 +34,7 @@ export default async function RootLayout({
   return (
     <html lang={locale}>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <ChunkErrorHandler />
         <QueryProvider>
           <AntdProvider>
             <PeriodProvider>

@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { Button, Space, Tag, Input, Table, message, Modal, Card, Tooltip } from 'antd';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Button, Space, Tag, Input, Table, message, Modal, Card, Tooltip, Select } from 'antd';
 import { groupHooks } from '../../hooks/useGroups';
 import { useTranslation } from 'react-i18next';
 import { getKey, I18nKey } from '@shared/types/I18nKeyType';
@@ -39,7 +39,17 @@ const ReviewGroupsPage: React.FC = () => {
 
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | string>('all');
+  const [teacherFilter, setTeacherFilter] = useState<'all' | string>('all');
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Danh sách giảng viên để lọc: chỉ những giảng viên có đề tài (nhóm) trong đúng đợt
+  // đang chọn — lấy trực tiếp từ `groups` (đã lọc theo đợt ở trên), không cần gọi API riêng.
+  const teacherOptions = useMemo(() => {
+    const names = Array.from(new Set(groups.map((g) => g.supervisor).filter(Boolean)));
+    return names.sort((a, b) => a.localeCompare(b));
+  }, [groups]);
 
   const filtered = useMemo(() => {
     const s = query.trim().toLowerCase();
@@ -53,10 +63,17 @@ const ReviewGroupsPage: React.FC = () => {
           if (g.status !== statusFilter) return false;
         }
       }
+      if (teacherFilter !== 'all' && g.supervisor !== teacherFilter) return false;
       if (!s) return true;
-      return [g.code, g.title, g.supervisor].join(' ').toLowerCase().includes(s) || g.members.some((m: IGroupMember) => m.name.toLowerCase().includes(s));
+      return [g.title, g.supervisor].join(' ').toLowerCase().includes(s) || g.members.some((m: IGroupMember) => m.name.toLowerCase().includes(s));
     });
-  }, [groups, query, statusFilter]);
+  }, [groups, query, statusFilter, teacherFilter]);
+
+  // Lọc/tìm kiếm thay đổi làm số trang thay đổi theo — về lại trang 1 để tránh đứng ở
+  // trang trống (VD: đang ở trang 5 rồi lọc còn 2 trang).
+  useEffect(() => {
+    setPage(1);
+  }, [query, statusFilter, teacherFilter]);
 
   const pending = groups.filter((g) => g.status === STATUS_CODE.PENDING_UP || g.status === STATUS_CODE.WARNING || g.status === STATUS_CODE.MISSING).length;
   const accepted = groups.filter((g) => g.status === STATUS_CODE.APPROVED_UP).length;
@@ -198,12 +215,24 @@ const ReviewGroupsPage: React.FC = () => {
       <Card className="filter-table-card rounded-[18px] border border-slate-100 bg-white shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
         <div className="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4 p-5 pb-0">
           <Search
-            placeholder="Tìm kiếm theo mã nhóm, tên đề tài, giảng viên hoặc thành viên..."
+            placeholder="Tìm kiếm theo tên đề tài, giảng viên hoặc thành viên..."
             onSearch={(v) => setQuery(v)}
             onChange={(e) => setQuery(e.target.value)}
             allowClear
             size="large"
-            className="w-full md:w-[460px]"
+            className="w-full md:w-[400px]"
+          />
+          <Select
+            value={teacherFilter}
+            onChange={(v) => setTeacherFilter(v)}
+            size="large"
+            className="w-full md:w-[240px]"
+            showSearch
+            optionFilterProp="label"
+            options={[
+              { value: 'all', label: 'Tất cả giảng viên' },
+              ...teacherOptions.map((name) => ({ value: name, label: name })),
+            ]}
           />
           <div className="flex flex-wrap gap-2">
             <Button type={statusFilter === 'all' ? 'primary' : 'default'} onClick={() => setStatusFilter('all')} className="rounded-lg h-10 font-medium">{t(getKey('all_tab'))}</Button>
@@ -219,14 +248,19 @@ const ReviewGroupsPage: React.FC = () => {
             dataSource={filtered} 
             columns={columns} 
             pagination={{
-              pageSize: 10,
+              current: page,
+              pageSize: pageSize,
+              onChange: (nextPage, nextPageSize) => {
+                setPage(nextPage);
+                setPageSize(nextPageSize);
+              },
               showSizeChanger: true,
               position: ['bottomCenter'],
               showTotal(total, range) {
                 return <span className="pl-2">{`${t('showing')} ${range[0]} ${t('to')} ${range[1]} ${t('of')} ${total} ${t('entries')}`}</span>;
               },
             }}
-            className="border border-slate-100 rounded-xl overflow-hidden"
+            className="border border-slate-100 rounded-xl"
             scroll={{ x: 'max-content' }}
             sticky={{
               offsetHeader: 0,

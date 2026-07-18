@@ -1,6 +1,7 @@
 import { FileText } from 'lucide-react'
 import { TeacherPill } from '../../_components/TeacherShell'
 import { TeacherModal, getTopicStatusTone } from '../../_components/TeacherUI'
+import { getPreviewUrl } from '@/lib/utils/fileUrl'
 
 type Topic = {
   id?: string
@@ -105,7 +106,7 @@ export default function ModalDetailTopic({ open, topic, onClose }: ModalDetailTo
             {topic.fileUrl ? (
               <div className="flex items-center justify-between rounded-2xl bg-blue-50/50 px-4 py-3 border border-blue-100">
                 <a
-                  href={topic.fileUrl}
+                  href={getPreviewUrl(topic.fileUrl) || topic.fileUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 text-sm font-semibold text-[#1976D2] hover:underline max-w-[90%] truncate"

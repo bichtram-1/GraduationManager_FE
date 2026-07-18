@@ -4,7 +4,7 @@ import type { ReactNode } from 'react'
 import { useMemo, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { BookOpen, Building2, CalendarDays, ClipboardCheck, GraduationCap, Home, LogOut, Menu, ShieldCheck, Trophy, Users, Clock, Bell } from 'lucide-react'
+import { BookOpen, Building2, CalendarDays, ClipboardCheck, GraduationCap, Home, LogOut, ShieldCheck, Trophy, Users, Clock, Bell, User } from 'lucide-react'
 import { Select, Dropdown } from 'antd'
 import { usePeriod } from '@/lib/providers/PeriodProvider'
 import { teacherApi } from '@/lib/api/teacherApi'
@@ -364,7 +364,7 @@ export function TeacherShell({ children }: { children: ReactNode }) {
               className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-700 transition hover:bg-slate-200"
               title="Thông tin giảng viên"
             >
-              <Menu />
+              <User className="h-4 w-4" />
             </button>
             <button
               type="button"

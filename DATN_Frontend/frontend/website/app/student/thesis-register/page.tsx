@@ -9,6 +9,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { StudentPill, StudentSectionHeader } from '../_components/StudentShell'
 import { StudentButton, StudentModal } from '../_components/StudentUI'
 import { COMMON_LABELS } from '@/constants/commonLabels'
+import { getPreviewUrl } from '@/lib/utils/fileUrl'
 import { App } from 'antd'
 
 type Topic = { id: string; code?: string; title: string; module: string; published: boolean; slots?: string; description?: string; direction?: string; fileUrl?: string }
@@ -647,12 +648,12 @@ export default function ThesisRegisterPage() {
               <div className="pt-2">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Tài liệu đính kèm</span>
                 <a
-                  href={detailTopic.fileUrl}
+                  href={getPreviewUrl(detailTopic.fileUrl) || detailTopic.fileUrl}
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex items-center gap-2 rounded-xl bg-blue-50 px-4 py-2.5 text-xs font-bold text-blue-600 border border-blue-100 transition hover:bg-blue-100 shadow-sm"
                 >
-                  📂 Tải xuống tài liệu mô tả đề tài
+                  📂 Xem tài liệu mô tả đề tài
                 </a>
               </div>
             )}

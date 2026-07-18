@@ -10,7 +10,7 @@ import { studentApi } from '@/lib/api/studentApi'
 import { uploadApi } from '@/lib/api/uploadApi'
 import { usePeriod } from '@/lib/providers/PeriodProvider'
 import { COMMON_LABELS } from '@/constants/commonLabels'
-import { getFileUrl } from '@/lib/utils/fileUrl'
+import { getFileUrl, getPreviewUrl } from '@/lib/utils/fileUrl'
 import { App } from 'antd'
 
 type StatusFilter = 'all' | 'Đã nộp' | 'Thiếu' | 'Chưa nộp'
@@ -391,7 +391,7 @@ export default function StudentReportsDATNPage() {
                     </td>
                     <td className="px-5 py-4 text-[#1976D2] max-w-40">
                       {getFileUrl(milestone.fileUrl || milestone.file) ? (
-                        <a href={getFileUrl(milestone.fileUrl || milestone.file) || undefined} target="_blank" rel="noopener noreferrer" title={milestone.file} className="flex min-w-0 items-center gap-1 hover:underline">
+                        <a href={getPreviewUrl(milestone.fileUrl || milestone.file) || undefined} target="_blank" rel="noopener noreferrer" title={milestone.file} className="flex min-w-0 items-center gap-1 hover:underline">
                           <FileText className="h-4 w-4 shrink-0" />
                           <span className="min-w-0 truncate">{milestone.file}</span>
                         </a>
@@ -440,7 +440,7 @@ export default function StudentReportsDATNPage() {
                   <FileText className="h-4 w-4 text-[#1976D2] shrink-0" />
                   <span className="shrink-0">File: </span>
                   {getFileUrl(selected.fileUrl || selected.file) ? (
-                    <a href={getFileUrl(selected.fileUrl || selected.file) || undefined} target="_blank" rel="noopener noreferrer" title={selected.file} className="min-w-0 truncate text-[#1976D2] hover:underline font-semibold">
+                    <a href={getPreviewUrl(selected.fileUrl || selected.file) || undefined} target="_blank" rel="noopener noreferrer" title={selected.file} className="min-w-0 truncate text-[#1976D2] hover:underline font-semibold">
                       {selected.file}
                     </a>
                   ) : (

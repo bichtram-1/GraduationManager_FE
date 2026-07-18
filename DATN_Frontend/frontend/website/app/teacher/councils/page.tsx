@@ -26,6 +26,7 @@ type Council = {
   name: string
   period: string
   chair: string
+  secretary: string
   studentsCount: number
   avgScore: number
   groups?: ICouncilGroup[]
@@ -76,6 +77,7 @@ export default function CouncilsPage() {
         if (data?.councilGroups) {
           const list = data.councilGroups.map((c: IRawCouncil) => {
             const chair = c.members?.find((m: ICouncilMember) => m.role.includes('Chủ tịch'))?.name || c.members?.[0]?.name || 'Chưa phân công'
+            const secretary = c.members?.find((m: ICouncilMember) => m.role.includes('Thư ký'))?.name || 'Chưa phân công'
             const studentsCount = c.groups?.reduce((acc: number, g: ICouncilGroup) => acc + (g.students?.length || 0), 0) || 0
 
             return {
@@ -83,6 +85,7 @@ export default function CouncilsPage() {
               name: c.name,
               period: selectedPeriod?.name || 'Học kỳ hiện tại',
               chair,
+              secretary,
               studentsCount,
               avgScore: 8.0,
               groups: c.groups || [],
@@ -432,6 +435,7 @@ export default function CouncilsPage() {
                         <p className="text-sm text-slate-500 mt-1">{c.period}</p>
                         <div className="mt-3 space-y-1 text-sm text-slate-600">
                           <p>Chủ tịch hội đồng: <strong className="text-slate-800">{c.chair}</strong></p>
+                          <p>Thư ký: <strong className="text-slate-800">{c.secretary}</strong></p>
                         </div>
                       </div>
                       <div className="text-right rounded-2xl bg-blue-50 px-3 py-2 flex-shrink-0">

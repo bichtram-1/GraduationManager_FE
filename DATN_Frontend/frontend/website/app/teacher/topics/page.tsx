@@ -27,6 +27,7 @@ type Topic = {
 
 export default function Page() {
   const { selectedPeriod } = usePeriod()
+  const isPeriodClosed = selectedPeriod?.status === 'closed'
   const [topicList, setTopicList] = useState<Topic[]>([])
   const [openCreate, setOpenCreate] = useState(false)
   const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null)
@@ -154,6 +155,10 @@ export default function Page() {
   }
 
   const confirmDelete = async () => {
+    if (isPeriodClosed) {
+      showNotification('Đợt đã đóng, không thể xóa đề tài!', 'error')
+      return
+    }
     if (!deletingTopic || !deletingTopic.id) return
     setDeletingCode(deletingTopic.code)
     try {
@@ -177,6 +182,10 @@ export default function Page() {
   }
 
   const handleImportFile = async (file: File) => {
+    if (isPeriodClosed) {
+      showNotification('Đợt đã đóng, không thể import đề tài!', 'error')
+      return
+    }
     const ok = window.confirm(`Bạn có chắc muốn import đề tài từ file ${file.name}?`)
     if (!ok) return
     setSubmitting(true)
@@ -203,6 +212,10 @@ export default function Page() {
   }
 
   const handleSave = async (overrideFileUrl?: string) => {
+    if (isPeriodClosed) {
+      showNotification('Đợt đã đóng, không thể lưu đề tài!', 'error')
+      return
+    }
     const trimmedName = name.trim()
     const trimmedSummary = description.trim()
     const maxSlots = Number.parseInt(slots, 10)
@@ -275,7 +288,7 @@ export default function Page() {
         title="Đề tài của tôi"
         description="Theo dõi đề tài, cập nhật nội dung và quản lý trạng thái ngay trên một màn hình."
         actions={
-          <TeacherButton variant="primary" className="!h-11" onClick={openCreateModal}>
+          <TeacherButton variant="primary" className="!h-11" onClick={openCreateModal} disabled={isPeriodClosed}>
             <span className="inline-flex items-center gap-2">
               <Plus className="h-4 w-4" />
               Tạo đề tài mới
@@ -283,6 +296,12 @@ export default function Page() {
           </TeacherButton>
         }
       />
+
+      {isPeriodClosed && (
+        <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+          ⚠️ Đợt &quot;{selectedPeriod?.name}&quot; đã đóng — bạn chỉ có thể xem, không thể tạo/sửa/xóa đề tài.
+        </div>
+      )}
 
       <TeacherCard>
         <TeacherToolbar
@@ -341,17 +360,17 @@ export default function Page() {
                         </button>
                         <button
                           className="rounded-2xl p-2 text-amber-600 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-30"
-                          title={topic.status === 'Đã duyệt' ? 'Đề tài đã duyệt không được chỉnh sửa' : 'Sửa'}
+                          title={isPeriodClosed ? 'Đợt đã đóng, không thể chỉnh sửa' : topic.status === 'Đã duyệt' ? 'Đề tài đã duyệt không được chỉnh sửa' : 'Sửa'}
                           onClick={() => handleEdit(topic)}
-                          disabled={topic.status === 'Đã duyệt'}
+                          disabled={isPeriodClosed || topic.status === 'Đã duyệt'}
                         >
                           <Edit2 className="h-4 w-4" />
                         </button>
                         <button
                           className="rounded-2xl p-2 text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-30"
-                          title={topic.status === 'Đã duyệt' ? 'Đề tài đã duyệt không được xóa' : 'Xóa'}
+                          title={isPeriodClosed ? 'Đợt đã đóng, không thể xóa' : topic.status === 'Đã duyệt' ? 'Đề tài đã duyệt không được xóa' : 'Xóa'}
                           onClick={() => setDeletingTopic(topic)}
-                          disabled={deletingCode === topic.code || topic.status === 'Đã duyệt'}
+                          disabled={isPeriodClosed || deletingCode === topic.code || topic.status === 'Đã duyệt'}
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
