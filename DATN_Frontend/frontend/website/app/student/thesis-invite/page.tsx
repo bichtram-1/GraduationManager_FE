@@ -66,7 +66,6 @@ export default function InvitePage() {
   }, [selectedPeriod])
   const isPeriodDisabled = isPeriodLocked || !isRegistrationTime.isOpen || isRegistrationTime.isClosed
   const isActionDisabled = isPeriodDisabled
-  const isTopicActive = !!(registration && registration.topicId && registration.topicId !== "");
 
   const [newId, setNewId] = useState('')
   const [suggestions, setSuggestions] = useState<IStudentSearchResult[]>([])
@@ -79,6 +78,8 @@ export default function InvitePage() {
   const [cancelling, setCancelling] = useState(false)
   const [leaveGroupConfirmOpen, setLeaveGroupConfirmOpen] = useState(false)
   const [leaving, setLeaving] = useState(false)
+
+  const isTopicActive = !!(registration && registration.topicId && registration.topicId !== "");
 
   const outgoingCount = outgoingInvites.length
   const incomingCount = incomingInvites.length

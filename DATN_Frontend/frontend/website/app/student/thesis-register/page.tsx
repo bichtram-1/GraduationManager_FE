@@ -79,7 +79,6 @@ export default function ThesisRegisterPage() {
     return { isOpen, isClosed }
   }, [selectedPeriod])
   const isActionDisabled = isPeriodLocked || !isRegistrationTime.isOpen || isRegistrationTime.isClosed
-  const isTopicActive = !!(registration && registration.topicId && registration.topicId !== "");
   const showDeadlineWarning = useMemo(() => {
     if (!selectedPeriod?.regDeadline) return false
     const parts = selectedPeriod.regDeadline.split('/')
@@ -100,6 +99,8 @@ export default function ThesisRegisterPage() {
   const [registration, setRegistration] = useState<Registration | null>(null)
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null)
   const [confirming, setConfirming] = useState(false)
+
+  const isTopicActive = !!(registration && registration.topicId && registration.topicId !== "");
 
   // Pagination and search/filter states
   const [page, setPage] = useState(1)
