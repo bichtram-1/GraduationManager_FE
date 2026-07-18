@@ -199,8 +199,10 @@ export default function TeacherGradingPage() {
     }
 
     window.addEventListener('realtime-score-updated', handleRealtimeUpdate)
+    window.addEventListener('realtime-assignment-published', handleRealtimeUpdate)
     return () => {
       window.removeEventListener('realtime-score-updated', handleRealtimeUpdate)
+      window.removeEventListener('realtime-assignment-published', handleRealtimeUpdate)
     }
   }, [selectedPeriod?.id])
 

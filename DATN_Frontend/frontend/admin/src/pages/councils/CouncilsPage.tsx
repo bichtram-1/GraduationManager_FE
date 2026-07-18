@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { message, Modal, Button, Tag } from 'antd';
-import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined, CalendarOutlined, CheckCircleOutlined, CloseCircleOutlined, SolutionOutlined, ExclamationCircleFilled, SendOutlined, LockOutlined, UndoOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined, CalendarOutlined, CheckCircleOutlined, CloseCircleOutlined, SolutionOutlined, ExclamationCircleFilled, SendOutlined, UndoOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { councilHooks } from '../../hooks/useCouncils';
 import { groupHooks } from '../../hooks/useGroups';
@@ -107,6 +107,7 @@ const CouncilsPage: React.FC = () => {
   const { data: councils = [] } = councilHooks.useFetchListCouncils();
   const deleteCouncilMutation = councilHooks.useDeleteCouncil();
   const updateCouncilMutation = councilHooks.useUpdateCouncil();
+  const publishAllCouncilsMutation = councilHooks.usePublishAllCouncils();
   const [selectedCouncilForView, setSelectedCouncilForView] = useState<CouncilCard | null>(null);
   const [query, setQuery] = useState('');
   const [roomFilter, setRoomFilter] = useState('all');
@@ -176,6 +177,42 @@ const CouncilsPage: React.FC = () => {
     if (!selectedPeriod) return councils;
     return councils.filter((c: CouncilRow) => c.dot_id === String(selectedPeriod.id) || c.batch === selectedPeriod.name);
   }, [councils, selectedPeriod]);
+
+  const draftCouncilsCount = useMemo(
+    () => councilsInPeriod.filter((c: CouncilRow) => !c.status || c.status === 'NHAP').length,
+    [councilsInPeriod]
+  );
+
+  const handlePublishAllCouncils = () => {
+    if (isActionDisabled || draftCouncilsCount === 0) return;
+    Modal.confirm({
+      centered: true,
+      title: null,
+      icon: null,
+      content: (
+        <div className="text-center">
+          <ExclamationCircleFilled className="text-[40px] leading-none text-blue-500 mb-3 inline-block" />
+          <div className="font-bold text-xl mb-2">Công bố tất cả hội đồng</div>
+          <div className="text-sm text-slate-500">
+            Công bố <strong>{draftCouncilsCount}</strong> hội đồng đang ở trạng thái bản nháp trong đợt <strong>&quot;{selectedPeriod?.name}&quot;</strong>. Các hội đồng đã công bố sẽ không bị ảnh hưởng. Bạn có chắc chắn?
+          </div>
+        </div>
+      ),
+      okText: 'Xác nhận',
+      cancelText: 'Hủy',
+      onOk() {
+        publishAllCouncilsMutation.mutate(selectedPeriod?.id, {
+          onSuccess: (data) => {
+            message.success(data?.message || 'Công bố hội đồng thành công!');
+          },
+          onError: (err: unknown) => {
+            const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+            message.error(msg || (err as Error).message || 'Có lỗi xảy ra!');
+          },
+        });
+      },
+    });
+  };
 
   const totalCouncils = useMemo(() => councilsInPeriod.length, [councilsInPeriod]);
   const totalEligible = useMemo(() => councilsInPeriod.reduce((acc, c) => acc + (c.topicGroups?.length ?? 0), 0), [councilsInPeriod]);
@@ -331,6 +368,16 @@ const CouncilsPage: React.FC = () => {
               Nhóm chưa phân hội đồng ({unassignedGroups.length})
             </Button>
             <Button
+              type="default"
+              icon={<SendOutlined />}
+              disabled={isActionDisabled || draftCouncilsCount === 0}
+              loading={publishAllCouncilsMutation.isPending}
+              onClick={handlePublishAllCouncils}
+              className="rounded-xl h-[46px] px-6 font-semibold shadow-sm flex items-center gap-1.5 border-emerald-200 text-emerald-700 hover:text-emerald-800 hover:border-emerald-400 disabled:text-slate-400 disabled:border-slate-200"
+            >
+              Công bố tất cả ({draftCouncilsCount})
+            </Button>
+            <Button
               type="primary"
               icon={<PlusOutlined />}
               disabled={isActionDisabled}
@@ -443,8 +490,6 @@ const CouncilsPage: React.FC = () => {
                     <span className="text-sm font-semibold">{c.title}</span>
                     {c.status === 'DA_CONG_BO' ? (
                       <Tag color="success" className="m-0 text-xs px-2 py-0.5 rounded-full font-medium">Đã công bố</Tag>
-                    ) : c.status === 'DA_KET_THUC' ? (
-                      <Tag color="processing" className="m-0 text-xs px-2 py-0.5 rounded-full font-medium">Đã kết thúc</Tag>
                     ) : (
                       <Tag color="default" className="m-0 text-xs px-2 py-0.5 rounded-full font-medium">Bản nháp</Tag>
                     )}
@@ -463,18 +508,8 @@ const CouncilsPage: React.FC = () => {
                       </button>
                     )}
                     {!isActionDisabled && c.status === 'DA_CONG_BO' && (
-                      <>
-                        <button className="btn btns btn-icon text-sky-600 hover:text-sky-700 font-semibold" onClick={() => handleUpdateStatus(c.id, 'DA_KET_THUC', 'Đã kết thúc')}>
-                          <LockOutlined /> Kết thúc
-                        </button>
-                        <button className="btn btns btn-icon text-amber-600 hover:text-amber-700 font-semibold" onClick={() => handleUpdateStatus(c.id, 'NHAP', 'Bản nháp')}>
-                          <UndoOutlined /> Hủy công bố
-                        </button>
-                      </>
-                    )}
-                    {!isActionDisabled && c.status === 'DA_KET_THUC' && (
-                      <button className="btn btns btn-icon text-amber-600 hover:text-amber-700 font-semibold" onClick={() => handleUpdateStatus(c.id, 'DA_CONG_BO', 'Đã công bố')}>
-                        <UndoOutlined /> Mở lại
+                      <button className="btn btns btn-icon text-amber-600 hover:text-amber-700 font-semibold" onClick={() => handleUpdateStatus(c.id, 'NHAP', 'Bản nháp')}>
+                        <UndoOutlined /> Hủy công bố
                       </button>
                     )}
                     <button className="btn btns btn-icon" onClick={() => handleViewCouncil(c.id)}>

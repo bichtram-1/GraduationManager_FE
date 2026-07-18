@@ -47,4 +47,14 @@ export const councilHooks = {
       },
     });
   },
+
+  usePublishAllCouncils: () => {
+    const queryClient = useQueryClient();
+    return useMutation<{ success: boolean; message: string; results?: { publishedCount: number } }, AxiosError, string | undefined>({
+      mutationFn: (periodId) => councilApi.publishAllCouncils(periodId),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['councilsList'] });
+      },
+    });
+  },
 };

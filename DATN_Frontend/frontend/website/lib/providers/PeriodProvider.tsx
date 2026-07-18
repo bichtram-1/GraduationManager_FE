@@ -120,7 +120,7 @@ export const PeriodProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           ) {
             window.dispatchEvent(new CustomEvent('realtime-group-updated'));
             window.dispatchEvent(new CustomEvent('realtime-topic-updated'));
-          } else if (data.type === 'assignment_published') {
+          } else if (data.type === 'assignment_published' || data.type === 'council_published') {
             window.dispatchEvent(new CustomEvent('realtime-assignment-published', { detail: data }));
           } else if (data.type === 'score_updated' || data.type === 'tttn_score_updated') {
             window.dispatchEvent(new CustomEvent('realtime-score-updated', { detail: data }));
