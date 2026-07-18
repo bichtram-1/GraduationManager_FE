@@ -299,7 +299,7 @@ export default function Page() {
 
       {isPeriodClosed && (
         <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
-          ⚠️ Đợt &quot;{selectedPeriod?.name}&quot; đã đóng — bạn chỉ có thể xem, không thể tạo/sửa/xóa đề tài.
+          ⚠️ Đợt &quot;{selectedPeriod?.name}&quot; đã đóng - bạn chỉ có thể xem, không thể tạo/sửa/xóa đề tài.
         </div>
       )}
 

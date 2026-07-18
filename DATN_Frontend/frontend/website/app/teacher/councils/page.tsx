@@ -68,43 +68,54 @@ export default function CouncilsPage() {
   useEffect(() => {
     let mounted = true
     setLoading(true)
-    teacherApi.getGradingData({ periodId: selectedPeriod?.id })
-      .then((data) => {
-        if (!mounted) return
-        if (data?.teacherId) {
-          setCurrentTeacherId(String(data.teacherId))
-        }
-        if (data?.councilGroups) {
-          const list = data.councilGroups.map((c: IRawCouncil) => {
-            const chair = c.members?.find((m: ICouncilMember) => m.role.includes('Chủ tịch'))?.name || c.members?.[0]?.name || 'Chưa phân công'
-            const secretary = c.members?.find((m: ICouncilMember) => m.role.includes('Thư ký'))?.name || 'Chưa phân công'
-            const studentsCount = c.groups?.reduce((acc: number, g: ICouncilGroup) => acc + (g.students?.length || 0), 0) || 0
+    const fetchCouncils = () => {
+      teacherApi.getGradingData({ periodId: selectedPeriod?.id })
+        .then((data) => {
+          if (!mounted) return
+          if (data?.teacherId) {
+            setCurrentTeacherId(String(data.teacherId))
+          }
+          if (data?.councilGroups) {
+            const list = data.councilGroups.map((c: IRawCouncil) => {
+              const chair = c.members?.find((m: ICouncilMember) => m.role.includes('Chủ tịch'))?.name || c.members?.[0]?.name || 'Chưa phân công'
+              const secretary = c.members?.find((m: ICouncilMember) => m.role.includes('Thư ký'))?.name || 'Chưa phân công'
+              const studentsCount = c.groups?.reduce((acc: number, g: ICouncilGroup) => acc + (g.students?.length || 0), 0) || 0
 
-            return {
-              id: c.code,
-              name: c.name,
-              period: selectedPeriod?.name || 'Học kỳ hiện tại',
-              chair,
-              secretary,
-              studentsCount,
-              avgScore: 8.0,
-              groups: c.groups || [],
-              members: c.members || []
-            }
-          })
-          setCouncils(list)
-        } else {
-          setCouncils([])
-        }
-      })
-      .catch(() => {
-        if (mounted) setCouncils([])
-      })
-      .finally(() => {
-        if (mounted) setLoading(false)
-      })
+              return {
+                id: c.code,
+                name: c.name,
+                period: selectedPeriod?.name || 'Học kỳ hiện tại',
+                chair,
+                secretary,
+                studentsCount,
+                avgScore: 8.0,
+                groups: c.groups || [],
+                members: c.members || []
+              }
+            })
+            setCouncils(list)
+          } else {
+            setCouncils([])
+          }
+        })
+        .catch(() => {
+          if (mounted) setCouncils([])
+        })
+        .finally(() => {
+          if (mounted) setLoading(false)
+        })
+    }
+
+    fetchCouncils()
+
+    const handleSync = () => {
+      fetchCouncils()
+    }
+    window.addEventListener('realtime-assignment-published', handleSync)
+
     return () => {
       mounted = false
+      window.removeEventListener('realtime-assignment-published', handleSync)
     }
   }, [selectedPeriod?.id])
 

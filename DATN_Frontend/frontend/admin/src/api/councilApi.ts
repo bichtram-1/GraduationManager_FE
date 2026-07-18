@@ -72,4 +72,9 @@ export const councilApi = {
     const response = await axiosInstance.delete(`/private/v1/councils/${id}`);
     return response?.data;
   },
+
+  publishAllCouncils: async (periodId?: string): Promise<{ success: boolean; message: string; results?: { publishedCount: number } }> => {
+    const response = await axiosInstance.post('/private/v1/councils/publish', null, { params: { periodId } });
+    return response?.data;
+  },
 };
