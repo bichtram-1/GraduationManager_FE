@@ -73,8 +73,11 @@ export const teacherApi = {
     return response?.data;
   },
 
-  getHistory: async (limit?: number): Promise<any[]> => {
-    const response = await axiosInstance.get('/private/v1/teacher/history', { params: limit ? { limit } : undefined });
+  getHistory: async (limit?: number, periodId?: number | string): Promise<any[]> => {
+    const params: any = {};
+    if (limit) params.limit = limit;
+    if (periodId) params.dot_id = periodId;
+    const response = await axiosInstance.get('/private/v1/teacher/history', { params });
     return response?.data?.results?.objects || [];
   },
 };

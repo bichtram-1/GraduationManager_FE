@@ -6,6 +6,7 @@ import { historyHooks } from '../../hooks/useHistory';
 import { IHistoryLog } from '../../api/historyApi';
 import type { BaseListParams } from '@shared/types/GeneralType';
 import dayjs from 'dayjs';
+import { useGlobalVariable } from '../../hooks/GlobalVariableProvider';
 
 type HistoryListParams = BaseListParams & {
   keyword?: string;
@@ -29,13 +30,16 @@ const ACTION_MAP: Record<string, { label: string; color: string }> = {
 };
 
 const HistoryPage: React.FC = () => {
+  const { selectedPeriod } = useGlobalVariable();
+
   const useFilteredHistoryQuery = (params: BaseListParams) => {
-    const typedParams = params as HistoryListParams;
+    const typedParams = params as HistoryListParams & { periodId?: string };
     const queryParams = {
       action_type: typedParams.actionFilter === 'all' ? undefined : typedParams.actionFilter,
       role: typedParams.roleFilter === 'all' ? undefined : typedParams.roleFilter,
       keyword: typedParams.keyword?.trim() || undefined,
       nhom_id: typedParams.searchGroup?.trim() || undefined,
+      dot_id: typedParams.periodId || undefined,
     };
     return historyHooks.useFetchAdminHistory(queryParams);
   };
@@ -162,6 +166,7 @@ const HistoryPage: React.FC = () => {
       pageSubtitle="Theo dõi nhật ký các hoạt động đăng ký đề tài, duyệt nhóm, phân công và khai báo trên toàn hệ thống."
       columns={columns}
       useQueryHook={useFilteredHistoryQuery}
+      paramVariables={useMemo(() => ({ page: 1, limit: 10, periodId: selectedPeriod?.id || '' }), [selectedPeriod?.id])}
       actions={{
         isDetail: false,
         isEdit: false,
