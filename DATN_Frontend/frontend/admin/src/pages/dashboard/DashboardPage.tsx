@@ -43,17 +43,27 @@ const DashboardPage = () => {
   };
 
   const milestones = useMemo(() => {
+    const parseDate = (dStr?: string) => {
+      if (!dStr || dStr === '—') return null;
+      const singleDate = dStr.includes('-') ? dStr.split('-')[0].trim() : dStr;
+      const parts = singleDate.split('/');
+      if (parts.length === 3) {
+        return new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
+      }
+      return null;
+    };
+
+    let rawList: Array<{ title: string; date: string; color: 'green' | 'gray' }> = [];
+
     if (!selectedPeriod) {
-      return [
+      rawList = [
         { title: t(getKey('company_registration')), date: '01/05/2026', color: 'green' },
         { title: t(getKey('info_review')), date: '10/05/2026', color: 'green' },
         { title: t(getKey('internship_start')), date: '15/05/2026', color: 'gray' },
         { title: t(getKey('submit_final_report')), date: '30/07/2026', color: 'gray' },
       ];
-    }
-
-    if (selectedPeriod.type === 'datn') {
-      return [
+    } else if (selectedPeriod.type === 'datn') {
+      rawList = [
         {
           title: 'Mở đăng ký đợt học',
           date: selectedPeriod.regOpenDate || '—',
@@ -101,43 +111,50 @@ const DashboardPage = () => {
           color: isCompleted(selectedPeriod.endDate) ? 'green' : 'gray',
         },
       ];
+    } else {
+      rawList = [
+        {
+          title: 'Mở đăng ký đợt học',
+          date: selectedPeriod.regOpenDate || '—',
+          color: isCompleted(selectedPeriod.regOpenDate) ? 'green' : 'gray',
+        },
+        {
+          title: 'Hạn đăng ký đợt học',
+          date: selectedPeriod.regDeadline || '—',
+          color: isCompleted(selectedPeriod.regDeadline) ? 'green' : 'gray',
+        },
+        {
+          title: 'Bắt đầu đợt (Thực tập tốt nghiệp)',
+          date: selectedPeriod.startDate || '—',
+          color: isCompleted(selectedPeriod.startDate) ? 'green' : 'gray',
+        },
+        {
+          title: 'Hạn nộp báo cáo tiến độ',
+          date: selectedPeriod.reportDeadline || '—',
+          color: isCompleted(selectedPeriod.reportDeadline) ? 'green' : 'gray',
+        },
+        {
+          title: 'Thời gian chấm điểm',
+          date: selectedPeriod.gradingStartDate && selectedPeriod.gradingEndDate 
+            ? `${selectedPeriod.gradingStartDate} - ${selectedPeriod.gradingEndDate}` 
+            : '—',
+          color: isCompleted(selectedPeriod.gradingEndDate) ? 'green' : 'gray',
+        },
+        {
+          title: 'Kết thúc đợt học',
+          date: selectedPeriod.endDate || '—',
+          color: isCompleted(selectedPeriod.endDate) ? 'green' : 'gray',
+        },
+      ];
     }
 
-    // TTTN mode
-    return [
-      {
-        title: 'Mở đăng ký đợt học',
-        date: selectedPeriod.regOpenDate || '—',
-        color: isCompleted(selectedPeriod.regOpenDate) ? 'green' : 'gray',
-      },
-      {
-        title: 'Hạn đăng ký đợt học',
-        date: selectedPeriod.regDeadline || '—',
-        color: isCompleted(selectedPeriod.regDeadline) ? 'green' : 'gray',
-      },
-      {
-        title: 'Bắt đầu đợt (Thực tập tốt nghiệp)',
-        date: selectedPeriod.startDate || '—',
-        color: isCompleted(selectedPeriod.startDate) ? 'green' : 'gray',
-      },
-      {
-        title: 'Hạn nộp báo cáo tiến độ',
-        date: selectedPeriod.reportDeadline || '—',
-        color: isCompleted(selectedPeriod.reportDeadline) ? 'green' : 'gray',
-      },
-      {
-        title: 'Thời gian chấm điểm',
-        date: selectedPeriod.gradingStartDate && selectedPeriod.gradingEndDate 
-          ? `${selectedPeriod.gradingStartDate} - ${selectedPeriod.gradingEndDate}` 
-          : '—',
-        color: isCompleted(selectedPeriod.gradingEndDate) ? 'green' : 'gray',
-      },
-      {
-        title: 'Kết thúc đợt học',
-        date: selectedPeriod.endDate || '—',
-        color: isCompleted(selectedPeriod.endDate) ? 'green' : 'gray',
-      },
-    ];
+    return [...rawList].sort((a, b) => {
+      const dateA = parseDate(a.date);
+      const dateB = parseDate(b.date);
+      if (!dateA) return 1;
+      if (!dateB) return -1;
+      return dateA.getTime() - dateB.getTime();
+    });
   }, [selectedPeriod, t]);
 
   const statCards = [ 
@@ -146,28 +163,28 @@ const DashboardPage = () => {
       value: formatNumber(stats?.totalUsers ?? 0),
       sub: String(t(getKey('total_users_sub'), { count: formatNumber(stats?.activeUsers ?? 0) } as Record<string, unknown>)),
       icon: <TeamOutlined style={{ fontSize: 16 }} />,
-      color: 'bg-[var(--color-blue-md)] text-white',
+      color: 'bg-gradient-to-tr from-blue-500 to-indigo-600 text-white',
     },
     {
       title: t(getKey('eligible_for_thesis')),
       value: formatNumber(stats?.totalCourses ?? 0),
       sub: '',
       icon: <BookOutlined style={{ fontSize: 16 }} />,
-      color: 'bg-[var(--color-green-md)] text-white',
+      color: 'bg-gradient-to-tr from-emerald-500 to-teal-600 text-white',
     },
     {
       title: t(getKey('thesis_topics')),
       value: formatNumber(stats?.totalQuestions ?? 0),
       sub: '',
       icon: <QuestionCircleOutlined style={{ fontSize: 16 }} />,
-      color: 'bg-[var(--color-amber-md)] text-white',
+      color: 'bg-gradient-to-tr from-amber-500 to-orange-600 text-white',
     },
     {
       title: t(getKey('total_companies')),
       value: formatNumber(stats?.totalCodes ?? 0),
       sub: '',
       icon: <KeyOutlined style={{ fontSize: 16 }} />,
-      color: 'bg-[var(--color-red-md)] text-white',
+      color: 'bg-gradient-to-tr from-rose-500 to-red-600 text-white',
     },
   ];
 
@@ -176,7 +193,7 @@ const DashboardPage = () => {
       <div className={cn('absolute -top-10 right-0 h-44 w-44 rounded-full bg-[var(--color-blue-md)]/10 blur-3xl')} />
       <div className={cn('absolute top-24 left-8 h-32 w-32 rounded-full bg-[var(--color-green-md)]/10 blur-3xl')} />
 
-      <div className={cn('relative overflow-hidden rounded-[28px] border border-white/70 bg-white px-6 py-6 shadow-[0_20px_45px_rgba(15,23,42,0.08)]')}> 
+      <div className={cn('relative overflow-hidden rounded-[28px] border border-white/80 bg-gradient-to-br from-slate-50 via-white to-slate-50/50 px-6 py-6 shadow-[0_20px_45px_rgba(15,23,42,0.06)]')}> 
         <div className={cn('flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between')}>
           <div>
             <div className={cn('mb-2 inline-flex items-center gap-2 rounded-full bg-[var(--color-blue-md)]/10 px-3 py-1 text-xs font-medium text-[var(--color-blue-login-mid)]')}>
@@ -212,7 +229,7 @@ const DashboardPage = () => {
         {statCards?.map((card) => (
           <Card
             key={card?.title}
-            className={cn('overflow-hidden !rounded-[22px] border border-slate-100 shadow-[0_16px_35px_rgba(15,23,42,0.06)]')}
+            className={cn('overflow-hidden !rounded-[22px] border border-slate-100/80 shadow-[0_16px_35px_rgba(15,23,42,0.04)] hover:shadow-[0_20px_40px_rgba(15,23,42,0.08)] hover:-translate-y-1 transition-all duration-300')}
             loading={isLoading}
           >
             <div className={cn('flex items-start justify-between gap-4')}>
@@ -276,7 +293,7 @@ const DashboardPage = () => {
       </div>
 
       <div className={cn('grid grid-cols-1 gap-6 xl:grid-cols-3')}>
-        <Card className={cn('overflow-hidden !rounded-[22px] border border-slate-100 shadow-[0_16px_35px_rgba(15,23,42,0.06)] xl:col-span-2')} loading={isLoading}>
+        <Card className={cn('overflow-hidden !rounded-[22px] border border-slate-100/80 shadow-[0_16px_35px_rgba(15,23,42,0.04)] xl:col-span-2 hover:shadow-[0_20px_40px_rgba(15,23,42,0.06)] transition-all duration-300')} loading={isLoading}>
           <div className={cn('mb-4 flex items-center justify-between')}>
             <div>
               <Title level={4} className="!mb-1 !text-slate-900">{t(getKey('recent_activities'))}</Title>
@@ -287,40 +304,44 @@ const DashboardPage = () => {
               {t(getKey('chronological'))}
             </div>
           </div>
-          <List
-            itemLayout="horizontal"
-            dataSource={recentActivities}
-            renderItem={(activity) => (
-              <List.Item className={cn('!px-0')}>
-                <List.Item.Meta
-                  avatar={<div className={cn('flex size-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-blue-md)]/10')}><UserOutlined className="!text-[14px] text-[var(--color-blue-login-mid)]" /></div>}
-                  title={<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><div className="font-medium text-slate-900">{activity?.userName}</div><Text className="text-sm text-slate-400">{dayjs(activity?.date).format(TIME_FORMAT)}</Text></div>}
-                  description={<div className="mt-1 flex flex-wrap items-center gap-3"><div className="text-sm text-slate-500">{activity?.courseName}</div><Tag color={activity?.statusColor ?? 'blue'}>{activity?.status ?? t(getKey('info'))}</Tag></div>}
-                />
-              </List.Item>
-            )}
-          />
+          <div className="max-h-[380px] overflow-y-auto overflow-x-auto pr-2">
+            <List
+              itemLayout="horizontal"
+              dataSource={recentActivities}
+              renderItem={(activity) => (
+                <List.Item className={cn('!px-0')}>
+                  <List.Item.Meta
+                    avatar={<div className={cn('flex size-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-50 to-indigo-50/50 border border-indigo-100/50')}><UserOutlined className="!text-[14px] text-indigo-500" /></div>}
+                    title={<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><div className="font-semibold text-slate-800">{activity?.userName}</div><Text className="text-xs text-slate-400 font-medium">{dayjs(activity?.date).format(TIME_FORMAT)}</Text></div>}
+                    description={<div className="mt-1 flex flex-wrap items-center gap-3"><div className="text-xs text-slate-500 font-medium">{activity?.courseName}</div><Tag className="rounded-full !px-2.5 !py-[1px] !border-none !m-0" color={activity?.statusColor ?? 'blue'}>{activity?.status ?? t(getKey('info'))}</Tag></div>}
+                  />
+                </List.Item>
+              )}
+            />
+          </div>
         </Card>
 
-        <Card className={cn('overflow-hidden !rounded-[22px] border border-slate-100 shadow-[0_16px_35px_rgba(15,23,42,0.06)]')} loading={isLoading}>
+        <Card className={cn('overflow-hidden !rounded-[22px] border border-slate-100/80 shadow-[0_16px_35px_rgba(15,23,42,0.04)] hover:shadow-[0_20px_40px_rgba(15,23,42,0.06)] transition-all duration-300')} loading={isLoading}>
           <div className={cn('mb-4')}>
             <Title level={4} className="!mb-1 !text-slate-900">{t(getKey('milestones'))}</Title>
             <Text className="text-slate-500">{t(getKey('milestones_sub'))}</Text>
           </div>
-          <List
-            dataSource={milestones}
-            renderItem={(item) => (
-              <List.Item className={cn('!px-0')}>
-                <div className="flex items-start gap-3">
-                  <div className={cn('mt-1 size-3 rounded-full', item.color === 'green' ? 'bg-[var(--color-green-md)]' : 'bg-slate-300')} />
-                  <div>
-                    <div className="font-medium text-slate-900">{item.title}</div>
-                    <div className="text-sm text-slate-500">{item.date}</div>
+          <div className="max-h-[380px] overflow-y-auto overflow-x-auto pr-2">
+            <List
+              dataSource={milestones}
+              renderItem={(item) => (
+                <List.Item className={cn('!px-0 border-b-0 py-3')}>
+                  <div className="flex items-start gap-3.5">
+                    <div className={cn('mt-2.5 size-2.5 shrink-0 rounded-full ring-4 ring-offset-2 transition-all', item.color === 'green' ? 'bg-emerald-500 ring-emerald-100' : 'bg-slate-300 ring-slate-100')} />
+                    <div>
+                      <div className="font-semibold text-slate-800 leading-snug">{item.title}</div>
+                      <div className="text-xs text-slate-400 font-medium mt-1">{item.date}</div>
+                    </div>
                   </div>
-                </div>
-              </List.Item>
-            )}
-          />
+                </List.Item>
+              )}
+            />
+          </div>
         </Card>
       </div>
     </div>
