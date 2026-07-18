@@ -107,6 +107,7 @@ export default function ThesisRegisterPage() {
   const [directionOptions, setDirectionOptions] = useState<ITopicDirection[]>([])
   const [teacher, setTeacher] = useState('all')
   const [teacherOptions, setTeacherOptions] = useState<string[]>([])
+  const [availableOnly, setAvailableOnly] = useState(false)
   const [searchInput, setSearchInput] = useState('')
   const [keyword, setKeyword] = useState('')
   const [detailTopic, setDetailTopic] = useState<Topic | null>(null)
@@ -196,7 +197,8 @@ export default function ThesisRegisterPage() {
           limit: 12,
           direction,
           teacher: teacher !== 'all' ? teacher : undefined,
-          keyword: keyword.trim() || undefined
+          keyword: keyword.trim() || undefined,
+          availableOnly: availableOnly || undefined
         })
         if (!mounted) return
         setTopics(res.rows)
@@ -221,7 +223,7 @@ export default function ThesisRegisterPage() {
       mounted = false
       window.removeEventListener('realtime-topic-updated', handleSync)
     }
-  }, [selectedPeriod?.id, page, direction, teacher, keyword])
+  }, [selectedPeriod?.id, page, direction, teacher, keyword, availableOnly])
 
   const handleRegister = (id: string) => {
     if (registration && registration.topicId) {
@@ -501,6 +503,23 @@ export default function ThesisRegisterPage() {
               placeholder="Nhập tên đề tài, tên giảng viên..."
               className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-400 transition"
             />
+          </div>
+
+          {/* Available Slot Filter */}
+          <div className="w-56">
+            <label className="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">Số lượng</label>
+            <label className="flex h-9.5 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 cursor-pointer select-none hover:border-blue-300 transition">
+              <input
+                type="checkbox"
+                checked={availableOnly}
+                onChange={(e) => {
+                  setAvailableOnly(e.target.checked)
+                  setPage(1)
+                }}
+                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-400"
+              />
+              Nhóm có thể đăng ký
+            </label>
           </div>
         </div>
       </div>

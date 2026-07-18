@@ -20,7 +20,25 @@ import { groupHooks } from '../../hooks/useGroups';
 import type { IListTopic } from '../../type/TopicType';
 import type { IListGroup, IGroupMember, IUpdateGroup, ICreateGroup } from '../../type/GroupType';
 
-const ThesisStudentDetailForm = ({ detail }: { detail?: any }) => {
+type ThesisStudentDetailGroupMember = {
+  studentId?: string;
+  name?: string;
+  className?: string;
+};
+
+type ThesisStudentDetail = {
+  studentId?: string;
+  name?: string;
+  className?: string;
+  course?: string;
+  groupCode?: string;
+  groupMembers?: ThesisStudentDetailGroupMember[];
+  topic?: string;
+  topicDesc?: string;
+  supervisor?: string;
+};
+
+const ThesisStudentDetailForm = ({ detail }: { detail?: ThesisStudentDetail }) => {
   if (!detail) return null;
 
   return (
@@ -55,7 +73,7 @@ const ThesisStudentDetailForm = ({ detail }: { detail?: any }) => {
         <div className="border-b border-slate-100 pb-4">
           <span className="text-slate-400 text-xs block mb-2">Thành viên trong nhóm</span>
           <div className="flex flex-col gap-2">
-            {detail.groupMembers.map((m: any) => (
+            {detail.groupMembers.map((m: ThesisStudentDetailGroupMember) => (
               <div key={m.studentId} className="flex justify-between items-center bg-slate-50 px-3 py-2 rounded-lg border border-slate-100">
                 <span className="font-medium text-slate-700 text-sm">{m.name} ({m.studentId})</span>
                 <span className="text-xs text-slate-400">{m.className}</span>
