@@ -268,7 +268,16 @@ const StudentScoresPage: React.FC<Props> = ({ fixedMode }) => {
           columns={columns}
           scroll={{ x: 1300 }}
           loading={isLoading}
-          pagination={{ position: ['bottomCenter'] }}
+          pagination={{
+            position: ['bottomCenter'],
+            showQuickJumper: false,
+            showSizeChanger: true,
+            showTotal: (total, range) => (
+              <span className="pl-2">
+                {`${t('showing')} ${range[0]} ${t('to')} ${range[1]} ${t('of')} ${total} ${t('entries')}`}
+              </span>
+            ),
+          }}
           sticky={{
             offsetHeader: 0,
             offsetScroll: STICKY_PAGINATION_HEIGHT,
