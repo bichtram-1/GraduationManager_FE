@@ -85,7 +85,7 @@ export const HistoryTimelineModal: React.FC<HistoryTimelineModalProps> = ({
                       </Tag>
                       {log.nhom_id && (
                         <Tag color="purple" className="rounded font-medium">
-                          Nhóm #{log.nhom_id}
+                          Nhóm
                         </Tag>
                       )}
                     </div>

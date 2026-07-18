@@ -235,10 +235,18 @@ const ReviewGroupsPage: React.FC = () => {
             ]}
           />
           <div className="flex flex-wrap gap-2">
-            <Button type={statusFilter === 'all' ? 'primary' : 'default'} onClick={() => setStatusFilter('all')} className="rounded-lg h-10 font-medium">{t(getKey('all_tab'))}</Button>
-            <Button type={statusFilter === STATUS_CODE.PENDING_UP ? 'primary' : 'default'} onClick={() => setStatusFilter(STATUS_CODE.PENDING_UP)} className="rounded-lg h-10 font-medium">{t(getKey('status_pending'))}</Button>
-            <Button type={statusFilter === STATUS_CODE.APPROVED_UP ? 'primary' : 'default'} onClick={() => setStatusFilter(STATUS_CODE.APPROVED_UP)} className="rounded-lg h-10 font-medium">{t(getKey('status_approved'))}</Button>
-            <Button type={statusFilter === STATUS_CODE.DISSOLVED ? 'primary' : 'default'} onClick={() => setStatusFilter(STATUS_CODE.DISSOLVED)} className="rounded-lg h-10 font-medium">{t(getKey('status_rejected'))}</Button>
+            <Button type={statusFilter === 'all' ? 'primary' : 'default'} onClick={() => setStatusFilter('all')} className="rounded-lg h-10 font-medium">
+              {t(getKey('all_tab'))} ({groups.length})
+            </Button>
+            <Button type={statusFilter === STATUS_CODE.PENDING_UP ? 'primary' : 'default'} onClick={() => setStatusFilter(STATUS_CODE.PENDING_UP)} className="rounded-lg h-10 font-medium">
+              {t(getKey('status_pending'))} ({pending})
+            </Button>
+            <Button type={statusFilter === STATUS_CODE.APPROVED_UP ? 'primary' : 'default'} onClick={() => setStatusFilter(STATUS_CODE.APPROVED_UP)} className="rounded-lg h-10 font-medium">
+              {t(getKey('status_approved'))} ({accepted})
+            </Button>
+            <Button type={statusFilter === STATUS_CODE.DISSOLVED ? 'primary' : 'default'} onClick={() => setStatusFilter(STATUS_CODE.DISSOLVED)} className="rounded-lg h-10 font-medium">
+              {t(getKey('status_rejected'))} ({rejected})
+            </Button>
           </div>
         </div>
 

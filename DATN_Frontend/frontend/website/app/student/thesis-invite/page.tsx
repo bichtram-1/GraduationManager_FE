@@ -341,7 +341,7 @@ export default function InvitePage() {
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <h3 className="text-sm font-semibold text-emerald-950 flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              Đã tạo nhóm thành công ({registration.groupName})
+              Đã tạo nhóm thành công
             </h3>
             {registration.status !== 'accepted' && !isActionDisabled && (
               <button

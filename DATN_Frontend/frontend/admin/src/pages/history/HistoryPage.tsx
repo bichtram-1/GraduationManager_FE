@@ -97,7 +97,7 @@ const HistoryPage: React.FC = () => {
       render: (val: number | null) =>
         val ? (
           <Tag color="purple" className="font-semibold rounded-md">
-            Nhóm #{val}
+            Đã có nhóm
           </Tag>
         ) : (
           <span className="text-slate-300">—</span>

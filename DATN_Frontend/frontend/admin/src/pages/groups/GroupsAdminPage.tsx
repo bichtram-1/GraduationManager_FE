@@ -75,7 +75,7 @@ const GroupsAdminPage: React.FC = () => {
     if (totalMembers > left.maxMembers) return message.error(t(getKey('merge_max_members_error')));
     Modal.confirm({
       title: t(getKey('merge_groups_confirm_title')),
-      content: (t(getKey('merge_groups_confirm_content'), { left: left.code || `Nhóm #${left.id}`, right: right.code || `Nhóm #${right.id}`, count: totalMembers }) as string),
+      content: `Bạn có chắc chắn muốn gộp nhóm của [${left.members.map(m => m.name).join(', ')}] và nhóm của [${right.members.map(m => m.name).join(', ')}] thành nhóm mới có ${totalMembers} thành viên không?`,
       okText: t(getKey('confirm_btn')),
       cancelText: t(getKey('cancel_btn')),
       async onOk() {
@@ -405,7 +405,11 @@ const GroupsAdminPage: React.FC = () => {
           setHistoryVisible(false);
           setSelectedGroupId(undefined);
         }}
-        title={`Lịch sử hoạt động của Nhóm #${selectedGroupId}`}
+        title={(() => {
+          const sGroup = groups.find(g => g.id === selectedGroupId);
+          const membersStr = sGroup ? ` [${sGroup.members.map(m => m.name).join(', ')}]` : '';
+          return `Lịch sử hoạt động của nhóm${membersStr}`;
+        })()}
         filters={{ nhom_id: selectedGroupId }}
       />
     </div>

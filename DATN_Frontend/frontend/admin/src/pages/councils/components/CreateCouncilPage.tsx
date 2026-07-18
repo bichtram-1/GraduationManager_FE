@@ -816,7 +816,7 @@ const CreateCouncilPage = () => {
           return sId === sAdv || (topic.reviewerId && sId === sRev);
         });
         if (conflict) {
-          message.error(t(getKey('examiner_conflict'), { code: topic.topicCode || `Nhóm #${topic.id}` }));
+          message.error(t(getKey('examiner_conflict'), { code: topic.topicName || topic.topicCode || `Đề tài #${topic.id}` }));
           return;
         }
       }
@@ -829,7 +829,7 @@ const CreateCouncilPage = () => {
           return sId === sAdv || (topic.reviewerId && sId === sRev);
         });
         if (conflictExt) {
-          message.error(t(getKey('external_examiner_conflict'), { code: topic.topicCode || `Nhóm #${topic.id}` }));
+          message.error(t(getKey('external_examiner_conflict'), { code: topic.topicName || topic.topicCode || `Đề tài #${topic.id}` }));
           return;
         }
       }
@@ -936,7 +936,7 @@ const CreateCouncilPage = () => {
                               Hội đồng: <strong>"{c.title}"</strong>
                             </li>
                             <li>
-                              Nhóm đề tài: <strong>{otherTopic.topicCode || `Nhóm #${otherTopic.id}`}</strong> - {otherTopic.topicName}
+                              Đề tài: <strong>{otherTopic.topicName}</strong>
                             </li>
                             <li>
                               Vai trò: <strong className="text-blue-600">{otherRole}</strong>
@@ -954,7 +954,7 @@ const CreateCouncilPage = () => {
                               Hội đồng hiện tại: <strong>"{form.name || 'Hội đồng mới'}"</strong>
                             </li>
                             <li>
-                              Nhóm đề tài: <strong>{topic.topicCode || `Nhóm #${topic.id}`}</strong> - {topic.topicName}
+                              Đề tài: <strong>{topic.topicName}</strong>
                             </li>
                             <li>
                               Vai trò: <strong className="text-red-600">{currentRole}</strong>
