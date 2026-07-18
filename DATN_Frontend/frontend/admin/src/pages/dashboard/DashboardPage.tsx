@@ -148,12 +148,29 @@ const DashboardPage = () => {
       ];
     }
 
+    const titleOrder = [
+      'Bắt đầu đợt (Đồ án tốt nghiệp)',
+      'Bắt đầu đợt (Thực tập tốt nghiệp)',
+      'Mở đăng ký đợt học',
+      'Hạn đăng ký đợt học',
+      'Hạn nộp báo cáo tiến độ',
+      'Thời gian phản biện đồ án',
+      'Thời gian bảo vệ đồ án',
+      'Thời gian chấm điểm',
+      'Kết thúc đợt học'
+    ];
+
     return [...rawList].sort((a, b) => {
       const dateA = parseDate(a.date);
       const dateB = parseDate(b.date);
       if (!dateA) return 1;
       if (!dateB) return -1;
-      return dateA.getTime() - dateB.getTime();
+      const diff = dateA.getTime() - dateB.getTime();
+      if (diff !== 0) return diff;
+
+      const idxA = titleOrder.findIndex(t => a.title.includes(t));
+      const idxB = titleOrder.findIndex(t => b.title.includes(t));
+      return (idxA !== -1 ? idxA : 99) - (idxB !== -1 ? idxB : 99);
     });
   }, [selectedPeriod, t]);
 

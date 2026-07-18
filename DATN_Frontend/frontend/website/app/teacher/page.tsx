@@ -40,6 +40,8 @@ interface ITttnItem {
   id?: string | number;
   name?: string;
   studentCode?: string;
+  company?: string;
+  companyName?: string;
   report?: string;
   status?: string;
   comment?: string;
@@ -340,8 +342,12 @@ export default function TeacherIndexPage() {
           <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
             <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-5 py-4">
               <div>
-                <div className="text-sm font-semibold text-slate-900">Đề tài đang phụ trách</div>
-                <div className="text-xs text-slate-500">Danh sách đề tài hiện đang hướng dẫn và trạng thái duyệt</div>
+                <div className="text-sm font-semibold text-slate-900">Sinh viên đang hướng dẫn</div>
+                <div className="text-xs text-slate-500">
+                  {selectedPeriod?.type === 'tttn'
+                    ? 'Danh sách sinh viên thực tập hiện đang hướng dẫn'
+                    : 'Danh sách đề tài hiện đang hướng dẫn và trạng thái duyệt'}
+                </div>
               </div>
               <TeacherPill tone="blue">{selectedPeriod?.name || 'Học kỳ hiện tại'}</TeacherPill>
             </div>
@@ -351,39 +357,68 @@ export default function TeacherIndexPage() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm min-w-[600px]">
-                <thead className="bg-slate-50 text-slate-600">
-                  <tr>
-                    <th className="px-5 py-3 text-left w-16">STT</th>
-                    <th className="px-5 py-3 text-left">Tên đề tài</th>
-                    <th className="px-5 py-3 text-left">SLTV</th>
-                    <th className="px-5 py-3 text-left">SV đăng ký</th>
-                    <th className="px-5 py-3 text-left">Trạng thái</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {topics.length > 0 ? (
-                    topics.map((topic, index) => (
-                      <tr key={topic.code} className="border-t border-slate-100 transition hover:bg-slate-50/80">
-                        <td className="px-5 py-4 font-medium text-slate-500">{index + 1}</td>
-                        <td className="px-5 py-4 text-slate-900">
-                          <div className="font-medium">{topic.name}</div>
-                          {topic.note && <div className="mt-1 text-xs text-slate-500">{topic.note}</div>}
-                        </td>
-                        <td className="px-5 py-4 text-slate-600">{topic.slot}</td>
-                        <td className="px-5 py-4 text-slate-600">{topic.students}</td>
-                        <td className="px-5 py-4">
-                          <TeacherPill tone={getTopicStatusTone(topic.status)}>{topic.status}</TeacherPill>
-                        </td>
-                      </tr>
-                    ))
-                    ) : (
+                {selectedPeriod?.type === 'tttn' ? (
+                  <table className="w-full text-sm min-w-[600px]">
+                    <thead className="bg-slate-50 text-slate-600">
                       <tr>
-                        <td colSpan={5} className="px-5 py-8 text-center text-slate-500">Không có đề tài nào phụ trách trong đợt này.</td>
+                        <th className="px-5 py-3 text-left w-16">STT</th>
+                        <th className="px-5 py-3 text-left">MSSV</th>
+                        <th className="px-5 py-3 text-left">Họ tên</th>
+                        <th className="px-5 py-3 text-left">Công ty</th>
                       </tr>
-                    )}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {tttnList.length > 0 ? (
+                        tttnList.map((student, index) => (
+                          <tr key={student.studentCode || student.id} className="border-t border-slate-100 transition hover:bg-slate-50/80">
+                            <td className="px-5 py-4 font-medium text-slate-500">{index + 1}</td>
+                            <td className="px-5 py-4 font-medium text-[#1976D2]">{student.studentCode || student.id}</td>
+                            <td className="px-5 py-4 text-slate-900">{student.name}</td>
+                            <td className="px-5 py-4 text-slate-600">{student.company || student.companyName || 'Chưa có'}</td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={4} className="px-5 py-8 text-center text-slate-500">Không có sinh viên thực tập nào hướng dẫn trong đợt này.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                ) : (
+                  <table className="w-full text-sm min-w-[600px]">
+                    <thead className="bg-slate-50 text-slate-600">
+                      <tr>
+                        <th className="px-5 py-3 text-left w-16">STT</th>
+                        <th className="px-5 py-3 text-left">Tên đề tài</th>
+                        <th className="px-5 py-3 text-left">SLTV</th>
+                        <th className="px-5 py-3 text-left">SV đăng ký</th>
+                        <th className="px-5 py-3 text-left">Trạng thái</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {topics.length > 0 ? (
+                        topics.map((topic, index) => (
+                          <tr key={topic.code} className="border-t border-slate-100 transition hover:bg-slate-50/80">
+                            <td className="px-5 py-4 font-medium text-slate-500">{index + 1}</td>
+                            <td className="px-5 py-4 text-slate-900">
+                              <div className="font-medium">{topic.name}</div>
+                              {topic.note && <div className="mt-1 text-xs text-slate-500">{topic.note}</div>}
+                            </td>
+                            <td className="px-5 py-4 text-slate-600">{topic.slot}</td>
+                            <td className="px-5 py-4 text-slate-600">{topic.students}</td>
+                            <td className="px-5 py-4">
+                              <TeacherPill tone={getTopicStatusTone(topic.status)}>{topic.status}</TeacherPill>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={5} className="px-5 py-8 text-center text-slate-500">Không có đề tài nào phụ trách trong đợt này.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                )}
               </div>
             )}
           </section>

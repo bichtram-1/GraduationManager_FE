@@ -343,7 +343,7 @@ export default function InvitePage() {
               <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
               Đã tạo nhóm thành công
             </h3>
-            {registration.status !== 'accepted' && !isActionDisabled && (
+            {registration.status !== 'accepted' && !isActionDisabled && (registration.members?.length ?? 0) > 1 && (
               <button
                 type="button"
                 onClick={() => setLeaveGroupConfirmOpen(true)}
