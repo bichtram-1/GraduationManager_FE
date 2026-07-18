@@ -111,7 +111,7 @@ const SwapMemberModal: React.FC<SwapMemberModalProps> = ({
               }
               options={otherGroupStudents.map((s) => ({
                 value: s.studentId,
-                label: `${s.name} (${s.studentId}) — Nhóm #${s.groupId} [Đề tài: ${s.topic || 'Chưa đăng ký'}] | Lớp: ${s.className || '—'}`,
+                label: `${s.name} (${s.studentId}) [Đề tài: ${s.topic || 'Chưa đăng ký'}] | Lớp: ${s.className || '—'}`,
               }))}
             />
           </Form.Item>

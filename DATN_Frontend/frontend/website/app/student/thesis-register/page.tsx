@@ -372,11 +372,30 @@ export default function ThesisRegisterPage() {
             Trạng thái nhóm hiện tại
           </div>
           <div className="mt-3 text-lg font-semibold text-slate-900">
-            {registration ? registration.groupName : 'Chưa có nhóm/đề tài được gửi'}
+            {registration ? 'Đã ghép nhóm thành công' : 'Chưa có nhóm/đề tài được gửi'}
           </div>
-          <div className="mt-2 text-sm text-slate-600">
-            {registration ? registration.topicTitle : 'Sau khi đăng ký, trạng thái duyệt của giảng viên sẽ xuất hiện tại đây.'}
-          </div>
+          {registration && (
+            <div className="mt-2 text-sm font-semibold text-blue-700">
+              {registration.topicTitle ? `Đề tài đăng ký: ${registration.topicTitle}` : 'Đã có nhóm (Chưa đăng ký đề tài)'}
+            </div>
+          )}
+          {!registration && (
+            <div className="mt-2 text-sm text-slate-600">
+              Sau khi đăng ký, trạng thái duyệt của giảng viên sẽ xuất hiện tại đây.
+            </div>
+          )}
+          {registration && registration.members && (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {registration.members.map((m) => (
+                <span key={m.studentCode} className="inline-flex items-center gap-1.5 rounded-xl bg-white border border-slate-200 px-2.5 py-1 text-xs text-slate-700 font-medium">
+                  {m.name} ({m.studentCode})
+                  {m.isLeader && (
+                    <span className="bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold px-1 rounded ml-1.5">Trưởng nhóm</span>
+                  )}
+                </span>
+              ))}
+            </div>
+          )}
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <StudentPill tone={registrationTone}>{registration ? (registration.status === 'accepted' ? 'Đã duyệt' : registration.status === 'rejected' ? 'Đã từ chối' : 'Chờ giảng viên duyệt') : 'Chưa đăng ký'}</StudentPill>
             {registration && <StudentPill tone="blue">{registration.batch}</StudentPill>}
@@ -563,8 +582,8 @@ export default function ThesisRegisterPage() {
                           <div className="mt-2.5 text-xs text-blue-600 font-semibold">Hướng đề tài: {t.direction || 'Phát triển phần mềm'}</div>
                           {isCurrentTopic && registration && (
                             <div className="mt-3 flex flex-wrap items-center gap-2">
-                              <StudentPill tone={registrationTone}>{registration.status === 'accepted' ? 'Nhóm đã duyệt' : registration.status === 'rejected' ? 'Nhóm bị từ chối' : 'Nhóm đang chờ duyệt'}</StudentPill>
-                              <span className="text-xs text-slate-500">{registration.groupName}</span>
+                              <StudentPill tone={registrationTone}>{registration.status === 'accepted' ? 'Đã duyệt đề tài này' : registration.status === 'rejected' ? 'Đề tài bị từ chối' : 'Đang chờ duyệt đề tài này'}</StudentPill>
+                              <span className="text-xs text-emerald-700 font-semibold bg-emerald-50 border border-emerald-100 rounded-full px-2.5 py-0.5">Nhóm của bạn</span>
                             </div>
                           )}
                         </div>

@@ -64,8 +64,8 @@ const ThesisStudentDetailForm = ({ detail }: { detail?: ThesisStudentDetail }) =
 
       <div className="border-b border-slate-100 pb-4">
         <span className="text-slate-400 text-xs block mb-1.5">Nhóm đồ án tốt nghiệp</span>
-        <Tag color="blue" className="text-sm font-semibold px-3 py-0.5 rounded-md">
-          Mã nhóm: {detail.groupCode || '—'}
+        <Tag color="green" className="text-sm font-semibold px-3 py-0.5 rounded-md">
+          Đã ghép nhóm thành công
         </Tag>
       </div>
 
@@ -711,7 +711,7 @@ const ThesisStudentsPage = () => {
                     .join(', ');
                   return {
                     value: g.id,
-                    label: `${g.code ? `${g.code} - ` : `Nhóm #${g.id} - `}${g.title || 'Chưa có đề tài'} (Thành viên chưa đạt: ${ineligibleMemberNames || 'Không rõ'})`
+                    label: `${g.title || 'Chưa có đề tài'} (Thành viên chưa đạt: ${ineligibleMemberNames || 'Không rõ'})`
                   };
                 })}
                 optionFilterProp="label"
