@@ -11,7 +11,7 @@ export const topicApi = {
     return response?.data?.results?.objects || [];
   },
 
-  getTopics: async (params?: { periodId?: string; page?: number; limit?: number; direction?: string; keyword?: string; teacher?: string; availableOnly?: boolean }) => {
+  getTopics: async (params?: { periodId?: string; page?: number; limit?: number; direction?: string; keyword?: string; teacher?: string; availableOnly?: boolean; slotsStatus?: string }) => {
     const response = await axiosInstance.get('/private/v1/topics', { params });
     const resData = response?.data?.results?.objects || response?.data?.results?.object || response?.data;
     const rawList = (resData && typeof resData === 'object' && 'rows' in resData) ? resData.rows : (Array.isArray(resData) ? resData : []);

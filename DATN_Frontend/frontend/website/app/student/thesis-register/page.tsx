@@ -107,7 +107,7 @@ export default function ThesisRegisterPage() {
   const [directionOptions, setDirectionOptions] = useState<ITopicDirection[]>([])
   const [teacher, setTeacher] = useState('all')
   const [teacherOptions, setTeacherOptions] = useState<string[]>([])
-  const [availableOnly, setAvailableOnly] = useState(false)
+  const [slotsStatus, setSlotsStatus] = useState<string>('all')
   const [searchInput, setSearchInput] = useState('')
   const [keyword, setKeyword] = useState('')
   const [detailTopic, setDetailTopic] = useState<Topic | null>(null)
@@ -198,7 +198,7 @@ export default function ThesisRegisterPage() {
           direction,
           teacher: teacher !== 'all' ? teacher : undefined,
           keyword: keyword.trim() || undefined,
-          availableOnly: availableOnly || undefined
+          slotsStatus: slotsStatus !== 'all' ? slotsStatus : undefined
         })
         if (!mounted) return
         setTopics(res.rows)
@@ -223,7 +223,7 @@ export default function ThesisRegisterPage() {
       mounted = false
       window.removeEventListener('realtime-topic-updated', handleSync)
     }
-  }, [selectedPeriod?.id, page, direction, teacher, keyword, availableOnly])
+  }, [selectedPeriod?.id, page, direction, teacher, keyword, slotsStatus])
 
   const handleRegister = (id: string) => {
     if (registration && registration.topicId) {
@@ -505,21 +505,21 @@ export default function ThesisRegisterPage() {
             />
           </div>
 
-          {/* Available Slot Filter */}
+          {/* Slots Status Filter */}
           <div className="w-56">
-            <label className="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">Số lượng</label>
-            <label className="flex h-9.5 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 cursor-pointer select-none hover:border-blue-300 transition">
-              <input
-                type="checkbox"
-                checked={availableOnly}
-                onChange={(e) => {
-                  setAvailableOnly(e.target.checked)
-                  setPage(1)
-                }}
-                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-400"
-              />
-              Nhóm có thể đăng ký
-            </label>
+            <label className="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">Trạng thái đề tài</label>
+            <select
+              value={slotsStatus}
+              onChange={(e) => {
+                setSlotsStatus(e.target.value)
+                setPage(1)
+              }}
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-400 transition"
+            >
+              <option value="all">Tất cả đề tài</option>
+              <option value="available">Có thể đăng ký</option>
+              <option value="full">Không thể đăng ký</option>
+            </select>
           </div>
         </div>
       </div>
@@ -545,8 +545,22 @@ export default function ThesisRegisterPage() {
                         <div className="min-w-0">
                           <a className="text-[#2196F3] font-medium text-sm">{t.code || t.id}</a>
                           <h3 className="mt-2 text-lg font-semibold text-slate-900 line-clamp-2" title={t.title}>{t.title}</h3>
-                          <div className="mt-2 text-xs text-slate-500">{teacher} • Số lượng: {used}/{maxSlots} sinh viên</div>
-                          <div className="mt-1 text-xs text-blue-600 font-semibold">Hướng đề tài: {t.direction || 'Phát triển phần mềm'}</div>
+                          <div className="mt-2 text-xs text-slate-500 flex flex-wrap items-center gap-1.5">
+                            <span>{teacher}</span>
+                            <span className="text-slate-300">•</span>
+                            <span className="font-medium text-slate-600">Sĩ số: {used}/{maxSlots}</span>
+                            <span className="text-slate-300">•</span>
+                            {hasSlot ? (
+                              <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 border border-emerald-200">
+                                Có thể đăng ký
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-700 border border-red-200">
+                                Đã đầy
+                              </span>
+                            )}
+                          </div>
+                          <div className="mt-2.5 text-xs text-blue-600 font-semibold">Hướng đề tài: {t.direction || 'Phát triển phần mềm'}</div>
                           {isCurrentTopic && registration && (
                             <div className="mt-3 flex flex-wrap items-center gap-2">
                               <StudentPill tone={registrationTone}>{registration.status === 'accepted' ? 'Nhóm đã duyệt' : registration.status === 'rejected' ? 'Nhóm bị từ chối' : 'Nhóm đang chờ duyệt'}</StudentPill>
