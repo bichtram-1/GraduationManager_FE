@@ -9,6 +9,7 @@ export const historyHooks = {
     action_type?: string;
     role?: string;
     keyword?: string;
+    dot_id?: string;
   }) => {
     return useQuery({
       queryKey: ['historyList', params],
