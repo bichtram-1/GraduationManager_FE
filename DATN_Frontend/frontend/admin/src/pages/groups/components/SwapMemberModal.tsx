@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Modal, Form, Select, Button, message, Alert } from 'antd';
+import { Modal, Form, Select, message, Alert } from 'antd';
 import { SwapOutlined } from '@ant-design/icons';
 import { groupHooks } from '../../../hooks/useGroups';
 import type { IGroupMember } from '../../../type/GroupType';
@@ -42,9 +42,13 @@ const SwapMemberModal: React.FC<SwapMemberModalProps> = ({
       } else {
         message.error(res.message || 'Hoán đổi thất bại!');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      message.error(err?.response?.data?.message || 'Có lỗi xảy ra khi hoán đổi!');
+      const errorMessage =
+        typeof err === 'object' && err !== null && 'response' in err
+          ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+          : undefined;
+      message.error(errorMessage || 'Có lỗi xảy ra khi hoán đổi!');
     } finally {
       setLoading(false);
     }
