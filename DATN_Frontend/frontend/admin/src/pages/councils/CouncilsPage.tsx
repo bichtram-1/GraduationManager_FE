@@ -217,7 +217,7 @@ const CouncilsPage: React.FC = () => {
   const totalCouncils = useMemo(() => councilsInPeriod.length, [councilsInPeriod]);
   const totalEligible = useMemo(() => councilsInPeriod.reduce((acc, c) => acc + (c.topicGroups?.length ?? 0), 0), [councilsInPeriod]);
   const totalRejected = useMemo(() => councilsInPeriod.reduce((acc, c) => acc + (c.rejected ?? 0), 0), [councilsInPeriod]);
-  const totalAssessors = useMemo(() => councilsInPeriod.reduce((acc, c) => acc + (c.chair?.length ?? 0) + (c.reviewer?.length ?? 0), 0), [councilsInPeriod]);
+  const totalAssignedGroups = useMemo(() => councilsInPeriod.reduce((acc, c) => acc + (c.topicGroups?.length ?? 0), 0), [councilsInPeriod]);
 
   const getSession = (dateTime: string) => {
     const matched = dateTime.match(/(\d{2}):(\d{2})/);
@@ -436,11 +436,11 @@ const CouncilsPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Cross Assessors */}
+          {/* Assigned Groups */}
           <div className="rounded-2xl border border-sky-100 bg-sky-50/50 p-5 shadow-[0_8px_20px_rgba(15,23,42,0.04)] flex justify-between items-start">
             <div>
               <div className="text-sm text-sky-700">{t(getKey('cross_assessors'))}</div>
-              <div className="mt-1 text-[32px] font-bold leading-[38px] text-sky-700">{formatNumber(totalAssessors)}</div>
+              <div className="mt-1 text-[32px] font-bold leading-[38px] text-sky-700">{formatNumber(totalAssignedGroups)}</div>
             </div>
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-sky-100 text-sky-600">
               <SolutionOutlined style={{ fontSize: 20 }} />
@@ -562,51 +562,24 @@ const CouncilsPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Cột 3: Ủy viên */}
+                {/* Cột 3: Ủy viên — mọi thành viên hội đồng không phải Chủ tịch/Thư ký
+                    (thanhvienhoidong.vai_tro chỉ còn CHU_TICH/THU_KY/UY_VIEN). Phản biện của
+                    từng nhóm là thông tin riêng lấy từ lichbaove.giang_vien_pb_id (mảng
+                    reviewer) và không loại trừ vai trò Ủy viên, nên không gộp vào đây để
+                    tránh hiện trùng tên. */}
                 <div className="role-col">
-                  <div className="role-name">{t(getKey('topic_group'))}</div>
-                  <div className="role-title">{t(getKey('assigned_topic_groups_list'))}</div>
-                  {c.topicGroups.length ? (
-                    <div className="topic-list">
-                      {c.topics && c.topics.length ? (
-                        c.topics.map((topic) => (
-                          <div className="topic-item" key={topic.code}>
-                            <div className="flex justify-between items-center">
-                              <div>
-                                <div className="topic-item-title">{topic.code} - {topic.title}</div>
-                                <div className="topic-item-meta">
-                                  {Array.isArray((topic as any).members)
-                                    ? (t(getKey('students_count_suffix'), { count: (topic as any).members.length } as any) as string)
-                                    : (t(getKey('students_count_suffix'), { count: topic.members } as any) as string)}
-                                </div>
-                              </div>
-                              {topic.startTime && <div className="chip">{topic.startTime}</div>}
-                            </div>
-                            {Array.isArray((topic as any).members) && (topic as any).members.length > 0 && (
-                              <div className="mt-2 text-[var(--color-text-secondary)] text-[13px]">{(topic as any).members.join(', ')}</div>
-                            )}
-                            <div className="mt-2" />
-                          </div>
-                        ))
-                      ) : (
-                        c.topicGroups.map((topic) => (
-                          <div className="topic-item" key={topic.code}>
-                            <div className="topic-item-title">{topic.code} - {topic.title}</div>
-                            <div className="topic-item-meta">
-                              {Array.isArray((topic as any).members)
-                                ? (t(getKey('students_count_suffix'), { count: (topic as any).members.length } as any) as string)
-                                : (t(getKey('students_count_suffix'), { count: topic.members } as any) as string)}
-                            </div>
-                            {Array.isArray((topic as any).members) && (topic as any).members.length > 0 && (
-                              <div className="mt-2 text-[var(--color-text-secondary)] text-[13px]">{(topic as any).members.join(', ')}</div>
-                            )}
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  ) : (
-                    <span className="muted">{t(getKey('not_assigned_topic_groups'))}</span>
-                  )}
+                  <div className="role-name">Ủy viên</div>
+                  <div className="chip-wrap flex flex-col gap-1 items-start mt-2">
+                    {c.member && c.member.length ? (
+                      c.member.map((name) => (
+                        <span key={name} className="font-semibold text-slate-800 text-sm py-0.5">
+                          {name}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="muted text-xs italic">Chưa phân công</span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Cột 4: Tổng nhóm */}

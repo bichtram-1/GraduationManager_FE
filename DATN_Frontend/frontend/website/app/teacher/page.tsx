@@ -329,7 +329,7 @@ export default function TeacherIndexPage() {
               <CheckCircle2 className="h-5 w-5" />
             </div>
             <div className="text-sm font-medium text-emerald-800">
-              Không có việc gì cần xử lý gấp trong đợt {selectedPeriod?.name || 'hiện tại'} lúc này. Mọi thứ đang ổn!
+              Không có việc gì cần xử lý gấp trong đợt {selectedPeriod?.name || 'hiện tại'} lúc này.
             </div>
           </div>
         )}
