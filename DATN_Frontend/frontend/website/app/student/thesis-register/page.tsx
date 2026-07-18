@@ -351,7 +351,7 @@ export default function ThesisRegisterPage() {
       )}
 
       {!isPeriodLocked && !isRegistrationTime.isClosed && showDeadlineWarning && (
-        <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 font-semibold flex items-center gap-2">
+        <div className="sticky top-[76px] z-30 mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 font-semibold flex items-center gap-2 shadow-md">
           <span className="h-2 w-2 rounded-full bg-red-500 animate-ping" />
           <span>Chú ý: Sắp đến hạn đăng ký đề tài đồ án tốt nghiệp! Hạn chót: {selectedPeriod?.regDeadline}. Vui lòng hoàn tất đăng ký sớm!</span>
         </div>
@@ -416,7 +416,7 @@ export default function ThesisRegisterPage() {
               </div>
             </div>
           </div>
-          {registration && registration.status !== 'accepted' && !isActionDisabled && (
+          {registration && registration.status !== 'accepted' && !isActionDisabled && (registration.members?.length ?? 0) > 1 && (
             <div className="mt-4 flex justify-end">
               <button
                 type="button"
