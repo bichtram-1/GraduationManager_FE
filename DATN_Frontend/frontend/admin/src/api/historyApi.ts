@@ -24,6 +24,16 @@ export const historyApi = {
     dot_id?: string;
   }): Promise<IHistoryLog[]> => {
     const response = await axiosInstance.get('/private/v1/admin/history', { params });
-    return response?.data?.results?.objects || [];
+    const objects = response?.data?.results?.objects;
+    // axiosInstance có interceptor global tự bọc results.objects (nếu là mảng) thành
+    // { rows, total } cho các API dùng chuẩn phân trang — history trả mảng thẳng nên cần
+    // nhận diện cả 2 dạng, tránh trả nhầm object khiến Table.tsx (dataSource) crash.
+    if (Array.isArray(objects)) {
+      return objects;
+    }
+    if (objects && Array.isArray(objects.rows)) {
+      return objects.rows;
+    }
+    return [];
   },
 };
