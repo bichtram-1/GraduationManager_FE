@@ -71,13 +71,8 @@ const HistoryPage: React.FC = () => {
       dataIndex: 'description',
       key: 'description',
       ellipsis: true,
-      render: (val: string, record: IHistoryLog) => (
-        <div className="flex flex-col gap-1">
-          <span className="font-medium text-slate-800">{val}</span>
-          {record.details && (
-            <span className="text-xs text-slate-400 max-w-lg truncate">{record.details}</span>
-          )}
-        </div>
+      render: (val: string) => (
+        <span className="font-medium text-slate-800">{val}</span>
       ),
     },
     {

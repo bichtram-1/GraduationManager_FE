@@ -246,7 +246,7 @@ export default function TeacherIndexPage() {
               {loading ? (
                 <Skeleton active paragraph={{ rows: 3 }} />
               ) : dynamicReminders.map((item, index) => (
-                <div key={item} className="flex gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div key={`${item}-${index}`} className="flex gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
                   <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-full bg-[#eff6ff] text-[#1976D2] font-semibold text-sm">
                     {index + 1}
                   </div>
@@ -272,8 +272,8 @@ export default function TeacherIndexPage() {
             <div className="mt-4 space-y-3">
               {loading ? (
                 <Skeleton active paragraph={{ rows: 3 }} />
-              ) : dynamicTimeline.map(([day, title, time]) => (
-                <div key={title} className="rounded-2xl bg-slate-50 p-4">
+              ) : dynamicTimeline.map(([day, title, time], index) => (
+                <div key={`${title}-${index}`} className="rounded-2xl bg-slate-50 p-4">
                   <div className="flex items-center justify-between text-xs text-slate-500">
                     <span className="font-semibold text-[#1976D2]">{day}</span>
                     <span>{time}</span>

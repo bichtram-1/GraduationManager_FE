@@ -259,8 +259,9 @@ export default function Page() {
         setViewingTopic(null);
       }
       showNotification(editingCode ? 'Cập nhật đề tài thành công!' : 'Đề xuất đề tài thành công!', 'success');
-    } catch {
-      showNotification('Không thể lưu đề tài!', 'error');
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      showNotification(msg || 'Không thể lưu đề tài!', 'error');
     } finally {
       setSubmitting(false)
       setOpenCreate(false)

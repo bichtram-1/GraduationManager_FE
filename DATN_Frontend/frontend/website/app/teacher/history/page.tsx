@@ -163,13 +163,6 @@ export default function TeacherHistoryPage() {
                     {log.description}
                   </p>
 
-                  {/* Detail details if any */}
-                  {log.details && (
-                    <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50/50 p-3 text-xs text-slate-500 font-mono overflow-x-auto leading-relaxed">
-                      {log.details}
-                    </div>
-                  )}
-
                   {/* User footer */}
                   <div className="mt-4 flex items-center gap-2 border-t border-slate-50 pt-3 text-[11px] text-slate-400">
                     <User className="h-3.5 w-3.5" />

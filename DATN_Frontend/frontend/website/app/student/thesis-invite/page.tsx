@@ -492,7 +492,7 @@ export default function InvitePage() {
               <div className="text-sm font-semibold text-slate-900">Lời mời nhận được</div>
               <div className="text-xs text-slate-500">Chấp nhận hoặc từ chối nếu được nhóm khác mời</div>
             </div>
-            <StudentPill tone="blue">Inbox</StudentPill>
+            <StudentPill tone="blue">Lời mời</StudentPill>
           </div>
 
           <div className="max-h-96 space-y-3 overflow-y-auto p-5">

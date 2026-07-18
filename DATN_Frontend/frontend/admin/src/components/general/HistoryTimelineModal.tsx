@@ -92,11 +92,6 @@ export const HistoryTimelineModal: React.FC<HistoryTimelineModalProps> = ({
                     <div className="text-sm text-slate-700 font-medium leading-relaxed mb-2">
                       {log.description}
                     </div>
-                    {log.details && (
-                      <div className="text-[11px] text-slate-500 bg-white/70 border border-slate-100/50 p-2 rounded-lg leading-relaxed mb-2">
-                        {log.details}
-                      </div>
-                    )}
                     <div className="text-xs text-slate-400 flex items-center gap-1.5 pt-1.5 border-t border-slate-100/30">
                       <UserOutlined />
                       <span>Thực hiện bởi:</span>

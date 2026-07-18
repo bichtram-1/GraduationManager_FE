@@ -534,11 +534,6 @@ export default function ThesisRegisterPage() {
                             </div>
                           )}
                         </div>
-                        <div className="shrink-0">
-                          <div className={`whitespace-nowrap rounded-full px-3 py-1 text-xs font-medium ${hasSlot ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
-                            {hasSlot ? 'Còn nhận' : 'Đủ số lượng'}
-                          </div>
-                        </div>
                       </div>
                     </div>
 
@@ -551,11 +546,11 @@ export default function ThesisRegisterPage() {
                       </button>
                       {!isCurrentTopic ? (
                         <button
-                          disabled={(!!registration && registration.status === 'accepted') || isActionDisabled}
+                          disabled={(!!registration && registration.status === 'accepted') || isActionDisabled || !hasSlot}
                           onClick={() => handleRegister(t.id)}
-                          className={`flex-1 rounded-2xl px-4 py-2 text-sm font-medium shadow-sm transition ${(!!registration && registration.status === 'accepted') || isActionDisabled ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-[#2196F3] text-white hover:bg-[#1976D2]'}`}
+                          className={`flex-1 rounded-2xl px-4 py-2 text-sm font-medium shadow-sm transition ${(!!registration && registration.status === 'accepted') || isActionDisabled || !hasSlot ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-[#2196F3] text-white hover:bg-[#1976D2]'}`}
                         >
-                          Đăng ký
+                          {hasSlot ? 'Đăng ký' : 'Đã đủ số lượng'}
                         </button>
                       ) : (
                         <button
