@@ -79,6 +79,7 @@ export default function ThesisRegisterPage() {
     return { isOpen, isClosed }
   }, [selectedPeriod])
   const isActionDisabled = isPeriodLocked || !isRegistrationTime.isOpen || isRegistrationTime.isClosed
+  const isTopicActive = !!(registration && registration.topicId && registration.topicId !== "");
   const showDeadlineWarning = useMemo(() => {
     if (!selectedPeriod?.regDeadline) return false
     const parts = selectedPeriod.regDeadline.split('/')
@@ -416,12 +417,18 @@ export default function ThesisRegisterPage() {
               </div>
             </div>
           </div>
-          {registration && registration.status !== 'accepted' && !isActionDisabled && (registration.members?.length ?? 0) > 1 && (
+          {registration && !isActionDisabled && (registration.members?.length ?? 0) > 1 && (
             <div className="mt-4 flex justify-end">
               <button
                 type="button"
+                disabled={isTopicActive}
                 onClick={() => setConfirmAction({ type: 'leaveGroup' })}
-                className="rounded-2xl border border-red-200 px-4 py-2 text-xs font-medium text-red-600 transition hover:bg-red-50"
+                className={`rounded-2xl border px-4 py-2 text-xs font-medium transition ${
+                  isTopicActive
+                    ? 'border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed'
+                    : 'border-red-200 text-red-600 hover:bg-red-50'
+                }`}
+                title={isTopicActive ? "Không thể rời/giải tán nhóm khi đang đăng ký đề tài (chờ duyệt hoặc đã duyệt)" : ""}
               >
                 Giải tán / Rời nhóm
               </button>

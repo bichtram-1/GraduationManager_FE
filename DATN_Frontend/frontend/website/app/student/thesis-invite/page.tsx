@@ -66,6 +66,7 @@ export default function InvitePage() {
   }, [selectedPeriod])
   const isPeriodDisabled = isPeriodLocked || !isRegistrationTime.isOpen || isRegistrationTime.isClosed
   const isActionDisabled = isPeriodDisabled
+  const isTopicActive = !!(registration && registration.topicId && registration.topicId !== "");
 
   const [newId, setNewId] = useState('')
   const [suggestions, setSuggestions] = useState<IStudentSearchResult[]>([])
@@ -343,11 +344,17 @@ export default function InvitePage() {
               <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
               Đã tạo nhóm thành công
             </h3>
-            {registration.status !== 'accepted' && !isActionDisabled && (registration.members?.length ?? 0) > 1 && (
+            {!isActionDisabled && (registration.members?.length ?? 0) > 1 && (
               <button
                 type="button"
+                disabled={isTopicActive}
                 onClick={() => setLeaveGroupConfirmOpen(true)}
-                className="rounded-2xl border border-red-200 bg-white px-4 py-2 text-xs font-medium text-red-600 transition hover:bg-red-50"
+                className={`rounded-2xl border px-4 py-2 text-xs font-medium transition ${
+                  isTopicActive
+                    ? 'border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed'
+                    : 'border-red-200 bg-white text-red-600 hover:bg-red-50'
+                }`}
+                title={isTopicActive ? "Không thể rời/giải tán nhóm khi đang đăng ký đề tài (chờ duyệt hoặc đã duyệt)" : ""}
               >
                 Rời/Giải tán nhóm
               </button>
