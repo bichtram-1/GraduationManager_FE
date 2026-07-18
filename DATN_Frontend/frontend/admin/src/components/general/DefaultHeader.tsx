@@ -47,12 +47,15 @@ const DefaultHeader = () => {
   useEffect(() => {
     if (allPeriods.length === 0) return;
 
+    const currentExists = selectedPeriod ? allPeriods.find(p => p.id === selectedPeriod.id) : null;
+    const isClosed = currentExists ? currentExists.status === 'closed' : false;
+
     if (isInternshipPage) {
       // For internship pages, we MUST select a TTTN period
       const tttnPeriods = allPeriods.filter(p => p.type === 'tttn');
       if (tttnPeriods.length > 0) {
         const isCurrentTttn = selectedPeriod && selectedPeriod.type === 'tttn';
-        if (!isCurrentTttn) {
+        if (!isCurrentTttn || !currentExists || isClosed) {
           const activeTttn = tttnPeriods.find(p => p.status === 'open' || p.status === 'published') || tttnPeriods[0];
           setSelectedPeriod(activeTttn);
         }
@@ -62,14 +65,14 @@ const DefaultHeader = () => {
       const datnPeriods = allPeriods.filter(p => p.type === 'datn');
       if (datnPeriods.length > 0) {
         const isCurrentDatn = selectedPeriod && selectedPeriod.type === 'datn';
-        if (!isCurrentDatn) {
+        if (!isCurrentDatn || !currentExists || isClosed) {
           const activeDatn = datnPeriods.find(p => p.status === 'open' || p.status === 'published') || datnPeriods[0];
           setSelectedPeriod(activeDatn);
         }
       }
     } else {
-      // General pages: select any active period if none selected
-      if (!selectedPeriod) {
+      // General pages: select any active period if none selected or if selected is closed/deleted
+      if (!selectedPeriod || !currentExists || isClosed) {
         const activePeriod = allPeriods.find(p => p.status === 'open' || p.status === 'published') || allPeriods[0];
         setSelectedPeriod(activePeriod);
       }

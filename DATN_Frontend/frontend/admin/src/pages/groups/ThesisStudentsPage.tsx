@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import FilterTable from '../../components/shared/table/FilterTable';
 import { assignmentHooks } from '../../hooks/useAssignments';
-import { cn, STATUS_CODE } from '../../constants/commonConst';
+import { cn, STATUS_CODE, isPeriodClosedForAdmin } from '../../constants/commonConst';
 import { getKey } from '@shared/types/I18nKeyType';
 import type { AssignmentRow } from '../../type/AssignmentType';
 import { formatNumber } from '@shared/utils/numberUtils';
@@ -23,6 +23,9 @@ const ThesisStudentsPage = () => {
   const { selectedPeriod } = useGlobalVariable();
 
   const isDatnPeriod = selectedPeriod?.type === 'datn';
+  const isPeriodClosed = isPeriodClosedForAdmin(selectedPeriod);
+
+  const deleteAssignmentMutation = assignmentHooks.useDeleteAssignment();
 
   const { data: assignmentList } = assignmentHooks.useFetchListAssignments({ 
     page: 1, 
@@ -395,6 +398,7 @@ const ThesisStudentsPage = () => {
   const listParams = {
     page: 1,
     limit: 10,
+    periodId: selectedPeriod?.id,
   };
 
   return (
@@ -441,7 +445,18 @@ const ThesisStudentsPage = () => {
           actions={{
             isDetail: false,
             isEdit: false,
-            isDelete: false,
+            isDelete: !isPeriodClosed,
+            isDeleteDisabled: (record: AssignmentRow) => {
+              return !!record.supervisor || record.groupStatus === 'valid';
+            }
+          }}
+          deleteInfo={isPeriodClosed ? undefined : {
+            type: 'modal',
+            modalInfo: {
+              modalContent: null,
+              modalProps: {},
+              modalFunc: deleteAssignmentMutation as any
+            }
           }}
           filterRender={() => (
             <div className={cn('grid grid-cols-1 gap-3 xl:grid-cols-12')}>
