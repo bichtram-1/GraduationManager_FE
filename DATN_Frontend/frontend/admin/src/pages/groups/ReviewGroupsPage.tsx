@@ -260,7 +260,7 @@ const ReviewGroupsPage: React.FC = () => {
                 return <span className="pl-2">{`${t('showing')} ${range[0]} ${t('to')} ${range[1]} ${t('of')} ${total} ${t('entries')}`}</span>;
               },
             }}
-            className="border border-slate-100 rounded-xl overflow-hidden"
+            className="border border-slate-100 rounded-xl"
             scroll={{ x: 'max-content' }}
             sticky={{
               offsetHeader: 0,
