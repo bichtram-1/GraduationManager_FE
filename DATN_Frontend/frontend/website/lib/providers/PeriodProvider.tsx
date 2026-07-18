@@ -55,7 +55,7 @@ export const PeriodProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           // Check if saved period still exists and is not closed
           const current = latestSaved ? rows.find((p) => p.id === latestSaved.id) : null
           
-          if (!current || current.status === 'closed') {
+          if (!current) {
             const defaultPeriod = rows.find((p) => p.status === 'open' || p.status === 'published') || rows[0]
             setSelectedPeriodState(defaultPeriod)
             localStorage.setItem('selected_period', JSON.stringify(defaultPeriod))
