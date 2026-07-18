@@ -147,7 +147,7 @@ export default function TeacherHistoryPage() {
                       </span>
                       {log.nhom_id && (
                         <span className="inline-flex items-center rounded-lg bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
-                          Nhóm #{log.nhom_id}
+                          Nhóm
                         </span>
                       )}
                     </div>

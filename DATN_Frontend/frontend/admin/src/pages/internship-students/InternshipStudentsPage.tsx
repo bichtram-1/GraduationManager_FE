@@ -193,7 +193,10 @@ const InternshipStudentsPage = () => {
   const declarationActions = useMemo(() => ({
     isDetail: true,
     isEdit: false,
-    isDelete: !isPeriodClosed
+    isDelete: !isPeriodClosed,
+    isDeleteDisabled: (record: IConfirmationRequest) => {
+      return record.status === STATUS_CODE.APPROVED || (record.status as any) === 'APPROVED';
+    }
   }), [isPeriodClosed]);
 
   const noCompanyParamVariables = useMemo(() => ({

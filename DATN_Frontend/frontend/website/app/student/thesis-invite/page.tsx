@@ -383,10 +383,10 @@ export default function InvitePage() {
       )}
 
       <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-        <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
-          <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-5 py-4">
+        <section className="rounded-[28px] border border-slate-200 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
+          <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-5 py-4 rounded-t-[28px]">
             <div>
-              <div className="text-sm font-semibold text-slate-900">Mời thành viên</div>
+              <div className="text-sm font-semibold text-slate-900">Mới thành viên</div>
               <div className="text-xs text-slate-500">Gửi lời mời theo danh sách MSSV cho {selectedPeriod?.name || 'đợt đăng ký'}</div>
             </div>
             <StudentPill tone="blue">Chủ nhóm</StudentPill>
@@ -431,14 +431,14 @@ export default function InvitePage() {
               </button>
 
               {showSuggestions && suggestions.length > 0 && (
-                <div className="absolute left-0 right-14 top-full z-10 mt-1 max-h-64 overflow-y-auto rounded-2xl border border-slate-200 bg-white py-1.5 shadow-lg">
+                <div className="absolute left-0 right-14 top-full z-30 mt-1.5 max-h-60 overflow-y-auto rounded-2xl border border-slate-200 bg-white py-1 shadow-xl">
                   {suggestions.map((student) => (
                     <button
                       type="button"
                       key={student.code}
                       onMouseDown={(e) => e.preventDefault()}
                       onClick={() => selectSuggestion(student)}
-                      className="flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left transition hover:bg-blue-50"
+                      className="flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left transition hover:bg-blue-50/70"
                     >
                       <span className="text-sm font-semibold text-slate-900">{student.name}</span>
                       <span className="text-xs text-slate-500">MSSV: {student.code}{student.className ? ` • Lớp: ${student.className}` : ''}</span>
@@ -448,7 +448,7 @@ export default function InvitePage() {
               )}
 
               {showSuggestions && newId.trim() && suggestions.length === 0 && (
-                <div className="absolute left-0 right-14 top-full z-10 mt-1 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-400 shadow-lg">
+                <div className="absolute left-0 right-14 top-full z-30 mt-1.5 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-xs text-slate-400 shadow-xl">
                   Không tìm thấy sinh viên phù hợp.
                 </div>
               )}

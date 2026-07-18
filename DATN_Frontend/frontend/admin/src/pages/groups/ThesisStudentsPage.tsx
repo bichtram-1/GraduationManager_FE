@@ -1,10 +1,12 @@
 import { SearchOutlined, TeamOutlined } from '@ant-design/icons';
-import { Form, Input, Select, Tag, Typography, Card, Empty, Modal, message, Radio } from 'antd';
+import { Form, Input, Select, Tag, Typography, Card, Empty, Modal, message, Radio, Button } from 'antd';
+import { Link } from 'react-router-dom';
+import { ROUTES } from '../../constants/routers';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import FilterTable from '../../components/shared/table/FilterTable';
 import { assignmentHooks } from '../../hooks/useAssignments';
-import { cn, STATUS_CODE } from '../../constants/commonConst';
+import { cn, STATUS_CODE, isPeriodClosedForAdmin } from '../../constants/commonConst';
 import { getKey } from '@shared/types/I18nKeyType';
 import type { AssignmentRow } from '../../type/AssignmentType';
 import { formatNumber } from '@shared/utils/numberUtils';
@@ -18,11 +20,99 @@ import { groupHooks } from '../../hooks/useGroups';
 import type { IListTopic } from '../../type/TopicType';
 import type { IListGroup, IGroupMember, IUpdateGroup, ICreateGroup } from '../../type/GroupType';
 
+type ThesisStudentDetailGroupMember = {
+  studentId?: string;
+  name?: string;
+  className?: string;
+};
+
+type ThesisStudentDetail = {
+  studentId?: string;
+  name?: string;
+  className?: string;
+  course?: string;
+  groupCode?: string;
+  groupMembers?: ThesisStudentDetailGroupMember[];
+  topic?: string;
+  topicDesc?: string;
+  supervisor?: string;
+};
+
+const ThesisStudentDetailForm = ({ detail }: { detail?: ThesisStudentDetail }) => {
+  if (!detail) return null;
+
+  return (
+    <div className="flex flex-col gap-4 py-2 text-slate-700">
+      <div className="grid grid-cols-2 gap-4 border-b border-slate-100 pb-4">
+        <div>
+          <span className="text-slate-400 text-xs block">Mã số sinh viên</span>
+          <span className="font-semibold text-slate-800 text-sm">{detail.studentId || '—'}</span>
+        </div>
+        <div>
+          <span className="text-slate-400 text-xs block">Họ và tên</span>
+          <span className="font-semibold text-slate-800 text-sm">{detail.name || '—'}</span>
+        </div>
+        <div>
+          <span className="text-slate-400 text-xs block">Lớp</span>
+          <span className="font-semibold text-slate-800 text-sm">{detail.className || '—'}</span>
+        </div>
+        <div>
+          <span className="text-slate-400 text-xs block">Khóa học</span>
+          <span className="font-semibold text-slate-800 text-sm">{detail.course || '—'}</span>
+        </div>
+      </div>
+
+      <div className="border-b border-slate-100 pb-4">
+        <span className="text-slate-400 text-xs block mb-1.5">Nhóm đồ án tốt nghiệp</span>
+        <Tag color="blue" className="text-sm font-semibold px-3 py-0.5 rounded-md">
+          Mã nhóm: {detail.groupCode || '—'}
+        </Tag>
+      </div>
+
+      {detail.groupMembers && detail.groupMembers.length > 0 && (
+        <div className="border-b border-slate-100 pb-4">
+          <span className="text-slate-400 text-xs block mb-2">Thành viên trong nhóm</span>
+          <div className="flex flex-col gap-2">
+            {detail.groupMembers.map((m: ThesisStudentDetailGroupMember) => (
+              <div key={m.studentId} className="flex justify-between items-center bg-slate-50 px-3 py-2 rounded-lg border border-slate-100">
+                <span className="font-medium text-slate-700 text-sm">{m.name} ({m.studentId})</span>
+                <span className="text-xs text-slate-400">{m.className}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 gap-4">
+        <div>
+          <span className="text-slate-400 text-xs block">Đề tài đồ án</span>
+          <span className="font-semibold text-slate-800 text-sm block mt-1">{detail.topic || '—'}</span>
+        </div>
+        <div>
+          <span className="text-slate-400 text-xs block">Mô tả đề tài</span>
+          <p className="text-slate-600 text-sm mt-1 mb-0 leading-relaxed whitespace-pre-line bg-slate-50 p-3 rounded-lg border border-slate-100">
+            {detail.topicDesc || '—'}
+          </p>
+        </div>
+        <div>
+          <span className="text-slate-400 text-xs block">Giảng viên hướng dẫn</span>
+          <Tag color="cyan" className="text-sm font-semibold px-3 py-0.5 rounded-md mt-1">
+            {detail.supervisor || 'Chưa phân công'}
+          </Tag>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const ThesisStudentsPage = () => {
   const { t } = useTranslation();
   const { selectedPeriod } = useGlobalVariable();
 
   const isDatnPeriod = selectedPeriod?.type === 'datn';
+  const isPeriodClosed = isPeriodClosedForAdmin(selectedPeriod);
+
+  const deleteAssignmentMutation = assignmentHooks.useDeleteAssignment();
 
   const { data: assignmentList } = assignmentHooks.useFetchListAssignments({ 
     page: 1, 
@@ -341,6 +431,58 @@ const ThesisStudentsPage = () => {
           );
         },
       },
+      {
+        title: 'Phân bổ nhóm',
+        key: 'allocation',
+        width: 140,
+        render: (_: unknown, r: AssignmentRow) => {
+          const status = r.groupStatus || 'no_group';
+
+          if (status === 'no_group') {
+            return (
+              <Button
+                type="link"
+                onClick={() => {
+                  setAllocationStudent(r);
+                  setAllocationType('existing');
+                  setSelectedGroupId('');
+                  setSelectedPartnerStudentId('');
+                  setSelectedAllocationTopicId('');
+                }}
+                className="p-0 text-blue-600 hover:text-blue-800 font-semibold text-xs h-auto leading-none"
+              >
+                Phân vào nhóm
+              </Button>
+            );
+          }
+          if (status === 'ineligible_member') {
+            return (
+              <Link to={`/admin${ROUTES.GROUPS}`} className="text-amber-600 hover:text-amber-800 font-semibold text-xs">
+                Ghép/Điều chỉnh nhóm
+              </Link>
+            );
+          }
+          if (status === 'no_topic' || status === 'topic_rejected') {
+            return (
+              <Button
+                type="link"
+                onClick={() => handleAssignTopic(r.groupId, r.groupCode)}
+                className="p-0 text-blue-600 hover:text-blue-800 font-semibold text-xs h-auto leading-none"
+              >
+                Gán đề tài
+              </Button>
+            );
+          }
+          if (status === 'topic_pending') {
+            return (
+              <Link to={`/admin${ROUTES.GROUPS_REVIEW}`} className="text-blue-600 hover:text-blue-800 font-semibold text-xs">
+                Đi duyệt đề tài
+              </Link>
+            );
+          }
+          return <span className="text-emerald-600 font-medium text-xs">Đã hoàn tất</span>;
+        },
+      },
     ],
     [t, handleAssignTopic]
   );
@@ -395,6 +537,7 @@ const ThesisStudentsPage = () => {
   const listParams = {
     page: 1,
     limit: 10,
+    periodId: selectedPeriod?.id,
   };
 
   return (
@@ -439,9 +582,33 @@ const ThesisStudentsPage = () => {
           useQueryHook={useFilteredStudentsQuery}
           paramVariables={listParams}
           actions={{
-            isDetail: false,
+            isDetail: true,
             isEdit: false,
-            isDelete: false,
+            isDelete: !isPeriodClosed,
+            isDeleteDisabled: (record: AssignmentRow) => {
+              return !!record.supervisor || record.groupStatus === 'valid';
+            }
+          }}
+          detailInfo={{
+            type: 'modal',
+            modalInfo: {
+              modalContent: <ThesisStudentDetailForm />,
+              modalProps: {
+                centered: true,
+                width: 680,
+                title: 'Chi tiết thông tin đồ án tốt nghiệp',
+                footer: null
+              },
+              modalFunc: assignmentHooks.useFetchDetailAssignment
+            }
+          }}
+          deleteInfo={isPeriodClosed ? undefined : {
+            type: 'modal',
+            modalInfo: {
+              modalContent: null,
+              modalProps: {},
+              modalFunc: deleteAssignmentMutation as any
+            }
           }}
           filterRender={() => (
             <div className={cn('grid grid-cols-1 gap-3 xl:grid-cols-12')}>
