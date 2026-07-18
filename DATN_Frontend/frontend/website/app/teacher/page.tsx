@@ -1,13 +1,30 @@
 "use client"
 
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { CalendarDays, CheckCircle2, Trophy, Users } from 'lucide-react'
-import { TeacherPill, TeacherSectionHeader, TeacherStatCard } from './_components/TeacherShell'
+import { AlertTriangle, CalendarClock, CalendarDays, CheckCircle2, ClipboardCheck, Trophy, Users } from 'lucide-react'
+import { TeacherPill, TeacherSectionHeader } from './_components/TeacherShell'
 import { getTopicStatusTone } from './_components/TeacherUI'
 import { usePeriod } from '@/lib/providers/PeriodProvider'
 import { teacherApi } from '@/lib/api/teacherApi'
 import { Skeleton } from 'antd'
+
+interface IGroupApprovalItem {
+  id?: string | number
+  status?: string
+}
+
+// Đợt ĐATN/TTTN ghi ngày dạng "DD/MM/YYYY" — parse thủ công để tránh sai lệch theo
+// locale của trình duyệt (Date.parse với "/" không đảm bảo thứ tự ngày/tháng đồng nhất).
+const parseVNDate = (value?: string): Date | null => {
+  if (!value) return null
+  const parts = value.split('/')
+  if (parts.length !== 3) return null
+  const [day, month, year] = parts.map(Number)
+  if (!day || !month || !year) return null
+  return new Date(year, month - 1, day)
+}
 
 interface ITopicItem {
   id?: string | number;
@@ -47,10 +64,12 @@ interface ICouncilItem {
 const DASHBOARD_KEY = ['teacher-dashboard']
 const STUDENTS_KEY = ['teacher-students']
 const GRADING_KEY = ['teacher-grading']
+const GROUPS_KEY = ['teacher-groups-pending']
 
 export default function TeacherIndexPage() {
-  const { selectedPeriod } = usePeriod()
+  const { selectedPeriod, setStudentsTab, setGradingTab } = usePeriod()
   const queryClient = useQueryClient()
+  const router = useRouter()
 
   const dashboardQuery = useQuery({
     queryKey: [...DASHBOARD_KEY, selectedPeriod?.id],
@@ -59,6 +78,13 @@ export default function TeacherIndexPage() {
   const studentsQuery = useQuery({
     queryKey: [...STUDENTS_KEY, selectedPeriod?.id],
     queryFn: () => teacherApi.getStudents({ periodId: selectedPeriod?.id }),
+  })
+  // Số nhóm ĐATN vừa đăng ký đề tài của giảng viên, đang chờ phê duyệt thành viên — chỉ
+  // cần tải khi đang xem đợt ĐATN (dùng cho khối nhắc việc "Duyệt đề tài").
+  const groupsQuery = useQuery({
+    queryKey: [...GROUPS_KEY, selectedPeriod?.id],
+    queryFn: () => teacherApi.getGroups({ periodId: selectedPeriod?.id }),
+    enabled: selectedPeriod?.type === 'datn',
   })
   const gradingQuery = useQuery({
     queryKey: [...GRADING_KEY, selectedPeriod?.id],
@@ -76,12 +102,16 @@ export default function TeacherIndexPage() {
   const tttnList: ITttnItem[] = studentsRes?.success ? (studentsRes.tttn || []) : []
   const datnList: IDatnGroupItem[] = studentsRes?.success ? (studentsRes.datn || []) : []
   const councilsList: ICouncilItem[] = gradingRes?.councilGroups || []
+  const pendingGroupApprovals: IGroupApprovalItem[] = (groupsQuery.data || []).filter(
+    (g: IGroupApprovalItem) => g.status === 'pending'
+  )
 
   useEffect(() => {
     const handleSync = () => {
       queryClient.invalidateQueries({ queryKey: DASHBOARD_KEY })
       queryClient.invalidateQueries({ queryKey: STUDENTS_KEY })
       queryClient.invalidateQueries({ queryKey: GRADING_KEY })
+      queryClient.invalidateQueries({ queryKey: GROUPS_KEY })
     }
     window.addEventListener('realtime-group-updated', handleSync)
     window.addEventListener('realtime-topic-updated', handleSync)
@@ -93,6 +123,47 @@ export default function TeacherIndexPage() {
       window.removeEventListener('realtime-assignment-published', handleSync)
     }
   }, [queryClient])
+
+  // Khối "trợ lý nhắc việc" ở đầu trang chủ — thay cho 4 thẻ thống kê tĩnh trước đây.
+  // Nội dung đổi hẳn theo loại đợt đang chọn (TTTN/ĐATN) và mốc thời gian thật của đợt.
+  const isTttnPeriod = selectedPeriod?.type === 'tttn'
+  const isDatnPeriod = selectedPeriod?.type === 'datn'
+  const isReportSubmissionPhase = selectedPeriod?.status === 'open'
+  const isGradingPhase = selectedPeriod?.status === 'grading'
+
+  const pendingTttnReports = tttnList.filter(
+    (s) => s.status === 'Đã nộp' && (!s.comment || s.comment.trim() === '')
+  )
+  const pendingDatnReports = datnList.filter(
+    (g) => g.status === 'Đã nộp' && (!g.comment || g.comment.trim() === '')
+  )
+
+  const tttnWeekProgress = useMemo(() => {
+    const start = parseVNDate(selectedPeriod?.startDate)
+    const end = parseVNDate(selectedPeriod?.endDate)
+    if (!start || !end) return null
+    const msPerWeek = 7 * 24 * 60 * 60 * 1000
+    const totalWeeks = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / msPerWeek))
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const daysPassed = Math.max(0, (today.getTime() - start.getTime()) / (24 * 60 * 60 * 1000))
+    const currentWeek = Math.min(totalWeeks, Math.max(1, Math.ceil((daysPassed + 1) / 7)))
+    return { currentWeek, totalWeeks }
+  }, [selectedPeriod?.startDate, selectedPeriod?.endDate])
+
+  const goToStudents = (tab: 'TTTN' | 'DATN') => {
+    setStudentsTab(tab)
+    router.push(`/teacher/students?studentsTab=${tab}`)
+  }
+
+  const goToGrading = () => {
+    setGradingTab('TTTN')
+    router.push('/teacher/grading')
+  }
+
+  const goToGroups = () => {
+    router.push('/teacher/groups')
+  }
 
   // Tự động sinh danh sách việc cần xử lý dựa trên dữ liệu thực tế
   const getDynamicReminders = () => {
@@ -157,27 +228,110 @@ export default function TeacherIndexPage() {
   // Tính toán các chỉ số tức thì dựa trên dữ liệu thực tế
   const totalTttnStudents = tttnList.length
 
+  // Danh sách các thẻ nhắc việc sẽ hiện — đổi hẳn theo loại đợt đang chọn, không hiện
+  // thẻ nào không áp dụng để tránh rối mắt (VD: đợt TTTN thì không có "Duyệt đề tài").
+  type ReminderTone = 'urgent' | 'warning' | 'info'
+  const TONE_STYLE: Record<ReminderTone, { border: string; bg: string; text: string; iconBg: string; iconColor: string; btn: string }> = {
+    urgent: { border: 'border-red-200', bg: 'bg-red-50', text: 'text-red-800', iconBg: 'bg-red-100', iconColor: 'text-red-600', btn: 'bg-red-600 hover:bg-red-700' },
+    warning: { border: 'border-amber-200', bg: 'bg-amber-50', text: 'text-amber-800', iconBg: 'bg-amber-100', iconColor: 'text-amber-600', btn: 'bg-amber-500 hover:bg-amber-600' },
+    info: { border: 'border-blue-200', bg: 'bg-blue-50', text: 'text-blue-800', iconBg: 'bg-blue-100', iconColor: 'text-blue-600', btn: 'bg-[#2196F3] hover:bg-[#1976D2]' },
+  }
+
+  const reminderCards: Array<{ key: string; tone: ReminderTone; icon: typeof AlertTriangle; title: string; message: string; actionLabel: string; onAction: () => void }> = []
+
+  if (isTttnPeriod) {
+    if (isGradingPhase) {
+      reminderCards.push({
+        key: 'tttn-grading',
+        tone: 'info',
+        icon: CalendarClock,
+        title: 'Tiến độ đợt thực tập',
+        message: `Đợt thực tập đang ở tuần thứ ${tttnWeekProgress?.currentWeek ?? '—'}/${tttnWeekProgress?.totalWeeks ?? '—'}. Hệ thống đã mở cổng nhập điểm doanh nghiệp.`,
+        actionLabel: 'Nhập điểm',
+        onAction: goToGrading,
+      })
+    } else if (isReportSubmissionPhase && pendingTttnReports.length > 0) {
+      reminderCards.push({
+        key: 'tttn-reports',
+        tone: 'warning',
+        icon: AlertTriangle,
+        title: 'Nhắc nhở',
+        message: `Bạn có ${pendingTttnReports.length} sinh viên đã nộp báo cáo tuần nhưng chưa được nhận xét.`,
+        actionLabel: 'Xem ngay',
+        onAction: () => goToStudents('TTTN'),
+      })
+    }
+  } else if (isDatnPeriod) {
+    if (pendingGroupApprovals.length > 0) {
+      reminderCards.push({
+        key: 'datn-groups',
+        tone: 'urgent',
+        icon: ClipboardCheck,
+        title: 'Duyệt đề tài',
+        message: `Có ${pendingGroupApprovals.length} nhóm sinh viên vừa đăng ký đề tài của bạn và đang chờ phê duyệt thành viên.`,
+        actionLabel: 'Duyệt ngay',
+        onAction: goToGroups,
+      })
+    }
+    if (isReportSubmissionPhase && pendingDatnReports.length > 0) {
+      reminderCards.push({
+        key: 'datn-reports',
+        tone: 'warning',
+        icon: AlertTriangle,
+        title: 'Nhắc nhở',
+        message: `Bạn có ${pendingDatnReports.length} nhóm đã nộp báo cáo tuần nhưng chưa được nhận xét.`,
+        actionLabel: 'Xem ngay',
+        onAction: () => goToStudents('DATN'),
+      })
+    }
+  }
+
   return (
     <>
       <TeacherSectionHeader
         title="Trang chủ giảng viên"
-        description="Quản lý đề tài, sinh viên hướng dẫn và hoạt động chấm điểm dựa trên kết nối thực tế tới Back-End."
+        description="Quản lý đề tài, sinh viên hướng dẫn và hoạt động chấm điểm"
       />
 
-      <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-6 grid gap-4 md:grid-cols-2">
         {loading ? (
-          Array.from({ length: 4 }).map((_, i) => (
+          Array.from({ length: 2 }).map((_, i) => (
             <div key={i} className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
               <Skeleton active title={false} paragraph={{ rows: 2 }} />
             </div>
           ))
+        ) : reminderCards.length > 0 ? (
+          reminderCards.map((card) => {
+            const style = TONE_STYLE[card.tone]
+            const Icon = card.icon
+            return (
+              <div key={card.key} className={`flex items-start gap-4 rounded-[24px] border ${style.border} ${style.bg} p-5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]`}>
+                <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${style.iconBg} ${style.iconColor}`}>
+                  <Icon className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className={`text-sm font-semibold ${style.text}`}>{card.title}</div>
+                  <div className={`mt-1 text-sm leading-relaxed ${style.text} opacity-90`}>{card.message}</div>
+                  <button
+                    type="button"
+                    onClick={card.onAction}
+                    className={`mt-3 inline-flex items-center rounded-xl px-4 py-2 text-sm font-medium text-white transition ${style.btn}`}
+                  >
+                    {card.actionLabel}
+                  </button>
+                </div>
+              </div>
+            )
+          })
         ) : (
-          <>
-            <TeacherStatCard title="Đề tài" value={String(stats.topics)} hint="Đề tài đã đề xuất" accent="blue" />
-            <TeacherStatCard title="TTTN" value={String(stats.tttn)} hint="Sinh viên đang hướng dẫn" accent="green" />
-            <TeacherStatCard title="ĐATN" value={String(stats.datn)} hint="Nhóm chấm phản biện" accent="orange" />
-            <TeacherStatCard title="Hội đồng" value={String(stats.councils)} hint="Lịch chấm hội đồng" accent="violet" />
-          </>
+          <div className="flex items-center gap-4 rounded-[24px] border border-emerald-200 bg-emerald-50 p-5 shadow-[0_10px_30px_rgba(15,23,42,0.05)] md:col-span-2">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600">
+              <CheckCircle2 className="h-5 w-5" />
+            </div>
+            <div className="text-sm font-medium text-emerald-800">
+              Không có việc gì cần xử lý gấp trong đợt {selectedPeriod?.name || 'hiện tại'} lúc này. Mọi thứ đang ổn!
+            </div>
+          </div>
         )}
       </div>
 

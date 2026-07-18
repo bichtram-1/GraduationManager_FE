@@ -23,12 +23,14 @@ export default function ScoringTable({
   canEditReport,
   notify,
   reportMax = 10,
+  readOnly = false,
 }: {
   groupId: string
   students: Student[]
   canEditReport: boolean
   notify: (msg: string, type?: 'success' | 'error') => void
   reportMax?: number
+  readOnly?: boolean
 }) {
   const initial = students.map((m) => ({ member: m, score: { presentation: '', demo: '', qna: '', report: '' } as Score, otherScores: [] } as RowType))
   const [rows, setRows] = useState<RowType[]>(initial)
@@ -167,6 +169,10 @@ export default function ScoringTable({
   }, [groupId])
 
   async function save() {
+    if (readOnly) {
+      notify('Đợt đã đóng, không thể lưu điểm!', 'error')
+      return
+    }
     if (Object.keys(errors).length > 0) {
       notify('Vui lòng sửa các điểm số chưa hợp lệ (ô màu đỏ) trước khi lưu!', 'error')
       return
@@ -203,7 +209,7 @@ export default function ScoringTable({
         </div>
         <div className="flex items-center gap-3">
           <div className="inline-flex items-center rounded-md bg-emerald-50 text-emerald-700 px-2 py-1 text-xs">Đang chấm</div>
-          <TeacherButton onClick={() => save()}>{loading ? 'Đang lưu...' : 'Lưu điểm'}</TeacherButton>
+          <TeacherButton onClick={() => save()} disabled={readOnly || loading}>{loading ? 'Đang lưu...' : 'Lưu điểm'}</TeacherButton>
         </div>
       </div>
 
@@ -235,7 +241,8 @@ export default function ScoringTable({
                       <div className="flex flex-col">
                         <input
                           placeholder="0.00"
-                          className={`${TeacherInputClass('w-20')} ${errors[`${i}-presentation`] ? 'border-red-500 focus:border-red-500 focus:ring-red-500 ring-2 ring-red-100 bg-red-50/30 font-semibold text-red-600' : ''}`}
+                          disabled={readOnly}
+                          className={`${TeacherInputClass('w-20')} ${readOnly ? 'opacity-50 bg-slate-100 cursor-not-allowed' : ''} ${errors[`${i}-presentation`] ? 'border-red-500 focus:border-red-500 focus:ring-red-500 ring-2 ring-red-100 bg-red-50/30 font-semibold text-red-600' : ''}`}
                           value={s.presentation}
                           onChange={(e) => handleScoreChange(i, 'presentation', e.target.value, 3, 'Thuyết trình')}
                         />
@@ -250,7 +257,8 @@ export default function ScoringTable({
                       <div className="flex flex-col">
                         <input
                           placeholder="0.00"
-                          className={`${TeacherInputClass('w-20')} ${errors[`${i}-demo`] ? 'border-red-500 focus:border-red-500 focus:ring-red-500 ring-2 ring-red-100 bg-red-50/30 font-semibold text-red-600' : ''}`}
+                          disabled={readOnly}
+                          className={`${TeacherInputClass('w-20')} ${readOnly ? 'opacity-50 bg-slate-100 cursor-not-allowed' : ''} ${errors[`${i}-demo`] ? 'border-red-500 focus:border-red-500 focus:ring-red-500 ring-2 ring-red-100 bg-red-50/30 font-semibold text-red-600' : ''}`}
                           value={s.demo}
                           onChange={(e) => handleScoreChange(i, 'demo', e.target.value, 5, 'Demo')}
                         />
@@ -265,7 +273,8 @@ export default function ScoringTable({
                       <div className="flex flex-col">
                         <input
                           placeholder="0.00"
-                          className={`${TeacherInputClass('w-20')} ${errors[`${i}-qna`] ? 'border-red-500 focus:border-red-500 focus:ring-red-500 ring-2 ring-red-100 bg-red-50/30 font-semibold text-red-600' : ''}`}
+                          disabled={readOnly}
+                          className={`${TeacherInputClass('w-20')} ${readOnly ? 'opacity-50 bg-slate-100 cursor-not-allowed' : ''} ${errors[`${i}-qna`] ? 'border-red-500 focus:border-red-500 focus:ring-red-500 ring-2 ring-red-100 bg-red-50/30 font-semibold text-red-600' : ''}`}
                           value={s.qna}
                           onChange={(e) => handleScoreChange(i, 'qna', e.target.value, 2, 'Vấn đáp')}
                         />
@@ -282,9 +291,9 @@ export default function ScoringTable({
                         <div className="flex flex-col">
                           <input
                             placeholder="0.00"
-                            disabled={!canEditReport}
-                            title={!canEditReport ? 'Bạn chỉ được xem điểm báo cáo' : undefined}
-                            className={`${TeacherInputClass('w-20')} ${!canEditReport ? 'opacity-50 bg-slate-100 cursor-not-allowed select-none' : ''} ${errors[`${i}-report`] ? 'border-red-500 focus:border-red-500 focus:ring-red-500 ring-2 ring-red-100 bg-red-50/30 font-semibold text-red-600' : ''}`}
+                            disabled={!canEditReport || readOnly}
+                            title={!canEditReport ? 'Bạn chỉ được xem điểm báo cáo' : readOnly ? 'Đợt đã đóng, không thể chỉnh sửa' : undefined}
+                            className={`${TeacherInputClass('w-20')} ${!canEditReport || readOnly ? 'opacity-50 bg-slate-100 cursor-not-allowed select-none' : ''} ${errors[`${i}-report`] ? 'border-red-500 focus:border-red-500 focus:ring-red-500 ring-2 ring-red-100 bg-red-50/30 font-semibold text-red-600' : ''}`}
                             value={s.report}
                             onChange={(e) => handleScoreChange(i, 'report', e.target.value, reportMax, 'Báo cáo')}
                           />

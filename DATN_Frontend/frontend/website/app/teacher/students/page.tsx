@@ -13,6 +13,7 @@ import { getFileUrl, getPreviewUrl } from '@/lib/utils/fileUrl'
 export default function TeacherStudentsPage() {
   const { message } = App.useApp()
   const { selectedPeriod, studentsTab, setStudentsTab } = usePeriod()
+  const isPeriodClosed = selectedPeriod?.status === 'closed'
   const segment = studentsTab === 'DATN' ? 'ĐATN' : 'TTTN'
   const setSegment = (seg: 'TTTN' | 'ĐATN') => {
     setStudentsTab(seg === 'ĐATN' ? 'DATN' : 'TTTN')
@@ -223,6 +224,10 @@ export default function TeacherStudentsPage() {
   }, [reportModal.open, reportModal.type, reportModal.id, selectedReport, comments])
 
   const handleSaveReportComment = async () => {
+    if (isPeriodClosed) {
+      message.warning('Đợt đã đóng, không thể chỉnh sửa nhận xét!')
+      return
+    }
     if (!reportModal.id || !reportModal.type) return
     try {
       const payload: { studentId: string; periodId?: string; comment: string; type: "TTTN" | "DATN"; baoCaoId?: number } = {
@@ -265,6 +270,10 @@ export default function TeacherStudentsPage() {
   }
 
   const handleSaveCommentFromModal = async () => {
+    if (isPeriodClosed) {
+      message.warning('Đợt đã đóng, không thể chỉnh sửa nhận xét!')
+      return
+    }
     if (!commentModal.id) return
     const type = commentModal.id.startsWith('G') ? 'DATN' : 'TTTN'
     try {
@@ -357,6 +366,12 @@ export default function TeacherStudentsPage() {
           </>
         )}
       />
+
+      {isPeriodClosed && (
+        <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+          ⚠️ Đợt &quot;{selectedPeriod?.name}&quot; đã đóng — bạn chỉ có thể xem, không thể nhận xét báo cáo.
+        </div>
+      )}
 
       <section className="mb-5 rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_8px_30px_rgba(15,23,42,0.04)]">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
@@ -764,17 +779,24 @@ export default function TeacherStudentsPage() {
 
               <div>
                 <div className="text-sm font-medium text-slate-900">Nhận xét báo cáo (không bắt buộc)</div>
-                <textarea 
-                  value={reportCommentText} 
-                  onChange={(e) => setReportCommentText(e.target.value)} 
-                  className="mt-2 h-28 w-full rounded-md border border-slate-200 p-3 text-sm outline-none focus:border-blue-400" 
-                  placeholder="Nhập nhận xét về báo cáo..." 
+                <textarea
+                  value={reportCommentText}
+                  onChange={(e) => setReportCommentText(e.target.value)}
+                  disabled={isPeriodClosed}
+                  className="mt-2 h-28 w-full rounded-md border border-slate-200 p-3 text-sm outline-none focus:border-blue-400 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
+                  placeholder="Nhập nhận xét về báo cáo..."
                 />
               </div>
 
               <div className="flex justify-end gap-3">
                 <button className="rounded-md px-4 py-2 text-sm" onClick={() => setReportModal({ open: false, id: undefined, type: undefined })}>{COMMON_LABELS.CLOSE}</button>
-                <button className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white" onClick={handleSaveReportComment}>Lưu nhận xét</button>
+                <button
+                  className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-40"
+                  onClick={handleSaveReportComment}
+                  disabled={isPeriodClosed}
+                >
+                  Lưu nhận xét
+                </button>
               </div>
             </div>
           </div>
@@ -788,10 +810,23 @@ export default function TeacherStudentsPage() {
           <div className="relative z-50 w-full max-w-xl rounded-3xl bg-white p-6 shadow-lg">
             <h3 className="text-lg font-semibold font-sans">Nhận xét {commentTargetLabel ? `— ${commentTargetLabel}` : ''}</h3>
             <p className="mt-2 text-sm text-slate-600 font-sans">Ghi nhận nhận xét cho mục được chọn.</p>
-            <textarea autoFocus value={commentModal.text} onChange={(e) => setCommentModal((s) => ({ ...s, text: e.target.value }))} className="mt-4 h-32 w-full rounded-md border border-slate-200 p-3 text-sm outline-none" />
+            <textarea
+              autoFocus
+              value={commentModal.text}
+              onChange={(e) => setCommentModal((s) => ({ ...s, text: e.target.value }))}
+              disabled={isPeriodClosed}
+              className="mt-4 h-32 w-full rounded-md border border-slate-200 p-3 text-sm outline-none disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
+            />
             <div className="mt-4 flex justify-end gap-2 font-sans">
               <button type="button" className="rounded-md px-4 py-2 text-sm" onClick={() => setCommentModal({ open: false, id: undefined, text: '' })}>{COMMON_LABELS.CANCEL}</button>
-              <button type="button" className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white" onClick={handleSaveCommentFromModal}>Lưu</button>
+              <button
+                type="button"
+                className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-40"
+                onClick={handleSaveCommentFromModal}
+                disabled={isPeriodClosed}
+              >
+                Lưu
+              </button>
             </div>
           </div>
         </div>

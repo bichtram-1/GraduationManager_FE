@@ -36,6 +36,7 @@ type GroupApproval = {
 
 export default function TeacherGroupsPage() {
   const { selectedPeriod } = usePeriod()
+  const isPeriodClosed = selectedPeriod?.status === 'closed'
   const [searchTopic, setSearchTopic] = useState('')
   const [searchMssv, setSearchMssv] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | ApprovalStatus>('all')
@@ -103,6 +104,7 @@ export default function TeacherGroupsPage() {
   const rejectedCount = groups.filter((group) => group.status === 'rejected').length
 
   const handleAction = async (groupId: string, action: 'accept' | 'reject') => {
+    if (isPeriodClosed) return
     setSavingId(groupId)
     try {
       const data = await teacherApi.updateGroupStatus(groupId, action)
@@ -121,6 +123,12 @@ export default function TeacherGroupsPage() {
         description="Duyệt các nhóm sinh viên đăng ký vào đề tài của giảng viên."
         actions={<TeacherBadge type="info">{pendingCount} nhóm chờ duyệt</TeacherBadge>}
       />
+
+      {isPeriodClosed && (
+        <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+          ⚠️ Đợt &quot;{selectedPeriod?.name}&quot; đã đóng — bạn chỉ có thể xem, không thể duyệt nhóm.
+        </div>
+      )}
 
       <TeacherCard>
         <div className="flex flex-col gap-3 border-b border-slate-200 bg-slate-50 px-5 py-4 sm:flex-row sm:items-center">
@@ -237,7 +245,7 @@ export default function TeacherGroupsPage() {
                           <TeacherButton
                             variant="success"
                             className="px-3 py-1.5 text-xs"
-                            disabled={group.status !== 'pending' || savingId === group.id}
+                            disabled={isPeriodClosed || group.status !== 'pending' || savingId === group.id}
                             onClick={() => handleAction(group.id, 'accept')}
                           >
                             Chấp nhận
@@ -245,7 +253,7 @@ export default function TeacherGroupsPage() {
                           <TeacherButton
                             variant="danger"
                             className="px-3 py-1.5 text-xs"
-                            disabled={group.status !== 'pending' || savingId === group.id}
+                            disabled={isPeriodClosed || group.status !== 'pending' || savingId === group.id}
                             onClick={() => handleAction(group.id, 'reject')}
                           >
                             Từ chối
@@ -271,11 +279,6 @@ export default function TeacherGroupsPage() {
         open={modalOpen}
         title="Chi tiết đăng ký nhóm"
         onClose={() => setModalOpen(false)}
-        footer={
-          <TeacherButton variant="secondary" onClick={() => setModalOpen(false)}>
-            Đóng
-          </TeacherButton>
-        }
       >
         {selectedGroup ? (
           <div className="space-y-4">
@@ -308,11 +311,6 @@ export default function TeacherGroupsPage() {
                   </div>
                 ))}
               </div>
-            </div>
-
-            <div className="rounded-[24px] bg-slate-50 p-5 border border-slate-200">
-              <div className="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-2">Ghi chú</div>
-              <div className="text-sm leading-6 text-slate-700">{selectedGroup.note || 'Không có ghi chú.'}</div>
             </div>
           </div>
         ) : (
