@@ -9,7 +9,7 @@ import { studentApi } from '@/lib/api/studentApi'
 import { uploadApi } from '@/lib/api/uploadApi'
 import { usePeriod } from '@/lib/providers/PeriodProvider'
 import { COMMON_LABELS } from '@/constants/commonLabels'
-import { getFileUrl } from '@/lib/utils/fileUrl'
+import { getFileUrl, getPreviewUrl } from '@/lib/utils/fileUrl'
 import { App, Spin } from 'antd'
 
 type StatusFilter = 'all' | 'Đã nộp' | 'Thiếu' | 'Chưa nộp'
@@ -406,7 +406,7 @@ export default function StudentReportsTTTNPage() {
                     </td>
                     <td className="px-5 py-4 text-[#1976D2] max-w-40">
                       {getFileUrl(report.fileUrl || report.file) ? (
-                        <a href={getFileUrl(report.fileUrl || report.file) || undefined} target="_blank" rel="noopener noreferrer" title={report.file} className="flex min-w-0 items-center gap-1 hover:underline">
+                        <a href={getPreviewUrl(report.fileUrl || report.file) || undefined} target="_blank" rel="noopener noreferrer" title={report.file} className="flex min-w-0 items-center gap-1 hover:underline">
                           <FileText className="h-4 w-4 shrink-0" />
                           <span className="min-w-0 truncate">{report.file}</span>
                         </a>
@@ -453,7 +453,7 @@ export default function StudentReportsTTTNPage() {
                   <FileText className="h-4 w-4 text-[#1976D2] shrink-0" />
                   <span className="shrink-0">File: </span>
                   {getFileUrl(selectedReport.fileUrl || selectedReport.file) ? (
-                    <a href={getFileUrl(selectedReport.fileUrl || selectedReport.file) || undefined} target="_blank" rel="noopener noreferrer" title={selectedReport.file} className="min-w-0 truncate text-[#1976D2] hover:underline font-semibold">
+                    <a href={getPreviewUrl(selectedReport.fileUrl || selectedReport.file) || undefined} target="_blank" rel="noopener noreferrer" title={selectedReport.file} className="min-w-0 truncate text-[#1976D2] hover:underline font-semibold">
                       {selectedReport.file}
                     </a>
                   ) : (

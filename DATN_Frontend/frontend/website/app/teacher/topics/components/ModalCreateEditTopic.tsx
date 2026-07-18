@@ -4,6 +4,7 @@ import { TeacherButton, TeacherField, TeacherInputClass, TeacherModal, getTopicS
 import { TeacherPill } from '../../_components/TeacherShell'
 import { topicApi } from '@/lib/api/topicApi'
 import { COMMON_LABELS } from '@/constants/commonLabels'
+import { getPreviewUrl } from '@/lib/utils/fileUrl'
 
 type ModalCreateEditTopicProps = {
   open: boolean
@@ -346,7 +347,7 @@ export default function ModalCreateEditTopic(props: ModalCreateEditTopicProps) {
             ) : fileUrl ? (
               <div className="flex items-center justify-between rounded-2xl bg-blue-50/50 px-4 py-3 border border-blue-100">
                 <a
-                  href={fileUrl}
+                  href={getPreviewUrl(fileUrl) || fileUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 text-sm font-medium text-[#1976D2] hover:underline max-w-[85%] truncate"

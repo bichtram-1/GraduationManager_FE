@@ -8,7 +8,7 @@ import { usePeriod } from '@/lib/providers/PeriodProvider'
 import { teacherApi } from '@/lib/api/teacherApi'
 import { App } from 'antd'
 import { COMMON_LABELS } from '@/constants/commonLabels'
-import { getFileUrl } from '@/lib/utils/fileUrl'
+import { getFileUrl, getPreviewUrl } from '@/lib/utils/fileUrl'
 
 export default function TeacherStudentsPage() {
   const { message } = App.useApp()
@@ -738,8 +738,9 @@ export default function TeacherStudentsPage() {
                   {(() => {
                     const fileName = selectedReport?.duong_dan_file || (selectedReport ? `tuan_${selectedReport.tuan_so}.pdf` : 'report.pdf');
                     const fileUrl = getFileUrl(selectedReport?.duong_dan_file);
+                    const previewUrl = getPreviewUrl(selectedReport?.duong_dan_file);
                     return fileUrl ? (
-                      <a href={fileUrl} target="_blank" rel="noreferrer" className="text-blue-600 underline font-semibold hover:text-blue-800">
+                      <a href={previewUrl || fileUrl} target="_blank" rel="noreferrer" className="text-blue-600 underline font-semibold hover:text-blue-800">
                         {fileName}
                       </a>
                     ) : (
