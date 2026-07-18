@@ -24,7 +24,7 @@ import { useSearchParams } from 'react-router-dom';
 const STICKY_PAGINATION_HEIGHT = 57;
 
 type ScoreMode = 'internship' | 'project';
-type ScoreStatus = 'draft' | 'reviewing' | 'finalized';
+type ScoreStatus = 'draft' | 'finalized';
 
 type BaseScoreRow = {
   id: string;
@@ -53,7 +53,6 @@ type ScoreRow = InternshipScoreRow | ProjectScoreRow;
 
 const statusMeta: Record<ScoreStatus, { labelKey: keyof I18nKey; className: string }> = {
   [STATUS_CODE.DRAFT]: { labelKey: 'draft', className: '!bg-[var(--color-gold-light)] !text-[var(--color-gold-medium)]' },
-  [STATUS_CODE.REVIEWING]: { labelKey: 'reviewing', className: '!bg-[var(--color-blue-light)] !text-[var(--color-blue-medium)]' },
   [STATUS_CODE.FINALIZED]: { labelKey: 'finalized', className: '!bg-[var(--color-green-light)] !text-[var(--color-green-medium)]' },
 };
 
@@ -81,8 +80,8 @@ const StudentScoresPage: React.FC<Props> = ({ fixedMode }) => {
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailRecord, setDetailRecord] = useState<ScoreRow | null>(null);
   const [keyword, setKeyword] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | ScoreStatus>('all');
   const [classFilter, setClassFilter] = useState<string | undefined>(undefined);
+  const [mentorFilter, setMentorFilter] = useState<string | undefined>(undefined);
 
   // Fetch score data from API
   const { data: scoresData, isLoading } = scoreHooks.useFetchListScores({
@@ -92,7 +91,7 @@ const StudentScoresPage: React.FC<Props> = ({ fixedMode }) => {
     mode,
     keyword,
     className: classFilter,
-    status: statusFilter === 'all' ? undefined : statusFilter,
+    mentor: mentorFilter,
   });
 
   const sourceRows = useMemo(() => (scoresData?.rows ?? []) as ScoreRow[], [scoresData]);
@@ -110,6 +109,12 @@ const StudentScoresPage: React.FC<Props> = ({ fixedMode }) => {
   const availableClasses = useMemo(() => {
     const s = new Set<string>();
     sourceRows.forEach((r) => { if (r.className) s.add(r.className); });
+    return Array.from(s);
+  }, [sourceRows]);
+
+  const availableMentors = useMemo(() => {
+    const s = new Set<string>();
+    sourceRows.forEach((r) => { if (r.mentor) s.add(r.mentor); });
     return Array.from(s);
   }, [sourceRows]);
 
@@ -217,62 +222,59 @@ const StudentScoresPage: React.FC<Props> = ({ fixedMode }) => {
         </Card>
       </div>
 
-      <div className="filter-table-card mb-5 rounded-[20px] border border-slate-100 bg-white px-4 pt-3 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
+      <div className="filter-table-card mb-5">
         {!fixedMode && (
-          <Tabs activeKey={mode} onChange={(k) => setMode(k as ScoreMode)} items={[
-            { key: 'internship', label: t(getKey('internship_score_management')) },
-            { key: 'project', label: t(getKey('project_score_management')) }
-          ]} />
+          <div className="px-6 pt-6">
+            <Tabs activeKey={mode} onChange={(k) => setMode(k as ScoreMode)} items={[
+              { key: 'internship', label: t(getKey('internship_score_management')) },
+              { key: 'project', label: t(getKey('project_score_management')) }
+            ]} />
+          </div>
         )}
 
-        <div className="p-4">
-          <div className="mb-4 flex flex-col justify-between gap-4 md:flex-row md:items-center">
-            <div className="flex flex-1 items-center gap-3">
-              <Input
-                allowClear
-                placeholder={t(getKey('search_score_placeholder'))}
-                prefix={<SearchOutlined className="text-slate-400" />}
-                onChange={(e) => setKeyword(e.target.value)}
-                className="!h-11 max-w-md !rounded-[12px] !border-slate-300"
-              />
-            </div>
-            <div className="flex items-center gap-3">
-              <Select
-                allowClear
-                placeholder={t(getKey('class_name'))}
-                value={classFilter}
-                onChange={(v) => setClassFilter(v)}
-                className="!h-10 w-[180px]"
-                options={availableClasses.map((c) => ({ label: c, value: c }))}
-              />
-              <Select
-                allowClear
-                placeholder={t(getKey('group_status'))}
-                value={statusFilter}
-                onChange={(v) => setStatusFilter(v || 'all')}
-                className="!h-10 w-[160px]"
-                options={[
-                  { value: 'all', label: t(getKey('all_tab')) },
-                  ...Object.keys(statusMeta).map((k) => ({ value: k, label: t(getKey(statusMeta[k as ScoreStatus].labelKey)) }))
-                ]}
-              />
-            </div>
+        <div className="filter-table-header mb-4 flex flex-col justify-between gap-4 md:flex-row md:items-center">
+          <div className="flex flex-1 items-center gap-3">
+            <Input
+              allowClear
+              placeholder={t(getKey('search_score_placeholder'))}
+              prefix={<SearchOutlined className="text-slate-400" />}
+              onChange={(e) => setKeyword(e.target.value)}
+              className="!h-11 max-w-md !rounded-[12px] !border-slate-300"
+            />
           </div>
-
-          <Table
-            rowKey="id"
-            dataSource={filteredRows}
-            columns={columns}
-            scroll={{ x: 1300 }}
-            loading={isLoading}
-            pagination={{ position: ['bottomCenter'] }}
-            sticky={{
-              offsetHeader: 0,
-              offsetScroll: STICKY_PAGINATION_HEIGHT,
-              getContainer: () => scrollContainerRef?.current || window,
-            }}
-          />
+          <div className="flex items-center gap-3">
+            <Select
+              allowClear
+              placeholder={t(getKey('class_name'))}
+              value={classFilter}
+              onChange={(v) => setClassFilter(v)}
+              className="!h-10 w-[180px]"
+              options={availableClasses.map((c) => ({ label: c, value: c }))}
+            />
+            <Select
+              allowClear
+              placeholder={t(getKey('mentor'))}
+              value={mentorFilter}
+              onChange={(v) => setMentorFilter(v)}
+              className="!h-10 w-[180px]"
+              options={availableMentors.map((m) => ({ label: m, value: m }))}
+            />
+          </div>
         </div>
+
+        <Table
+          rowKey="id"
+          dataSource={filteredRows}
+          columns={columns}
+          scroll={{ x: 1300 }}
+          loading={isLoading}
+          pagination={{ position: ['bottomCenter'] }}
+          sticky={{
+            offsetHeader: 0,
+            offsetScroll: STICKY_PAGINATION_HEIGHT,
+            getContainer: () => scrollContainerRef?.current || window,
+          }}
+        />
       </div>
 
       <Modal title={t(getKey('detail'))} open={detailOpen} onCancel={() => { setDetailOpen(false); setDetailRecord(null); }} footer={null} centered width={540}>

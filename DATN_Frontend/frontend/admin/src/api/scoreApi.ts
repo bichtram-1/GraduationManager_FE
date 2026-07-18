@@ -6,6 +6,7 @@ export interface IScoreListParams extends BaseListParams {
   mode: 'internship' | 'project';
   keyword?: string;
   className?: string;
+  mentor?: string;
   status?: string;
 }
 
