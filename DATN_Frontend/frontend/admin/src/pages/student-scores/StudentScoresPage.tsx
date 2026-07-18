@@ -9,9 +9,11 @@ import {
   Table,
   Tag,
   Tabs,
+  message,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { FileDoneOutlined, SearchOutlined, TrophyOutlined } from '@ant-design/icons';
+import { FileDoneOutlined, SearchOutlined, TrophyOutlined, DownloadOutlined } from '@ant-design/icons';
+import * as XLSX from 'xlsx';
 import { useTranslation } from 'react-i18next';
 import { getKey, I18nKey } from '@shared/types/I18nKeyType';
 import { STATUS_CODE, cn } from '../../constants/commonConst';
@@ -82,6 +84,7 @@ const StudentScoresPage: React.FC<Props> = ({ fixedMode }) => {
   const [keyword, setKeyword] = useState('');
   const [classFilter, setClassFilter] = useState<string | undefined>(undefined);
   const [mentorFilter, setMentorFilter] = useState<string | undefined>(undefined);
+  const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
 
   // Fetch score data from API
   const { data: scoresData, isLoading } = scoreHooks.useFetchListScores({
@@ -92,11 +95,103 @@ const StudentScoresPage: React.FC<Props> = ({ fixedMode }) => {
     keyword,
     className: classFilter,
     mentor: mentorFilter,
+    status: statusFilter,
   });
 
   const sourceRows = useMemo(() => (scoresData?.rows ?? []) as ScoreRow[], [scoresData]);
 
   const filteredRows = sourceRows;
+
+  const handleExportExcel = () => {
+    if (!selectedPeriod) {
+      message.warning('Vui lòng chọn đợt tốt nghiệp/thực tập!');
+      return;
+    }
+
+    const pStatus = selectedPeriod.status;
+    const isGrading = pStatus === 'grading';
+    const isClosed = pStatus === 'closed';
+
+    if (!isGrading && !isClosed) {
+      Modal.warning({
+        title: 'Chưa đến giai đoạn chấm điểm',
+        content: 'Đợt học/tốt nghiệp hiện tại chưa đến giai đoạn chấm điểm, không thể xuất bảng điểm!',
+        centered: true,
+      });
+      return;
+    }
+
+    if (!filteredRows || filteredRows.length === 0) {
+      message.warning('Không có dữ liệu để xuất Excel!');
+      return;
+    }
+
+    const executeExport = (isDraft: boolean) => {
+      const data = filteredRows.map((r, index) => {
+        if (mode === 'internship') {
+          const row = r as InternshipScoreRow;
+          return {
+            'STT': index + 1,
+            'MSSV': row.studentId || '',
+            'Họ tên': row.studentName || '',
+            'Lớp': row.className || '',
+            'Doanh nghiệp': row.companyName || '',
+            'Giảng viên hướng dẫn': row.mentor || '',
+            'Điểm tổng kết': row.finalScore !== null ? row.finalScore : '',
+            'Trạng thái': row.status === 'finalized' ? 'Đã chấm xong' : 'Chưa hoàn tất',
+          };
+        } else {
+          const row = r as ProjectScoreRow;
+          return {
+            'STT': index + 1,
+            'MSSV': row.studentId || '',
+            'Họ tên': row.studentName || '',
+            'Lớp': row.className || '',
+            'Tên đề tài': row.topicName || '',
+            'Giảng viên hướng dẫn': row.mentor || '',
+            'Điểm Thuyết trình': row.defenseScore !== null ? row.defenseScore : '',
+            'Điểm Demo': row.demoScore !== null ? row.demoScore : '',
+            'Điểm Vấn đáp': row.qaScore !== null ? row.qaScore : '',
+            'Điểm Báo cáo': row.reportScore !== null ? row.reportScore : '',
+            'Điểm tổng kết': row.finalScore !== null ? row.finalScore : '',
+            'Trạng thái': row.status === 'finalized' ? 'Đã chấm xong' : 'Chưa hoàn tất',
+          };
+        }
+      });
+
+      const worksheet = XLSX.utils.json_to_sheet(data);
+      const workbook = XLSX.utils.book_new();
+      const sheetName = mode === 'internship' ? 'Diem Thuc Tap' : 'Diem Do An';
+      const suffix = isDraft ? '-du-thao' : '-chinh-thuc';
+      const fileName = mode === 'internship' 
+        ? `bang-diem-thuc-tap-${selectedPeriod.name || 'export'}${suffix}.xlsx` 
+        : `bang-diem-do-an-${selectedPeriod.name || 'export'}${suffix}.xlsx`;
+
+      XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+      XLSX.writeFile(workbook, fileName);
+      message.success(`Xuất file Excel ${isDraft ? 'dự thảo' : 'chính thức'} thành công!`);
+    };
+
+    if (isGrading) {
+      const draftCount = filteredRows.filter((r) => r.status === 'draft').length;
+      if (draftCount > 0) {
+        Modal.confirm({
+          title: 'Xác nhận xuất file điểm dự thảo',
+          content: `Hiện tại vẫn còn ${draftCount} sinh viên chưa hoàn tất chấm điểm. Bạn có chắc chắn muốn xuất file bảng điểm tạm thời (dự thảo) không?`,
+          okText: 'Xác nhận',
+          cancelText: 'Hủy',
+          centered: true,
+          onOk() {
+            executeExport(true);
+          },
+        });
+        return;
+      }
+      executeExport(false);
+    } else {
+      executeExport(false);
+    }
+  };
 
   const summary = useMemo(() => {
     const total = sourceRows.length;
@@ -243,6 +338,25 @@ const StudentScoresPage: React.FC<Props> = ({ fixedMode }) => {
             />
           </div>
           <div className="flex items-center gap-3">
+            <Button
+              type="primary"
+              icon={<DownloadOutlined />}
+              onClick={handleExportExcel}
+              className="rounded-xl h-10 font-medium bg-emerald-600 hover:bg-emerald-700 border-none flex items-center gap-1.5"
+            >
+              Xuất Excel
+            </Button>
+            <Select
+              allowClear
+              placeholder="Trạng thái chấm"
+              value={statusFilter}
+              onChange={(v) => setStatusFilter(v)}
+              className="!h-10 w-[180px]"
+              options={[
+                { label: 'Đã chấm xong', value: 'finalized' },
+                { label: 'Chưa hoàn tất', value: 'draft' },
+              ]}
+            />
             <Select
               allowClear
               placeholder={t(getKey('class_name'))}
