@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { studentApi } from '@/lib/api/studentApi'
 import { Spin, message, Empty } from 'antd'
 import { Clock, Search, User, Users, ClipboardCheck, AlertTriangle, BookOpen } from 'lucide-react'
+import { usePeriod } from '@/lib/providers/PeriodProvider'
 
 interface IHistoryLog {
   log_id: number
@@ -35,12 +36,22 @@ export default function StudentHistoryPage() {
   const [logs, setLogs] = useState<IHistoryLog[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const { selectedPeriod } = usePeriod()
 
   useEffect(() => {
     let mounted = true
     async function loadHistory() {
+      if (!selectedPeriod) {
+        if (mounted) {
+          setLogs([])
+          setLoading(false)
+        }
+        return
+      }
+
+      setLoading(true)
       try {
-        const data = await studentApi.getHistory()
+        const data = await studentApi.getHistory(undefined, selectedPeriod.id)
         if (mounted) {
           setLogs(data)
         }
@@ -57,7 +68,7 @@ export default function StudentHistoryPage() {
     return () => {
       mounted = false
     }
-  }, [])
+  }, [selectedPeriod])
 
   const filteredLogs = useMemo(() => {
     if (!search.trim()) return logs

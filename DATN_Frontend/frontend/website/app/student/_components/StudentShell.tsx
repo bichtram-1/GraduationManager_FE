@@ -68,11 +68,16 @@ export function StudentShell({ children }: { children: ReactNode }) {
   const [notifOpen, setNotifOpen] = useState(false)
 
   const fetchNotifications = async () => {
+    if (!selectedPeriod) {
+      setNotifications([])
+      setUnreadCount(0)
+      return
+    }
     try {
       // Chuông chỉ hiển thị top gần nhất nên chỉ cần xin backend đúng số dòng đó
       // (không tải toàn bộ lịch sử) — trang "Lịch sử hoạt động" đầy đủ vẫn gọi
       // getHistory() không giới hạn.
-      const data = await studentApi.getHistory(20)
+      const data = await studentApi.getHistory(20, selectedPeriod.id)
       setNotifications(data)
       const lastSeen = localStorage.getItem('student_last_seen_notif')
       if (lastSeen) {
@@ -96,7 +101,7 @@ export function StudentShell({ children }: { children: ReactNode }) {
       window.removeEventListener('realtime-topic-updated', fetchNotifications)
       window.removeEventListener('realtime-score-updated', fetchNotifications)
     }
-  }, [])
+  }, [selectedPeriod])
 
   useEffect(() => {
     let mounted = true

@@ -49,11 +49,16 @@ export function TeacherShell({ children }: { children: ReactNode }) {
   const [notifOpen, setNotifOpen] = useState(false)
 
   const fetchNotifications = async () => {
+    if (!selectedPeriod) {
+      setNotifications([])
+      setUnreadCount(0)
+      return
+    }
     try {
       // Chuông chỉ hiển thị top gần nhất nên chỉ cần xin backend đúng số dòng đó
       // (không tải toàn bộ lịch sử) — trang "Lịch sử" đầy đủ vẫn gọi getHistory()
       // không giới hạn.
-      const data = await teacherApi.getHistory(20)
+      const data = await teacherApi.getHistory(20, selectedPeriod.id)
       setNotifications(data)
       const lastSeen = localStorage.getItem('teacher_last_seen_notif')
       if (lastSeen) {
@@ -77,7 +82,7 @@ export function TeacherShell({ children }: { children: ReactNode }) {
       window.removeEventListener('realtime-topic-updated', fetchNotifications)
       window.removeEventListener('realtime-score-updated', fetchNotifications)
     }
-  }, [])
+  }, [selectedPeriod])
 
   useEffect(() => {
     let mounted = true

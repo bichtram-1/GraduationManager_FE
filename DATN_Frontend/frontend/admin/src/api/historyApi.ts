@@ -21,6 +21,7 @@ export const historyApi = {
     action_type?: string;
     role?: string;
     keyword?: string;
+    dot_id?: string;
   }): Promise<IHistoryLog[]> => {
     const response = await axiosInstance.get('/private/v1/admin/history', { params });
     return response?.data?.results?.objects || [];
