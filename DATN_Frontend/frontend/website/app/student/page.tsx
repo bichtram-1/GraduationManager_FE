@@ -43,11 +43,13 @@ export default function StudentIndexPage() {
     window.addEventListener('realtime-group-updated', handleSync)
     window.addEventListener('realtime-topic-updated', handleSync)
     window.addEventListener('realtime-assignment-published', handleAssignmentPublished)
+    window.addEventListener('realtime-score-updated', handleSync)
 
     return () => {
       window.removeEventListener('realtime-group-updated', handleSync)
       window.removeEventListener('realtime-topic-updated', handleSync)
       window.removeEventListener('realtime-assignment-published', handleAssignmentPublished)
+      window.removeEventListener('realtime-score-updated', handleSync)
     }
   }, [message, queryClient])
 
