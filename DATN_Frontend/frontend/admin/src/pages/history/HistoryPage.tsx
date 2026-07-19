@@ -12,7 +12,6 @@ type HistoryListParams = BaseListParams & {
   keyword?: string;
   actionFilter?: string;
   roleFilter?: string;
-  searchGroup?: string;
 };
 
 const ACTION_MAP: Record<string, { label: string; color: string }> = {
@@ -38,7 +37,6 @@ const HistoryPage: React.FC = () => {
       action_type: typedParams.actionFilter === 'all' ? undefined : typedParams.actionFilter,
       role: typedParams.roleFilter === 'all' ? undefined : typedParams.roleFilter,
       keyword: typedParams.keyword?.trim() || undefined,
-      nhom_id: typedParams.searchGroup?.trim() || undefined,
       dot_id: typedParams.periodId || undefined,
     };
     return historyHooks.useFetchAdminHistory(queryParams);
@@ -107,7 +105,7 @@ const HistoryPage: React.FC = () => {
 
   const filterRender = () => (
     <div className="mb-4 grid grid-cols-1 gap-3 xl:grid-cols-12">
-      <Form.Item name="actionFilter" className="xl:col-span-3 !mb-0">
+      <Form.Item name="actionFilter" className="xl:col-span-4 !mb-0">
         <Select
           allowClear
           placeholder="Hành động"
@@ -125,7 +123,7 @@ const HistoryPage: React.FC = () => {
         />
       </Form.Item>
 
-      <Form.Item name="roleFilter" className="xl:col-span-3 !mb-0">
+      <Form.Item name="roleFilter" className="xl:col-span-4 !mb-0">
         <Select
           allowClear
           placeholder="Vai trò"
@@ -139,20 +137,11 @@ const HistoryPage: React.FC = () => {
         />
       </Form.Item>
 
-      <Form.Item name="keyword" className="xl:col-span-3 !mb-0">
+      <Form.Item name="keyword" className="xl:col-span-4 !mb-0">
         <Input
           allowClear
           prefix={<SearchOutlined className="text-slate-400" />}
           placeholder="Người thực hiện / MSSV..."
-          className="!h-11 !rounded-[12px] !border-slate-300"
-        />
-      </Form.Item>
-
-      <Form.Item name="searchGroup" className="xl:col-span-3 !mb-0">
-        <Input
-          allowClear
-          prefix={<SearchOutlined className="text-slate-400" />}
-          placeholder="ID nhóm..."
           className="!h-11 !rounded-[12px] !border-slate-300"
         />
       </Form.Item>

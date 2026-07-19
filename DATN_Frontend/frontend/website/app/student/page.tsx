@@ -7,6 +7,7 @@ import { ArrowRight, CalendarDays, CheckCircle2, FileText, Trophy, Upload, Build
 import { StudentPill, StudentSectionHeader, StudentStatCard } from './_components/StudentShell'
 import { studentApi } from '@/lib/api/studentApi'
 import { App, Skeleton } from 'antd'
+import { formatVietnamDateTime } from '@/lib/utils/datetime'
 
 const DASHBOARD_KEY = ['student-dashboard']
 const HISTORY_KEY = ['student-history']
@@ -24,8 +25,7 @@ export default function StudentIndexPage() {
 
   const formatTime = (timeStr: string) => {
     try {
-      const date = new Date(timeStr)
-      return date.toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' })
+      return formatVietnamDateTime(timeStr)
     } catch {
       return timeStr
     }

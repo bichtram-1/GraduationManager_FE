@@ -8,6 +8,7 @@ import { BookOpen, Building2, CalendarDays, ClipboardCheck, GraduationCap, Home,
 import { Select, Dropdown } from 'antd'
 import { usePeriod } from '@/lib/providers/PeriodProvider'
 import { teacherApi } from '@/lib/api/teacherApi'
+import { formatVietnamTimeDate } from '@/lib/utils/datetime'
 
 const NAV_ITEMS = [
   { key: 'home', href: '/teacher', label: 'Trang chủ', icon: Home },
@@ -348,7 +349,7 @@ export function TeacherShell({ children }: { children: ReactNode }) {
                           <div className="font-medium text-slate-800">{n.description}</div>
                           <div className="text-[10px] text-slate-400 mt-1 flex items-center gap-1">
                             <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500" />
-                            {new Date(n.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} - {new Date(n.created_at).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
+                            {formatVietnamTimeDate(n.created_at)}
                           </div>
                         </div>
                       ))

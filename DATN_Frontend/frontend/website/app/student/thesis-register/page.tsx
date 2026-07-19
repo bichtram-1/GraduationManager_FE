@@ -11,6 +11,7 @@ import { StudentButton, StudentModal } from '../_components/StudentUI'
 import { COMMON_LABELS } from '@/constants/commonLabels'
 import { getPreviewUrl } from '@/lib/utils/fileUrl'
 import { App } from 'antd'
+import { formatVietnamDateTime } from '@/lib/utils/datetime'
 
 type Topic = { id: string; code?: string; title: string; module: string; published: boolean; slots?: string; description?: string; direction?: string; fileUrl?: string }
 
@@ -407,7 +408,7 @@ export default function ThesisRegisterPage() {
               <div className="text-xs text-slate-500">Đã gửi lúc</div>
               <div className="mt-2 text-sm font-medium text-slate-900 inline-flex items-center gap-2">
                 <CalendarDays className="h-4 w-4 text-[#1976D2]" />
-                {registration ? registration.submittedAt : 'Chưa có dữ liệu'}
+                {registration ? formatVietnamDateTime(registration.submittedAt) : 'Chưa có dữ liệu'}
               </div>
             </div>
             <div className="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200">
@@ -563,7 +564,9 @@ export default function ThesisRegisterPage() {
                 const teacher = t.module ? `GV: ${t.module}` : 'GV: Chưa phân công'
                 const slotsStr = t.slots || '0/4'
                 const [used, maxSlots] = slotsStr.split('/').map(Number)
-                const hasSlot = used < maxSlots && t.published
+                const safeUsed = Number.isFinite(used) ? used : 0
+                const safeMaxSlots = Number.isFinite(maxSlots) ? maxSlots : 0
+                const hasSlot = safeUsed < safeMaxSlots && t.published
                 const isCurrentTopic = registration?.topicId === t.id
                 return (
                   <div key={t.id} className="rounded-[18px] border border-slate-100 bg-white p-6 shadow-sm flex flex-col justify-between">
@@ -575,17 +578,7 @@ export default function ThesisRegisterPage() {
                           <div className="mt-2 text-xs text-slate-500 flex flex-wrap items-center gap-1.5">
                             <span>{teacher}</span>
                             <span className="text-slate-300">•</span>
-                            <span className="font-medium text-slate-600">Sĩ số: {used}/{maxSlots}</span>
-                            <span className="text-slate-300">•</span>
-                            {hasSlot ? (
-                              <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 border border-emerald-200">
-                                Có thể đăng ký
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-700 border border-red-200">
-                                Đã đầy
-                              </span>
-                            )}
+                            <span className="font-medium text-slate-600">Số lượng sinh viên thực hiện: {safeMaxSlots}</span>
                           </div>
                           <div className="mt-2.5 text-xs text-blue-600 font-semibold">Hướng đề tài: {t.direction || 'Phát triển phần mềm'}</div>
                           {isCurrentTopic && registration && (

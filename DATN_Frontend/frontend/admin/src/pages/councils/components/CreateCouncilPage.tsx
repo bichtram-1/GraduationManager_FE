@@ -373,7 +373,8 @@ const CreateCouncilPage = () => {
           return;
         }
 
-        // Lọc theo kết quả hướng dẫn/phản biện dựa trên thời gian đợt
+        // Lọc theo kết quả hướng dẫn/phản biện dựa trên thời gian đợt - Bỏ lọc theo yêu cầu
+        /*
         const periodObj = datnPeriods.find((p) => p.name === periodName);
         if (periodObj) {
           const parsePeriodDate = (dateStr?: string) => {
@@ -403,6 +404,7 @@ const CreateCouncilPage = () => {
             }
           }
         }
+        */
 
         const supervisor = g.supervisor || 'Chưa phân công';
         if (!bucketsMap[supervisor]) {
@@ -791,11 +793,11 @@ const CreateCouncilPage = () => {
       return;
     }
 
-    const rearrangedMembers = [
+    const rearrangedMembers = Array.from(new Set([
       selectedChairId,
       selectedSecretaryId,
       ...form.members.filter((id) => id !== selectedChairId && id !== selectedSecretaryId)
-    ].filter(Boolean) as string[];
+    ].filter(Boolean))) as string[];
 
     if (rearrangedMembers.length < 5) {
       message.error("không đủ thành viên hội đồng ít nhất 5 thành viên");
@@ -1238,12 +1240,14 @@ const CreateCouncilPage = () => {
 
     setEditingId(council.id);
 
-    const mappedMembers = (council.member || [])
-      .concat(council.chair || [])
-      .concat(council.reviewer || [])
-      .concat(council.secretary || [])
-      .map((nm: string) => findTeacherIdByName(nm))
-      .filter(Boolean) as string[];
+    const mappedMembers = Array.from(new Set(
+      (council.member || [])
+        .concat(council.chair || [])
+        .concat(council.reviewer || [])
+        .concat(council.secretary || [])
+        .map((nm: string) => findTeacherIdByName(nm))
+        .filter(Boolean)
+    )) as string[];
 
     setForm((current) => ({
       ...current,
