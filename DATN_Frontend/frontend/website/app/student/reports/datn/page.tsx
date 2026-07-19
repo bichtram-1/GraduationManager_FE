@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState, useEffect, ChangeEvent } from 'react'
+import dayjs from 'dayjs'
 import Link from 'next/link'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { CheckCircle2, FileText, Plus, Upload, Clock3, MessageSquareQuote, Rocket, Users, GraduationCap, ShieldCheck } from 'lucide-react'
@@ -35,6 +36,23 @@ export default function StudentReportsDATNPage() {
   const { selectedPeriod } = usePeriod()
   const queryClient = useQueryClient()
   const isPeriodLocked = selectedPeriod?.status === 'grading' || selectedPeriod?.status === 'closed'
+
+  const parsePeriodDate = (dateStr?: string) => {
+    if (!dateStr) return null;
+    let d = dayjs(dateStr, 'DD/MM/YYYY');
+    if (!d.isValid()) d = dayjs(dateStr, 'YYYY-MM-DD');
+    return d.isValid() ? d : null;
+  };
+
+  const today = dayjs();
+  const reportStart = parsePeriodDate(selectedPeriod?.reportStartDate);
+  const reportEnd = parsePeriodDate(selectedPeriod?.reportDeadline);
+
+  const isSubmissionOpen = useMemo(() => {
+    if (!reportStart || !reportEnd) return true;
+    return (today.isAfter(reportStart, 'day') || today.isSame(reportStart, 'day')) &&
+           (today.isBefore(reportEnd, 'day') || today.isSame(reportEnd, 'day'));
+  }, [reportStart, reportEnd, today]);
 
   const reportsQuery = useQuery({ queryKey: MILESTONES_KEY, queryFn: studentApi.getDatnReports })
   const registrationQuery = useQuery({ queryKey: REGISTRATION_KEY, queryFn: () => studentApi.getMyThesisRegistration() })
@@ -235,8 +253,13 @@ export default function StudentReportsDATNPage() {
         actions={registration?.status === 'accepted' && isTopicApproved && !isPeriodLocked ? (
           <button
             type="button"
+            disabled={!isSubmissionOpen}
             onClick={openSubmitModal}
-            className="inline-flex items-center gap-2 rounded-2xl bg-[#2196F3] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-blue-200 transition hover:bg-[#1976D2]"
+            className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-medium text-white transition ${
+              !isSubmissionOpen
+                ? 'bg-slate-400 cursor-not-allowed opacity-50'
+                : 'bg-[#2196F3] shadow-lg shadow-blue-200 hover:bg-[#1976D2]'
+            }`}
           >
             <Plus className="h-4 w-4" />
             Nộp bản thảo
@@ -249,6 +272,14 @@ export default function StudentReportsDATNPage() {
           {selectedPeriod?.status === 'closed'
             ? 'Đợt đồ án tốt nghiệp này đã đóng, bạn không thể nộp bản thảo nữa.'
             : 'Đợt đồ án tốt nghiệp đã bắt đầu chấm điểm, bạn không thể nộp bản thảo nữa.'}
+        </div>
+      )}
+
+      {!isSubmissionOpen && !isPeriodLocked && (
+        <div className="mb-6 rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+          {reportStart && today.isBefore(reportStart, 'day')
+            ? `Thời gian nộp báo cáo tiến độ đồ án tốt nghiệp chưa bắt đầu. Bạn chỉ được nộp từ ngày ${selectedPeriod?.reportStartDate} đến ngày ${selectedPeriod?.reportDeadline}.`
+            : `Thời gian nộp báo cáo tiến độ đồ án tốt nghiệp đã kết thúc vào ngày ${selectedPeriod?.reportDeadline}.`}
         </div>
       )}
 

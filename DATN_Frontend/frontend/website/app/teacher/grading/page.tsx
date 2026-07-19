@@ -766,15 +766,16 @@ export default function TeacherGradingPage() {
                             </td>
                             <td className="px-5 py-4">
                               <div className="flex items-center gap-2">
-                                <TeacherButton
-                                  variant={hasScore ? 'secondary' : 'primary'}
-                                  onClick={() => { setSelectedGroup(g); setSelectedCouncil(selectedCouncil); setShowScoringModal(true) }}
-                                  disabled={!isGradingStarted || !editable || !isPassed}
-                                  className={!isGradingStarted || !editable || !isPassed ? 'opacity-50 cursor-not-allowed' : ''}
-                                  title={!isPassed ? "Nhóm phải được cả GVHD và GVPB đánh giá đạt mới được nhập điểm" : undefined}
-                                >
-                                  {hasScore ? 'Chấm lại' : 'Vào chấm điểm'}
-                                </TeacherButton>
+                                <span title={!isPassed ? "Nhóm phải được cả GVHD và GVPB đánh giá đạt mới được nhập điểm" : undefined}>
+                                  <TeacherButton
+                                    variant={hasScore ? 'secondary' : 'primary'}
+                                    onClick={() => { setSelectedGroup(g); setSelectedCouncil(selectedCouncil); setShowScoringModal(true) }}
+                                    disabled={!isGradingStarted || !editable || !isPassed}
+                                    className={!isGradingStarted || !editable || !isPassed ? 'opacity-50 cursor-not-allowed' : ''}
+                                  >
+                                    {hasScore ? 'Chấm lại' : 'Vào chấm điểm'}
+                                  </TeacherButton>
+                                </span>
                               </div>
                             </td>
                           </tr>
