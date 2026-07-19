@@ -98,17 +98,6 @@ const FileField: React.FC<FileFieldProps> = ({ value, onChange, disabled }) => {
             >
               Xem online
             </Button>
-            <Button
-              type="default"
-              size="small"
-              icon={<LinkOutlined />}
-              href={value}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="!rounded-lg"
-            >
-              Mở tab mới
-            </Button>
             {!disabled && (
               <Button
                 type="text"
@@ -123,21 +112,7 @@ const FileField: React.FC<FileFieldProps> = ({ value, onChange, disabled }) => {
         </div>
 
         <Modal
-          title={
-            <div className="flex items-center justify-between pr-8">
-              <span className="font-semibold text-slate-800">Xem trực tuyến: {getFileName(value)}</span>
-              <Button
-                type="link"
-                icon={<LinkOutlined />}
-                href={value}
-                target="_blank"
-                rel="noopener noreferrer"
-                size="small"
-              >
-                Mở trong tab mới
-              </Button>
-            </div>
-          }
+          title={<span className="font-semibold text-slate-800">Xem trực tuyến: {getFileName(value)}</span>}
           open={previewVisible}
           onCancel={() => setPreviewVisible(false)}
           footer={null}

@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { Button, Card, DatePicker, Input, Select, Tag, TimePicker, Modal, message, Checkbox } from 'antd';
 import dayjs from 'dayjs';
-import { ArrowLeftOutlined, MenuOutlined, DeleteOutlined, SwapOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined, SwapOutlined } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '../../../constants/commonConst';
 import { useTranslation } from 'react-i18next';
@@ -118,8 +118,8 @@ const useDragScroll = () => {
   return ref;
 };
 
-const normalizeString = (str: any) => {
-  if (typeof str !== 'string') str = String(str || '');
+const normalizeString = (input: unknown) => {
+  const str = typeof input === 'string' ? input : String(input || '');
   if (!str) return '';
   return str
     .normalize('NFD')
@@ -129,8 +129,8 @@ const normalizeString = (str: any) => {
     .toLowerCase();
 };
 
-const cleanAndNormalize = (str: any) => {
-  if (typeof str !== 'string') str = String(str || '');
+const cleanAndNormalize = (input: unknown) => {
+  const str = typeof input === 'string' ? input : String(input || '');
   if (!str) return '';
   return str
     .normalize('NFC')
@@ -140,8 +140,8 @@ const cleanAndNormalize = (str: any) => {
     .toLowerCase();
 };
 
-const cleanNormalizeNoAccent = (str: any) => {
-  if (typeof str !== 'string') str = String(str || '');
+const cleanNormalizeNoAccent = (input: unknown) => {
+  const str = typeof input === 'string' ? input : String(input || '');
   if (!str) return '';
   return str
     .normalize('NFD')
@@ -191,7 +191,7 @@ const CreateCouncilPage = () => {
   const [examinersToSwapOut, setExaminersToSwapOut] = useState<string[]>([]);
   const [replacementExaminers, setReplacementExaminers] = useState<string[]>([]);
   const [draggingTopicId, setDraggingTopicId] = useState<string | null>(null);
-  const [dragOverTopicId, setDragOverTopicId] = useState<string | null>(null);
+  const [, setDragOverTopicId] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [workflowTab, setWorkflowTab] = useState<WorkflowTab>('pick');
   const [isPreviewVisible, setIsPreviewVisible] = useState(false);
@@ -260,7 +260,7 @@ const CreateCouncilPage = () => {
     if (!editingId && councilsList && councilsList.length > 0) {
       let maxNum = 0;
       const currentPeriodName = form.batch || selectedPeriod?.name || '';
-      const councilsInPeriod = councilsList.filter((c: any) => 
+      const councilsInPeriod = councilsList.filter((c: CouncilRow) =>
         String(c.dot_id) === String(selectedPeriod?.id) || 
         c.batch === currentPeriodName
       );
@@ -524,7 +524,7 @@ const CreateCouncilPage = () => {
 
   const memberIds = form.members;
 
-  function teacherNameById(id: any) {
+  function teacherNameById(id: string | null | undefined) {
     if (!id) return '';
     const idStr = String(id).trim();
     const found = teacherList.find((teacher: IAssignmentTeacher) => String(teacher.id).trim() === idStr);
@@ -563,7 +563,7 @@ const CreateCouncilPage = () => {
     if (!teacherId) return null;
     const teacherName = teacherNameById(teacherId);
     const currentPeriodName = form.batch || selectedPeriod?.name || '';
-    const matchedCouncil = councilsList.find((c: any) => {
+    const matchedCouncil = councilsList.find((c: CouncilRow) => {
       if (editingId && String(c.id) === String(editingId)) return false;
       const isCurrentPeriod = String(c.dot_id) === String(selectedPeriod?.id) || c.batch === currentPeriodName;
       if (!isCurrentPeriod) return false;
@@ -628,13 +628,13 @@ const CreateCouncilPage = () => {
   };
 
   const updateReviewerForTopic = (topicId: string, reviewerId: string | null) => {
-    const isSameId = (id1: any, id2: any) => {
+    const isSameId = (id1: unknown, id2: unknown) => {
       if (id1 === id2) return true;
       if (!id1 || !id2) return false;
       return String(id1).trim() === String(id2).trim();
     };
 
-    const includesId = (arr: any[], id: any) => {
+    const includesId = (arr: unknown[], id: unknown) => {
       return arr.some(item => isSameId(item, id));
     };
 
@@ -722,34 +722,12 @@ const CreateCouncilPage = () => {
     }));
   };
 
-  const updateExaminerForTopic = (topicId: string, examinerIds: string[] | null) => {
-    const list = examinerIds ?? [];
-    setSelectedTopics((current) => current.map((topic) => (topic.id === topicId ? { ...topic, examinerId: list[0] || null, examinerIds: list } : topic)));
-  };
-
-  const swapExaminer = (topicId: string, externalTeacherId: string) => {
-    setSelectedTopics((current) => current.map((topic) => {
-      if (topic.id === topicId) {
-        return {
-          ...topic,
-          examinerId: externalTeacherId,
-          examinerIds: [externalTeacherId]
-        };
-      }
-      return topic;
-    }));
-  };
-
   const handleToggleSwapOut = (id: string) => {
     setExaminersToSwapOut((prev) => {
       const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
       setReplacementExaminers((rep) => rep.slice(0, next.length));
       return next;
     });
-  };
-
-  const updateExternalExaminersForTopic = (topicId: string, externalIds: string[] | null) => {
-    setSelectedTopics((current) => current.map((topic) => (topic.id === topicId ? { ...topic, externalExaminers: externalIds ?? [] } : topic)));
   };
 
   const updateTopicMinutes = (topicId: string, minutes: number) => {
@@ -827,8 +805,6 @@ const CreateCouncilPage = () => {
       return;
     }
 
-
-
     for (const topic of selectedTopics) {
       const hasInternal = topic.examinerIds && topic.examinerIds.length > 0;
       const hasExternal = topic.externalExaminers && topic.externalExaminers.length > 0;
@@ -893,7 +869,7 @@ const CreateCouncilPage = () => {
 
           let foundConflict = false;
           for (const otherTopicRaw of (c.topics || [])) {
-            const otherTopic = otherTopicRaw as any;
+            const otherTopic = otherTopicRaw as CouncilTopicPayload & { advisorId?: string };
             const [oH, oM] = (otherTopic.startTime || '08:00').split(':').map(Number);
             const oStart = oH * 60 + oM;
             const oEnd = oStart + (otherTopic.minutes || 40);
@@ -958,10 +934,10 @@ const CreateCouncilPage = () => {
                           <span className="font-semibold text-slate-700">Lịch đã phân công (Bận):</span>
                           <ul className="list-disc pl-5 mt-1 text-xs text-slate-500 space-y-1">
                             <li>
-                              Hội đồng: <strong>"{c.title}"</strong>
+                              Hội đồng: <strong>&quot;{c.title}&quot;</strong>
                             </li>
                             <li>
-                              Đề tài: <strong>{otherTopic.topicName}</strong>
+                              Đề tài: <strong>{otherTopic.title}</strong>
                             </li>
                             <li>
                               Vai trò: <strong className="text-blue-600">{otherRole}</strong>
@@ -976,7 +952,7 @@ const CreateCouncilPage = () => {
                           <span className="font-semibold text-slate-700">Lịch phân công mới (Trùng lắp):</span>
                           <ul className="list-disc pl-5 mt-1 text-xs text-slate-500 space-y-1">
                             <li>
-                              Hội đồng hiện tại: <strong>"{form.name || 'Hội đồng mới'}"</strong>
+                              Hội đồng hiện tại: <strong>&quot;{form.name || 'Hội đồng mới'}&quot;</strong>
                             </li>
                             <li>
                               Đề tài: <strong>{topic.topicName}</strong>
@@ -1143,7 +1119,7 @@ const CreateCouncilPage = () => {
     return schedules;
   }, [form.time, selectedTopics]);
 
-  const getTeacherRoleInCouncil = (id: string, index: number) => {
+  const getTeacherRoleInCouncil = (id: string) => {
     if (id === selectedChairId) return 'Chủ tịch';
     if (id === selectedSecretaryId) return 'Thư ký (TH)';
     const isReviewer = selectedTopics.some((t) => t.reviewerId === id);
@@ -1187,7 +1163,7 @@ const CreateCouncilPage = () => {
     const [y, m, d] = form.date.split('-');
     const currentCouncilDateStr = `${d}/${m}/${y}`;
 
-    const hasConflictInOther = councilsList.some((c: any) => {
+    const hasConflictInOther = councilsList.some((c: CouncilRow) => {
       if (String(c.id) === String(editingId)) return false;
 
       const parts = c.dateTime ? c.dateTime.split(' · ') : [];
@@ -1197,7 +1173,7 @@ const CreateCouncilPage = () => {
       // Calculate total council duration
       let cStartSec = 24 * 60;
       let cEndSec = 0;
-      (c.topics || []).forEach((t: any) => {
+      (c.topics || []).forEach((t: CouncilTopicPayload) => {
         const [tH, tM] = (t.startTime || '08:00').split(':').map(Number);
         const tStart = tH * 60 + tM;
         const tEnd = tStart + (t.minutes || 40);
@@ -1219,7 +1195,7 @@ const CreateCouncilPage = () => {
       }
 
       // Check specific overlapping topics in that council
-      const hasOverlapTopic = (c.topics || []).some((t: any) => {
+      const hasOverlapTopic = (c.topics || []).some((t: CouncilTopicPayload & { advisorId?: string }) => {
         const [tH, tM] = (t.startTime || '08:00').split(':').map(Number);
         const tStart = tH * 60 + tM;
         const tEnd = tStart + (t.minutes || 40);
@@ -1771,7 +1747,7 @@ const CreateCouncilPage = () => {
                         <tr
                           key={topic.id}
                           draggable
-                          onDragStart={(e) => {
+                          onDragStart={() => {
                             setTimeout(() => {
                               setDraggingTopicId(topic.id);
                             }, 0);
@@ -1991,8 +1967,8 @@ const CreateCouncilPage = () => {
 
           <div>
             <div className="flex flex-wrap gap-2">
-              {rearrangedMembers.map((id, idx) => {
-                const role = getTeacherRoleInCouncil(id, idx);
+              {rearrangedMembers.map((id) => {
+                const role = getTeacherRoleInCouncil(id);
                 const tagColors: Record<string, string> = {
                   'Chủ tịch': 'gold',
                   'Thư ký (TH)': 'cyan',

@@ -126,7 +126,20 @@ const CouncilsPage: React.FC = () => {
     }
     return false;
   }, [selectedPeriod]);
+  const isDefenseEnded = useMemo(() => {
+    if (!selectedPeriod || !selectedPeriod.defenseEndDate) return false;
+    const parts = selectedPeriod.defenseEndDate.split('/');
+    if (parts.length === 3) {
+      const d = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
+      d.setHours(0, 0, 0, 0);
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      return now > d;
+    }
+    return false;
+  }, [selectedPeriod]);
   const isActionDisabled = isPeriodClosed || isDefenseStarted;
+  const isCreateCouncilDisabled = isPeriodClosed || isDefenseEnded;
 
   const { data: groupList } = groupHooks.useFetchListGroups();
   const [isUnassignedModalVisible, setIsUnassignedModalVisible] = useState(false);
@@ -380,7 +393,7 @@ const CouncilsPage: React.FC = () => {
             <Button
               type="primary"
               icon={<PlusOutlined />}
-              disabled={isActionDisabled}
+              disabled={isCreateCouncilDisabled}
               onClick={() => navigate(ROUTES.COUNCILS_CREATE)}
               className="rounded-xl h-[46px] px-6 font-semibold shadow-md flex items-center gap-1.5 bg-[var(--color-primary)] border-none text-white hover:opacity-90 animate-none disabled:bg-slate-100 disabled:text-slate-400"
             >

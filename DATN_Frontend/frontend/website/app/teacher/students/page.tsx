@@ -590,7 +590,7 @@ export default function TeacherStudentsPage() {
                     <th className="px-5 py-3 text-left w-12">STT</th>
                     <th className="px-5 py-3 text-left max-w-[220px]">Tên đề tài</th>
                     <th className="px-5 py-3 text-left">Thành viên</th>
-                    <th className="px-5 py-3 text-right">Hành động</th>
+                    <th className="px-5 py-3 text-center">Hành động</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -627,7 +627,7 @@ export default function TeacherStudentsPage() {
                             )}
                           </td>
                           <td className="px-5 py-4">
-                            <div className="flex justify-end gap-2 items-center">
+                            <div className="flex justify-center gap-2 items-center">
                               <button
                                 onClick={() => {
                                   setSelectedDATN(group);
