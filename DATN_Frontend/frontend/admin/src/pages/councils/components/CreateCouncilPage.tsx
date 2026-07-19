@@ -159,6 +159,7 @@ const CreateCouncilPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const section2Ref = useRef<HTMLDivElement | null>(null);
+  const timePickerWrapperRef = useRef<HTMLDivElement | null>(null);
   const pickContainerRef = useDragScroll();
   const sortContainerRef = useDragScroll();
   const previewContainerRef = useDragScroll();
@@ -343,6 +344,30 @@ const CreateCouncilPage = () => {
       }));
     }
   }, [form.batch, editingId, originalBatch]);
+
+  useEffect(() => {
+    // Giống cách ô "Năm học" ở form tạo đợt tự tách "20262027" -> "2026-2027": nhập đủ 4 số
+    // giờ:phút liền nhau (vd "1154") thì tự tách thành "HH:mm" (vd "11:54"). TimePicker của
+    // antd tự parse text gõ tay theo format nên không có onChange kiểu Input thường để tự
+    // chèn dấu ":" khi gõ — phải lắng nghe trực tiếp sự kiện input trên input DOM bên trong.
+    const inputEl = timePickerWrapperRef.current?.querySelector('input');
+    if (!inputEl) return;
+
+    const handleRawInput = (e: Event) => {
+      const target = e.target as HTMLInputElement;
+      const digits = target.value.replace(/\D/g, '');
+      if (digits.length !== 4) return;
+
+      const hh = parseInt(digits.slice(0, 2), 10);
+      const mm = parseInt(digits.slice(2, 4), 10);
+      if (hh > 23 || mm > 59) return;
+
+      setForm((current) => ({ ...current, time: `${digits.slice(0, 2)}:${digits.slice(2, 4)}` }));
+    };
+
+    inputEl.addEventListener('input', handleRawInput);
+    return () => inputEl.removeEventListener('input', handleRawInput);
+  }, []);
 
   useEffect(() => {
     // Chỉ ẩn thanh cuộn của khung nhìn chính khi đang ở trang Tạo/Sửa hội đồng này
@@ -1409,6 +1434,18 @@ const CreateCouncilPage = () => {
                         setDateError(null);
                       }
                     }}
+                    disabledDate={(current) => {
+                      if (!current || !selectedPeriodObj) return false;
+                      const defenseStart = selectedPeriodObj.defenseStartDate
+                        ? dayjs(selectedPeriodObj.defenseStartDate, 'DD/MM/YYYY')
+                        : null;
+                      const defenseEnd = selectedPeriodObj.defenseEndDate
+                        ? dayjs(selectedPeriodObj.defenseEndDate, 'DD/MM/YYYY')
+                        : null;
+                      if (defenseStart && current.isBefore(defenseStart, 'day')) return true;
+                      if (defenseEnd && current.isAfter(defenseEnd, 'day')) return true;
+                      return false;
+                    }}
                   />
                   {dateError && (
                     <div className="mt-1 text-xs text-red-500 font-medium leading-normal animate-fade-in">
@@ -1418,12 +1455,14 @@ const CreateCouncilPage = () => {
                 </div>
                 <div className="flex-1">
                   <div className="mb-1 text-xs text-gray-600">{t(getKey('start_time'))}</div>
-                  <TimePicker
-                    className="w-full"
-                    format="HH:mm"
-                    value={form.time ? dayjs(form.time, 'HH:mm', true) : null}
-                    onChange={(time) => setForm({ ...form, time: time ? time.format('HH:mm') : '' })}
-                  />
+                  <div ref={timePickerWrapperRef}>
+                    <TimePicker
+                      className="w-full"
+                      format="HH:mm"
+                      value={form.time ? dayjs(form.time, 'HH:mm', true) : null}
+                      onChange={(time) => setForm({ ...form, time: time ? time.format('HH:mm') : '' })}
+                    />
+                  </div>
                 </div>
               </div>
 
