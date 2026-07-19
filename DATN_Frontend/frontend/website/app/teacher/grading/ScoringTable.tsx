@@ -191,10 +191,14 @@ export default function ScoringTable({
         notify('Lưu điểm hội đồng thành công!', 'success')
         window.dispatchEvent(new CustomEvent('realtime-score-updated'))
       } else {
-        notify('Lưu điểm thất bại!', 'error')
+        notify(res?.message || 'Lưu điểm thất bại!', 'error')
       }
-    } catch (_) {
-      notify('Lưu điểm thất bại!', 'error')
+    } catch (err) {
+      // Hiện message thật từ backend (VD: "Đã hết thời gian chấm điểm cho đợt ... (Hạn cuối:
+      // ...)") thay vì luôn báo chung chung "Lưu điểm thất bại!" khiến giảng viên không biết
+      // lý do thật là gì.
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      notify(msg || 'Lưu điểm thất bại!', 'error')
     } finally {
       setLoading(false)
     }
