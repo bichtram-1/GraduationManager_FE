@@ -8,6 +8,7 @@ import ScoringTable from './ScoringTable'
 import { usePeriod } from '@/lib/providers/PeriodProvider'
 import { teacherApi } from '@/lib/api/teacherApi'
 import { COMMON_LABELS } from '@/constants/commonLabels'
+import { formatVietnamDateTimeAmPm } from '@/lib/utils/datetime'
 
 type TttnScoreRow = { id: string; name: string; class: string; dob: string; company: string; score: string }
 type ScoreRow = { id: string; isAdvisor?: boolean; isReviewer?: boolean; hasDefense?: boolean; hasReport?: boolean }
@@ -21,6 +22,8 @@ interface CouncilGroupItem {
   advisorName?: string | null
   reviewerId?: string | null
   students: GroupStudent[]
+  advisorEvaluation?: 'DAT' | 'KHONG_DAT' | null
+  reviewerEvaluation?: 'DAT' | 'KHONG_DAT' | null
 }
 interface Council {
   code: string
@@ -35,18 +38,7 @@ interface Council {
 }
 
 export default function TeacherGradingPage() {
-  const formatVietnamTime = (date: Date) => {
-    const day = String(date.getDate()).padStart(2, '0')
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const year = date.getFullYear()
-    let hours = date.getHours()
-    const minutes = String(date.getMinutes()).padStart(2, '0')
-    const ampm = hours >= 12 ? 'PM' : 'AM'
-    hours = hours % 12
-    hours = hours ? hours : 12
-    const strHours = String(hours).padStart(2, '0')
-    return `${strHours}:${minutes} ${ampm} ${day}/${month}/${year}`
-  }
+  const formatVietnamTime = (date: Date) => formatVietnamDateTimeAmPm(date)
 
   const { selectedPeriod, gradingTab, setGradingTab } = usePeriod()
   const isPeriodClosed = selectedPeriod?.status === 'closed'
@@ -598,28 +590,36 @@ export default function TeacherGradingPage() {
                     </div>
                       {/* show groups inside the council card for quick scan */}
                       <div className="mt-3 space-y-2 text-sm">
-                        {(council.groups || []).map((g) => (
-                          <div
-                            key={g.groupCode || g.id}
-                            role="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (!isGradingStarted || !editable) return;
-                              setSelectedCouncil(council);
-                              setSelectedGroup(g);
-                              setShowScoringModal(true);
-                            }}
-                            className={`flex items-center justify-between gap-3 rounded-md bg-white p-3 ring-1 ring-slate-100 cursor-pointer ${!isGradingStarted || !editable ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-50'}`}
-                          >
-                            <div>
-                              <div className="font-medium text-slate-800">
-                                {(g.students || []).map((s) => s.name).join(', ')}
+                        {(council.groups || []).map((g) => {
+                          const isPassed = g.advisorEvaluation === 'DAT' && g.reviewerEvaluation === 'DAT';
+                          return (
+                            <div
+                              key={g.groupCode || g.id}
+                              role="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (!isGradingStarted || !editable || !isPassed) return;
+                                setSelectedCouncil(council);
+                                setSelectedGroup(g);
+                                setShowScoringModal(true);
+                              }}
+                              className={`flex items-center justify-between gap-3 rounded-md bg-white p-3 ring-1 ring-slate-100 cursor-pointer ${
+                                !isGradingStarted || !editable || !isPassed 
+                                  ? 'opacity-50 cursor-not-allowed' 
+                                  : 'hover:bg-slate-50'
+                              }`}
+                              title={!isPassed ? "Nhóm phải được cả GVHD và GVPB đánh giá đạt mới được nhập điểm" : undefined}
+                            >
+                              <div>
+                                <div className="font-medium text-slate-800">
+                                  {(g.students || []).map((s) => s.name).join(', ')}
+                                </div>
+                                <div className="text-xs text-slate-500">{g.topic}</div>
                               </div>
-                              <div className="text-xs text-slate-500">{g.topic}</div>
+                              <div className="text-xs text-slate-500">{(g.students || []).length} SV</div>
                             </div>
-                            <div className="text-xs text-slate-500">{(g.students || []).length} SV</div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                   </button>
                 )
@@ -727,6 +727,19 @@ export default function TeacherGradingPage() {
                           hasScore = true;
                         }
 
+                        const isPassed = g.advisorEvaluation === 'DAT' && g.reviewerEvaluation === 'DAT';
+                        let evalBadge = null;
+                        if (!isPassed) {
+                          const parts = [];
+                          if (g.advisorEvaluation !== 'DAT') parts.push('GVHD');
+                          if (g.reviewerEvaluation !== 'DAT') parts.push('GVPB');
+                          evalBadge = (
+                            <span className="inline-flex items-center gap-2 rounded-md bg-rose-50 px-2 py-1 text-rose-700 text-[10px] font-semibold mt-1" title={`Chưa đạt đánh giá từ: ${parts.join(', ')}`}>
+                              Chưa đạt ({parts.join(' & ')})
+                            </span>
+                          );
+                        }
+
                         const globalIndex = (currentPageDATN - 1) * itemsPerPage + index + 1;
 
                         return (
@@ -746,15 +759,19 @@ export default function TeacherGradingPage() {
                             </td>
                             <td className="px-5 py-4 text-slate-700">{g.advisorName ?? '—'}</td>
                             <td className="px-5 py-4">
-                              {statusBadge}
+                              <div className="flex flex-col items-start">
+                                {statusBadge}
+                                {evalBadge}
+                              </div>
                             </td>
                             <td className="px-5 py-4">
                               <div className="flex items-center gap-2">
                                 <TeacherButton
                                   variant={hasScore ? 'secondary' : 'primary'}
                                   onClick={() => { setSelectedGroup(g); setSelectedCouncil(selectedCouncil); setShowScoringModal(true) }}
-                                  disabled={!isGradingStarted || !editable}
-                                  className={!isGradingStarted || !editable ? 'opacity-50 cursor-not-allowed' : ''}
+                                  disabled={!isGradingStarted || !editable || !isPassed}
+                                  className={!isGradingStarted || !editable || !isPassed ? 'opacity-50 cursor-not-allowed' : ''}
+                                  title={!isPassed ? "Nhóm phải được cả GVHD và GVPB đánh giá đạt mới được nhập điểm" : undefined}
                                 >
                                   {hasScore ? 'Chấm lại' : 'Vào chấm điểm'}
                                 </TeacherButton>

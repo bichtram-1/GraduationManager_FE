@@ -19,6 +19,18 @@ const REPORTS_KEY = ['tttn-reports']
 // (staleTime) sẽ dùng chung cache, khỏi gọi lại API.
 const DASHBOARD_KEY = ['student-dashboard']
 
+const getFileName = (url?: string) => {
+  if (!url) return '';
+  try {
+    const decoded = decodeURIComponent(url);
+    const parts = decoded.split('/');
+    const lastPart = parts[parts.length - 1];
+    return lastPart.replace(/^\d+_/, '') || 'File';
+  } catch {
+    return url.split('/').pop() || 'File';
+  }
+};
+
 export default function StudentReportsTTTNPage() {
   const { message } = App.useApp()
   const { selectedPeriod } = usePeriod()
@@ -406,14 +418,14 @@ export default function StudentReportsTTTNPage() {
                     </td>
                     <td className="px-5 py-4 text-[#1976D2] max-w-40">
                       {getFileUrl(report.fileUrl || report.file) ? (
-                        <a href={getPreviewUrl(report.fileUrl || report.file) || undefined} target="_blank" rel="noopener noreferrer" title={report.file} className="flex min-w-0 items-center gap-1 hover:underline">
+                        <a href={getPreviewUrl(report.fileUrl || report.file) || undefined} target="_blank" rel="noopener noreferrer" title={getFileName(report.file)} className="flex min-w-0 items-center gap-1 hover:underline">
                           <FileText className="h-4 w-4 shrink-0" />
-                          <span className="min-w-0 truncate">{report.file}</span>
+                          <span className="min-w-0 truncate">{getFileName(report.file)}</span>
                         </a>
                       ) : (
-                        <span className="flex min-w-0 items-center gap-1" title={report.file}>
+                        <span className="flex min-w-0 items-center gap-1" title={getFileName(report.file)}>
                           <FileText className="h-4 w-4 shrink-0" />
-                          <span className="min-w-0 truncate">{report.file}</span>
+                          <span className="min-w-0 truncate">{getFileName(report.file)}</span>
                         </span>
                       )}
                     </td>
@@ -453,11 +465,11 @@ export default function StudentReportsTTTNPage() {
                   <FileText className="h-4 w-4 text-[#1976D2] shrink-0" />
                   <span className="shrink-0">File: </span>
                   {getFileUrl(selectedReport.fileUrl || selectedReport.file) ? (
-                    <a href={getPreviewUrl(selectedReport.fileUrl || selectedReport.file) || undefined} target="_blank" rel="noopener noreferrer" title={selectedReport.file} className="min-w-0 truncate text-[#1976D2] hover:underline font-semibold">
-                      {selectedReport.file}
+                    <a href={getPreviewUrl(selectedReport.fileUrl || selectedReport.file) || undefined} target="_blank" rel="noopener noreferrer" title={getFileName(selectedReport.file)} className="min-w-0 truncate text-[#1976D2] hover:underline font-semibold">
+                      {getFileName(selectedReport.file)}
                     </a>
                   ) : (
-                    <span className="min-w-0 truncate" title={selectedReport.file}>{selectedReport.file}</span>
+                    <span className="min-w-0 truncate" title={getFileName(selectedReport.file)}>{getFileName(selectedReport.file)}</span>
                   )}
                 </div>
                 <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[#1976D2]" /> {selectedReport.status}</div>

@@ -18,6 +18,18 @@ type StatusFilter = 'all' | 'Đã nộp' | 'Thiếu' | 'Chưa nộp'
 const MILESTONES_KEY = ['datn-reports']
 const REGISTRATION_KEY = ['thesis-registration']
 
+const getFileName = (url?: string) => {
+  if (!url) return '';
+  try {
+    const decoded = decodeURIComponent(url);
+    const parts = decoded.split('/');
+    const lastPart = parts[parts.length - 1];
+    return lastPart.replace(/^\d+_/, '') || 'File';
+  } catch {
+    return url.split('/').pop() || 'File';
+  }
+};
+
 export default function StudentReportsDATNPage() {
   const { message } = App.useApp()
   const { selectedPeriod } = usePeriod()
@@ -391,14 +403,14 @@ export default function StudentReportsDATNPage() {
                     </td>
                     <td className="px-5 py-4 text-[#1976D2] max-w-40">
                       {getFileUrl(milestone.fileUrl || milestone.file) ? (
-                        <a href={getPreviewUrl(milestone.fileUrl || milestone.file) || undefined} target="_blank" rel="noopener noreferrer" title={milestone.file} className="flex min-w-0 items-center gap-1 hover:underline">
+                        <a href={getPreviewUrl(milestone.fileUrl || milestone.file) || undefined} target="_blank" rel="noopener noreferrer" title={getFileName(milestone.file)} className="flex min-w-0 items-center gap-1 hover:underline">
                           <FileText className="h-4 w-4 shrink-0" />
-                          <span className="min-w-0 truncate">{milestone.file}</span>
+                          <span className="min-w-0 truncate">{getFileName(milestone.file)}</span>
                         </a>
                       ) : (
-                        <span className="flex min-w-0 items-center gap-1" title={milestone.file}>
+                        <span className="flex min-w-0 items-center gap-1" title={getFileName(milestone.file)}>
                           <FileText className="h-4 w-4 shrink-0" />
-                          <span className="min-w-0 truncate">{milestone.file}</span>
+                          <span className="min-w-0 truncate">{getFileName(milestone.file)}</span>
                         </span>
                       )}
                     </td>
@@ -440,11 +452,11 @@ export default function StudentReportsDATNPage() {
                   <FileText className="h-4 w-4 text-[#1976D2] shrink-0" />
                   <span className="shrink-0">File: </span>
                   {getFileUrl(selected.fileUrl || selected.file) ? (
-                    <a href={getPreviewUrl(selected.fileUrl || selected.file) || undefined} target="_blank" rel="noopener noreferrer" title={selected.file} className="min-w-0 truncate text-[#1976D2] hover:underline font-semibold">
-                      {selected.file}
+                    <a href={getPreviewUrl(selected.fileUrl || selected.file) || undefined} target="_blank" rel="noopener noreferrer" title={getFileName(selected.file)} className="min-w-0 truncate text-[#1976D2] hover:underline font-semibold">
+                      {getFileName(selected.file)}
                     </a>
                   ) : (
-                    <span className="min-w-0 truncate" title={selected.file}>{selected.file}</span>
+                    <span className="min-w-0 truncate" title={getFileName(selected.file)}>{getFileName(selected.file)}</span>
                   )}
                 </div>
                 <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[#1976D2]" /> {selected.status}</div>

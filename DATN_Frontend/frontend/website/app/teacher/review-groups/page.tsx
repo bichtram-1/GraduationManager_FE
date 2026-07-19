@@ -395,9 +395,11 @@ export default function TeacherReviewGroupsPage() {
                                 }}
                                 className={TeacherInputClass('min-w-37.5')}
                               >
-                                {evaluationOptions.map((option) => (
-                                  <option key={option.value || 'empty'} value={option.value}>{option.label}</option>
-                                ))}
+                                {evaluationOptions
+                                  .filter((option) => !(group.evaluation && option.value === ''))
+                                  .map((option) => (
+                                    <option key={option.value || 'empty'} value={option.value}>{option.label}</option>
+                                  ))}
                               </select>
                             </div>
                           </td>
@@ -543,9 +545,11 @@ export default function TeacherReviewGroupsPage() {
                                 }}
                                 className={TeacherInputClass('min-w-37.5')}
                               >
-                                {evaluationOptions.map((option) => (
-                                  <option key={option.value || 'empty'} value={option.value}>{option.label}</option>
-                                ))}
+                                {evaluationOptions
+                                  .filter((option) => !(group.evaluation && option.value === ''))
+                                  .map((option) => (
+                                    <option key={option.value || 'empty'} value={option.value}>{option.label}</option>
+                                  ))}
                               </select>
                             </div>
                           </td>

@@ -30,6 +30,7 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
 
   const [searchKeyword, setSearchKeyword] = React.useState('');
   const [selectedStudent, setSelectedStudent] = React.useState<IListUser | null>(null);
+  const prevSchoolYearRef = React.useRef(detail?.schoolYear || '');
 
   // Fetch students for search dropdown
   const { data: studentsData, isLoading: isStudentsLoading } = userHooks.useFetchListUsers({
@@ -44,8 +45,14 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
   React.useEffect(() => {
     if (form) {
       form.setFieldValue('type', tab);
+      if (!detail) {
+        const currentName = form.getFieldValue('name');
+        if (!currentName || currentName === 'ĐATN ' || currentName === 'TTTN ') {
+          form.setFieldValue('name', tab === 'datn' ? 'ĐATN ' : 'TTTN ');
+        }
+      }
     }
-  }, [form, tab]);
+  }, [form, tab, detail]);
 
   const { data: classesData, isLoading: isClassesLoading } = classHooks.useFetchListClasses();
   const classesList: IListClass[] = classesData?.rows ?? [];
@@ -73,6 +80,184 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
   const defenseStartDateValue = Form.useWatch('defenseStartDate', form);
   const defenseEndDateValue = Form.useWatch('defenseEndDate', form);
   const gradingStartDateValue = Form.useWatch('gradingStartDate', form);
+  const schoolYearValue = Form.useWatch('schoolYear', form);
+
+  const schoolYearRange = React.useMemo(() => {
+    if (!schoolYearValue) return null;
+    const match = schoolYearValue.match(/^(\d{4})-(\d{4})$/);
+    if (!match) return null;
+    return {
+      start: dayjs(`${match[1]}-01-01`),
+      end: dayjs(`${match[2]}-12-31`),
+    };
+  }, [schoolYearValue]);
+
+  const isOutsideSchoolYear = React.useCallback((current: dayjs.Dayjs) => {
+    if (!schoolYearRange) return false;
+    return current.isBefore(schoolYearRange.start, 'day') || current.isAfter(schoolYearRange.end, 'day');
+  }, [schoolYearRange]);
+
+  React.useEffect(() => {
+    if (disabled) return;
+
+    const fields = tab === 'datn' 
+      ? [
+          'startDate', 
+          'regOpenDate', 
+          'regDeadline', 
+          'reportStartDate', 
+          'reportDeadline', 
+          'reviewStartDate', 
+          'reviewEndDate', 
+          'defenseStartDate', 
+          'defenseEndDate', 
+          'gradingStartDate', 
+          'gradingEndDate',
+          'endDate'
+        ]
+      : [
+          'startDate', 
+          'reportStartDate', 
+          'reportDeadline', 
+          'gradingStartDate', 
+          'gradingEndDate',
+          'endDate'
+        ];
+
+    const values = form.getFieldsValue(fields);
+    
+    const isAfterOrEqualObj = (val: string | undefined, prevVal: string | undefined) => {
+      if (!val || !prevVal) return true;
+      const d = dayjs(val, DATE_DISPLAY_FORMAT, true);
+      const prev = dayjs(prevVal, DATE_DISPLAY_FORMAT, true);
+      return d.isAfter(prev, 'day') || d.isSame(prev, 'day');
+    };
+
+    const isAfterObj = (val: string | undefined, prevVal: string | undefined) => {
+      if (!val || !prevVal) return true;
+      const d = dayjs(val, DATE_DISPLAY_FORMAT, true);
+      const prev = dayjs(prevVal, DATE_DISPLAY_FORMAT, true);
+      return d.isAfter(prev, 'day');
+    };
+
+    let valuesChanged = false;
+    const newValues = { ...values };
+
+    if (tab === 'datn') {
+      if (newValues.regOpenDate && !isAfterOrEqualObj(newValues.regOpenDate, newValues.startDate)) {
+        newValues.regOpenDate = undefined;
+        valuesChanged = true;
+      }
+      
+      const prevForRegDeadline = newValues.regOpenDate || newValues.startDate;
+      if (newValues.regDeadline && !isAfterObj(newValues.regDeadline, prevForRegDeadline)) {
+        newValues.regDeadline = undefined;
+        valuesChanged = true;
+      }
+      
+      if (newValues.reportStartDate && !isAfterOrEqualObj(newValues.reportStartDate, newValues.startDate)) {
+        newValues.reportStartDate = undefined;
+        valuesChanged = true;
+      }
+      if (newValues.reportStartDate && newValues.regDeadline && !isAfterOrEqualObj(newValues.reportStartDate, newValues.regDeadline)) {
+        newValues.reportStartDate = undefined;
+        valuesChanged = true;
+      }
+      
+      const prevForReportDeadline = newValues.reportStartDate || newValues.regDeadline || newValues.startDate;
+      if (newValues.reportDeadline && !isAfterObj(newValues.reportDeadline, prevForReportDeadline)) {
+        newValues.reportDeadline = undefined;
+        valuesChanged = true;
+      }
+      
+      if (newValues.reviewStartDate && !isAfterObj(newValues.reviewStartDate, newValues.reportDeadline)) {
+        newValues.reviewStartDate = undefined;
+        valuesChanged = true;
+      }
+      
+      if (newValues.reviewEndDate && !isAfterObj(newValues.reviewEndDate, newValues.reviewStartDate)) {
+        newValues.reviewEndDate = undefined;
+        valuesChanged = true;
+      }
+      
+      if (newValues.defenseStartDate && !isAfterObj(newValues.defenseStartDate, newValues.reviewEndDate)) {
+        newValues.defenseStartDate = undefined;
+        valuesChanged = true;
+      }
+      
+      if (newValues.defenseEndDate && !isAfterObj(newValues.defenseEndDate, newValues.defenseStartDate)) {
+        newValues.defenseEndDate = undefined;
+        valuesChanged = true;
+      }
+      
+      if (newValues.gradingStartDate && !isAfterOrEqualObj(newValues.gradingStartDate, newValues.defenseStartDate)) {
+        newValues.gradingStartDate = undefined;
+        valuesChanged = true;
+      }
+      
+      if (newValues.gradingEndDate && !isAfterObj(newValues.gradingEndDate, newValues.gradingStartDate)) {
+        newValues.gradingEndDate = undefined;
+        valuesChanged = true;
+      }
+      if (newValues.gradingEndDate && !isAfterObj(newValues.gradingEndDate, newValues.defenseEndDate)) {
+        newValues.gradingEndDate = undefined;
+        valuesChanged = true;
+      }
+
+      const maxSubsequentDate = newValues.gradingEndDate || newValues.gradingStartDate || newValues.defenseEndDate || newValues.defenseStartDate || newValues.reviewEndDate || newValues.reviewStartDate || newValues.reportDeadline || newValues.reportStartDate || newValues.regDeadline || newValues.regOpenDate || newValues.startDate;
+      if (newValues.endDate && !isAfterObj(newValues.endDate, maxSubsequentDate)) {
+        newValues.endDate = undefined;
+        valuesChanged = true;
+      }
+      
+    } else {
+      if (newValues.reportStartDate && !isAfterOrEqualObj(newValues.reportStartDate, newValues.startDate)) {
+        newValues.reportStartDate = undefined;
+        valuesChanged = true;
+      }
+      
+      const prevForReportDeadline = newValues.reportStartDate || newValues.startDate;
+      if (newValues.reportDeadline && !isAfterObj(newValues.reportDeadline, prevForReportDeadline)) {
+        newValues.reportDeadline = undefined;
+        valuesChanged = true;
+      }
+      
+      if (newValues.gradingStartDate && !isAfterObj(newValues.gradingStartDate, newValues.reportDeadline)) {
+        newValues.gradingStartDate = undefined;
+        valuesChanged = true;
+      }
+      
+      if (newValues.gradingEndDate && !isAfterObj(newValues.gradingEndDate, newValues.gradingStartDate)) {
+        newValues.gradingEndDate = undefined;
+        valuesChanged = true;
+      }
+      
+      const maxSubsequentDate = newValues.gradingEndDate || newValues.gradingStartDate || newValues.reportDeadline || newValues.reportStartDate || newValues.startDate;
+      if (newValues.endDate && !isAfterObj(newValues.endDate, maxSubsequentDate)) {
+        newValues.endDate = undefined;
+        valuesChanged = true;
+      }
+    }
+
+    if (valuesChanged) {
+      form.setFieldsValue(newValues);
+    }
+  }, [
+    startDateValue,
+    endDateValue,
+    regOpenDateValue,
+    regDeadlineValue,
+    reportStartDateValue,
+    reportDeadlineValue,
+    reviewStartDateValue,
+    reviewEndDateValue,
+    defenseStartDateValue,
+    defenseEndDateValue,
+    gradingStartDateValue,
+    tab,
+    form,
+    disabled
+  ]);
 
   // Filter selected classes to check if student is already in them
   const selectedClasses = React.useMemo(() => {
@@ -402,10 +587,44 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
             placeholder="VD: 2026-2027"
             onChange={(e) => {
               let val = e.target.value.replace(/\s+/g, '');
+              if (/^\d{4}$/.test(val)) {
+                const y = parseInt(val, 10);
+                const newVal = `${y}-${y + 1}`;
+                form.setFieldValue('schoolYear', newVal);
+                prevSchoolYearRef.current = newVal;
+                return;
+              }
               if (/^\d{8}$/.test(val)) {
                 val = `${val.substring(0, 4)}-${val.substring(4, 8)}`;
                 form.setFieldValue('schoolYear', val);
               }
+              
+              const prevMatch = prevSchoolYearRef.current.match(/^(\d{4})-(\d{4})$/);
+              const currentMatch = val.match(/^(\d{4})-(\d{4})$/);
+              if (prevMatch && currentMatch) {
+                const prevY1 = prevMatch[1];
+                const prevY2 = prevMatch[2];
+                const currY1 = currentMatch[1];
+                const currY2 = currentMatch[2];
+                if (currY1 !== prevY1 && currY2 === prevY2) {
+                  const y1 = parseInt(currY1, 10);
+                  if (!isNaN(y1)) {
+                    const newVal = `${y1}-${y1 + 1}`;
+                    form.setFieldValue('schoolYear', newVal);
+                    prevSchoolYearRef.current = newVal;
+                    return;
+                  }
+                } else if (currY2 !== prevY2 && currY1 === prevY1) {
+                  const y2 = parseInt(currY2, 10);
+                  if (!isNaN(y2)) {
+                    const newVal = `${y2 - 1}-${y2}`;
+                    form.setFieldValue('schoolYear', newVal);
+                    prevSchoolYearRef.current = newVal;
+                    return;
+                  }
+                }
+              }
+              prevSchoolYearRef.current = val;
             }}
           />
         </Form.Item>
@@ -427,9 +646,10 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
                     const match = schoolYear.match(/^(\d{4})-(\d{4})$/);
                     if (match) {
                       const startYear = parseInt(match[1], 10);
-                      const valYear = dayjs(value, DATE_DISPLAY_FORMAT, true).year();
-                      if (valYear < startYear) {
-                        return Promise.reject(new Error(`Ngày bắt đầu phải từ năm học ${startYear} trở đi`));
+                      const valDate = dayjs(value, DATE_DISPLAY_FORMAT, true);
+                      const schoolYearStart = dayjs(`${startYear}-01-01`);
+                      if (valDate.isBefore(schoolYearStart, 'day')) {
+                        return Promise.reject(new Error(`Ngày bắt đầu phải từ ngày 01/01/${startYear} trở đi`));
                       }
                     }
                   }
@@ -442,7 +662,18 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
             }),
           ]}
         >
-          <CustomDatePicker disabled={disabled} />
+          <CustomDatePicker
+            disabled={disabled}
+            disabledDate={(current) => {
+              if (!current) return false;
+              if (isOutsideSchoolYear(current)) return true;
+              if (endDateValue) {
+                const end = dayjs(endDateValue, DATE_DISPLAY_FORMAT, true);
+                return current.isAfter(end, 'day') || current.isSame(end, 'day');
+              }
+              return false;
+            }}
+          />
         </Form.Item>
         <Form.Item
           name="endDate"
@@ -463,8 +694,9 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
                     const match = schoolYear.match(/^(\d{4})-(\d{4})$/);
                     if (match) {
                       const endYear = parseInt(match[2], 10);
-                      if (valDate.year() > endYear) {
-                        return Promise.reject(new Error(`Ngày kết thúc không được vượt quá năm học ${endYear}`));
+                      const schoolYearEnd = dayjs(`${endYear}-12-31`);
+                      if (valDate.isAfter(schoolYearEnd, 'day')) {
+                        return Promise.reject(new Error(`Ngày kết thúc không được vượt quá ngày 31/12/${endYear}`));
                       }
                     }
                   }
@@ -477,9 +709,13 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
           <CustomDatePicker
             disabled={disabled}
             disabledDate={(current) => {
-              if (!startDateValue || !current) return false;
-              const start = dayjs(startDateValue, DATE_DISPLAY_FORMAT, true);
-              return current.isBefore(start, 'day') || current.isSame(start, 'day');
+              if (!current) return false;
+              if (isOutsideSchoolYear(current)) return true;
+              if (startDateValue) {
+                const start = dayjs(startDateValue, DATE_DISPLAY_FORMAT, true);
+                return current.isBefore(start, 'day') || current.isSame(start, 'day');
+              }
+              return false;
             }}
           />
         </Form.Item>
@@ -513,6 +749,7 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
               disabled={disabled}
               disabledDate={(current) => {
                 if (!current) return false;
+                if (isOutsideSchoolYear(current)) return true;
                 if (startDateValue) {
                   const start = dayjs(startDateValue, DATE_DISPLAY_FORMAT, true);
                   if (current.isBefore(start, 'day')) return true;
@@ -556,6 +793,7 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
               disabled={disabled}
               disabledDate={(current) => {
                 if (!current) return false;
+                if (isOutsideSchoolYear(current)) return true;
                 if (regOpenDateValue) {
                   const regOpen = dayjs(regOpenDateValue, DATE_DISPLAY_FORMAT, true);
                   if (current.isBefore(regOpen, 'day') || current.isSame(regOpen, 'day')) return true;
@@ -615,6 +853,7 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
             disabled={disabled}
             disabledDate={(current) => {
               if (!current) return false;
+              if (isOutsideSchoolYear(current)) return true;
               if (startDateValue) {
                 const start = dayjs(startDateValue, DATE_DISPLAY_FORMAT, true);
                 if (current.isBefore(start, 'day')) return true;
@@ -668,6 +907,7 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
             disabled={disabled}
             disabledDate={(current) => {
               if (!current) return false;
+              if (isOutsideSchoolYear(current)) return true;
               if (reportStartDateValue) {
                 const reportStart = dayjs(reportStartDateValue, DATE_DISPLAY_FORMAT, true);
                 if (current.isBefore(reportStart, 'day') || current.isSame(reportStart, 'day')) return true;
@@ -719,6 +959,7 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
                 disabled={disabled}
                 disabledDate={(current) => {
                   if (!current) return false;
+                  if (isOutsideSchoolYear(current)) return true;
                   if (reportDeadlineValue) {
                     const reportDeadline = dayjs(reportDeadlineValue, DATE_DISPLAY_FORMAT, true);
                     if (current.isBefore(reportDeadline, 'day') || current.isSame(reportDeadline, 'day')) return true;
@@ -756,7 +997,26 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
                 }),
               ]}
             >
-              <CustomDatePicker disabled={disabled} />
+              <CustomDatePicker
+                disabled={disabled}
+                disabledDate={(current) => {
+                  if (!current) return false;
+                  if (isOutsideSchoolYear(current)) return true;
+                  if (reviewStartDateValue) {
+                    const reviewStart = dayjs(reviewStartDateValue, DATE_DISPLAY_FORMAT, true);
+                    if (current.isBefore(reviewStart, 'day') || current.isSame(reviewStart, 'day')) return true;
+                  }
+                  if (defenseStartDateValue) {
+                    const defenseStart = dayjs(defenseStartDateValue, DATE_DISPLAY_FORMAT, true);
+                    if (current.isAfter(defenseStart, 'day') || current.isSame(defenseStart, 'day')) return true;
+                  }
+                  if (endDateValue) {
+                    const end = dayjs(endDateValue, DATE_DISPLAY_FORMAT, true);
+                    if (current.isAfter(end, 'day') || current.isSame(end, 'day')) return true;
+                  }
+                  return false;
+                }}
+              />
             </Form.Item>
 
             <Form.Item
@@ -787,6 +1047,7 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
                 disabled={disabled}
                 disabledDate={(current) => {
                   if (!current) return false;
+                  if (isOutsideSchoolYear(current)) return true;
                   if (reviewEndDateValue) {
                     const reviewEnd = dayjs(reviewEndDateValue, DATE_DISPLAY_FORMAT, true);
                     if (current.isBefore(reviewEnd, 'day') || current.isSame(reviewEnd, 'day')) return true;
@@ -828,6 +1089,7 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
                 disabled={disabled}
                 disabledDate={(current) => {
                   if (!current) return false;
+                  if (isOutsideSchoolYear(current)) return true;
                   if (defenseStartDateValue) {
                     const defenseStart = dayjs(defenseStartDateValue, DATE_DISPLAY_FORMAT, true);
                     if (current.isBefore(defenseStart, 'day') || current.isSame(defenseStart, 'day')) return true;
@@ -882,6 +1144,7 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
             disabled={disabled}
             disabledDate={(current) => {
               if (!current) return false;
+              if (isOutsideSchoolYear(current)) return true;
               if (tab === 'datn') {
                 if (defenseStartDateValue) {
                   const defenseStart = dayjs(defenseStartDateValue, DATE_DISPLAY_FORMAT, true);
@@ -937,6 +1200,7 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
             disabled={disabled}
             disabledDate={(current) => {
               if (!current) return false;
+              if (isOutsideSchoolYear(current)) return true;
               if (gradingStartDateValue) {
                 const gradingStart = dayjs(gradingStartDateValue, DATE_DISPLAY_FORMAT, true);
                 if (current.isBefore(gradingStart, 'day') || current.isSame(gradingStart, 'day')) return true;

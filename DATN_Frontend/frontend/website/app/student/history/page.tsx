@@ -5,6 +5,7 @@ import { studentApi } from '@/lib/api/studentApi'
 import { Spin, message, Empty } from 'antd'
 import { Clock, Search, User, Users, ClipboardCheck, AlertTriangle, BookOpen } from 'lucide-react'
 import { usePeriod } from '@/lib/providers/PeriodProvider'
+import { formatVietnamTimeDate } from '@/lib/utils/datetime'
 
 interface IHistoryLog {
   log_id: number
@@ -83,9 +84,7 @@ export default function StudentHistoryPage() {
 
   const formatTime = (timeStr: string) => {
     try {
-      const d = new Date(timeStr)
-      const pad = (n: number) => n.toString().padStart(2, '0')
-      return `${pad(d.getHours())}:${pad(d.getMinutes())} - ${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`
+      return formatVietnamTimeDate(timeStr)
     } catch {
       return timeStr
     }

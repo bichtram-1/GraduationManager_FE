@@ -42,6 +42,7 @@ const CustomDatePicker: React.FC<Props> = ({
       className={className}
       style={{ width: '100%' }}
       disabledDate={disabledDate}
+      inputReadOnly
     />
   );
 };

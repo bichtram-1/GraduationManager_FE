@@ -9,6 +9,19 @@ import { teacherApi } from '@/lib/api/teacherApi'
 import { App } from 'antd'
 import { COMMON_LABELS } from '@/constants/commonLabels'
 import { getFileUrl, getPreviewUrl } from '@/lib/utils/fileUrl'
+import { formatVietnamDate } from '@/lib/utils/datetime'
+
+const getFileName = (url?: string) => {
+  if (!url) return '';
+  try {
+    const decoded = decodeURIComponent(url);
+    const parts = decoded.split('/');
+    const lastPart = parts[parts.length - 1];
+    return lastPart.replace(/^\d+_/, '') || 'File';
+  } catch {
+    return url.split('/').pop() || 'File';
+  }
+};
 
 export default function TeacherStudentsPage() {
   const { message } = App.useApp()
@@ -533,7 +546,7 @@ export default function TeacherStudentsPage() {
                               Tuần {rep.tuan_so}
                             </div>
                             <div className="text-xs text-slate-500 mt-0.5">
-                              {rep.trang_thai === 'Đã nộp' ? `Nộp ngày: ${rep.thoi_gian_nop}` : `Hạn nộp: ${new Date(rep.deadline || '').toLocaleDateString('vi-VN')}`}
+                              {rep.trang_thai === 'Đã nộp' ? `Nộp ngày: ${rep.thoi_gian_nop}` : `Hạn nộp: ${formatVietnamDate(rep.deadline || '')}`}
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
@@ -692,7 +705,7 @@ export default function TeacherStudentsPage() {
                               Tuần {rep.tuan_so}
                             </div>
                             <div className="text-xs text-slate-500 mt-0.5">
-                              {rep.trang_thai === 'Đã nộp' ? `Nộp ngày: ${rep.thoi_gian_nop}` : `Hạn nộp: ${new Date(rep.deadline || '').toLocaleDateString('vi-VN')}`}
+                              {rep.trang_thai === 'Đã nộp' ? `Nộp ngày: ${rep.thoi_gian_nop}` : `Hạn nộp: ${formatVietnamDate(rep.deadline || '')}`}
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
@@ -751,7 +764,7 @@ export default function TeacherStudentsPage() {
                 <div className="text-sm font-medium text-slate-900">File báo cáo</div>
                 <div className="mt-2 rounded-md border border-slate-100 bg-white p-3 text-sm text-slate-700">
                   {(() => {
-                    const fileName = selectedReport?.duong_dan_file || (selectedReport ? `tuan_${selectedReport.tuan_so}.pdf` : 'report.pdf');
+                    const fileName = selectedReport?.duong_dan_file ? getFileName(selectedReport.duong_dan_file) : (selectedReport ? `tuan_${selectedReport.tuan_so}.pdf` : 'report.pdf');
                     const fileUrl = getFileUrl(selectedReport?.duong_dan_file);
                     const previewUrl = getPreviewUrl(selectedReport?.duong_dan_file);
                     return fileUrl ? (
