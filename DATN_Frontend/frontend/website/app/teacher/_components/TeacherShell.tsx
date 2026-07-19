@@ -78,10 +78,12 @@ export function TeacherShell({ children }: { children: ReactNode }) {
     window.addEventListener('realtime-group-updated', fetchNotifications)
     window.addEventListener('realtime-topic-updated', fetchNotifications)
     window.addEventListener('realtime-score-updated', fetchNotifications)
+    window.addEventListener('realtime-assignment-published', fetchNotifications)
     return () => {
       window.removeEventListener('realtime-group-updated', fetchNotifications)
       window.removeEventListener('realtime-topic-updated', fetchNotifications)
       window.removeEventListener('realtime-score-updated', fetchNotifications)
+      window.removeEventListener('realtime-assignment-published', fetchNotifications)
     }
   }, [selectedPeriod])
 

@@ -360,10 +360,18 @@ const CompaniesPage = () => {
                   className="!h-11 !w-full"
                   options={[
                     { value: 'all', label: t(getKey('all_fields')) },
-                    { value: 'Phần mềm & công nghệ', label: 'Phần mềm & công nghệ' },
+                    { value: 'Phần mềm', label: 'Phần mềm' },
+                    { value: 'Mạng máy tính', label: 'Mạng máy tính' },
+                    { value: 'An toàn thông tin', label: 'An toàn thông tin' },
+                    { value: 'Hệ thống thông tin', label: 'Hệ thống thông tin' },
+                    { value: 'Trí tuệ nhân tạo', label: 'Trí tuệ nhân tạo' },
+                    { value: 'Thiết kế đồ họa / UI-UX', label: 'Thiết kế đồ họa / UI-UX' },
                     { value: 'Thương mại điện tử', label: 'Thương mại điện tử' },
-                    { value: 'Gia công phần mềm', label: 'Gia công phần mềm' },
-                    { value: 'Công nghệ số', label: 'Công nghệ số' },
+                    { value: 'Phần cứng & Nhúng', label: 'Phần cứng & Nhúng' },
+                    { value: 'Fintech', label: 'Fintech' },
+                    { value: 'Internet', label: 'Internet' },
+                    { value: 'Viễn thông', label: 'Viễn thông' },
+                    { value: 'Khác', label: 'Khác' },
                   ]}
                 />
               </Form.Item>

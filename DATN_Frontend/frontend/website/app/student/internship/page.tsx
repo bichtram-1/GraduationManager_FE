@@ -237,20 +237,8 @@ export default function StudentInternshipPage() {
       const trimmed = value.trim()
       if (!trimmed) {
         errorMsg = 'Vui lòng nhập thời gian thực tập'
-      } else {
-        const parseDurationToWeeks = (str: string): number => {
-          const normalized = str.trim().toLowerCase();
-          const numMatch = normalized.match(/\d+(?:\.\d+)?/);
-          if (!numMatch) return 0;
-          const num = parseFloat(numMatch[0]);
-          if (normalized.includes('tháng') || normalized.includes('thang')) {
-            return num * 4.3; // Quy đổi tháng ra tuần
-          }
-          return num; // Mặc định là tuần
-        };
-        if (parseDurationToWeeks(trimmed) < 8) {
-          errorMsg = 'Thời gian thực tập phải từ 8 tuần trở lên!'
-        }
+      } else if (Number(trimmed) < 8) {
+        errorMsg = 'Thời gian thực tập phải từ 8 tuần trở lên!'
       }
     }
     setErrors((current) => ({ ...current, [name]: errorMsg }))
@@ -362,6 +350,14 @@ export default function StudentInternshipPage() {
     }
   }
 
+  // "Thời gian thực tập" chỉ nhập số tuần, đơn vị "tuần" cố định - dữ liệu công ty cũ có thể
+  // đã lưu dạng "8 tuần" nên cần bóc lại phần số khi điền vào ô nhập chỉ nhận số này.
+  const extractWeeksDigits = (str?: string): string => {
+    if (!str) return '';
+    const match = str.match(/\d+/);
+    return match ? match[0] : '';
+  };
+
   const handleSelectSuggestion = (c: ICompany) => {
     setDeclareForm({
       companyName: c.name,
@@ -373,7 +369,7 @@ export default function StudentInternshipPage() {
       mentor: c.mentor || '',
       phone: c.phone || '',
       email: c.email || '',
-      duration: c.duration || '8 tuần',
+      duration: extractWeeksDigits(c.duration) || '8',
       confirmPaper: declareForm.confirmPaper,
     });
     setShowSuggestions(false);
@@ -482,7 +478,7 @@ export default function StudentInternshipPage() {
         mentor,
         phone,
         email,
-        duration,
+        duration: `${duration} tuần`,
         confirmPaper: declareForm.confirmPaper,
         internshipAddress: declareForm.confirmPaper ? (internshipAddress || address) : undefined
       }, selectedPeriod?.id)
@@ -844,16 +840,17 @@ export default function StudentInternshipPage() {
               disabled={submitting}
             />
           </StudentField>
-          <StudentField label="Thời gian thực tập" required error={errors.duration}>
+          <StudentField label="Thời gian thực tập (tuần)" required error={errors.duration}>
             <input
               value={declareForm.duration}
+              inputMode="numeric"
               onChange={(event) => {
-                const val = event.target.value;
+                const val = event.target.value.replace(/[^0-9]/g, '');
                 setDeclareForm((current) => ({ ...current, duration: val }));
                 validateField('duration', val);
               }}
               className={StudentInputClass()}
-              placeholder="8 tuần, 12 tuần..."
+              placeholder="VD: 8"
               disabled={submitting}
             />
           </StudentField>

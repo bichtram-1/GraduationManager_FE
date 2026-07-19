@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AxiosError } from 'axios';
 import { QueryKey } from '../constants/queryKey';
 import { assignmentApi, IAssignmentListParams } from '../api/assignmentApi';
+import { useGlobalVariable } from './GlobalVariableProvider';
 import type { BaseListParams } from '@shared/types/GeneralType';
 import type { ICreateAssignment, IDetailAssignment, IUpdateAssignment } from '../type/AssignmentType';
 
@@ -13,11 +14,16 @@ export const assignmentHooks = {
     });
   },
 
+  // Bắt buộc phải gửi periodId của đợt đang chọn, nếu không backend
+  // (PhanCongHdttController::xemChiTiet) sẽ fallback về đợt tạo gần nhất trong toàn hệ
+  // thống — có thể là một đợt ĐATN — khiến modal "Chi tiết phân công" TTTN hiển thị nhầm
+  // thông tin nhóm/đề tài ĐATN thay vì GVHD thực tập của sinh viên.
   useFetchDetailAssignment: (id: string, enabled: boolean = true) => {
+    const { selectedPeriod } = useGlobalVariable();
     return useQuery({
-      queryKey: [QueryKey.assignments.detail, id],
+      queryKey: [QueryKey.assignments.detail, id, selectedPeriod?.id],
       enabled: !!id && enabled,
-      queryFn: () => assignmentApi.getAssignmentDetail(id),
+      queryFn: () => assignmentApi.getAssignmentDetail(id, selectedPeriod?.id),
     });
   },
 

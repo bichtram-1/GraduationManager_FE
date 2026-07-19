@@ -15,8 +15,8 @@ export const assignmentApi = {
     return response?.data?.results?.objects;
   },
 
-  getAssignmentDetail: async (id: string): Promise<IDetailAssignment | undefined> => {
-    const response = await axiosInstance.get(`/private/v1/assignments/${id}`);
+  getAssignmentDetail: async (id: string, periodId?: string): Promise<IDetailAssignment | undefined> => {
+    const response = await axiosInstance.get(`/private/v1/assignments/${id}`, { params: { periodId } });
     return response?.data?.results?.object;
   },
 

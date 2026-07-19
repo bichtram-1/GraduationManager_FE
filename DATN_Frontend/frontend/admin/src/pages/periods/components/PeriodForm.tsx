@@ -606,27 +606,11 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
             async validator(_, value) {
               if (!value) return Promise.resolve();
               const name = value.trim();
-              
-              // Nhận thêm "TTTN"/"ĐATN"/"DATN" liền nhau - đây chính là tiền tố mặc định form tự
-              // điền và cũng là chữ gợi ý trong placeholder, trước đây bị chính rule này từ chối.
-              const isTttnName = /thực\s+tập|thuc\s+tap|\btt\b|\btt\d|tttn/i.test(name);
-              const isDatnName = /đồ\s+án|do\s+an|\bda\b|\bda\d|đatn|datn/i.test(name);
 
-              if (tab === 'tttn') {
-                if (isDatnName) {
-                  return Promise.reject(new Error('Tên đợt chứa ký tự của ĐATN (đồ án/DA), vui lòng kiểm tra lại để tránh nhầm đợt!'));
-                }
-                if (!isTttnName) {
-                  return Promise.reject(new Error('Tên đợt TTTN phải chứa ký tự liên quan như "Thực tập" hoặc "TT"'));
-                }
-              } else if (tab === 'datn') {
-                if (isTttnName) {
-                  return Promise.reject(new Error('Tên đợt chứa ký tự của TTTN (thực tập/TT), vui lòng kiểm tra lại để tránh nhầm đợt!'));
-                }
-                if (!isDatnName) {
-                  return Promise.reject(new Error('Tên đợt ĐATN phải chứa ký tự liên quan như "Đồ án" hoặc "DA"'));
-                }
-              }
+              // Không cần kiểm tra nội dung tên có chứa "Thực tập"/"TT" hay "Đồ án"/"DA" nữa —
+              // tiền tố "TTTN "/"ĐATN " đã được tự động điền và khoá cứng ở onChange bên dưới lúc
+              // tạo mới, nên rule nội dung này chỉ còn gây từ chối nhầm khi sửa đợt cũ (tên cũ có
+              // thể không theo đúng khuôn, vì prefix-lock chỉ áp dụng lúc tạo mới - xem !detail).
 
               // Check uniqueness via API in real-time
               try {
@@ -950,7 +934,11 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
                 const regDeadline = dayjs(regDeadlineValue, DATE_DISPLAY_FORMAT, true);
                 if (current.isBefore(regDeadline, 'day')) return true;
               }
-              if (reportDeadlineValue) {
+              // Chỉ chặn theo Hạn nộp báo cáo khi đang TẠO MỚI (nhập tuần tự từ đầu, lúc này
+              // đổi lại hạn nộp cũng còn tự do) — khi SỬA đợt đã lưu, 2 mốc có thể cần đổi cùng
+              // lúc (VD: dời cả cụm ngày sang sau) nên không chặn cứng ở lịch để tránh bế tắc
+              // (không chọn được ngày muốn vì mốc kia chưa dời), chỉ validate khi submit.
+              if (!detail && reportDeadlineValue) {
                 const reportDeadline = dayjs(reportDeadlineValue, DATE_DISPLAY_FORMAT, true);
                 if (current.isAfter(reportDeadline, 'day') || current.isSame(reportDeadline, 'day')) return true;
               }
@@ -996,7 +984,10 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
             disabledDate={(current) => {
               if (!current) return false;
               if (isOutsideSchoolYear(current)) return true;
-              if (reportStartDateValue) {
+              // Tương tự trường Bắt đầu nộp báo cáo: chỉ chặn cứng theo mốc kia khi TẠO MỚI.
+              // Khi SỬA đợt đã lưu, dùng mốc rộng hơn (hạn đăng ký/ngày bắt đầu đợt) làm sàn
+              // thay vì Bắt đầu nộp báo cáo hiện tại, để không bị kẹt khi cần dời cả 2 mốc.
+              if (!detail && reportStartDateValue) {
                 const reportStart = dayjs(reportStartDateValue, DATE_DISPLAY_FORMAT, true);
                 if (current.isBefore(reportStart, 'day') || current.isSame(reportStart, 'day')) return true;
               } else {
