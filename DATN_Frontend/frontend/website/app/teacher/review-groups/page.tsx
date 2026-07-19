@@ -70,6 +70,44 @@ export default function TeacherReviewGroupsPage() {
   const { message } = App.useApp()
   const { selectedPeriod } = usePeriod()
   const isPeriodClosed = selectedPeriod?.status === 'closed'
+
+  // Đợt ghi ngày dạng "DD/MM/YYYY" - parse thủ công để tránh sai lệch theo locale trình duyệt.
+  const parseVNDate = (value?: string): Date | null => {
+    if (!value) return null
+    const parts = value.split('/')
+    if (parts.length !== 3) return null
+    const [day, month, year] = parts.map(Number)
+    if (!day || !month || !year) return null
+    return new Date(year, month - 1, day)
+  }
+
+  // Ràng buộc thời gian phản biện chỉ áp dụng cho GVPB (Nhóm phản biện) - khớp với backend
+  // (GiangVien/NhomController::updateReviewGroupStatus), GVHD không bị chặn theo mốc này.
+  const isBeforeReviewStart = useMemo(() => {
+    const start = parseVNDate(selectedPeriod?.reviewStartDate)
+    if (!start) return false
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    start.setHours(0, 0, 0, 0)
+    return today < start
+  }, [selectedPeriod?.reviewStartDate])
+
+  const isAfterReviewEnd = useMemo(() => {
+    const end = parseVNDate(selectedPeriod?.reviewEndDate)
+    if (!end) return false
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    end.setHours(0, 0, 0, 0)
+    return today > end
+  }, [selectedPeriod?.reviewEndDate])
+
+  const isReviewWindowClosed = isBeforeReviewStart || isAfterReviewEnd
+  const reviewWindowMessage = isBeforeReviewStart
+    ? `Chưa đến thời gian phản biện của đợt (bắt đầu từ ${selectedPeriod?.reviewStartDate}), chưa thể đánh giá!`
+    : isAfterReviewEnd
+      ? `Đã hết thời gian phản biện của đợt (kết thúc ${selectedPeriod?.reviewEndDate}), không thể đánh giá nữa!`
+      : ''
+
   const [segment, setSegment] = useState<Segment>('Nhóm hướng dẫn')
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'reviewed'>('all')
 
@@ -531,10 +569,15 @@ export default function TeacherReviewGroupsPage() {
                             <div className="flex justify-start">
                               <select
                                 value={group.evaluation}
-                                disabled={isPeriodClosed || savingId === group.id}
+                                disabled={isPeriodClosed || isReviewWindowClosed || savingId === group.id}
+                                title={isReviewWindowClosed ? reviewWindowMessage : undefined}
                                 onChange={(event) => {
                                   if (selectedPeriod?.status === 'closed') {
                                     message.warning('Đợt học/tốt nghiệp đã đóng, không thể chỉnh sửa đánh giá!')
+                                    return
+                                  }
+                                  if (isReviewWindowClosed) {
+                                    message.warning(reviewWindowMessage)
                                     return
                                   }
                                   const val = event.target.value as EvaluationValue
