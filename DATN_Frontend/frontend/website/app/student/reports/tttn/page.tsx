@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState, useEffect, ChangeEvent } from 'react'
+import dayjs from 'dayjs'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { CalendarDays, CheckCircle2, FileText, Plus, Upload, Clock3, MessageSquareQuote, Building2, GraduationCap, ShieldCheck } from 'lucide-react'
 import { StudentPill, StudentSectionHeader } from '../../_components/StudentShell'
@@ -36,6 +37,23 @@ export default function StudentReportsTTTNPage() {
   const { selectedPeriod } = usePeriod()
   const queryClient = useQueryClient()
   const isPeriodLocked = selectedPeriod?.status === 'grading' || selectedPeriod?.status === 'closed'
+
+  const parsePeriodDate = (dateStr?: string) => {
+    if (!dateStr) return null;
+    let d = dayjs(dateStr, 'DD/MM/YYYY');
+    if (!d.isValid()) d = dayjs(dateStr, 'YYYY-MM-DD');
+    return d.isValid() ? d : null;
+  };
+
+  const today = dayjs();
+  const reportStart = parsePeriodDate(selectedPeriod?.reportStartDate);
+  const reportEnd = parsePeriodDate(selectedPeriod?.reportDeadline);
+
+  const isSubmissionOpen = useMemo(() => {
+    if (!reportStart || !reportEnd) return true;
+    return (today.isAfter(reportStart, 'day') || today.isSame(reportStart, 'day')) &&
+           (today.isBefore(reportEnd, 'day') || today.isSame(reportEnd, 'day'));
+  }, [reportStart, reportEnd, today]);
 
   const reportsQuery = useQuery({ queryKey: REPORTS_KEY, queryFn: studentApi.getTttnReports })
   const dashboardQuery = useQuery({ queryKey: DASHBOARD_KEY, queryFn: studentApi.getDashboard })
@@ -248,6 +266,7 @@ export default function StudentReportsTTTNPage() {
         actions={(
           <button
             type="button"
+            disabled={!isSubmissionOpen}
             onClick={() => {
               if (isPeriodLocked) {
                 message.error(
@@ -267,7 +286,11 @@ export default function StudentReportsTTTNPage() {
               }
               openSubmitModal()
             }}
-            className="inline-flex items-center gap-2 rounded-2xl bg-[#2196F3] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-blue-200 transition hover:bg-[#1976D2]"
+            className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-medium text-white transition ${
+              !isSubmissionOpen
+                ? 'bg-slate-400 cursor-not-allowed opacity-50'
+                : 'bg-[#2196F3] shadow-lg shadow-blue-200 hover:bg-[#1976D2]'
+            }`}
           >
             <Plus className="h-4 w-4" />
             Nộp nhật ký
@@ -280,6 +303,14 @@ export default function StudentReportsTTTNPage() {
           {selectedPeriod?.status === 'closed'
             ? 'Đợt thực tập này đã đóng, bạn không thể nộp báo cáo nữa.'
             : 'Đợt thực tập đã bắt đầu chấm điểm, bạn không thể nộp báo cáo nữa.'}
+        </div>
+      )}
+
+      {!isSubmissionOpen && !isPeriodLocked && (
+        <div className="mb-6 rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+          {reportStart && today.isBefore(reportStart, 'day')
+            ? `Thời gian nộp nhật ký thực tập tốt nghiệp chưa bắt đầu. Bạn chỉ được nộp từ ngày ${selectedPeriod?.reportStartDate} đến ngày ${selectedPeriod?.reportDeadline}.`
+            : `Thời gian nộp nhật ký thực tập tốt nghiệp đã kết thúc vào ngày ${selectedPeriod?.reportDeadline}.`}
         </div>
       )}
 

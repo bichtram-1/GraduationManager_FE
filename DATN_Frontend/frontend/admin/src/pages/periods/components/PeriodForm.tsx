@@ -80,6 +80,7 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
   const defenseStartDateValue = Form.useWatch('defenseStartDate', form);
   const defenseEndDateValue = Form.useWatch('defenseEndDate', form);
   const gradingStartDateValue = Form.useWatch('gradingStartDate', form);
+  const gradingEndDateValue = Form.useWatch('gradingEndDate', form);
   const schoolYearValue = Form.useWatch('schoolYear', form);
 
   const schoolYearRange = React.useMemo(() => {
@@ -144,96 +145,180 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
     const newValues = { ...values };
 
     if (tab === 'datn') {
+      // 1. regOpenDate must be >= startDate
       if (newValues.regOpenDate && !isAfterOrEqualObj(newValues.regOpenDate, newValues.startDate)) {
         newValues.regOpenDate = undefined;
         valuesChanged = true;
       }
       
-      const prevForRegDeadline = newValues.regOpenDate || newValues.startDate;
-      if (newValues.regDeadline && !isAfterObj(newValues.regDeadline, prevForRegDeadline)) {
+      // 2. regDeadline must be > regOpenDate
+      if (!newValues.regOpenDate) {
+        if (newValues.regDeadline) {
+          newValues.regDeadline = undefined;
+          valuesChanged = true;
+        }
+      } else if (newValues.regDeadline && !isAfterObj(newValues.regDeadline, newValues.regOpenDate)) {
         newValues.regDeadline = undefined;
         valuesChanged = true;
       }
       
-      if (newValues.reportStartDate && !isAfterOrEqualObj(newValues.reportStartDate, newValues.startDate)) {
-        newValues.reportStartDate = undefined;
-        valuesChanged = true;
-      }
-      if (newValues.reportStartDate && newValues.regDeadline && !isAfterOrEqualObj(newValues.reportStartDate, newValues.regDeadline)) {
+      // 3. reportStartDate must be >= regDeadline
+      if (!newValues.regDeadline) {
+        if (newValues.reportStartDate) {
+          newValues.reportStartDate = undefined;
+          valuesChanged = true;
+        }
+      } else if (newValues.reportStartDate && !isAfterOrEqualObj(newValues.reportStartDate, newValues.regDeadline)) {
         newValues.reportStartDate = undefined;
         valuesChanged = true;
       }
       
-      const prevForReportDeadline = newValues.reportStartDate || newValues.regDeadline || newValues.startDate;
-      if (newValues.reportDeadline && !isAfterObj(newValues.reportDeadline, prevForReportDeadline)) {
+      // 4. reportDeadline must be > reportStartDate
+      if (!newValues.reportStartDate) {
+        if (newValues.reportDeadline) {
+          newValues.reportDeadline = undefined;
+          valuesChanged = true;
+        }
+      } else if (newValues.reportDeadline && !isAfterObj(newValues.reportDeadline, newValues.reportStartDate)) {
         newValues.reportDeadline = undefined;
         valuesChanged = true;
       }
       
-      if (newValues.reviewStartDate && !isAfterObj(newValues.reviewStartDate, newValues.reportDeadline)) {
+      // 5. reviewStartDate must be > reportDeadline
+      if (!newValues.reportDeadline) {
+        if (newValues.reviewStartDate) {
+          newValues.reviewStartDate = undefined;
+          valuesChanged = true;
+        }
+      } else if (newValues.reviewStartDate && !isAfterObj(newValues.reviewStartDate, newValues.reportDeadline)) {
         newValues.reviewStartDate = undefined;
         valuesChanged = true;
       }
       
-      if (newValues.reviewEndDate && !isAfterObj(newValues.reviewEndDate, newValues.reviewStartDate)) {
+      // 6. reviewEndDate must be > reviewStartDate
+      if (!newValues.reviewStartDate) {
+        if (newValues.reviewEndDate) {
+          newValues.reviewEndDate = undefined;
+          valuesChanged = true;
+        }
+      } else if (newValues.reviewEndDate && !isAfterObj(newValues.reviewEndDate, newValues.reviewStartDate)) {
         newValues.reviewEndDate = undefined;
         valuesChanged = true;
       }
       
-      if (newValues.defenseStartDate && !isAfterObj(newValues.defenseStartDate, newValues.reviewEndDate)) {
+      // 7. defenseStartDate must be > reviewEndDate
+      if (!newValues.reviewEndDate) {
+        if (newValues.defenseStartDate) {
+          newValues.defenseStartDate = undefined;
+          valuesChanged = true;
+        }
+      } else if (newValues.defenseStartDate && !isAfterObj(newValues.defenseStartDate, newValues.reviewEndDate)) {
         newValues.defenseStartDate = undefined;
         valuesChanged = true;
       }
       
-      if (newValues.defenseEndDate && !isAfterObj(newValues.defenseEndDate, newValues.defenseStartDate)) {
+      // 8. defenseEndDate must be > defenseStartDate
+      if (!newValues.defenseStartDate) {
+        if (newValues.defenseEndDate) {
+          newValues.defenseEndDate = undefined;
+          valuesChanged = true;
+        }
+      } else if (newValues.defenseEndDate && !isAfterObj(newValues.defenseEndDate, newValues.defenseStartDate)) {
         newValues.defenseEndDate = undefined;
         valuesChanged = true;
       }
       
-      if (newValues.gradingStartDate && !isAfterOrEqualObj(newValues.gradingStartDate, newValues.defenseStartDate)) {
+      // 9. gradingStartDate must be >= defenseStartDate
+      if (!newValues.defenseStartDate) {
+        if (newValues.gradingStartDate) {
+          newValues.gradingStartDate = undefined;
+          valuesChanged = true;
+        }
+      } else if (newValues.gradingStartDate && !isAfterOrEqualObj(newValues.gradingStartDate, newValues.defenseStartDate)) {
         newValues.gradingStartDate = undefined;
         valuesChanged = true;
       }
       
-      if (newValues.gradingEndDate && !isAfterObj(newValues.gradingEndDate, newValues.gradingStartDate)) {
+      // 10. gradingEndDate must be > gradingStartDate
+      if (!newValues.gradingStartDate) {
+        if (newValues.gradingEndDate) {
+          newValues.gradingEndDate = undefined;
+          valuesChanged = true;
+        }
+      } else if (newValues.gradingEndDate && !isAfterObj(newValues.gradingEndDate, newValues.gradingStartDate)) {
         newValues.gradingEndDate = undefined;
         valuesChanged = true;
       }
-      if (newValues.gradingEndDate && !isAfterObj(newValues.gradingEndDate, newValues.defenseEndDate)) {
+      
+      // 11. gradingEndDate must be > defenseEndDate
+      if (!newValues.defenseEndDate) {
+        if (newValues.gradingEndDate) {
+          newValues.gradingEndDate = undefined;
+          valuesChanged = true;
+        }
+      } else if (newValues.gradingEndDate && !isAfterObj(newValues.gradingEndDate, newValues.defenseEndDate)) {
         newValues.gradingEndDate = undefined;
         valuesChanged = true;
       }
 
-      const maxSubsequentDate = newValues.gradingEndDate || newValues.gradingStartDate || newValues.defenseEndDate || newValues.defenseStartDate || newValues.reviewEndDate || newValues.reviewStartDate || newValues.reportDeadline || newValues.reportStartDate || newValues.regDeadline || newValues.regOpenDate || newValues.startDate;
-      if (newValues.endDate && !isAfterObj(newValues.endDate, maxSubsequentDate)) {
+      // 12. endDate must be > gradingEndDate
+      if (!newValues.gradingEndDate) {
+        if (newValues.endDate) {
+          newValues.endDate = undefined;
+          valuesChanged = true;
+        }
+      } else if (newValues.endDate && !isAfterObj(newValues.endDate, newValues.gradingEndDate)) {
         newValues.endDate = undefined;
         valuesChanged = true;
       }
       
     } else {
+      // 1. reportStartDate must be >= startDate
       if (newValues.reportStartDate && !isAfterOrEqualObj(newValues.reportStartDate, newValues.startDate)) {
         newValues.reportStartDate = undefined;
         valuesChanged = true;
       }
       
-      const prevForReportDeadline = newValues.reportStartDate || newValues.startDate;
-      if (newValues.reportDeadline && !isAfterObj(newValues.reportDeadline, prevForReportDeadline)) {
+      // 2. reportDeadline must be > reportStartDate
+      if (!newValues.reportStartDate) {
+        if (newValues.reportDeadline) {
+          newValues.reportDeadline = undefined;
+          valuesChanged = true;
+        }
+      } else if (newValues.reportDeadline && !isAfterObj(newValues.reportDeadline, newValues.reportStartDate)) {
         newValues.reportDeadline = undefined;
         valuesChanged = true;
       }
       
-      if (newValues.gradingStartDate && !isAfterObj(newValues.gradingStartDate, newValues.reportDeadline)) {
+      // 3. gradingStartDate must be > reportDeadline
+      if (!newValues.reportDeadline) {
+        if (newValues.gradingStartDate) {
+          newValues.gradingStartDate = undefined;
+          valuesChanged = true;
+        }
+      } else if (newValues.gradingStartDate && !isAfterObj(newValues.gradingStartDate, newValues.reportDeadline)) {
         newValues.gradingStartDate = undefined;
         valuesChanged = true;
       }
       
-      if (newValues.gradingEndDate && !isAfterObj(newValues.gradingEndDate, newValues.gradingStartDate)) {
+      // 4. gradingEndDate must be > gradingStartDate
+      if (!newValues.gradingStartDate) {
+        if (newValues.gradingEndDate) {
+          newValues.gradingEndDate = undefined;
+          valuesChanged = true;
+        }
+      } else if (newValues.gradingEndDate && !isAfterObj(newValues.gradingEndDate, newValues.gradingStartDate)) {
         newValues.gradingEndDate = undefined;
         valuesChanged = true;
       }
       
-      const maxSubsequentDate = newValues.gradingEndDate || newValues.gradingStartDate || newValues.reportDeadline || newValues.reportStartDate || newValues.startDate;
-      if (newValues.endDate && !isAfterObj(newValues.endDate, maxSubsequentDate)) {
+      // 5. endDate must be > gradingEndDate
+      if (!newValues.gradingEndDate) {
+        if (newValues.endDate) {
+          newValues.endDate = undefined;
+          valuesChanged = true;
+        }
+      } else if (newValues.endDate && !isAfterObj(newValues.endDate, newValues.gradingEndDate)) {
         newValues.endDate = undefined;
         valuesChanged = true;
       }
@@ -254,6 +339,7 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
     defenseStartDateValue,
     defenseEndDateValue,
     gradingStartDateValue,
+    gradingEndDateValue,
     tab,
     form,
     disabled
