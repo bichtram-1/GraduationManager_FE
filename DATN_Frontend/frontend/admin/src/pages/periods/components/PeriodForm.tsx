@@ -761,50 +761,6 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
             }}
           />
         </Form.Item>
-        <Form.Item
-          name="endDate"
-          label={t(getKey('end_date'))}
-          dependencies={['startDate', 'schoolYear']}
-          rules={[
-            { required: true, message: t(getKey('end_date_required')) },
-            ({ getFieldValue }) => ({
-              validator(_, value) {
-                const start = getFieldValue('startDate');
-                const schoolYear = getFieldValue('schoolYear');
-                if (value) {
-                  const valDate = dayjs(value, DATE_DISPLAY_FORMAT, true);
-                  if (start && !valDate.isAfter(dayjs(start, DATE_DISPLAY_FORMAT, true))) {
-                    return Promise.reject(new Error('Ngày kết thúc phải sau ngày bắt đầu'));
-                  }
-                  if (schoolYear) {
-                    const match = schoolYear.match(/^(\d{4})-(\d{4})$/);
-                    if (match) {
-                      const endYear = parseInt(match[2], 10);
-                      const schoolYearEnd = dayjs(`${endYear}-12-31`);
-                      if (valDate.isAfter(schoolYearEnd, 'day')) {
-                        return Promise.reject(new Error(`Ngày kết thúc không được vượt quá ngày 31/12/${endYear}`));
-                      }
-                    }
-                  }
-                }
-                return Promise.resolve();
-              },
-            }),
-          ]}
-        >
-          <CustomDatePicker
-            disabled={disabled}
-            disabledDate={(current) => {
-              if (!current) return false;
-              if (isOutsideSchoolYear(current)) return true;
-              if (startDateValue) {
-                const start = dayjs(startDateValue, DATE_DISPLAY_FORMAT, true);
-                return current.isBefore(start, 'day') || current.isSame(start, 'day');
-              }
-              return false;
-            }}
-          />
-        </Form.Item>
         {tab === 'datn' && (
           <Form.Item
             name="regOpenDate"
@@ -1294,6 +1250,51 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
               if (endDateValue) {
                 const end = dayjs(endDateValue, DATE_DISPLAY_FORMAT, true);
                 if (current.isAfter(end, 'day') || current.isSame(end, 'day')) return true;
+              }
+              return false;
+            }}
+          />
+        </Form.Item>
+
+        <Form.Item
+          name="endDate"
+          label={t(getKey('end_date'))}
+          dependencies={['startDate', 'schoolYear']}
+          rules={[
+            { required: true, message: t(getKey('end_date_required')) },
+            ({ getFieldValue }) => ({
+              validator(_, value) {
+                const start = getFieldValue('startDate');
+                const schoolYear = getFieldValue('schoolYear');
+                if (value) {
+                  const valDate = dayjs(value, DATE_DISPLAY_FORMAT, true);
+                  if (start && !valDate.isAfter(dayjs(start, DATE_DISPLAY_FORMAT, true))) {
+                    return Promise.reject(new Error('Ngày kết thúc phải sau ngày bắt đầu'));
+                  }
+                  if (schoolYear) {
+                    const match = schoolYear.match(/^(\d{4})-(\d{4})$/);
+                    if (match) {
+                      const endYear = parseInt(match[2], 10);
+                      const schoolYearEnd = dayjs(`${endYear}-12-31`);
+                      if (valDate.isAfter(schoolYearEnd, 'day')) {
+                        return Promise.reject(new Error(`Ngày kết thúc không được vượt quá ngày 31/12/${endYear}`));
+                      }
+                    }
+                  }
+                }
+                return Promise.resolve();
+              },
+            }),
+          ]}
+        >
+          <CustomDatePicker
+            disabled={disabled}
+            disabledDate={(current) => {
+              if (!current) return false;
+              if (isOutsideSchoolYear(current)) return true;
+              if (startDateValue) {
+                const start = dayjs(startDateValue, DATE_DISPLAY_FORMAT, true);
+                return current.isBefore(start, 'day') || current.isSame(start, 'day');
               }
               return false;
             }}
