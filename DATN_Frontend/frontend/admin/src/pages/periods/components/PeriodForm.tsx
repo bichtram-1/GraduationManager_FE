@@ -6,7 +6,7 @@ import type { BatchType, IDetailPeriod } from '../../../type/PeriodType';
 import { periodApi } from '../../../api/periodApi';
 import { useTranslation } from 'react-i18next';
 import { getKey } from '@shared/types/I18nKeyType';
-import { STATUS_CODE, DATE_DISPLAY_FORMAT } from '../../../constants/commonConst';
+import { DATE_DISPLAY_FORMAT, isPeriodClosedForAdmin } from '../../../constants/commonConst';
 import { classHooks } from '../../../hooks/useClasses';
 import { userHooks } from '../../../hooks/useUsers';
 import CustomDatePicker from '../../../components/shared/input/CustomDatePicker';
@@ -25,7 +25,7 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
   const { t } = useTranslation();
   const form = Form.useFormInstance();
 
-  const isClosed = detail?.status === STATUS_CODE.CLOSED;
+  const isClosed = isPeriodClosedForAdmin(detail);
   const disabled = initialDisabled || isClosed;
 
   const [searchKeyword, setSearchKeyword] = React.useState('');
@@ -1091,10 +1091,6 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
                   if (reviewStartDateValue) {
                     const reviewStart = dayjs(reviewStartDateValue, DATE_DISPLAY_FORMAT, true);
                     if (current.isBefore(reviewStart, 'day') || current.isSame(reviewStart, 'day')) return true;
-                  }
-                  if (defenseStartDateValue) {
-                    const defenseStart = dayjs(defenseStartDateValue, DATE_DISPLAY_FORMAT, true);
-                    if (current.isAfter(defenseStart, 'day') || current.isSame(defenseStart, 'day')) return true;
                   }
                   if (endDateValue) {
                     const end = dayjs(endDateValue, DATE_DISPLAY_FORMAT, true);
