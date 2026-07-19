@@ -16,7 +16,7 @@ import PeriodForm from './components/PeriodForm';
 import { periodHooks } from '../../hooks/usePeriods';
 import { userHooks } from '../../hooks/useUsers';
 import type { BatchStatus, BatchType, ICreatePeriod, IUpdatePeriod, IListPeriod, IDetailPeriod } from '../../type/PeriodType';
-import { STATUS_CODE, cn } from '../../constants/commonConst';
+import { STATUS_CODE, cn, isPeriodClosedForAdmin } from '../../constants/commonConst';
 
 const getStatusMeta = (t: (key: string) => string) => ({
   [STATUS_CODE.OPEN]: { label: t(getKey('period_status_open')), className: '!bg-[var(--color-green-light)] !text-[var(--color-green-medium)]' },
@@ -246,7 +246,7 @@ const PeriodsPage = () => {
             isDetail: true,
             isEdit: true,
             isDelete: true,
-            isEditDisabled: (record) => (record as IListPeriod).status === STATUS_CODE.CLOSED,
+            isEditDisabled: (record) => isPeriodClosedForAdmin(record as IListPeriod),
             isDeleteDisabled: (record) => (record as IListPeriod).status === STATUS_CODE.CLOSED,
           }}
           detailInfo={{ type: 'modal', modalInfo: { modalContent: <PeriodForm tab={tab} disabled />, modalProps: { centered: true, width: 820, title: t(getKey('detail_period')), footer: null }, modalFunc: periodHooks.useFetchDetailPeriod as unknown as (id: string, enable: boolean) => import('@tanstack/react-query').UseQueryResult<IDetailPeriod, Error> } }}
