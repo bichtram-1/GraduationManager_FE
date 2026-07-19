@@ -373,8 +373,7 @@ const CreateCouncilPage = () => {
           return;
         }
 
-        // Lọc theo kết quả hướng dẫn/phản biện dựa trên thời gian đợt - Bỏ lọc theo yêu cầu
-        /*
+        // Lọc theo kết quả hướng dẫn/phản biện dựa trên thời gian đợt
         const periodObj = datnPeriods.find((p) => p.name === periodName);
         if (periodObj) {
           const parsePeriodDate = (dateStr?: string) => {
@@ -391,12 +390,12 @@ const CreateCouncilPage = () => {
           const kqPb = g.ket_qua_phan_bien;
 
           if (ngayBatDauPhanBien && today.isAfter(ngayBatDauPhanBien.subtract(1, 'day'), 'day')) {
-            // Từ ngày bắt đầu phản biện đến cuối đợt: Bắt buộc cả hai kết quả phải là DAT
-            if (kqHd !== 'DAT' || kqPb !== 'DAT') {
+            // Từ ngày bắt đầu phản biện đến cuối đợt: Loại bỏ các nhóm đề tài có kết quả là KHONG_DAT, giữ lại NULL và DAT
+            if (kqHd === 'KHONG_DAT' || kqPb === 'KHONG_DAT') {
               return;
             }
           } else {
-            // Trước ngày bắt đầu phản biện: Nhóm có kết quả hướng dẫn & phản biện là null hoặc DAT
+            // Trước ngày bắt đầu phản biện: Chỉ hiện các nhóm có kết quả hướng dẫn & phản biện là null hoặc DAT
             const isHdValid = !kqHd || kqHd === 'DAT';
             const isPbValid = !kqPb || kqPb === 'DAT';
             if (!isHdValid || !isPbValid) {
@@ -404,7 +403,6 @@ const CreateCouncilPage = () => {
             }
           }
         }
-        */
 
         const supervisor = g.supervisor || 'Chưa phân công';
         if (!bucketsMap[supervisor]) {
