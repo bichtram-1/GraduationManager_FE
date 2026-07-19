@@ -144,6 +144,18 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
     let valuesChanged = false;
     const newValues = { ...values };
 
+    // 0. startDate/endDate phải nằm trong Năm học - nếu đổi Năm học khiến ngày đã chọn
+    // ra ngoài phạm vi thì tự xóa, đồng bộ với cách mọi field ngày khác trong form này
+    // đều tự xóa field liên quan khi có thay đổi làm nó không còn hợp lệ.
+    if (newValues.startDate && isOutsideSchoolYear(dayjs(newValues.startDate, DATE_DISPLAY_FORMAT, true))) {
+      newValues.startDate = undefined;
+      valuesChanged = true;
+    }
+    if (newValues.endDate && isOutsideSchoolYear(dayjs(newValues.endDate, DATE_DISPLAY_FORMAT, true))) {
+      newValues.endDate = undefined;
+      valuesChanged = true;
+    }
+
     if (tab === 'datn') {
       // 1. regOpenDate must be >= startDate
       if (newValues.regOpenDate && !isAfterOrEqualObj(newValues.regOpenDate, newValues.startDate)) {
@@ -340,6 +352,8 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
     defenseEndDateValue,
     gradingStartDateValue,
     gradingEndDateValue,
+    schoolYearValue,
+    isOutsideSchoolYear,
     tab,
     form,
     disabled
@@ -593,8 +607,10 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
               if (!value) return Promise.resolve();
               const name = value.trim();
               
-              const isTttnName = /thực\s+tập|thuc\s+tap|\btt\b|\btt\d/i.test(name);
-              const isDatnName = /đồ\s+án|do\s+an|\bda\b|\bda\d/i.test(name);
+              // Nhận thêm "TTTN"/"ĐATN"/"DATN" liền nhau - đây chính là tiền tố mặc định form tự
+              // điền và cũng là chữ gợi ý trong placeholder, trước đây bị chính rule này từ chối.
+              const isTttnName = /thực\s+tập|thuc\s+tap|\btt\b|\btt\d|tttn/i.test(name);
+              const isDatnName = /đồ\s+án|do\s+an|\bda\b|\bda\d|đatn|datn/i.test(name);
 
               if (tab === 'tttn') {
                 if (isDatnName) {
@@ -631,7 +647,29 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
           }
         ]}
       >
-        <Input disabled={disabled} placeholder={tab === 'tttn' ? 'VD: TTTN HK1/2026-2027' : 'VD: ĐATN HK1/2026-2027'} />
+        <Input
+          disabled={disabled}
+          placeholder={tab === 'tttn' ? 'VD: TTTN HK1/2026-2027' : 'VD: ĐATN HK1/2026-2027'}
+          onChange={(e) => {
+            let val = e.target.value;
+            // Chỉ khoá tiền tố lúc TẠO MỚI (giống effect tự điền tên mặc định cũng chỉ chạy
+            // khi !detail) - sửa đợt cũ có tên không theo đúng khuôn này thì không đụng vào.
+            if (!detail) {
+              const prefix = tab === 'tttn' ? 'TTTN ' : 'ĐATN ';
+              if (!val.startsWith(prefix)) {
+                const idx = val.indexOf(prefix);
+                if (idx >= 0) {
+                  // Gõ lạc chỗ khiến tiền tố không còn ở đầu - đưa về đầu, giữ nguyên phần còn lại
+                  val = prefix + val.slice(0, idx) + val.slice(idx + prefix.length);
+                } else {
+                  // Tiền tố bị xoá hẳn - khôi phục lại, giữ nguyên phần đã gõ thêm làm hậu tố
+                  val = prefix + val;
+                }
+              }
+            }
+            form.setFieldValue('name', val);
+          }}
+        />
       </Form.Item>
 
       <div className="grid grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-2">
@@ -658,33 +696,38 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
                 if (!match) {
                   return Promise.reject(new Error('Định dạng năm học phải là YYYY-YYYY, VD: 2026-2027'));
                 }
+                if (match[1].startsWith('0') || match[2].startsWith('0')) {
+                  return Promise.reject(new Error('Năm học không được bắt đầu bằng số 0, VD: 2026-2027'));
+                }
                 const year1 = parseInt(match[1], 10);
                 const year2 = parseInt(match[2], 10);
-                if (year2 <= year1) {
-                  return Promise.reject(new Error('Năm sau phải lớn hơn năm trước'));
+                if (year2 !== year1 + 1) {
+                  return Promise.reject(new Error('Năm học phải là 2 năm liên tiếp, VD: 2026-2027'));
                 }
                 return Promise.resolve();
               }
             }
           ]}
+          validateTrigger="onBlur"
         >
           <Input
             disabled={disabled}
             placeholder="VD: 2026-2027"
             onChange={(e) => {
-              let val = e.target.value.replace(/\s+/g, '');
-              if (/^\d{4}$/.test(val)) {
+              // Chỉ giữ số và dấu gạch ngang - không cho gõ chữ/ký tự khác vào ô năm học.
+              let val = e.target.value.replace(/[^\d-]/g, '');
+              if (/^[1-9]\d{3}$/.test(val)) {
                 const y = parseInt(val, 10);
                 const newVal = `${y}-${y + 1}`;
                 form.setFieldValue('schoolYear', newVal);
                 prevSchoolYearRef.current = newVal;
                 return;
               }
-              if (/^\d{8}$/.test(val)) {
+              if (/^[1-9]\d{7}$/.test(val)) {
                 val = `${val.substring(0, 4)}-${val.substring(4, 8)}`;
                 form.setFieldValue('schoolYear', val);
               }
-              
+
               const prevMatch = prevSchoolYearRef.current.match(/^(\d{4})-(\d{4})$/);
               const currentMatch = val.match(/^(\d{4})-(\d{4})$/);
               if (prevMatch && currentMatch) {
@@ -692,7 +735,9 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
                 const prevY2 = prevMatch[2];
                 const currY1 = currentMatch[1];
                 const currY2 = currentMatch[2];
-                if (currY1 !== prevY1 && currY2 === prevY2) {
+                // Không tự ép nếu nửa vừa sửa bắt đầu bằng số 0 (vd "0202") - để nguyên value
+                // đó cho rule validate bên trên báo lỗi rõ ràng, tránh co thành số sai như "202-203".
+                if (currY1 !== prevY1 && currY2 === prevY2 && currY1[0] !== '0') {
                   const y1 = parseInt(currY1, 10);
                   if (!isNaN(y1)) {
                     const newVal = `${y1}-${y1 + 1}`;
@@ -700,7 +745,7 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
                     prevSchoolYearRef.current = newVal;
                     return;
                   }
-                } else if (currY2 !== prevY2 && currY1 === prevY1) {
+                } else if (currY2 !== prevY2 && currY1 === prevY1 && currY2[0] !== '0') {
                   const y2 = parseInt(currY2, 10);
                   if (!isNaN(y2)) {
                     const newVal = `${y2 - 1}-${y2}`;
@@ -710,6 +755,7 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
                   }
                 }
               }
+              form.setFieldValue('schoolYear', val);
               prevSchoolYearRef.current = val;
             }}
           />
@@ -1294,7 +1340,11 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
               if (isOutsideSchoolYear(current)) return true;
               if (startDateValue) {
                 const start = dayjs(startDateValue, DATE_DISPLAY_FORMAT, true);
-                return current.isBefore(start, 'day') || current.isSame(start, 'day');
+                if (current.isBefore(start, 'day') || current.isSame(start, 'day')) return true;
+              }
+              if (gradingEndDateValue) {
+                const gradingEnd = dayjs(gradingEndDateValue, DATE_DISPLAY_FORMAT, true);
+                if (current.isBefore(gradingEnd, 'day') || current.isSame(gradingEnd, 'day')) return true;
               }
               return false;
             }}

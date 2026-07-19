@@ -348,20 +348,20 @@ export default function ThesisRegisterPage() {
       )}
 
       {!isPeriodLocked && isRegistrationTime.isClosed && (
-        <div className="sticky top-20 z-30 mb-5 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700 font-semibold shadow-sm">
+        <div className="sticky top-20 sm:top-32 z-30 mb-5 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700 font-semibold shadow-sm">
           ⚠️ Cổng đăng ký đề tài ĐATN đã đóng do hết hạn (Hạn chót: {selectedPeriod?.regDeadline}). Bạn không thể đăng ký/hủy đề tài hoặc rời nhóm nữa.
         </div>
       )}
 
-      {!isPeriodLocked && !isRegistrationTime.isClosed && showDeadlineWarning && (
-        <div className="sticky top-20 z-30 mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 font-semibold flex items-center gap-2 shadow-md">
+      {!isPeriodLocked && !isRegistrationTime.isClosed && showDeadlineWarning && registration?.status !== 'accepted' && (
+        <div className="sticky top-20 sm:top-32 z-30 mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 font-semibold flex items-center gap-2 shadow-md">
           <span className="h-2 w-2 rounded-full bg-red-500 animate-ping" />
           <span>Chú ý: Sắp đến hạn đăng ký đề tài đồ án tốt nghiệp! Hạn chót: {selectedPeriod?.regDeadline}. Vui lòng hoàn tất đăng ký sớm!</span>
         </div>
       )}
 
       {isPeriodLocked && (
-        <div className="sticky top-20 z-30 mb-5 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-sm">
+        <div className="sticky top-20 sm:top-32 z-30 mb-5 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-sm">
           {selectedPeriod?.status === 'closed'
             ? 'Đợt đồ án tốt nghiệp này đã đóng, bạn không thể đăng ký/hủy đề tài hoặc rời nhóm nữa.'
             : 'Đợt đồ án tốt nghiệp đã bắt đầu chấm điểm, bạn không thể đăng ký/hủy đề tài hoặc rời nhóm nữa.'}

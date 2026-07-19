@@ -249,7 +249,7 @@ export default function StudentReportsDATNPage() {
     <>
       <StudentSectionHeader
         title="Báo cáo ĐATN"
-        description="Nộp bản thảo từng giai đoạn, theo dõi phản hồi và trạng thái chấm của giảng viên theo bố cục chi tiết hơn."
+        description="Nộp báo cáo từng giai đoạn, theo dõi phản hồi và trạng thái chấm của giảng viên theo bố cục chi tiết hơn."
         actions={registration?.status === 'accepted' && isTopicApproved && !isPeriodLocked ? (
           <button
             type="button"
@@ -262,7 +262,7 @@ export default function StudentReportsDATNPage() {
             }`}
           >
             <Plus className="h-4 w-4" />
-            Nộp bản thảo
+            Nộp báo cáo
           </button>
         ) : undefined}
       />
@@ -270,7 +270,7 @@ export default function StudentReportsDATNPage() {
       {isPeriodLocked && (
         <div className="mb-6 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
           {selectedPeriod?.status === 'closed'
-            ? 'Đợt đồ án tốt nghiệp này đã đóng, bạn không thể nộp bản thảo nữa.'
+            ? 'Đợt đồ án tốt nghiệp này đã đóng, bạn không thể nộp báo cáo nữa.'
             : 'Đã kết thúc ngày nộp báo cáo.'}
         </div>
       )}
@@ -521,7 +521,7 @@ export default function StudentReportsDATNPage() {
 
       <StudentModal
         open={submitOpen}
-        title="Nộp bản thảo ĐATN"
+        title="Nộp báo cáo ĐATN"
         description="Nhập giai đoạn, file và nội dung bản thảo"
         onClose={() => setSubmitOpen(false)}
         footer={
@@ -580,7 +580,7 @@ export default function StudentReportsDATNPage() {
             {submitForm.fileUrl && !selectedFile && (
               <div className="mt-2 text-right">
                 <a
-                  href={submitForm.fileUrl}
+                  href={getPreviewUrl(submitForm.fileUrl) || submitForm.fileUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 text-xs font-medium text-[#1976D2] hover:underline"

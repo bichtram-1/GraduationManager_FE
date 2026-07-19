@@ -604,7 +604,7 @@ export default function StudentReportsTTTNPage() {
             {submitForm.fileUrl && !selectedFile && (
               <div className="mt-2 text-right">
                 <a
-                  href={submitForm.fileUrl}
+                  href={getPreviewUrl(submitForm.fileUrl) || submitForm.fileUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 text-xs font-medium text-[#1976D2] hover:underline"

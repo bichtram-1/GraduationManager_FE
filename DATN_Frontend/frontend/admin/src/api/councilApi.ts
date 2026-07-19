@@ -17,6 +17,7 @@ export type CouncilRow = {
   batch?: string;
   dot_id?: string;
   topics?: {
+    id?: string;
     code?: string;
     title?: string;
     members?: number;

@@ -297,13 +297,13 @@ export default function InvitePage() {
       )}
 
       {!isPeriodLocked && isRegistrationTime.isClosed && (
-        <div className="sticky top-20 z-30 mb-5 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700 font-semibold shadow-sm">
+        <div className="sticky top-20 sm:top-32 z-30 mb-5 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700 font-semibold shadow-sm">
           ⚠️ Cổng đăng ký đề tài ĐATN đã đóng do hết hạn (Hạn chót: {selectedPeriod?.regDeadline}). Bạn không thể gửi lời mời, tham gia nhóm hoặc rời nhóm nữa.
         </div>
       )}
 
       {isPeriodLocked && (
-        <div className="sticky top-20 z-30 mb-5 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-sm">
+        <div className="sticky top-20 sm:top-32 z-30 mb-5 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-sm">
           {selectedPeriod?.status === 'closed'
             ? 'Đợt đồ án tốt nghiệp này đã đóng, bạn không thể gửi/hủy lời mời hoặc phản hồi lời mời nữa.'
             : 'Đợt đồ án tốt nghiệp đã bắt đầu chấm điểm, bạn không thể gửi/hủy lời mời hoặc phản hồi lời mời nữa.'}

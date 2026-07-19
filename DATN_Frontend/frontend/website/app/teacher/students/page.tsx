@@ -381,7 +381,7 @@ export default function TeacherStudentsPage() {
       />
 
       {isPeriodClosed && (
-        <div className="sticky top-20 z-30 mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 shadow-sm">
+        <div className="sticky top-20 sm:top-32 z-30 mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 shadow-sm">
           ⚠️ Đợt &quot;{selectedPeriod?.name}&quot; đã đóng — bạn chỉ có thể xem, không thể nhận xét báo cáo.
         </div>
       )}
@@ -590,7 +590,7 @@ export default function TeacherStudentsPage() {
                     <th className="px-5 py-3 text-left w-12">STT</th>
                     <th className="px-5 py-3 text-left max-w-[220px]">Tên đề tài</th>
                     <th className="px-5 py-3 text-left">Thành viên</th>
-                    <th className="px-5 py-3 text-right">Hành động</th>
+                    <th className="px-5 py-3 text-center">Hành động</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -627,7 +627,7 @@ export default function TeacherStudentsPage() {
                             )}
                           </td>
                           <td className="px-5 py-4">
-                            <div className="flex justify-end gap-2 items-center">
+                            <div className="flex justify-center gap-2 items-center">
                               <button
                                 onClick={() => {
                                   setSelectedDATN(group);
