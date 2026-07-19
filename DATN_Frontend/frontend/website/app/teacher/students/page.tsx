@@ -381,7 +381,7 @@ export default function TeacherStudentsPage() {
       />
 
       {isPeriodClosed && (
-        <div className="sticky top-20 z-30 mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 shadow-sm">
+        <div className="sticky top-20 sm:top-32 z-30 mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 shadow-sm">
           ⚠️ Đợt &quot;{selectedPeriod?.name}&quot; đã đóng — bạn chỉ có thể xem, không thể nhận xét báo cáo.
         </div>
       )}

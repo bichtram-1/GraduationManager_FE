@@ -967,7 +967,7 @@ const CreateCouncilPage = () => {
                         </div>
                       </div>
 
-                      <div className="mt-3 font-semibold text-slate-800 bg-red-50 text-red-700 p-2.5 rounded-lg text-xs">
+                      <div className="mt-3 font-semibold bg-red-50 text-red-700 p-2.5 rounded-lg text-xs">
                         ⚠️ Yêu cầu: Vui lòng đổi lịch hội đồng sang ngày khác hoặc chọn giảng viên khác thay thế để tránh trùng lịch bảo vệ!
                       </div>
                     </div>
