@@ -271,7 +271,7 @@ export default function StudentReportsDATNPage() {
         <div className="mb-6 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
           {selectedPeriod?.status === 'closed'
             ? 'Đợt đồ án tốt nghiệp này đã đóng, bạn không thể nộp bản thảo nữa.'
-            : 'Đợt đồ án tốt nghiệp đã bắt đầu chấm điểm, bạn không thể nộp bản thảo nữa.'}
+            : 'Đã kết thúc ngày nộp báo cáo.'}
         </div>
       )}
 

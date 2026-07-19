@@ -272,7 +272,7 @@ export default function StudentReportsTTTNPage() {
                 message.error(
                   selectedPeriod?.status === 'closed'
                     ? 'Đợt thực tập này đã đóng, bạn không thể nộp báo cáo nữa.'
-                    : 'Đợt thực tập đã bắt đầu chấm điểm, bạn không thể nộp báo cáo nữa.'
+                    : 'Đã kết thúc ngày nộp báo cáo.'
                 )
                 return
               }
@@ -302,7 +302,7 @@ export default function StudentReportsTTTNPage() {
         <div className="mb-6 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
           {selectedPeriod?.status === 'closed'
             ? 'Đợt thực tập này đã đóng, bạn không thể nộp báo cáo nữa.'
-            : 'Đợt thực tập đã bắt đầu chấm điểm, bạn không thể nộp báo cáo nữa.'}
+            : 'Đã kết thúc ngày nộp báo cáo.'}
         </div>
       )}
 
