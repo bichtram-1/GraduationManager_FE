@@ -600,11 +600,15 @@ export default function ThesisRegisterPage() {
                       </button>
                       {!isCurrentTopic ? (
                         <button
-                          disabled={(!!registration && registration.status === 'accepted') || isActionDisabled || !hasSlot}
+                          disabled={(!!registration && registration.status === 'accepted') || isActionDisabled || !hasSlot || !registration || (registration.members?.length ?? 0) < 2}
                           onClick={() => handleRegister(t.id)}
-                          className={`flex-1 rounded-2xl px-4 py-2 text-sm font-medium shadow-sm transition ${(!!registration && registration.status === 'accepted') || isActionDisabled || !hasSlot ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-[#2196F3] text-white hover:bg-[#1976D2]'}`}
+                          className={`flex-1 rounded-2xl px-4 py-2 text-sm font-medium shadow-sm transition ${(!!registration && registration.status === 'accepted') || isActionDisabled || !hasSlot || !registration || (registration.members?.length ?? 0) < 2 ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-[#2196F3] text-white hover:bg-[#1976D2]'}`}
                         >
-                          {hasSlot ? 'Đăng ký' : 'Đã đủ số lượng'}
+                          {!registration || (registration.members?.length ?? 0) < 2
+                            ? 'Yêu cầu nhóm đủ 2 người'
+                            : hasSlot
+                            ? 'Đăng ký'
+                            : 'Đã đủ số lượng'}
                         </button>
                       ) : (
                         <button
