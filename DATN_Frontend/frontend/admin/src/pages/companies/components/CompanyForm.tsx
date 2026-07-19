@@ -10,12 +10,24 @@ type Props = {
   disabled?: boolean;
 };
 
+// Danh sách lĩnh vực đồng bộ với DEFAULT_FIELDS ở website/app/student/internship/page.tsx —
+// công ty có thể có nhiều lĩnh vực, backend lưu qua bảng congtylinhvuc và trả về dạng
+// chuỗi nối bằng ", " (xem CongTyService::transformCompany). Select dùng mode="tags" nên
+// vẫn cho nhập lĩnh vực mới ngoài danh sách gợi ý, giống cơ chế bên student.
 const companyFieldOptions = [
-  { value: 'Phần mềm & công nghệ', label: 'Phần mềm & công nghệ' },
-  { value: 'Thương mại điện tử', label: 'Thương mại điện tử' },
-  { value: 'Gia công phần mềm', label: 'Gia công phần mềm' },
-  { value: 'Công nghệ số', label: 'Công nghệ số' },
-];
+  'Phần mềm',
+  'Mạng máy tính',
+  'An toàn thông tin',
+  'Hệ thống thông tin',
+  'Trí tuệ nhân tạo',
+  'Thiết kế đồ họa / UI-UX',
+  'Thương mại điện tử',
+  'Phần cứng & Nhúng',
+  'Fintech',
+  'Internet',
+  'Viễn thông',
+  'Khác',
+].map((value) => ({ value, label: value }));
 
 const companyStatusOptions: { value: string; label: keyof I18nKey }[] = [
   { value: STATUS_CODE.ACTIVE, label: 'company_active' },
@@ -74,8 +86,16 @@ const CompanyForm: React.FC<Props> = ({ disabled = false }) => {
             onSearch={handleLookupTax}
           />
       </Form.Item>
-      <Form.Item label={t(getKey('company_field'))} name="field" rules={[{ required: true, message: t(getKey('please_select_field')) }]}>
-          <Select disabled={disabled} options={companyFieldOptions} />
+      <Form.Item
+        label={t(getKey('company_field'))}
+        name="field"
+        rules={[{ required: true, message: t(getKey('please_select_field')) }]}
+        getValueProps={(value?: string) => ({
+          value: value ? value.split(',').map((s) => s.trim()).filter(Boolean) : [],
+        })}
+        normalize={(value: string[]) => (Array.isArray(value) ? value.join(', ') : value)}
+      >
+          <Select mode="tags" disabled={disabled} options={companyFieldOptions} placeholder="Chọn hoặc nhập lĩnh vực hoạt động" />
       </Form.Item>
       <Form.Item label={t(getKey('company_status'))} name="status" initialValue={STATUS_CODE.PENDING} rules={[{ required: true, message: t(getKey('please_select_status')) }]}>
           <Select
