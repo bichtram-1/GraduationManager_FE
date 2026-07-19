@@ -233,11 +233,6 @@ const StudentScoresPage: React.FC<Props> = ({ fixedMode }) => {
     { title: t(getKey('class_name')), dataIndex: 'className', key: 'className', width: 130 },
     { title: t(getKey('topic_name')), dataIndex: 'topicName', key: 'topicName', width: 240, ellipsis: true },
     { title: t(getKey('mentor')), dataIndex: 'mentor', key: 'mentor', width: 180, ellipsis: true },
-    { title: t(getKey('score_defense')), dataIndex: 'defenseScore', key: 'defenseScore', width: 110, render: (v) => formatNumber(v) },
-    { title: t(getKey('score_demo')), dataIndex: 'demoScore', key: 'demoScore', width: 110, render: (v) => formatNumber(v) },
-    { title: t(getKey('score_qa')), dataIndex: 'qaScore', key: 'qaScore', width: 100, render: (v) => formatNumber(v) },
-    { title: t(getKey('score_component_total')), key: 'componentTotal', width: 140, render: (_,_r) => formatNumber((_r.defenseScore ?? 0) + (_r.demoScore ?? 0) + (_r.qaScore ?? 0)) },
-    { title: t(getKey('score_report')), dataIndex: 'reportScore', key: 'reportScore', width: 110, render: (v) => formatNumber(v) },
     { title: t(getKey('project_final_score')), dataIndex: 'finalScore', key: 'finalScore', width: 110, render: (v) => <b>{typeof v === 'number' ? v.toFixed(2) : (v !== null && v !== undefined && v !== '' ? Number(v).toFixed(2) : '—')}</b> },
     { title: t(getKey('score_band')), key: 'band', width: 130, render: (_v, r) => { const meta = scoreBand(r.finalScore); return <Tag className={cn('!m-0 !rounded-full !px-2.5 !py-[2px] !border-none', meta.className)}>{t(getKey(meta.labelKey))}</Tag>; } },
     { title: t(getKey('action')), key: 'actions', fixed: 'right', width: 100, render: (_,_r) => (<Button type="link" onClick={() => openDetailModal(_r as ScoreRow)}>{t(getKey('detail'))}</Button>) },
@@ -412,17 +407,6 @@ const StudentScoresPage: React.FC<Props> = ({ fixedMode }) => {
               <Descriptions.Item label={t(getKey('company_name'))}>{(detailRecord as InternshipScoreRow).companyName}</Descriptions.Item>
             ) : (
               <Descriptions.Item label={t(getKey('topic_name'))}>{(detailRecord as ProjectScoreRow).topicName}</Descriptions.Item>
-            )}
-            {!('companyName' in detailRecord) && (
-              <>
-                <Descriptions.Item label={t(getKey('score_defense'))}>{formatNumber((detailRecord as ProjectScoreRow).defenseScore)}</Descriptions.Item>
-                <Descriptions.Item label={t(getKey('score_demo'))}>{formatNumber((detailRecord as ProjectScoreRow).demoScore)}</Descriptions.Item>
-                <Descriptions.Item label={t(getKey('score_qa'))}>{formatNumber((detailRecord as ProjectScoreRow).qaScore)}</Descriptions.Item>
-                <Descriptions.Item label={t(getKey('score_component_total'))}>
-                  {formatNumber(((detailRecord as ProjectScoreRow).defenseScore ?? 0) + ((detailRecord as ProjectScoreRow).demoScore ?? 0) + ((detailRecord as ProjectScoreRow).qaScore ?? 0))}
-                </Descriptions.Item>
-                <Descriptions.Item label={t(getKey('score_report'))}>{formatNumber((detailRecord as ProjectScoreRow).reportScore)}</Descriptions.Item>
-              </>
             )}
             <Descriptions.Item label={t(getKey('final_score'))}><b>{typeof detailRecord.finalScore === 'number' ? detailRecord.finalScore.toFixed(2) : (detailRecord.finalScore !== null && detailRecord.finalScore !== undefined && detailRecord.finalScore !== '' ? Number(detailRecord.finalScore).toFixed(2) : '—')}</b></Descriptions.Item>
             <Descriptions.Item label={t(getKey('score_band'))}>{t(getKey(scoreBand(detailRecord.finalScore).labelKey))}</Descriptions.Item>
