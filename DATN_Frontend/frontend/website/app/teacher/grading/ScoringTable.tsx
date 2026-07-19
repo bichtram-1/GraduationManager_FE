@@ -182,7 +182,12 @@ export default function ScoringTable({
       presentation: r.score.presentation !== '' ? parseFloat(r.score.presentation) : null,
       demo: r.score.demo !== '' ? parseFloat(r.score.demo) : null,
       qna: r.score.qna !== '' ? parseFloat(r.score.qna) : null,
-      report: r.score.report !== '' ? parseFloat(r.score.report) : null,
+      // Chỉ gửi report khi CHÍNH giảng viên này được sửa (canEditReport) - nếu không, cột này
+      // vốn không hiển thị/không sửa được nhưng vẫn đang mang giá trị "điểm trung bình xem
+      // tham khảo" tải sẵn từ getScores(); gửi lại giá trị đó lên backend khiến backend hiểu
+      // nhầm là cố tình sửa điểm báo cáo và từ chối lưu luôn cả điểm bảo vệ (thuyết trình/demo/
+      // vấn đáp) mà giảng viên này thực sự vừa nhập.
+      report: canEditReport && r.score.report !== '' ? parseFloat(r.score.report) : null,
     }))
     setLoading(true)
     try {
