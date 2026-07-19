@@ -110,6 +110,12 @@ export function TeacherShell({ children }: { children: ReactNode }) {
         const activePeriod = datnPeriods.find(p => p.status === 'open' || p.status === 'published') || datnPeriods[0];
         setSelectedPeriod(activePeriod);
       }
+    } else if (pathname.startsWith('/teacher/groups')) {
+      const datnPeriods = periods.filter(p => p.type === 'datn');
+      if (datnPeriods.length > 0 && (!selectedPeriod || selectedPeriod.type !== 'datn')) {
+        const activePeriod = datnPeriods.find(p => p.status === 'open' || p.status === 'published') || datnPeriods[0];
+        setSelectedPeriod(activePeriod);
+      }
     } else if (pathname.startsWith('/teacher/review-groups')) {
       const datnPeriods = periods.filter(p => p.type === 'datn');
       if (datnPeriods.length > 0 && (!selectedPeriod || selectedPeriod.type !== 'datn')) {
