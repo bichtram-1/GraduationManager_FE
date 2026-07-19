@@ -640,7 +640,12 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
             // khi !detail) - sửa đợt cũ có tên không theo đúng khuôn này thì không đụng vào.
             if (!detail) {
               const prefix = tab === 'tttn' ? 'TTTN ' : 'ĐATN ';
-              if (!val.startsWith(prefix)) {
+              // Đang xoá dở ngay trong tiền tố (VD: "ĐATN " -> "ĐATN" -> "ĐAT" -> ... -> "") thì
+              // để yên, không ép chèn lại - trước đây cứ thấy val không "startsWith" prefix là
+              // chèn thêm "prefix + val" phía trước, nhưng khi val chỉ là phần đầu của prefix
+              // (thiếu dấu cách/vài ký tự cuối) thì việc chèn lại tạo ra chuỗi lặp "ĐATN ĐATN".
+              const isPartialPrefix = prefix.startsWith(val);
+              if (!val.startsWith(prefix) && !isPartialPrefix) {
                 const idx = val.indexOf(prefix);
                 if (idx >= 0) {
                   // Gõ lạc chỗ khiến tiền tố không còn ở đầu - đưa về đầu, giữ nguyên phần còn lại

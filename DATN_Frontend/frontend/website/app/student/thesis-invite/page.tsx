@@ -87,7 +87,12 @@ export default function InvitePage() {
 
   const isInviteDisabled = useMemo(() => {
     if (isPeriodDisabled) return true
-    if (!registration) return false
+
+    // Nếu chưa có nhóm (registration === null), bản thân sinh viên là 1 thành viên.
+    // Nếu đã gửi 1 lời mời đi (pendingOutgoing >= 1), nhóm coi như đã đạt số lượng tối đa (1 + 1 = 2)
+    if (!registration) {
+      return pendingOutgoing >= 1
+    }
 
     const currentMember = registration.members?.find(m => m.isCurrent)
     const isLeader = !currentMember || currentMember.isLeader
