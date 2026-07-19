@@ -261,7 +261,7 @@ export default function TeacherReviewGroupsPage() {
     setReviewGroups((current) => current.map((group) => (group.id === groupId ? { ...group, evaluation } : group)))
   }
 
-  const handleSave = async (segmentType: Segment, groupId: string, evaluation: EvaluationValue) => {
+  const handleSave = async (segmentType: Segment, groupId: string, evaluation: EvaluationValue, previousEvaluation: EvaluationValue) => {
     if (selectedPeriod?.status === 'closed') {
       message.warning('Đợt học/tốt nghiệp đã đóng, không thể chỉnh sửa đánh giá!')
       return
@@ -277,6 +277,20 @@ export default function TeacherReviewGroupsPage() {
         setGuidanceGroups((current) => current.map((group) => (group.id === groupId ? (data.group as GuidanceGroup) : group)))
       } else {
         setReviewGroups((current) => current.map((group) => (group.id === groupId ? (data.group as ReviewGroup) : group)))
+      }
+    } catch (err) {
+      // handleEvaluationChange đã cập nhật UI ngay (lạc quan) trước khi gọi API này - nếu
+      // backend từ chối lưu (VD: ngoài thời gian phản biện, đợt đã đóng, đã đánh giá trước
+      // đó...) mà không bắt lỗi ở đây thì dropdown vẫn hiện "Đạt/Không đạt" như đã lưu thành
+      // công dù cột ket_qua_phan_bien/ket_qua_huong_dan trong DB chưa hề được cập nhật - đây
+      // chính là lý do đánh giá "biến mất" sau khi tải lại trang. Phải hoàn tác về giá trị cũ
+      // và báo lỗi thật cho giảng viên biết.
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      message.error(msg || 'Lưu đánh giá thất bại, vui lòng thử lại!')
+      if (segmentType === 'Nhóm hướng dẫn') {
+        setGuidanceGroups((current) => current.map((group) => (group.id === groupId ? { ...group, evaluation: previousEvaluation } : group)))
+      } else {
+        setReviewGroups((current) => current.map((group) => (group.id === groupId ? { ...group, evaluation: previousEvaluation } : group)))
       }
     } finally {
       setSavingId(null)
@@ -425,10 +439,11 @@ export default function TeacherReviewGroupsPage() {
                                     message.warning('Không thể đánh giá vì giảng viên phản biện đã đánh giá trước đó!')
                                     return
                                   }
+                                  const previousEvaluation = group.evaluation
                                   const val = event.target.value as EvaluationValue
                                   handleEvaluationChange('Nhóm hướng dẫn', group.id, val)
                                   if (val === 'dat' || val === 'khongdat') {
-                                    handleSave('Nhóm hướng dẫn', group.id, val)
+                                    handleSave('Nhóm hướng dẫn', group.id, val, previousEvaluation)
                                   }
                                 }}
                                 className={TeacherInputClass('min-w-37.5')}
@@ -580,10 +595,11 @@ export default function TeacherReviewGroupsPage() {
                                     message.warning(reviewWindowMessage)
                                     return
                                   }
+                                  const previousEvaluation = group.evaluation
                                   const val = event.target.value as EvaluationValue
                                   handleEvaluationChange('Nhóm phản biện', group.id, val)
                                   if (val === 'dat' || val === 'khongdat') {
-                                    handleSave('Nhóm phản biện', group.id, val)
+                                    handleSave('Nhóm phản biện', group.id, val, previousEvaluation)
                                   }
                                 }}
                                 className={TeacherInputClass('min-w-37.5')}
