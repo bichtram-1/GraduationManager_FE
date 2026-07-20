@@ -99,20 +99,7 @@ export default function StudentResultsPage() {
           <div className="text-sm text-slate-600">Kết quả chia theo TTTN & ĐATN</div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="rounded-2xl bg-white p-3 text-xs shadow-sm ring-1 ring-slate-200">
-            <div className="flex items-center gap-2 text-xs text-slate-500"><CalendarDays className="h-4 w-4 text-[#1976D2]" /> Cập nhật</div>
-            <div className="mt-1 text-sm font-semibold text-slate-900">{data.summary.updatedAt}</div>
-          </div>
-          <div className="rounded-2xl bg-white p-3 text-xs shadow-sm ring-1 ring-slate-200">
-            <div className="flex items-center gap-2 text-xs text-slate-500"><ChartColumnBig className="h-4 w-4 text-[#1976D2]" /> Công bố</div>
-            <div className="mt-1 text-sm font-semibold text-slate-900">{isPublished ? 'Đã công bố' : 'Đang chờ'}</div>
-          </div>
-          <div className="rounded-2xl bg-white p-3 text-xs shadow-sm ring-1 ring-slate-200">
-            <div className="flex items-center gap-2 text-xs text-slate-500"><Medal className="h-4 w-4 text-emerald-500" /> Xếp loại</div>
-            <div className="mt-1 text-sm font-semibold text-slate-900">{data.summary.classification}</div>
-          </div>
-        </div>
+        {/* status cards removed to declutter UI */}
       </section>
 
       <div className="mb-5 flex gap-2 border-b border-slate-200">

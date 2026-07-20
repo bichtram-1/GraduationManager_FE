@@ -132,7 +132,7 @@ export default function StudentIndexPage() {
                 : ''}
             </p>
           </div>
-          <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[420px]">
+          <div className="grid gap-3 sm:grid-cols-2 lg:min-w-[300px]">
             <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
               <div className="text-xs text-slate-500">TTTN</div>
               <div className="mt-2 text-lg font-semibold text-slate-900">{tttn.status}</div>
@@ -143,17 +143,11 @@ export default function StudentIndexPage() {
                 {datn.status === 'Đã đăng ký' ? '1 đề tài' : datn.status}
               </div>
             </div>
-            <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
-              <div className="text-xs text-slate-500">Điểm dự kiến</div>
-              <div className="mt-2 text-lg font-semibold text-slate-900">
-                {expectedScore > 0 ? expectedScore : 'Chưa có'}
-              </div>
-            </div>
           </div>
         </div>
       </section>
 
-      <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-6 grid gap-4 md:grid-cols-3">
         <StudentStatCard
           title="TTTN"
           value={tttn.status}
@@ -171,12 +165,6 @@ export default function StudentIndexPage() {
           value={String(reportsCount).padStart(2, '0')}
           hint="Báo cáo tiến độ đã nộp"
           accent="orange"
-        />
-        <StudentStatCard
-          title="Kết quả"
-          value={expectedScore > 0 ? String(expectedScore) : 'Chưa có'}
-          hint="Điểm tổng kết dự kiến"
-          accent="violet"
         />
       </div>
 

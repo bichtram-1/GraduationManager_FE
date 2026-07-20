@@ -607,10 +607,10 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
               if (!value) return Promise.resolve();
               const name = value.trim();
 
-              // Không cần kiểm tra nội dung tên có chứa "Thực tập"/"TT" hay "Đồ án"/"DA" nữa —
-              // tiền tố "TTTN "/"ĐATN " đã được tự động điền và khoá cứng ở onChange bên dưới lúc
-              // tạo mới, nên rule nội dung này chỉ còn gây từ chối nhầm khi sửa đợt cũ (tên cũ có
-              // thể không theo đúng khuôn, vì prefix-lock chỉ áp dụng lúc tạo mới - xem !detail).
+              const prefix = tab === 'tttn' ? 'TTTN ' : 'ĐATN ';
+              if (!name.startsWith(prefix)) {
+                return Promise.reject(new Error(`Tên đợt tốt nghiệp phải bắt đầu bằng "${prefix}"`));
+              }
 
               // Check uniqueness via API in real-time
               try {
