@@ -59,6 +59,7 @@ const CompaniesPage = () => {
   const importMutation = companyHooks.useImportCompanies();
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [fileList, setFileList] = useState<any[]>([]);
+  const [previewData, setPreviewData] = useState<any[]>([]);
   const [importErrors, setImportErrors] = useState<string[]>([]);
   const [importSuccessMessage, setImportSuccessMessage] = useState<string | null>(null);
 
@@ -102,6 +103,7 @@ const CompaniesPage = () => {
     setFileList([]);
     setImportErrors([]);
     setImportSuccessMessage(null);
+    setPreviewData([]);
   };
 
   const handleExportExcel = () => {
@@ -556,29 +558,68 @@ const CompaniesPage = () => {
       >
         <div className="py-4">
           <div className="space-y-4 flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
-              <label className="block text-sm font-semibold text-slate-700">
-                1. Chọn file Excel dữ liệu <span className="text-red-500">*</span>
+            <div className="flex flex-col gap-2 items-center justify-center text-center">
+              <label className="block text-sm font-semibold text-slate-700 mb-1">
+                Tải file Excel dữ liệu doanh nghiệp lên hệ thống <span className="text-red-500">*</span>
               </label>
               <Upload
                 accept=".xlsx, .xls"
                 fileList={fileList}
                 beforeUpload={(file) => {
                   setFileList([file]);
+                  const reader = new FileReader();
+                  reader.onload = (e) => {
+                    const data = e.target?.result;
+                    const workbook = XLSX.read(data, { type: 'binary' });
+                    const sheetName = workbook.SheetNames[0];
+                    const sheet = workbook.Sheets[sheetName];
+                    const parsed = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                    setPreviewData(parsed.slice(0, 6));
+                  };
+                  reader.readAsBinaryString(file);
                   return false;
                 }}
                 onRemove={() => {
                   setFileList([]);
+                  setPreviewData([]);
                 }}
+                className="w-full flex justify-center"
               >
-                <Button
-                  icon={<UploadOutlined />}
-                  className="!h-11 rounded-lg border-dashed border-slate-300 hover:border-primary"
-                >
-                  Chọn file Excel (.xlsx, .xls)
-                </Button>
+                {fileList.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-slate-300 rounded-2xl bg-slate-50 hover:bg-blue-50/50 hover:border-primary transition cursor-pointer w-[480px] text-center min-h-[140px] px-8">
+                    <FileExcelOutlined className="text-4xl text-green-500 mb-3 animate-pulse" />
+                    <div className="text-sm font-semibold text-slate-700">Kéo thả hoặc nhấp để chọn file Excel</div>
+                    <div className="text-xs text-slate-400 mt-1">Chấp nhận định dạng .xlsx, .xls</div>
+                  </div>
+                ) : null}
               </Upload>
             </div>
+
+            {previewData.length > 0 && (
+              <div className="flex flex-col gap-1.5 mt-2">
+                <div className="text-xs font-semibold text-slate-500">Xem trước dữ liệu (tối đa 5 dòng đầu):</div>
+                <div className="overflow-x-auto border border-slate-200 rounded-xl bg-slate-50 p-2 max-h-48">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-slate-400 font-medium bg-slate-100">
+                        {previewData[0]?.map((col: any, i: number) => (
+                          <th key={i} className="p-1.5 font-medium">{col || `Cột ${i+1}`}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 bg-white">
+                      {previewData.slice(1).map((row: any, i: number) => (
+                        <tr key={i} className="hover:bg-slate-50">
+                          {previewData[0]?.map((_: any, j: number) => (
+                            <td key={j} className="p-1.5 truncate max-w-[150px]" title={row[j]}>{row[j] !== undefined ? String(row[j]) : '—'}</td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
 
             {importSuccessMessage && (
               <Alert
