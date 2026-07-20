@@ -636,24 +636,31 @@ const PeriodForm: React.FC<Props> = ({ tab, disabled: initialDisabled, detail })
           placeholder={tab === 'tttn' ? 'VD: TTTN HK1/2026-2027' : 'VD: ĐATN HK1/2026-2027'}
           onChange={(e) => {
             let val = e.target.value;
-            // Chỉ khoá tiền tố lúc TẠO MỚI (giống effect tự điền tên mặc định cũng chỉ chạy
-            // khi !detail) - sửa đợt cũ có tên không theo đúng khuôn này thì không đụng vào.
-            if (!detail) {
-              const prefix = tab === 'tttn' ? 'TTTN ' : 'ĐATN ';
-              // Đang xoá dở ngay trong tiền tố (VD: "ĐATN " -> "ĐATN" -> "ĐAT" -> ... -> "") thì
-              // để yên, không ép chèn lại - trước đây cứ thấy val không "startsWith" prefix là
-              // chèn thêm "prefix + val" phía trước, nhưng khi val chỉ là phần đầu của prefix
-              // (thiếu dấu cách/vài ký tự cuối) thì việc chèn lại tạo ra chuỗi lặp "ĐATN ĐATN".
-              const isPartialPrefix = prefix.startsWith(val);
-              if (!val.startsWith(prefix) && !isPartialPrefix) {
-                const idx = val.indexOf(prefix);
-                if (idx >= 0) {
-                  // Gõ lạc chỗ khiến tiền tố không còn ở đầu - đưa về đầu, giữ nguyên phần còn lại
-                  val = prefix + val.slice(0, idx) + val.slice(idx + prefix.length);
-                } else {
-                  // Tiền tố bị xoá hẳn - khôi phục lại, giữ nguyên phần đã gõ thêm làm hậu tố
-                  val = prefix + val;
+            const prefix = tab === 'tttn' ? 'TTTN ' : 'ĐATN ';
+
+            if (!val.startsWith(prefix)) {
+              const idx = val.indexOf(prefix);
+              if (idx >= 0) {
+                // Di chuyển tiền tố về đầu nếu gõ lệch vị trí
+                val = prefix + val.slice(0, idx) + val.slice(idx + prefix.length);
+              } else {
+                // Tự động khôi phục tiền tố và giữ lại phần hậu tố nguyên vẹn
+                let cleaned = val;
+                for (let len = prefix.length; len > 0; len--) {
+                  const sub = prefix.slice(0, len);
+                  if (cleaned.startsWith(sub)) {
+                    cleaned = cleaned.slice(len);
+                    break;
+                  }
                 }
+                for (let len = 1; len < prefix.length; len++) {
+                  const sub = prefix.slice(len);
+                  if (cleaned.startsWith(sub)) {
+                    cleaned = cleaned.slice(sub.length);
+                    break;
+                  }
+                }
+                val = prefix + cleaned.trimStart();
               }
             }
             form.setFieldValue('name', val);
