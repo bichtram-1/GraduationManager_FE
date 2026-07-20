@@ -52,7 +52,7 @@ function getActiveKey(pathname: string) {
 
 export function StudentShell({ children }: { children: ReactNode }) {
   const pathname = usePathname()
-  const { periods, selectedPeriod, setSelectedPeriod } = usePeriod()
+  const { periods, selectedPeriod, setSelectedPeriod, loading } = usePeriod()
   const [profileOpen, setProfileOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [student, setStudent] = useState<{
@@ -190,41 +190,47 @@ export function StudentShell({ children }: { children: ReactNode }) {
           </Link>
 
           {showPeriodSelector && (
-            <div className="hidden max-w-sm flex-1 px-6 sm:flex items-center justify-center min-w-0" title={selectedPeriod?.name}>
-              <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1 rounded-[12px] shadow-sm w-full min-w-0">
-                <span className="text-xs font-semibold text-slate-500 shrink-0">Đợt hoạt động:</span>
-                <Select
-                  className="w-full min-w-0"
-                  placeholder="Chọn đợt hoạt động"
-                  value={selectedPeriod?.id}
-                  labelRender={() => selectedPeriod?.name ?? 'Chọn đợt hoạt động'}
-                  onChange={(id) => {
-                    const period = periods.find((p) => p.id === id)
-                    setSelectedPeriod(period)
-                  }}
-                  variant="borderless"
-                  classNames={{ popup: { root: 'rounded-xl shadow-lg' } }}
-                >
-                  {showTttnGroup && periods.filter(p => p.type === 'tttn').length > 0 && (
-                    <Select.OptGroup label="Đợt Thực tập tốt nghiệp (TTTN)">
-                      {periods.filter(p => p.type === 'tttn').map(p => (
-                        <Select.Option key={p.id} value={p.id}>
-                          <span className="font-medium text-slate-700 text-sm">{p.name}</span>
-                        </Select.Option>
-                      ))}
-                    </Select.OptGroup>
-                  )}
-                  {showDatnGroup && periods.filter(p => p.type === 'datn').length > 0 && (
-                    <Select.OptGroup label="Đợt Đồ án tốt nghiệp (ĐATN)">
-                      {periods.filter(p => p.type === 'datn').map(p => (
-                        <Select.Option key={p.id} value={p.id}>
-                          <span className="font-medium text-slate-700 text-sm">{p.name}</span>
-                        </Select.Option>
-                      ))}
-                    </Select.OptGroup>
-                  )}
-                </Select>
-              </div>
+            <div className="hidden max-w-sm flex-1 px-6 sm:flex items-center justify-center min-w-0">
+              {loading || !selectedPeriod ? (
+                <div className="h-8 w-full bg-slate-50 border border-slate-200 px-3 rounded-[12px] flex items-center justify-center animate-pulse">
+                  <div className="h-2 w-1/3 bg-slate-200 rounded" />
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1 rounded-[12px] shadow-sm w-full min-w-0" title={selectedPeriod?.name}>
+                  <span className="text-xs font-semibold text-slate-500 shrink-0">Đợt hoạt động:</span>
+                  <Select
+                    className="w-full min-w-0"
+                    placeholder="Chọn đợt hoạt động"
+                    value={selectedPeriod?.id}
+                    labelRender={() => selectedPeriod?.name ?? 'Chọn đợt hoạt động'}
+                    onChange={(id) => {
+                      const period = periods.find((p) => p.id === id)
+                      setSelectedPeriod(period)
+                    }}
+                    variant="borderless"
+                    classNames={{ popup: { root: 'rounded-xl shadow-lg' } }}
+                  >
+                    {showTttnGroup && periods.filter(p => p.type === 'tttn').length > 0 && (
+                      <Select.OptGroup label="Đợt Thực tập tốt nghiệp (TTTN)">
+                        {periods.filter(p => p.type === 'tttn').map(p => (
+                          <Select.Option key={p.id} value={p.id}>
+                            <span className="font-medium text-slate-700 text-sm">{p.name}</span>
+                          </Select.Option>
+                        ))}
+                      </Select.OptGroup>
+                    )}
+                    {showDatnGroup && periods.filter(p => p.type === 'datn').length > 0 && (
+                      <Select.OptGroup label="Đợt Đồ án tốt nghiệp (ĐATN)">
+                        {periods.filter(p => p.type === 'datn').map(p => (
+                          <Select.Option key={p.id} value={p.id}>
+                            <span className="font-medium text-slate-700 text-sm">{p.name}</span>
+                          </Select.Option>
+                        ))}
+                      </Select.OptGroup>
+                    )}
+                  </Select>
+                </div>
+              )}
             </div>
           )}
 

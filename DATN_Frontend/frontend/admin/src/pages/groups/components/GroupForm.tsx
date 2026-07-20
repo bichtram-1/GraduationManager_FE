@@ -63,8 +63,20 @@ const GroupForm: React.FC<Props> = ({ detail, disabled, onPendingSwapChange }) =
   const otherGroupStudents = useMemo(() => {
     const rows = (assignmentList?.rows ?? []) as AssignmentRow[];
     const currentGroupId = detail?.id;
-    return rows.filter((r) => r.groupId && String(r.groupId) !== String(currentGroupId) && (r.dieuKienLamDoAn ?? 'DAT') === 'DAT');
-  }, [assignmentList, detail?.id]);
+    return rows.filter((r) => {
+      if (!r.groupId || String(r.groupId) === String(currentGroupId)) return false;
+      if ((r.dieuKienLamDoAn ?? 'DAT') !== 'DAT') return false;
+
+      // Lọc bỏ sinh viên thuộc nhóm đã bị từ chối (LOCKED) hoặc giải tán (DISSOLVED)
+      const group = allGroupsList.find((g) => String(g.id) === String(r.groupId));
+      if (group) {
+        if (group.status === 'LOCKED' || group.status === 'DISSOLVED') {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [assignmentList, detail?.id, allGroupsList]);
 
   const dbStudents = useMemo(() => {
     const rows = (assignmentList?.rows ?? []) as AssignmentRow[];
@@ -302,7 +314,14 @@ const GroupForm: React.FC<Props> = ({ detail, disabled, onPendingSwapChange }) =
                 <div className="mb-3 flex items-center justify-between">
                   <div className="text-sm font-semibold text-slate-800">Thành viên nhóm</div>
                   <div className="flex gap-2">
-                    <Button type="primary" size="small" ghost icon={<SwapOutlined />} onClick={() => setSwapping(true)}>
+                    <Button
+                      type="primary"
+                      size="small"
+                      ghost
+                      icon={<SwapOutlined />}
+                      onClick={() => setSwapping(true)}
+                      disabled={detail?.status === 'LOCKED' || detail?.status === 'DISSOLVED'}
+                    >
                       Hoán đổi
                     </Button>
                   </div>
