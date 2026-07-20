@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState, useEffect } from 'react'
-import { CheckCircle2, Clock3, Mail, Plus, XCircle } from 'lucide-react'
+import { CheckCircle2, Clock3, Mail, Plus, XCircle, ChevronDown, ChevronUp } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
 import { StudentPill, StudentSectionHeader } from '../_components/StudentShell'
 import { StudentButton, StudentModal } from '../_components/StudentUI'
@@ -78,6 +78,9 @@ export default function InvitePage() {
   const [cancelling, setCancelling] = useState(false)
   const [leaveGroupConfirmOpen, setLeaveGroupConfirmOpen] = useState(false)
   const [leaving, setLeaving] = useState(false)
+  const [historyLogs, setHistoryLogs] = useState<any[]>([])
+  const [loadingHistory, setLoadingHistory] = useState(false)
+  const [expandedLogs, setExpandedLogs] = useState<Record<number, boolean>>({})
 
   const isTopicActive = !!(registration && registration.topicId && registration.topicId !== "");
 
@@ -177,6 +180,53 @@ export default function InvitePage() {
       window.removeEventListener('realtime-topic-updated', handleSync)
     }
   }, [selectedPeriod?.id])
+
+  // Load history for current group when registration exists
+  useEffect(() => {
+    let mounted = true
+    const loadHistory = async () => {
+      if (!registration || !registration.groupId) {
+        setHistoryLogs([])
+        return
+      }
+      try {
+        setLoadingHistory(true)
+        const logs = await studentApi.getHistory(50, selectedPeriod?.id)
+        if (!mounted) return
+        // Filter logs for this group if nhom_id present
+        const filtered = (logs || []).filter((l: any) => l.nhom_id === registration.groupId || !registration.groupId)
+
+        // Try to enhance with class/name by searching student info when possible
+        const enhanced = await Promise.all(filtered.map(async (l: any) => {
+          const out: any = { ...l }
+          if (l.ma_so_sinh_vien) {
+            try {
+              const res = await studentApi.searchStudents(l.ma_so_sinh_vien)
+              if (res && res.length > 0) {
+                out.studentName = res[0].name
+                out.className = res[0].className
+              }
+            } catch (_err) {
+              // ignore
+            }
+          }
+          return out
+        }))
+
+        setHistoryLogs(enhanced)
+      } catch (_err) {
+        setHistoryLogs([])
+      } finally {
+        if (mounted) setLoadingHistory(false)
+      }
+    }
+
+    loadHistory()
+
+    return () => {
+      mounted = false
+    }
+  }, [registration, selectedPeriod?.id])
 
   const addInvite = async () => {
     const id = newId.trim()
@@ -542,6 +592,56 @@ export default function InvitePage() {
                 </div>
               </div>
             ))}
+
+            {/* Group history: show recent accept/reject actions and related logs */}
+            <div className="mt-4">
+              <div className="text-sm font-semibold text-slate-800">Lịch sử nhóm</div>
+              <div className="mt-2 space-y-2">
+                {loadingHistory && (
+                  <div className="text-xs text-slate-500">Đang tải lịch sử...</div>
+                )}
+
+                {!loadingHistory && historyLogs.length === 0 && (
+                  <div className="text-xs text-slate-400">Chưa có lịch sử hành động cho nhóm này.</div>
+                )}
+
+                {!loadingHistory && historyLogs.map((log) => {
+                  const id = log.log_id || Math.random()
+                  const isExpanded = !!expandedLogs[id]
+                  const when = log.created_at ? new Date(log.created_at).toLocaleString() : ''
+                  const actor = log.user_name || log.ma_so_sinh_vien || '—'
+                  const studentLabel = log.studentName ? `${log.studentName} • ${log.className || ''}` : (log.ma_so_sinh_vien ? `${log.ma_so_sinh_vien}` : '')
+                  const desc = log.description || log.details || ''
+                  const short = desc.length > 120 ? desc.slice(0, 120) + '…' : desc
+
+                  return (
+                    <div key={id} className="flex items-start justify-between gap-3 rounded-lg border border-slate-100 bg-slate-50 p-3 text-sm">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <div className="text-xs text-slate-500">{when}</div>
+                          <div className="text-xs text-slate-400">•</div>
+                          <div className="text-xs font-medium text-slate-700">{actor}</div>
+                          {studentLabel && <div className="ml-2 text-xs text-slate-500">{studentLabel}</div>}
+                        </div>
+                        <div className="mt-1 text-xs text-slate-600">
+                          {isExpanded ? desc : short}
+                        </div>
+                      </div>
+                      {desc.length > 120 && (
+                        <button
+                          type="button"
+                          onClick={() => setExpandedLogs((cur) => ({ ...cur, [id]: !cur[id] }))}
+                          className="ml-2 flex h-8 w-8 items-center justify-center rounded-full bg-white border text-slate-500 hover:bg-slate-100"
+                          aria-label={isExpanded ? 'Thu gọn' : 'Mở rộng'}
+                        >
+                          {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
           </div>
         </section>
       </div>

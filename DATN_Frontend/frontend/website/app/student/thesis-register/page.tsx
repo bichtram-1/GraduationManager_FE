@@ -439,48 +439,51 @@ export default function ThesisRegisterPage() {
         </div>
 
         <div className="rounded-[22px] bg-slate-50 p-4">
-          <div className="text-sm font-semibold text-slate-900">Cách đọc trạng thái</div>
-          <div className="mt-3 space-y-3 text-sm text-slate-600">
-            <div className="rounded-2xl bg-white p-4">
-              <div className="font-medium text-slate-900">Chờ giảng viên duyệt</div>
-              <div className="mt-1">Nhóm đã gửi đề tài nhưng chưa có kết luận chính thức.</div>
-            </div>
-            <div className="rounded-2xl bg-white p-4">
-              <div className="font-medium text-slate-900">Đã duyệt</div>
-              <div className="mt-1">Sinh viên biết ngay đề tài đã được giảng viên chấp thuận.</div>
-            </div>
-            <div className="rounded-2xl bg-white p-4">
-              <div className="font-medium text-slate-900">Đã từ chối</div>
-              <div className="mt-1">Cần đổi đề tài hoặc cập nhật nhóm trước khi gửi lại.</div>
-            </div>
+          <div className="text-sm font-semibold text-slate-900">Trạng thái hiện tại</div>
+          <div className="mt-3 text-sm text-slate-700">
+            {registration ? (
+              <>
+                <div className="font-medium text-slate-900">Bạn đã có nhóm</div>
+                <div className="mt-2 text-sm text-slate-600">{registration.topicTitle ? `Đề tài: ${registration.topicTitle}` : 'Nhóm đã được tạo nhưng chưa có đề tài'}</div>
+                <div className="mt-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {registration.members?.map((m) => (
+                      <span key={m.studentCode} className="inline-flex items-center gap-1.5 rounded-xl bg-white border border-slate-200 px-2.5 py-1 text-xs text-slate-700 font-medium">
+                        {m.name} ({m.studentCode})
+                        {m.isLeader && <span className="bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold px-1 rounded ml-1">Trưởng nhóm</span>}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="font-medium text-slate-900">Chưa có nhóm</div>
+                <div className="mt-2 text-sm text-slate-600">Bạn chưa tạo nhóm hoặc chưa nhận lời mời từ nhóm khác.</div>
+              </>
+            )}
+          </div>
+
+          <div className="mt-4">
+            {/* Show create group button only when student needs it: no registration and period allows actions */}
+            {!registration && !isActionDisabled && (
+              <Link href={`/student/thesis-invite`} className="inline-flex items-center gap-2 rounded-2xl bg-[#2196F3] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-blue-200 transition hover:bg-[#1976D2]">
+                <Users className="h-4 w-4" />
+                Tạo nhóm ĐATN
+              </Link>
+            )}
+
+            {/* Show requirement hint when there's no group or group is missing members (<2) */}
+            {(!registration || (registration.members?.length ?? 0) < 2) && (
+              <div className="mt-3 rounded-lg border border-yellow-100 bg-yellow-50 px-3 py-2 text-sm text-yellow-800">
+                Yêu cầu nhóm đủ hai người mới được đăng ký đề tài
+              </div>
+            )}
           </div>
         </div>
       </section>
 
-      {/* CỐ ĐỊNH BANNER TẠO NHÓM Ở ĐÂY CHO DỄ XEM */}
-      <section className="mb-6 rounded-[28px] border border-blue-100 bg-[linear-gradient(135deg,#eff6ff_0%,#ffffff_100%)] p-5 shadow-[0_12px_40px_rgba(15,23,42,0.05)]">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="text-sm font-semibold text-slate-900">Cần tạo nhóm trước khi đăng ký?</div>
-            <div className="mt-1 text-sm text-slate-600">Nếu đề tài yêu cầu mời thêm thành viên, hãy chuyển sang bước tạo nhóm để đồng bộ trạng thái duyệt.</div>
-          </div>
-          {isActionDisabled ? (
-            <button
-              type="button"
-              disabled
-              className="inline-flex items-center gap-2 rounded-2xl bg-slate-100 px-4 py-2.5 text-sm font-medium text-slate-400 cursor-not-allowed"
-            >
-              <Users className="h-4 w-4" />
-              Tạo nhóm ĐATN
-            </button>
-          ) : (
-            <Link href={`/student/thesis-invite?topic=${registration?.topicId ?? 'DT001'}`} className="inline-flex items-center gap-2 rounded-2xl bg-[#2196F3] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-blue-200 transition hover:bg-[#1976D2]">
-              <Users className="h-4 w-4" />
-              Tạo nhóm ĐATN
-            </Link>
-          )}
-        </div>
-      </section>
+      {/* Banner removed - create group button moved into status card */}
 
       {/* BỘ LỌC ĐỀ TÀI & TÌM KIẾM */}
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between bg-slate-50 p-4 rounded-[22px] border border-slate-200">
@@ -569,62 +572,55 @@ export default function ThesisRegisterPage() {
                 const hasSlot = safeUsed < safeMaxSlots && t.published
                 const isCurrentTopic = registration?.topicId === t.id
                 return (
-                  <div key={t.id} className="rounded-[18px] border border-slate-100 bg-white p-6 shadow-sm flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <a className="text-[#2196F3] font-medium text-sm">{t.code || t.id}</a>
-                          <h3 className="mt-2 text-lg font-semibold text-slate-900 line-clamp-2" title={t.title}>{t.title}</h3>
-                          <div className="mt-2 text-xs text-slate-500 flex flex-wrap items-center gap-1.5">
-                            <span>{teacher}</span>
-                            <span className="text-slate-300">•</span>
-                            <span className="font-medium text-slate-600">Số lượng sinh viên thực hiện: {safeMaxSlots}</span>
-                          </div>
-                          <div className="mt-2.5 text-xs text-blue-600 font-semibold">Hướng đề tài: {t.direction || 'Phát triển phần mềm'}</div>
+                  <div key={t.id} className="rounded-lg border border-slate-100 bg-white p-3 shadow-sm flex items-center justify-between gap-4">
+                    <div className="flex items-start gap-4 min-w-0">
+                      <div className="flex-shrink-0">
+                        <div className="text-xs text-[#2196F3] font-medium">{t.code || t.id}</div>
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold text-slate-900 line-clamp-2" title={t.title}>{t.title}</div>
+                        <div className="mt-1 flex items-center gap-2 text-xs text-slate-500">
+                          <span>{teacher}</span>
+                          <span className="text-slate-300">•</span>
+                          <span className="font-medium text-slate-600">{safeUsed}/{safeMaxSlots}</span>
+                          {t.direction && <span className="ml-2 text-xs text-blue-600">{t.direction}</span>}
+                        </div>
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
                           {isCurrentTopic && registration && (
-                            <div className="mt-3 flex flex-wrap items-center gap-2">
-                              <StudentPill tone={registrationTone}>{registration.status === 'accepted' ? 'Đã duyệt đề tài này' : registration.status === 'rejected' ? 'Đề tài bị từ chối' : 'Đang chờ duyệt đề tài này'}</StudentPill>
-                              <span className="text-xs text-emerald-700 font-semibold bg-emerald-50 border border-emerald-100 rounded-full px-2.5 py-0.5">Nhóm của bạn</span>
-                            </div>
+                            <StudentPill tone={registrationTone}>
+                              {registration.status === 'accepted' ? 'Đã duyệt' : registration.status === 'rejected' ? 'Đã từ chối' : 'Chờ duyệt'}
+                            </StudentPill>
                           )}
+                          {isCurrentTopic && <span className="text-xs text-emerald-700 font-semibold bg-emerald-50 border border-emerald-100 rounded-full px-2 py-0.5">Nhóm của bạn</span>}
                         </div>
                       </div>
                     </div>
 
-                    <div className="mt-6 flex items-center gap-3">
+                    <div className="flex items-center gap-3">
                       <button
                         onClick={() => setDetailTopic(t)}
-                        className="flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition"
+                        className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50 transition"
                       >
-                        Xem chi tiết
+                        Xem
                       </button>
                       {!isCurrentTopic ? (
                         <button
                           disabled={(!!registration && registration.status === 'accepted') || isActionDisabled || !hasSlot || !registration || (registration.members?.length ?? 0) < 2}
                           onClick={() => handleRegister(t.id)}
-                          className={`flex-1 rounded-2xl px-4 py-2 text-sm font-medium shadow-sm transition ${(!!registration && registration.status === 'accepted') || isActionDisabled || !hasSlot || !registration || (registration.members?.length ?? 0) < 2 ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-[#2196F3] text-white hover:bg-[#1976D2]'}`}
+                          className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${((!!registration && registration.status === 'accepted') || isActionDisabled || !hasSlot || !registration || (registration.members?.length ?? 0) < 2) ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-[#2196F3] text-white hover:bg-[#1976D2]'}`}
                         >
-                          {!registration || (registration.members?.length ?? 0) < 2
-                            ? 'Yêu cầu nhóm đủ 2 người'
-                            : hasSlot
-                            ? 'Đăng ký'
-                            : 'Đã đủ số lượng'}
+                          Đăng ký
                         </button>
                       ) : (
                         <button
                           disabled={registration?.status === 'accepted' || isActionDisabled}
                           onClick={() => setConfirmAction({ type: 'cancelTopic' })}
-                          className={`flex-1 rounded-2xl border px-4 py-2 text-sm font-medium transition ${registration?.status === 'accepted' || isActionDisabled ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
+                          className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${registration?.status === 'accepted' || isActionDisabled ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
                         >
-                          {registration?.status === 'accepted' ? 'Đã khóa đề tài' : 'Hủy đăng ký'}
+                          {registration?.status === 'accepted' ? 'Đã khóa' : 'Hủy'}
                         </button>
                       )}
                     </div>
-                    {isCurrentTopic && registration && (
-                      <div className="mt-4 rounded-2xl bg-[#eff6ff] px-4 py-3 text-xs leading-6 text-slate-600 ring-1 ring-blue-100">
-                        Hồ sơ nhóm của bạn đang ở trạng thái <span className="font-semibold text-slate-900">{registration.status === 'accepted' ? 'đã duyệt' : registration.status === 'rejected' ? 'đã từ chối' : 'chờ duyệt'}</span>. Khi giảng viên cập nhật, badge ở đây sẽ đổi ngay.
-                      </div>
-                    )}
                   </div>
                 )
               })}

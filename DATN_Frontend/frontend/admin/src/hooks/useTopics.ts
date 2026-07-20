@@ -49,4 +49,14 @@ export const topicHooks = {
       },
     });
   },
+
+  useImportTopics: () => {
+    const queryClient = useQueryClient();
+    return useMutation<{ success: boolean; message: string; errors?: string[] }, AxiosError, FormData>({
+      mutationFn: topicApi.importTopics,
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: [QueryKey.topics.list] });
+      },
+    });
+  },
 };

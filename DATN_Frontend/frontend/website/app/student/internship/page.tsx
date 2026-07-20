@@ -195,6 +195,7 @@ export default function StudentInternshipPage() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [query, setQuery] = useState('')
+  const [selectedField, setSelectedField] = useState('all')
   const [page, setPage] = useState(1)
   const pageSize = 10
   const [declareOpen, setDeclareOpen] = useState(false)
@@ -399,16 +400,30 @@ export default function StudentInternshipPage() {
     loadData()
   }, [loadData])
 
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.hash === '#companies') {
+      const el = document.getElementById('companies')
+      if (el) {
+        setTimeout(() => {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }, 150)
+      }
+    }
+  }, [companies])
+
   const filtered = useMemo(() => {
     return companies.filter((company) => {
       const text = `${company.code} ${company.name} ${company.field} ${company.address}`.toLowerCase()
-      return text.includes(query.toLowerCase())
+      const matchesQuery = text.includes(query.toLowerCase())
+      const matchesField = selectedField === 'all' || 
+        (company.field && company.field.toLowerCase().includes(selectedField.toLowerCase()))
+      return matchesQuery && matchesField
     })
-  }, [query, companies])
+  }, [query, selectedField, companies])
 
   useEffect(() => {
     setPage(1)
-  }, [query, companies])
+  }, [query, selectedField, companies])
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize))
   const currentPage = Math.min(page, pageCount)
@@ -593,7 +608,7 @@ export default function StudentInternshipPage() {
         </section>
       )}
 
-      <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
+      <section id="companies" className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
         <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-5 py-4">
           <div>
             <div className="text-sm font-semibold text-slate-900">Danh sách doanh nghiệp</div>
@@ -603,14 +618,29 @@ export default function StudentInternshipPage() {
         </div>
 
         <div className="border-b border-slate-200 bg-white px-5 py-4">
-          <div className="relative max-w-xl">
-            <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Tìm theo tên công ty, địa chỉ hoặc lĩnh vực..."
-              className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-white"
-            />
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="relative flex-1 max-w-xl">
+              <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Tìm theo tên công ty, địa chỉ hoặc lĩnh vực..."
+                className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-white"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-slate-500 shrink-0">Lĩnh vực:</span>
+              <select
+                value={selectedField}
+                onChange={(event) => setSelectedField(event.target.value)}
+                className="h-11 rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm outline-none transition focus:border-blue-400 focus:bg-white min-w-[180px] shadow-sm cursor-pointer"
+              >
+                <option value="all">Tất cả lĩnh vực</option>
+                {fieldOptions.map((field) => (
+                  <option key={field} value={field}>{field}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
