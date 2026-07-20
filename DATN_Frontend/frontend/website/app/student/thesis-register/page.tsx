@@ -96,7 +96,28 @@ export default function ThesisRegisterPage() {
     return diffDays >= 0 && diffDays <= 3
   }, [selectedPeriod])
   const [topics, setTopics] = useState<Topic[]>([])
+
+  const sortedTopics = useMemo(() => {
+    return [...topics].sort((a, b) => {
+      const aSlotsStr = a.slots || '0/4';
+      const [aUsed, aMaxSlots] = aSlotsStr.split('/').map(Number);
+      const aSafeUsed = Number.isFinite(aUsed) ? aUsed : 0;
+      const aSafeMaxSlots = Number.isFinite(aMaxSlots) ? aMaxSlots : 0;
+      const aIsFull = aSafeUsed >= aSafeMaxSlots;
+
+      const bSlotsStr = b.slots || '0/4';
+      const [bUsed, bMaxSlots] = bSlotsStr.split('/').map(Number);
+      const bSafeUsed = Number.isFinite(bUsed) ? bUsed : 0;
+      const bSafeMaxSlots = Number.isFinite(bMaxSlots) ? bMaxSlots : 0;
+      const bIsFull = bSafeUsed >= bSafeMaxSlots;
+
+      if (aIsFull && !bIsFull) return 1;
+      if (!aIsFull && bIsFull) return -1;
+      return 0;
+    });
+  }, [topics]);
   const [loading, setLoading] = useState(true)
+  const [loadingReg, setLoadingReg] = useState(true)
   const [registration, setRegistration] = useState<Registration | null>(null)
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null)
   const [confirming, setConfirming] = useState(false)
@@ -167,6 +188,7 @@ export default function ThesisRegisterPage() {
   useEffect(() => {
     let mounted = true
     async function loadRegistration() {
+      setLoadingReg(true)
       try {
         const regData = await studentApi.getMyThesisRegistration(selectedPeriod?.id)
         if (!mounted) return
@@ -174,6 +196,8 @@ export default function ThesisRegisterPage() {
       } catch (_err) {
         if (!mounted) return
         setRegistration(null)
+      } finally {
+        if (mounted) setLoadingReg(false)
       }
     }
     loadRegistration()
@@ -368,120 +392,140 @@ export default function ThesisRegisterPage() {
         </div>
       )}
 
-      <section className="mb-6 grid gap-4 rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)] lg:grid-cols-[1fr_0.95fr]">
-        <div className="rounded-[22px] bg-[linear-gradient(135deg,#eff6ff_0%,#ffffff_100%)] p-4 ring-1 ring-blue-100">
-          <div className="flex items-center gap-2 text-xs font-medium text-[#1976D2]">
-            <Clock3 className="h-4 w-4" />
-            Trạng thái nhóm hiện tại
-          </div>
-          <div className="mt-3 text-lg font-semibold text-slate-900">
-            {registration ? 'Đã ghép nhóm thành công' : 'Chưa có nhóm/đề tài được gửi'}
-          </div>
-          {registration && (
-            <div className="mt-2 text-sm font-semibold text-blue-700">
-              {registration.topicTitle ? `Đề tài đăng ký: ${registration.topicTitle}` : 'Đã có nhóm (Chưa đăng ký đề tài)'}
-            </div>
-          )}
-          {!registration && (
-            <div className="mt-2 text-sm text-slate-600">
-              Sau khi đăng ký, trạng thái duyệt của giảng viên sẽ xuất hiện tại đây.
-            </div>
-          )}
-          {registration && registration.members && (
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {registration.members.map((m) => (
-                <span key={m.studentCode} className="inline-flex items-center gap-1.5 rounded-xl bg-white border border-slate-200 px-2.5 py-1 text-xs text-slate-700 font-medium">
-                  {m.name} ({m.studentCode})
-                  {m.isLeader && (
-                    <span className="bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold px-1 rounded ml-1.5">Trưởng nhóm</span>
-                  )}
-                </span>
-              ))}
-            </div>
-          )}
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <StudentPill tone={registrationTone}>{registration ? (registration.status === 'accepted' ? 'Đã duyệt' : registration.status === 'rejected' ? 'Đã từ chối' : 'Chờ giảng viên duyệt') : 'Chưa đăng ký'}</StudentPill>
-            {registration && <StudentPill tone="blue">{registration.batch}</StudentPill>}
-          </div>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200">
-              <div className="text-xs text-slate-500">Đã gửi lúc</div>
-              <div className="mt-2 text-sm font-medium text-slate-900 inline-flex items-center gap-2">
-                <CalendarDays className="h-4 w-4 text-[#1976D2]" />
-                {registration ? formatVietnamDateTime(registration.submittedAt) : 'Chưa có dữ liệu'}
+      {loadingReg ? (
+        <section className="mb-6 grid gap-4 rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)] lg:grid-cols-[1fr_0.95fr]">
+          {/* Cột trái: Trạng thái nhóm */}
+          <div className="rounded-[22px] bg-slate-50/50 p-4 ring-1 ring-slate-100 flex flex-col gap-3 justify-between min-h-[240px]">
+            <div className="space-y-3 animate-pulse">
+              <div className="h-4 w-1/4 bg-slate-200 rounded" />
+              <div className="h-6 w-2/3 bg-slate-200 rounded" />
+              <div className="h-4 w-1/2 bg-slate-200 rounded" />
+              <div className="flex gap-1.5 mt-2">
+                <div className="h-5 w-24 bg-slate-200 rounded-full" />
+                <div className="h-5 w-24 bg-slate-200 rounded-full" />
               </div>
             </div>
-            <div className="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200">
-              <div className="text-xs text-slate-500">Phản hồi</div>
-              <div className="mt-2 text-sm font-medium text-slate-900 inline-flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-[#1976D2]" />
-                {registration ? registration.note : 'Chờ sinh viên hoàn tất đăng ký'}
-              </div>
+            <div className="flex gap-2 animate-pulse mt-4">
+              <div className="h-8 w-24 bg-slate-200 rounded-full" />
+              <div className="h-8 w-24 bg-slate-200 rounded-full" />
             </div>
           </div>
-          {registration && !isActionDisabled && (registration.members?.length ?? 0) > 1 && (
-            <div className="mt-4 flex justify-end">
-              <button
-                type="button"
-                disabled={isTopicActive}
-                onClick={() => setConfirmAction({ type: 'leaveGroup' })}
-                className={`rounded-2xl border px-4 py-2 text-xs font-medium transition ${
-                  isTopicActive
-                    ? 'border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed'
-                    : 'border-red-200 text-red-600 hover:bg-red-50'
-                }`}
-                title={isTopicActive ? "Không thể rời/giải tán nhóm khi đang đăng ký đề tài (chờ duyệt hoặc đã duyệt)" : ""}
-              >
-                Giải tán / Rời nhóm
-              </button>
+          {/* Cột phải: Thông tin đề tài */}
+          <div className="rounded-[22px] bg-slate-50/50 p-4 ring-1 ring-slate-100 flex flex-col gap-3 min-h-[240px] justify-between">
+            <div className="space-y-3 animate-pulse">
+              <div className="h-4 w-1/4 bg-slate-200 rounded" />
+              <div className="h-6 w-3/4 bg-slate-200 rounded" />
+              <div className="h-4 w-1/2 bg-slate-200 rounded" />
             </div>
-          )}
-        </div>
-
-        <div className="rounded-[22px] bg-slate-50 p-4">
-          <div className="text-sm font-semibold text-slate-900">Trạng thái hiện tại</div>
-          <div className="mt-3 text-sm text-slate-700">
-            {registration ? (
-              <>
-                <div className="font-medium text-slate-900">Bạn đã có nhóm</div>
-                <div className="mt-2 text-sm text-slate-600">{registration.topicTitle ? `Đề tài: ${registration.topicTitle}` : 'Nhóm đã được tạo nhưng chưa có đề tài'}</div>
-                <div className="mt-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    {registration.members?.map((m) => (
-                      <span key={m.studentCode} className="inline-flex items-center gap-1.5 rounded-xl bg-white border border-slate-200 px-2.5 py-1 text-xs text-slate-700 font-medium">
-                        {m.name} ({m.studentCode})
-                        {m.isLeader && <span className="bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold px-1 rounded ml-1">Trưởng nhóm</span>}
-                      </span>
-                    ))}
-                  </div>
+          </div>
+        </section>
+      ) : (
+        <section className="mb-6 grid gap-4 rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)] lg:grid-cols-[1fr_0.95fr]">
+          <div className="rounded-[22px] bg-[linear-gradient(135deg,#eff6ff_0%,#ffffff_100%)] p-4 ring-1 ring-blue-100">
+            <div className="flex items-center gap-2 text-xs font-medium text-[#1976D2]">
+              <Clock3 className="h-4 w-4" />
+              Trạng thái nhóm hiện tại
+            </div>
+            <div className="mt-3 text-lg font-semibold text-slate-900">
+              {registration ? 'Đã ghép nhóm thành công' : 'Chưa có nhóm/đề tài được gửi'}
+            </div>
+            {registration && (
+              <div className="mt-2 text-sm font-semibold text-blue-700">
+                {registration.topicTitle ? `Đề tài đăng ký: ${registration.topicTitle}` : 'Đã có nhóm (Chưa đăng ký đề tài)'}
+              </div>
+            )}
+            {!registration && (
+              <div className="mt-2 text-sm text-slate-600">
+                Sau khi đăng ký, trạng thái duyệt của giảng viên sẽ xuất hiện tại đây.
+              </div>
+            )}
+            {registration && registration.members && (
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {registration.members.map((m) => (
+                  <span key={m.studentCode} className="inline-flex items-center gap-1.5 rounded-xl bg-white border border-slate-200 px-2.5 py-1 text-xs text-slate-700 font-medium">
+                    {m.name} ({m.studentCode})
+                    {m.isLeader && (
+                      <span className="bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold px-1 rounded ml-1.5">Trưởng nhóm</span>
+                    )}
+                  </span>
+                ))}
+              </div>
+            )}
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <StudentPill tone={registrationTone}>{registration ? (registration.status === 'accepted' ? 'Đã duyệt' : registration.status === 'rejected' ? 'Đã từ chối' : 'Chờ giảng viên duyệt') : 'Chưa đăng ký'}</StudentPill>
+              {registration && <StudentPill tone="blue">{registration.batch}</StudentPill>}
+            </div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200">
+                <div className="text-xs text-slate-500">Đã gửi lúc</div>
+                <div className="mt-2 text-sm font-medium text-slate-900 inline-flex items-center gap-2">
+                  <CalendarDays className="h-4 w-4 text-[#1976D2]" />
+                  {registration ? formatVietnamDateTime(registration.submittedAt) : 'Chưa có dữ liệu'}
                 </div>
-              </>
-            ) : (
-              <>
-                <div className="font-medium text-slate-900">Chưa có nhóm</div>
-                <div className="mt-2 text-sm text-slate-600">Bạn chưa tạo nhóm hoặc chưa nhận lời mời từ nhóm khác.</div>
-              </>
-            )}
-          </div>
-
-          <div className="mt-4">
-            {/* Show create group button only when student needs it: no registration and period allows actions */}
+              </div>
+              <div className="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200">
+                <div className="text-xs text-slate-500">Phản hồi</div>
+                <div className="mt-2 text-sm font-medium text-slate-900 inline-flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-[#1976D2]" />
+                  {registration ? registration.note : 'Chờ sinh viên hoàn tất đăng ký'}
+                </div>
+              </div>
+            </div>
+            {/* Create group button (when no group) or keep disband control when group exists */}
             {!registration && !isActionDisabled && (
-              <Link href={`/student/thesis-invite`} className="inline-flex items-center gap-2 rounded-2xl bg-[#2196F3] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-blue-200 transition hover:bg-[#1976D2]">
-                <Users className="h-4 w-4" />
-                Tạo nhóm ĐATN
-              </Link>
+              <div className="mt-4">
+                <Link href={`/student/thesis-invite`} className="inline-flex items-center gap-2 rounded-2xl bg-[#2196F3] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-blue-200 transition hover:bg-[#1976D2]">
+                  <Users className="h-4 w-4" />
+                  Tạo nhóm ĐATN
+                </Link>
+              </div>
             )}
 
-            {/* Show requirement hint when there's no group or group is missing members (<2) */}
+            {registration && !isActionDisabled && (registration.members?.length ?? 0) > 1 && (
+              <div className="mt-4 flex justify-end">
+                <button
+                  type="button"
+                  disabled={isTopicActive}
+                  onClick={() => setConfirmAction({ type: 'leaveGroup' })}
+                  className={`rounded-2xl border px-4 py-2 text-xs font-medium transition ${
+                    isTopicActive
+                      ? 'border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed'
+                      : 'border-red-200 text-red-600 hover:bg-red-50'
+                  }`}
+                  title={isTopicActive ? "Không thể rời/giải tán nhóm khi đang đăng ký đề tài (chờ duyệt hoặc đã duyệt)" : ""}
+                >
+                  Giải tán / Rời nhóm
+                </button>
+              </div>
+            )}
+
+            {/* Requirement hint moved into group card (left) */}
             {(!registration || (registration.members?.length ?? 0) < 2) && (
               <div className="mt-3 rounded-lg border border-yellow-100 bg-yellow-50 px-3 py-2 text-sm text-yellow-800">
                 Yêu cầu nhóm đủ hai người mới được đăng ký đề tài
               </div>
             )}
           </div>
-        </div>
-      </section>
+
+          <div className="rounded-[22px] bg-slate-50 p-4">
+            <div className="text-sm font-semibold text-slate-900">Thông tin đề tài</div>
+            <div className="mt-3 text-sm text-slate-700">
+              {registration && registration.topicTitle ? (
+                <>
+                  <div className="font-medium text-slate-900">{registration.topicTitle}</div>
+                  <div className="mt-2 text-sm text-slate-600">{registration.instructor ? `GV: ${registration.instructor}` : 'Giảng viên: -'}</div>
+                  <div className="mt-3 text-xs text-slate-500">Thông tin đề tài liên quan sẽ hiển thị ở đây.</div>
+                </>
+              ) : (
+                <>
+                  <div className="font-medium text-slate-900">Chưa đăng ký đề tài</div>
+                  <div className="mt-2 text-sm text-slate-600">Bạn có thể duyệt danh sách đề tài và đăng ký phù hợp.</div>
+                </>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Banner removed - create group button moved into status card */}
 
@@ -563,7 +607,7 @@ export default function ThesisRegisterPage() {
         ) : (
           <div>
             <div className="grid gap-4 md:grid-cols-2">
-              {topics.map((t) => {
+              {sortedTopics.map((t) => {
                 const teacher = t.module ? `GV: ${t.module}` : 'GV: Chưa phân công'
                 const slotsStr = t.slots || '0/4'
                 const [used, maxSlots] = slotsStr.split('/').map(Number)
@@ -572,24 +616,22 @@ export default function ThesisRegisterPage() {
                 const hasSlot = safeUsed < safeMaxSlots && t.published
                 const isCurrentTopic = registration?.topicId === t.id
                 return (
-                  <div key={t.id} className="rounded-lg border border-slate-100 bg-white p-3 shadow-sm flex items-center justify-between gap-4">
+                  <div key={t.id} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm flex items-center justify-between gap-4 min-h-[96px]">
                     <div className="flex items-start gap-4 min-w-0">
                       <div className="flex-shrink-0">
-                        <div className="text-xs text-[#2196F3] font-medium">{t.code || t.id}</div>
+                        <div className="text-xs text-[#1976D2] font-semibold">{t.code || t.id}</div>
                       </div>
                       <div className="min-w-0">
-                        <div className="text-sm font-semibold text-slate-900 line-clamp-2" title={t.title}>{t.title}</div>
+                        <div className="text-sm font-semibold text-slate-900 line-clamp-2" title={t.title} style={{ WebkitLineClamp: 2 }}>{t.title}</div>
                         <div className="mt-1 flex items-center gap-2 text-xs text-slate-500">
-                          <span>{teacher}</span>
+                          <span className="truncate">{teacher}</span>
                           <span className="text-slate-300">•</span>
                           <span className="font-medium text-slate-600">{safeUsed}/{safeMaxSlots}</span>
-                          {t.direction && <span className="ml-2 text-xs text-blue-600">{t.direction}</span>}
+                          {t.direction && <span className="ml-2 text-xs text-blue-700 font-medium bg-blue-50 px-2 py-0.5 rounded-full">{t.direction}</span>}
                         </div>
-                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <div className="mt-2 flex items-center gap-2">
                           {isCurrentTopic && registration && (
-                            <StudentPill tone={registrationTone}>
-                              {registration.status === 'accepted' ? 'Đã duyệt' : registration.status === 'rejected' ? 'Đã từ chối' : 'Chờ duyệt'}
-                            </StudentPill>
+                            <StudentPill tone={registrationTone}>{registration.status === 'accepted' ? 'Đã duyệt' : registration.status === 'rejected' ? 'Đã từ chối' : 'Chờ duyệt'}</StudentPill>
                           )}
                           {isCurrentTopic && <span className="text-xs text-emerald-700 font-semibold bg-emerald-50 border border-emerald-100 rounded-full px-2 py-0.5">Nhóm của bạn</span>}
                         </div>
@@ -599,7 +641,7 @@ export default function ThesisRegisterPage() {
                     <div className="flex items-center gap-3">
                       <button
                         onClick={() => setDetailTopic(t)}
-                        className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50 transition"
+                        className="h-9 rounded-full border border-slate-200 bg-white px-4 text-sm text-slate-700 hover:bg-slate-50 transition"
                       >
                         Xem
                       </button>
@@ -607,7 +649,7 @@ export default function ThesisRegisterPage() {
                         <button
                           disabled={(!!registration && registration.status === 'accepted') || isActionDisabled || !hasSlot || !registration || (registration.members?.length ?? 0) < 2}
                           onClick={() => handleRegister(t.id)}
-                          className={`rounded-full px-3 py-1.5 text-sm font-medium transition ${((!!registration && registration.status === 'accepted') || isActionDisabled || !hasSlot || !registration || (registration.members?.length ?? 0) < 2) ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-[#2196F3] text-white hover:bg-[#1976D2]'}`}
+                          className={`h-9 rounded-full px-4 text-sm font-medium transition ${((!!registration && registration.status === 'accepted') || isActionDisabled || !hasSlot || !registration || (registration.members?.length ?? 0) < 2) ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-[#0ea5e9] text-white hover:bg-[#0891b2]'}`}
                         >
                           Đăng ký
                         </button>
@@ -615,9 +657,9 @@ export default function ThesisRegisterPage() {
                         <button
                           disabled={registration?.status === 'accepted' || isActionDisabled}
                           onClick={() => setConfirmAction({ type: 'cancelTopic' })}
-                          className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${registration?.status === 'accepted' || isActionDisabled ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
+                          className={`h-9 rounded-full border px-4 text-sm font-medium transition ${registration?.status === 'accepted' || isActionDisabled ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
                         >
-                          {registration?.status === 'accepted' ? 'Đã khóa' : 'Hủy'}
+                          Hủy
                         </button>
                       )}
                     </div>
