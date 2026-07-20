@@ -94,7 +94,7 @@ export default function StudentIndexPage() {
     )
   }
 
-  const { student, tttn, datn, reportsCount, expectedScore, pendingTasks, milestones, companiesCount } = data
+  const { student, tttn, datn, reportsCount, pendingTasks, milestones, companiesCount } = data
 
   return (
     <>

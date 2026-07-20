@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState, useEffect } from 'react'
-import { CheckCircle2, Trophy, Sparkles, ChartColumnBig, CalendarDays, Medal, BadgeCheck, Clock3, TrendingUp, FileText, GraduationCap, Star } from 'lucide-react'
+import { CheckCircle2, Trophy, Sparkles, CalendarDays, Medal, BadgeCheck, Clock3, TrendingUp, FileText, GraduationCap, Star } from 'lucide-react'
 import { StudentPill, StudentSectionHeader, StudentStatCard } from '../_components/StudentShell'
 import { studentApi, IStudentResults } from '@/lib/api/studentApi'
 
