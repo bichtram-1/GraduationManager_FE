@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Modal, Form, Select, message, Alert } from 'antd';
 import { SwapOutlined } from '@ant-design/icons';
-import { groupHooks } from '../../../hooks/useGroups';
 import type { IGroupMember } from '../../../type/GroupType';
 import type { AssignmentRow } from '../../../type/AssignmentType';
 
@@ -10,7 +9,8 @@ interface SwapMemberModalProps {
   onCancel: () => void;
   currentGroupMembers: IGroupMember[];
   otherGroupStudents: AssignmentRow[];
-  onSwapSuccess?: () => void;
+  /** Chỉ ghi nhận lựa chọn hoán đổi vào form để xem trước - CHƯA gọi API, chỉ thật sự lưu khi bấm "Cập nhật" ở form nhóm. */
+  onStageSwap?: (studentA: IGroupMember, studentB: AssignmentRow) => void;
 }
 
 const SwapMemberModal: React.FC<SwapMemberModalProps> = ({
@@ -18,37 +18,53 @@ const SwapMemberModal: React.FC<SwapMemberModalProps> = ({
   onCancel,
   currentGroupMembers,
   otherGroupStudents,
-  onSwapSuccess,
+  onStageSwap,
 }) => {
   const [form] = Form.useForm();
-  const swapMutation = groupHooks.useSwapMembers();
   const [loading, setLoading] = useState(false);
+
+  // Gom sinh viên theo đúng nhóm thật (groupId) và đặt tên nhóm bằng tên các thành viên
+  // trong đó - tránh dùng mã/số thứ tự nhóm vì số đó tính luôn cả các nhóm đã xóa/hủy nên
+  // không liên tục, dễ gây hiểu nhầm; tên thành viên thì trực quan và dễ hiểu hơn hẳn.
+  const groupedOptions = useMemo(() => {
+    const byGroup = new Map<string, AssignmentRow[]>();
+    otherGroupStudents.forEach((s) => {
+      const key = s.groupId || `_${s.studentId}`;
+      if (!byGroup.has(key)) byGroup.set(key, []);
+      byGroup.get(key)!.push(s);
+    });
+
+    return Array.from(byGroup.values()).map((members) => {
+      const names = members.map((m) => m.name);
+      const fullLabel = names.join(', ');
+      const shortLabel = names.length > 2 ? `${names.slice(0, 1).join(', ')} +${names.length - 1}` : fullLabel;
+      return {
+        label: `👥 ${shortLabel}`,
+        title: `Nhóm của: ${fullLabel}`,
+        options: members.map((s) => ({
+          value: s.studentId,
+          label: `${s.name} (${s.studentId}) [Đề tài: ${s.topic || 'Chưa đăng ký'}] | Lớp: ${s.className || '—'}`,
+        })),
+      };
+    });
+  }, [otherGroupStudents]);
 
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
       setLoading(true);
-      
-      const res = await swapMutation.mutateAsync({
-        studentIdA: values.studentIdA,
-        studentIdB: values.studentIdB,
-      });
 
-      if (res.success) {
-        message.success(res.message || 'Hoán đổi thành viên thành công!');
-        form.resetFields();
-        onSwapSuccess?.();
-        onCancel();
-      } else {
-        message.error(res.message || 'Hoán đổi thất bại!');
+      const studentA = currentGroupMembers.find((m) => m.code === values.studentIdA);
+      const studentB = otherGroupStudents.find((s) => s.studentId === values.studentIdB);
+      if (!studentA || !studentB) {
+        message.error('Không tìm thấy sinh viên đã chọn!');
+        return;
       }
-    } catch (err: unknown) {
-      console.error(err);
-      const errorMessage =
-        typeof err === 'object' && err !== null && 'response' in err
-          ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
-          : undefined;
-      message.error(errorMessage || 'Có lỗi xảy ra khi hoán đổi!');
+
+      onStageSwap?.(studentA, studentB);
+      message.info('Đã ghi nhận hoán đổi trong form, bấm "Cập nhật" để lưu chính thức!');
+      form.resetFields();
+      onCancel();
     } finally {
       setLoading(false);
     }
@@ -113,10 +129,7 @@ const SwapMemberModal: React.FC<SwapMemberModalProps> = ({
               filterOption={(input, option) =>
                 (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
               }
-              options={otherGroupStudents.map((s) => ({
-                value: s.studentId,
-                label: `${s.name} (${s.studentId}) [Đề tài: ${s.topic || 'Chưa đăng ký'}] | Lớp: ${s.className || '—'}`,
-              }))}
+              options={groupedOptions}
             />
           </Form.Item>
         </Form>

@@ -125,6 +125,10 @@ export interface FilterTableProps<
   deleteIcon?: (record: TList) => ReactNode;
   deleteConfirmTitle?: (record: TList) => string;
   deleteConfirmContent?: (record: TList) => ReactNode;
+  /** Guard tùy chọn chạy trước khi đóng modal Cập nhật (nút Hủy, nút X, phím Esc). Trả về
+   * false (hoặc Promise<false>) để hủy việc đóng - dùng khi form có thay đổi tạm chưa lưu
+   * cần cảnh báo người dùng trước khi thoát. Không truyền thì hành vi đóng modal như cũ. */
+  beforeCloseUpdateModal?: () => boolean | Promise<boolean>;
 }
 
 const initParams = { page: 1, limit: 10 };
@@ -169,6 +173,7 @@ const FilterTable = <
   deleteIcon,
   deleteConfirmTitle,
   deleteConfirmContent,
+  beforeCloseUpdateModal,
 }: FilterTableProps<TList, TDetail, TCreate, TUpdate>) => {
   const hasPageHeader = !!pageTitle;
 
@@ -331,7 +336,9 @@ const FilterTable = <
         },
         {
           onSuccess: () => {
-            handleCancelModal();
+            // skipGuard: modal đóng do lưu thành công, không phải người dùng chủ động thoát -
+            // không cần hỏi lại "thoát mà không lưu?" (đã lưu xong rồi).
+            handleCancelModal(true);
           },
           onError: (error: AxiosError) => {
             const errData = error?.response?.data as ApiErrorData | undefined;
@@ -356,7 +363,9 @@ const FilterTable = <
         { body: body as TCreate, params: internalParams },
         {
           onSuccess: () => {
-            handleCancelModal();
+            // skipGuard: modal đóng do lưu thành công, không phải người dùng chủ động thoát -
+            // không cần hỏi lại "thoát mà không lưu?" (đã lưu xong rồi).
+            handleCancelModal(true);
           },
           onError: (error: AxiosError) => {
             const errData = error?.response?.data as ApiErrorData | undefined;
@@ -379,7 +388,11 @@ const FilterTable = <
     }
   };
 
-  const handleCancelModal = () => {
+  const handleCancelModal = async (skipGuard = false) => {
+    if (!skipGuard && openModal?.type === UpdateModalType && beforeCloseUpdateModal) {
+      const canClose = await beforeCloseUpdateModal();
+      if (!canClose) return;
+    }
     setOpenModal({ open: false, id: '', index: -1, type: CreateModalType });
     formModal.resetFields();
   };
@@ -620,7 +633,7 @@ const FilterTable = <
       <Modal
         centered
         open={openModal?.open}
-        onCancel={handleCancelModal}
+        onCancel={() => handleCancelModal()}
         onOk={() => formModal.submit()}
         loading={isLoadingDetail}
         destroyOnHidden

@@ -147,7 +147,7 @@ const ThesisStudentsPage = () => {
   const groups = useMemo(() => (groupList?.rows ?? []) as IListGroup[], [groupList]);
 
   const [allocationStudent, setAllocationStudent] = useState<AssignmentRow | null>(null);
-  const [allocationType, setAllocationType] = useState<'existing' | 'new'>('existing');
+  const [allocationType, setAllocationType] = useState<'existing' | 'new' | 'solo'>('existing');
   const [selectedGroupId, setSelectedGroupId] = useState<string>('');
   const [selectedPartnerStudentId, setSelectedPartnerStudentId] = useState<string>('');
   const [selectedAllocationTopicId, setSelectedAllocationTopicId] = useState<string>('');
@@ -205,7 +205,7 @@ const ThesisStudentsPage = () => {
         setSubmittingAllocation(false);
       }
 
-    } else {
+    } else if (allocationType === 'new') {
       if (!selectedPartnerStudentId) {
         message.error('Vui lòng chọn 1 sinh viên khác để ghép nhóm!');
         return;
@@ -235,6 +235,38 @@ const ThesisStudentsPage = () => {
         setSelectedAllocationTopicId('');
       } catch {
         message.error('Có lỗi xảy ra khi tạo nhóm!');
+      } finally {
+        setSubmittingAllocation(false);
+      }
+    } else if (allocationType === 'solo') {
+      if (!selectedAllocationTopicId) {
+        message.error('Vui lòng chọn đề tài phân bổ cho sinh viên lẻ!');
+        return;
+      }
+
+      const newMembers = [
+        allocationStudent.studentId
+      ];
+
+      setSubmittingAllocation(true);
+      try {
+        await createGroup.mutateAsync({
+          body: {
+            members: newMembers,
+            dot_id: selectedPeriod?.id,
+            de_tai_id: selectedAllocationTopicId
+          } as unknown as ICreateGroup,
+          params: { page: 1, limit: 10 },
+        });
+        message.success('Đặc cách tạo nhóm lẻ và gán đề tài thành công!');
+        queryClient.invalidateQueries({ queryKey: [QueryKey.assignments.list] });
+        queryClient.invalidateQueries({ queryKey: [QueryKey.groups.list] });
+        setAllocationStudent(null);
+        setSelectedGroupId('');
+        setSelectedPartnerStudentId('');
+        setSelectedAllocationTopicId('');
+      } catch {
+        message.error('Có lỗi xảy ra khi tạo nhóm lẻ!');
       } finally {
         setSubmittingAllocation(false);
       }
@@ -692,10 +724,16 @@ const ThesisStudentsPage = () => {
                   Gom nhóm mới gồm sinh viên này và chính xác 1 sinh viên tự do khác.
                 </p>
               </Radio>
+              <Radio value="solo">
+                <span className="font-semibold text-slate-700">Đặc cách tạo nhóm lẻ (1 người) & Gán đề tài</span>
+                <p className="m-0 text-slate-400 text-xs ml-6">
+                  Tạo nhóm mới chỉ chứa duy nhất sinh viên lẻ này và gán ngay đề tài tốt nghiệp.
+                </p>
+              </Radio>
             </Radio.Group>
           </div>
 
-          {allocationType === 'existing' ? (
+          {allocationType === 'existing' && (
             <div className="flex flex-col gap-1.5 mt-2">
               <span className="text-slate-600 text-xs font-medium">Chọn nhóm để ghép:</span>
               <Select
@@ -717,7 +755,9 @@ const ThesisStudentsPage = () => {
                 optionFilterProp="label"
               />
             </div>
-          ) : (
+          )}
+
+          {allocationType === 'new' && (
             <div className="flex flex-col gap-3 mt-2">
               <div className="flex flex-col gap-1.5">
                 <span className="text-slate-600 text-xs font-medium">Chọn sinh viên chưa có nhóm để ghép cùng (Nhóm tối đa 2 người):</span>
@@ -750,6 +790,24 @@ const ThesisStudentsPage = () => {
                   optionFilterProp="label"
                 />
               </div>
+            </div>
+          )}
+
+          {allocationType === 'solo' && (
+            <div className="flex flex-col gap-1.5 mt-2">
+              <span className="text-slate-600 text-xs font-medium">Chọn đề tài phân bổ đặc cách cho sinh viên lẻ:</span>
+              <Select
+                showSearch
+                placeholder="Chọn đề tài..."
+                className="w-full"
+                value={selectedAllocationTopicId}
+                onChange={(v) => setSelectedAllocationTopicId(v)}
+                options={topics.map((t) => ({
+                  value: t.id,
+                  label: `${t.name} (${t.teacher})`
+                }))}
+                optionFilterProp="label"
+              />
             </div>
           )}
         </div>

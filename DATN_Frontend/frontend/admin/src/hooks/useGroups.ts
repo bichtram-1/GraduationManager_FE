@@ -40,6 +40,9 @@ export const groupHooks = {
         if (variables?.id) {
           queryClient.invalidateQueries({ queryKey: [QueryKey.groups.detail, variables.id] });
         }
+        // Cập nhật nhóm có thể kèm hoán đổi thành viên (swapStudentIdA/B), ảnh hưởng tới nhóm
+        // đối phương - làm mới luôn danh sách phân công để không hiển thị dữ liệu cũ.
+        queryClient.invalidateQueries({ queryKey: [QueryKey.assignments.list] });
       },
     });
   },

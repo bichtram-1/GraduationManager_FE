@@ -1,5 +1,6 @@
-import { BookOutlined, SearchOutlined, FileExcelOutlined, DownloadOutlined, UploadOutlined, ExclamationCircleFilled } from '@ant-design/icons';
+import { BookOutlined, SearchOutlined, FileExcelOutlined, DownloadOutlined, ExclamationCircleFilled } from '@ant-design/icons';
 import { Card, Tag, Input, Space, Button, Form, Select, Dropdown, Modal, message, Upload, Alert } from 'antd';
+import type { UploadFile } from 'antd/es/upload/interface';
 import FilterTable from '../../components/shared/table/FilterTable';
 import TopicForm from './components/TopicForm';
 import type { IListTopic, ICreateTopic, IUpdateTopic, TopicStatus } from '../../type/TopicType';
@@ -104,8 +105,8 @@ const TopicsPage = () => {
 
   const importMutation = topicHooks.useImportTopics();
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  const [fileList, setFileList] = useState<any[]>([]);
-  const [previewData, setPreviewData] = useState<any[]>([]);
+  const [fileList, setFileList] = useState<UploadFile[]>([]);
+  const [previewData, setPreviewData] = useState<unknown[][]>([]);
   const [importErrors, setImportErrors] = useState<string[]>([]);
   const [importSuccessMessage, setImportSuccessMessage] = useState<string | null>(null);
 
@@ -116,7 +117,8 @@ const TopicsPage = () => {
     }
 
     const formData = new FormData();
-    formData.append('file', fileList[0]);
+    const fileObj = (fileList[0] as unknown as { originFileObj?: File }).originFileObj || (fileList[0] as unknown as File);
+    formData.append('file', fileObj);
     if (selectedPeriod?.id) {
       formData.append('periodId', selectedPeriod.id);
     }
@@ -134,14 +136,15 @@ const TopicsPage = () => {
           }, 2000);
         }
       },
-      onError: (error: any) => {
-        const errors = error?.response?.data?.errors;
-        const msg = error?.response?.data?.message;
+      onError: (error: unknown) => {
+        const err = error as { response?: { data?: { errors?: string[]; message?: string } }; message?: string };
+        const errors = err?.response?.data?.errors;
+        const msg = err?.response?.data?.message;
         if (Array.isArray(errors)) {
           setImportErrors(errors);
           message.error(msg || 'Import thất bại, vui lòng kiểm tra lại file.');
         } else {
-          message.error(msg || error?.message || 'Có lỗi xảy ra khi import.');
+          message.error(msg || err?.message || 'Có lỗi xảy ra khi import.');
         }
       },
     });
@@ -275,7 +278,7 @@ const TopicsPage = () => {
               ];
 
         return (
-          <Space size={8} wrap>
+          <div className="flex items-center gap-2 whitespace-nowrap">
             <Tag className={cn('!m-0 !rounded-full !px-2.5 !py-[2px] !border-none', meta?.className)}>
               {meta ? meta.label : record.status}
             </Tag>
@@ -290,7 +293,7 @@ const TopicsPage = () => {
                 {t(getKey('change_status_btn'))}
               </Button>
             </Dropdown>
-          </Space>
+          </div>
         );
       }
     },
@@ -459,7 +462,7 @@ const TopicsPage = () => {
                     const sheetName = workbook.SheetNames[0];
                     const sheet = workbook.Sheets[sheetName];
                     const parsed = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-                    setPreviewData(parsed.slice(0, 6));
+                    setPreviewData(parsed.slice(0, 6) as unknown[][]);
                   };
                   reader.readAsBinaryString(file);
                   return false;
@@ -487,16 +490,16 @@ const TopicsPage = () => {
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
                       <tr className="border-b border-slate-200 text-slate-400 font-medium bg-slate-100">
-                        {previewData[0]?.map((col: any, i: number) => (
-                          <th key={i} className="p-1.5 font-medium">{col || `Cột ${i+1}`}</th>
+                        {previewData[0]?.map((col: unknown, i: number) => (
+                          <th key={i} className="p-1.5 font-medium">{String(col) || `Cột ${i+1}`}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 bg-white">
-                      {previewData.slice(1).map((row: any, i: number) => (
+                      {(previewData.slice(1) as unknown[][]).map((row: unknown[], i: number) => (
                         <tr key={i} className="hover:bg-slate-50">
-                          {previewData[0]?.map((_: any, j: number) => (
-                            <td key={j} className="p-1.5 truncate max-w-[150px]" title={row[j]}>{row[j] !== undefined ? String(row[j]) : '—'}</td>
+                          {(previewData[0] as unknown[])?.map((_: unknown, j: number) => (
+                            <td key={j} className="p-1.5 truncate max-w-[150px]" title={row[j] !== undefined ? String(row[j]) : ''}>{row[j] !== undefined ? String(row[j]) : '—'}</td>
                           ))}
                         </tr>
                       ))}

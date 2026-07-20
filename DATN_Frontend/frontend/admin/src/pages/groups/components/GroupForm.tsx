@@ -12,22 +12,30 @@ import { useGlobalVariable } from '../../../hooks/GlobalVariableProvider';
 import { assignmentHooks } from '../../../hooks/useAssignments';
 import { groupHooks } from '../../../hooks/useGroups';
 import SwapMemberModal from './SwapMemberModal';
-import { useQueryClient } from '@tanstack/react-query';
-import { QueryKey } from '../../../constants/queryKey';
 
 interface Props {
   detail?: IDetailGroup;
   sampleStudents?: IGroupMember[];
   disabled?: boolean;
+  onPendingSwapChange?: (hasPending: boolean) => void;
 }
 
-const GroupForm: React.FC<Props> = ({ detail, disabled }) => {
+const GroupForm: React.FC<Props> = ({ detail, disabled, onPendingSwapChange }) => {
   const { t } = useTranslation();
   const { selectedPeriod } = useGlobalVariable();
   const [adding, setAdding] = useState(false);
   const [swapping, setSwapping] = useState(false);
+  const [pendingSwap, setPendingSwap] = useState<{ outName: string; inName: string } | null>(null);
   const formInstance = Form.useFormInstance();
-  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    onPendingSwapChange?.(!!pendingSwap);
+  }, [pendingSwap, onPendingSwapChange]);
+
+  // Reset trạng thái hoán đổi xem-trước mỗi khi mở lại form cho 1 nhóm khác/nhóm mới
+  useEffect(() => {
+    setPendingSwap(null);
+  }, [detail?.id]);
 
   useEffect(() => {
     if (detail) {
@@ -84,6 +92,22 @@ const GroupForm: React.FC<Props> = ({ detail, disabled }) => {
     const newMembers = [...members, student];
     formInstance.setFieldsValue({ members: newMembers });
     setAdding(false);
+  };
+
+  // Chỉ cập nhật xem-trước trong form (chưa gọi API) - thay thành viên bị hoán đổi đi bằng
+  // thành viên mới, đồng thời ghi lại 2 mã sinh viên vào field ẩn để khi bấm "Cập nhật" thật
+  // sự, payload gửi lên sẽ kèm theo và backend mới thực hiện hoán đổi chéo cả 2 nhóm.
+  const onStageSwap = (studentOut: IGroupMember, studentIn: AssignmentRow) => {
+    const members = (formInstance.getFieldValue('members') || []) as IGroupMember[];
+    const newMembers = members
+      .filter((m) => m.code !== studentOut.code)
+      .concat([{ id: studentIn.studentId, code: studentIn.studentId, name: studentIn.name, class: studentIn.className }]);
+    formInstance.setFieldsValue({
+      members: newMembers,
+      swapStudentIdA: studentOut.code,
+      swapStudentIdB: studentIn.studentId,
+    });
+    setPendingSwap({ outName: studentOut.name, inName: studentIn.name });
   };
 
   const onRemove = (confirmCallback: () => void) => {
@@ -195,6 +219,20 @@ const GroupForm: React.FC<Props> = ({ detail, disabled }) => {
         <Input disabled />
       </Form.Item>
 
+      <Form.Item name="swapStudentIdA" noStyle>
+        <Input style={{ display: 'none' }} />
+      </Form.Item>
+      <Form.Item name="swapStudentIdB" noStyle>
+        <Input style={{ display: 'none' }} />
+      </Form.Item>
+
+      {pendingSwap && (
+        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+          Đang xem trước hoán đổi: <strong>{pendingSwap.outName}</strong> → <strong>{pendingSwap.inName}</strong>.
+          Thay đổi này chỉ chính thức lưu khi bạn bấm &quot;Cập nhật&quot;; bấm &quot;Hủy&quot; sẽ bỏ qua.
+        </div>
+      )}
+
       {detail?.status && (
         <Form.Item label={t(getKey('status'))}>
           <Tag color={statusOptions.find((o) => o.value === detail.status)?.color || 'default'} className="!px-2.5 !py-0.5 !text-xs !font-medium">
@@ -301,12 +339,7 @@ const GroupForm: React.FC<Props> = ({ detail, disabled }) => {
           onCancel={() => setSwapping(false)}
           currentGroupMembers={formInstance.getFieldValue('members') || []}
           otherGroupStudents={otherGroupStudents}
-          onSwapSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: [QueryKey.groups.list] });
-            if (detail?.id) {
-              queryClient.invalidateQueries({ queryKey: [QueryKey.groups.detail, detail.id] });
-            }
-          }}
+          onStageSwap={onStageSwap}
         />
       )}
     </>
