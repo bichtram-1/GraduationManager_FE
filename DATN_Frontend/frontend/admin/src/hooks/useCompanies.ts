@@ -77,4 +77,14 @@ export const companyHooks = {
       },
     });
   },
+
+  useImportCompanies: () => {
+    const queryClient = useQueryClient();
+    return useMutation<{ success: boolean; message: string; errors?: string[] }, AxiosError, FormData>({
+      mutationFn: companyApi.importCompanies,
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: [QueryKey.companies.list] });
+      },
+    });
+  },
 };

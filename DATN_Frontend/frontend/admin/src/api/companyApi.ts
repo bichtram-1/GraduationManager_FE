@@ -42,4 +42,13 @@ export const companyApi = {
       throw new Error(message || 'Tra cứu mã số thuế thất bại.');
     }
   },
+
+  importCompanies: async (formData: FormData) => {
+    const response = await axiosInstance.post('/private/v1/companies/import', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response?.data;
+  },
 };

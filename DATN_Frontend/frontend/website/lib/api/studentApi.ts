@@ -18,6 +18,8 @@ export interface IStudentDashboardData {
     position: string | null;
     supervisorTeacher: string | null;
     trangThaiDangKy: string | null;
+    score?: number | null;
+    reportsCount?: number;
   };
   datn: {
     hasPeriod: boolean;
@@ -27,6 +29,8 @@ export interface IStudentDashboardData {
     instructor: string | null;
     groupName: string | null;
     groupId: number | null;
+    score?: number | null;
+    reportsCount?: number;
   };
   reportsCount: number;
   expectedScore: number;
@@ -138,6 +142,7 @@ export interface IThesisRegistration {
   topicId: string;
   topicTitle: string;
   groupName: string;
+  groupId?: number | string | null;
   batch: string;
   submittedAt: string;
   status: 'pending' | 'accepted' | 'rejected';

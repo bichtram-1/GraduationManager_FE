@@ -33,4 +33,13 @@ export const topicApi = {
     const response = await axiosInstance.delete(`/private/v1/topics/${id}`);
     return response?.data;
   },
+
+  importTopics: async (formData: FormData) => {
+    const response = await axiosInstance.post('/private/v1/topics/import', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response?.data;
+  },
 };

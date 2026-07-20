@@ -1,5 +1,5 @@
-import { BankOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, SearchOutlined, SendOutlined, TeamOutlined, DeleteOutlined } from '@ant-design/icons';
-import { Button, Card, Dropdown, Form, Input, message, Modal, Select, Space, Tag, Tabs, Typography, Tooltip } from 'antd';
+import { BankOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, SearchOutlined, SendOutlined, TeamOutlined, DeleteOutlined, FileExcelOutlined, DownloadOutlined, UploadOutlined, ExclamationCircleFilled } from '@ant-design/icons';
+import { Button, Card, Dropdown, Form, Input, message, Modal, Select, Space, Tag, Tabs, Typography, Tooltip, Upload, Alert } from 'antd';
 import FilterTable from '../../components/shared/table/FilterTable';
 import type { ColumnsType } from 'antd/es/table';
 import PublishModal from './components/PublishModal';
@@ -13,6 +13,7 @@ import type { ICreateCompany, IDetailCompany, IUpdateCompany } from '../../type/
 import type { BaseListParams } from '@shared/types/GeneralType';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { formatNumber } from '@shared/utils/numberUtils';
+import * as XLSX from 'xlsx';
 
 type CompanyStatus = 'active' | 'pending' | 'paused';
 type ReviewStatus = 'pending' | 'approved' | 'rejected';
@@ -28,6 +29,7 @@ type CompanyRow = {
   id: string;
   name: string;
   taxId: string;
+  address?: string;
   field: string;
   contact: string;
   phone: string;
@@ -35,6 +37,7 @@ type CompanyRow = {
   status: CompanyStatus;
   reviewStatus: ReviewStatus;
   published: boolean;
+  firstStudent?: string;
 };
 const getReviewMeta = (t: (key: string) => string) => ({
   [STATUS_CODE.APPROVED]: { label: t(getKey('status_approved')), className: 'bg-[var(--color-green-light)] text-[var(--color-green-medium)]' },
@@ -52,6 +55,75 @@ const CompaniesPage = () => {
   const deleteCompanyMutation = companyHooks.useDeleteCompany();
   const publishCompaniesMutation = companyHooks.usePublishCompanies();
   const companyRows = (companyList?.rows ?? []) as CompanyRow[];
+
+  const importMutation = companyHooks.useImportCompanies();
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [fileList, setFileList] = useState<any[]>([]);
+  const [importErrors, setImportErrors] = useState<string[]>([]);
+  const [importSuccessMessage, setImportSuccessMessage] = useState<string | null>(null);
+
+  const handleImportSubmit = () => {
+    if (fileList.length === 0) {
+      message.error('Vui lòng chọn file Excel.');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', fileList[0]);
+
+    setImportErrors([]);
+    setImportSuccessMessage(null);
+
+    importMutation.mutate(formData, {
+      onSuccess: (res) => {
+        if (res.success) {
+          message.success(res.message || 'Import doanh nghiệp thành công.');
+          setImportSuccessMessage(res.message);
+          setTimeout(() => {
+            handleCloseImportModal();
+          }, 2000);
+        }
+      },
+      onError: (error: any) => {
+        const errors = error?.response?.data?.errors;
+        const msg = error?.response?.data?.message;
+        if (Array.isArray(errors)) {
+          setImportErrors(errors);
+          message.error(msg || 'Import thất bại, vui lòng kiểm tra lại file.');
+        } else {
+          message.error(msg || error?.message || 'Có lỗi xảy ra khi import.');
+        }
+      },
+    });
+  };
+
+  const handleCloseImportModal = () => {
+    setIsImportModalOpen(false);
+    setFileList([]);
+    setImportErrors([]);
+    setImportSuccessMessage(null);
+  };
+
+  const handleExportExcel = () => {
+    const listToExport = companyRows;
+    if (listToExport.length === 0) {
+      message.warning('Không có dữ liệu doanh nghiệp để xuất.');
+      return;
+    }
+    
+    const exportData = listToExport.map(row => ({
+      'Tên doanh nghiệp': row.name || '',
+      'Mã số thuế': row.taxId || '',
+      'Lĩnh vực hoạt động': row.field || '',
+      'Địa chỉ trụ sở': row.address || '',
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Danh sách doanh nghiệp');
+    XLSX.writeFile(workbook, 'Danh_sach_doanh_nghiep.xlsx');
+    message.success('Xuất file Excel thành công.');
+  };
 
   const useFilteredCompanyListQuery = (params: BaseListParams) => {
     const query = companyHooks.useFetchListCompanies();
@@ -174,9 +246,13 @@ const CompaniesPage = () => {
       ),
     },
     { title: t(getKey('company_tax_id')), dataIndex: 'taxId', key: 'taxId', width: 140 },
-    { title: t(getKey('company_contact')), dataIndex: 'contact', key: 'contact', width: 180, ellipsis: true },
-    { title: t(getKey('phone_number')), dataIndex: 'phone', key: 'phone', width: 140 },
-    { title: t(getKey('email')), dataIndex: 'email', key: 'email', ellipsis: true },
+    {
+      title: 'Người khai báo đầu tiên',
+      dataIndex: 'firstStudent',
+      key: 'firstStudent',
+      ellipsis: true,
+      render: (v: string) => <span className="text-slate-600 font-medium">{v || 'Hệ thống'}</span>
+    },
     {
       title: t(getKey('status')),
       key: 'reviewStatus',
@@ -295,6 +371,26 @@ const CompaniesPage = () => {
           createButtonLabel={t(getKey('add_company'))}
           columns={columns}
           useQueryHook={useFilteredCompanyListQuery}
+          extraHeaderActions={
+            <Space size={8}>
+              <Button
+                type="primary"
+                ghost
+                icon={<FileExcelOutlined />}
+                onClick={() => setIsImportModalOpen(true)}
+                className="!h-10 !rounded-[8px] !px-4 !flex !items-center !gap-2 !font-medium"
+              >
+                <span>Import Excel</span>
+              </Button>
+              <Button
+                icon={<DownloadOutlined />}
+                onClick={handleExportExcel}
+                className="!h-10 !rounded-[8px] !px-4 !flex !items-center !gap-2 !font-medium"
+              >
+                <span>Xuất Excel</span>
+              </Button>
+            </Space>
+          }
           createInfo={{
             type: 'modal',
             modalInfo: {
@@ -428,6 +524,88 @@ const CompaniesPage = () => {
         reviewStats={reviewStats}
         unpublishedCount={unpublishedCount}
       />
+
+      <Modal
+        title={
+          <Space>
+            <FileExcelOutlined className="text-green-600 text-xl" />
+            <span className="font-bold text-lg text-slate-800">Import doanh nghiệp từ Excel</span>
+          </Space>
+        }
+        open={isImportModalOpen}
+        onCancel={handleCloseImportModal}
+        footer={[
+          <Button key="cancel" onClick={handleCloseImportModal} className="!h-10 !px-4 !rounded-lg">
+            Hủy
+          </Button>,
+          <Button
+            key="submit"
+            type="primary"
+            loading={importMutation.isPending}
+            onClick={handleImportSubmit}
+            disabled={fileList.length === 0}
+            className="!h-10 !px-4 !rounded-lg !bg-primary hover:!bg-blueDark"
+          >
+            Import
+          </Button>,
+        ]}
+        width={600}
+        destroyOnClose
+        centered
+        maskClosable={false}
+      >
+        <div className="py-4">
+          <div className="space-y-4 flex flex-col gap-4">
+            <div className="flex flex-col gap-1.5">
+              <label className="block text-sm font-semibold text-slate-700">
+                1. Chọn file Excel dữ liệu <span className="text-red-500">*</span>
+              </label>
+              <Upload
+                accept=".xlsx, .xls"
+                fileList={fileList}
+                beforeUpload={(file) => {
+                  setFileList([file]);
+                  return false;
+                }}
+                onRemove={() => {
+                  setFileList([]);
+                }}
+              >
+                <Button
+                  icon={<UploadOutlined />}
+                  className="!h-11 rounded-lg border-dashed border-slate-300 hover:border-primary"
+                >
+                  Chọn file Excel (.xlsx, .xls)
+                </Button>
+              </Upload>
+            </div>
+
+            {importSuccessMessage && (
+              <Alert
+                message="Thành công"
+                description={importSuccessMessage}
+                type="success"
+                showIcon
+              />
+            )}
+
+            {importErrors.length > 0 && (
+              <div className="flex flex-col gap-1.5">
+                <div className="text-sm font-bold text-red-600 inline-flex items-center gap-1">
+                  <ExclamationCircleFilled /> Danh sách lỗi dòng dữ liệu ({importErrors.length} lỗi):
+                </div>
+                <div className="max-h-60 overflow-y-auto border border-red-100 rounded-lg bg-red-50/30 p-3 text-xs text-red-700 space-y-1 font-mono">
+                  {importErrors.map((err, idx) => (
+                    <div key={idx} className="border-b border-red-100/50 pb-1 last:border-0 last:pb-0">
+                      • {err}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

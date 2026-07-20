@@ -194,7 +194,7 @@ export default function StudentIndexPage() {
                 </div>
               </div>
               <Link
-                href="/student/internship"
+                href="/student/internship#companies"
                 className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#2196F3] px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-blue-200 transition hover:bg-[#1976D2]"
               >
                 Xem danh sách công ty
@@ -287,19 +287,36 @@ export default function StudentIndexPage() {
 
           <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
             <div className="text-sm font-semibold text-slate-900">Tình trạng học tập</div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-              <div className="rounded-2xl bg-slate-50 p-4">
-                <div className="flex items-center gap-2 text-xs text-slate-500"><Clock3 className="h-4 w-4 text-[#1976D2]" /> Báo cáo đã nộp</div>
-                <div className="mt-2 text-2xl font-semibold text-slate-900">{reportsCount}</div>
-                <div className="text-xs text-slate-500">báo cáo tiến độ</div>
-              </div>
-              <div className="rounded-2xl bg-slate-50 p-4">
-                <div className="flex items-center gap-2 text-xs text-slate-500"><TrendingUp className="h-4 w-4 text-[#1976D2]" /> Điểm trung bình</div>
-                <div className="mt-2 text-2xl font-semibold text-slate-900">
-                  {expectedScore > 0 ? expectedScore : 'Chưa có'}
+            <div className="mt-4 space-y-4">
+              {/* Thực tập tốt nghiệp block */}
+              {tttn.hasPeriod && (
+                <div className="rounded-2xl bg-slate-50 p-4 border border-slate-100/50">
+                  <div className="text-xs font-semibold text-[#1976D2]">Thực tập tốt nghiệp</div>
+                  <div className="mt-2 flex items-center justify-between text-xs text-slate-600">
+                    <span className="flex items-center gap-1.5"><Clock3 className="h-3.5 w-3.5 text-[#1976D2]" /> Báo cáo đã nộp:</span>
+                    <span className="font-semibold text-slate-900">{tttn.reportsCount ?? 0}</span>
+                  </div>
+                  <div className="mt-1.5 flex items-center justify-between text-xs text-slate-600">
+                    <span className="flex items-center gap-1.5"><TrendingUp className="h-3.5 w-3.5 text-[#1976D2]" /> Điểm tổng kết:</span>
+                    <span className="font-semibold text-slate-900">{tttn.score !== null && tttn.score !== undefined ? tttn.score : 'Chưa có'}</span>
+                  </div>
                 </div>
-                <div className="text-xs text-slate-500">dựa trên kết quả hiện tại</div>
-              </div>
+              )}
+
+              {/* Đồ án tốt nghiệp block */}
+              {datn.hasPeriod && (
+                <div className="rounded-2xl bg-slate-50 p-4 border border-slate-100/50">
+                  <div className="text-xs font-semibold text-emerald-700">Đồ án tốt nghiệp</div>
+                  <div className="mt-2 flex items-center justify-between text-xs text-slate-600">
+                    <span className="flex items-center gap-1.5"><Clock3 className="h-3.5 w-3.5 text-emerald-600" /> Báo cáo đã nộp:</span>
+                    <span className="font-semibold text-slate-900">{datn.reportsCount ?? 0}</span>
+                  </div>
+                  <div className="mt-1.5 flex items-center justify-between text-xs text-slate-600">
+                    <span className="flex items-center gap-1.5"><TrendingUp className="h-3.5 w-3.5 text-emerald-600" /> Điểm tổng kết:</span>
+                    <span className="font-semibold text-slate-900">{datn.score !== null && datn.score !== undefined ? datn.score : 'Chưa có'}</span>
+                  </div>
+                </div>
+              )}
             </div>
           </section>
         </aside>

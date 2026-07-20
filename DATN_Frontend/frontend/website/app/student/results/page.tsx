@@ -67,6 +67,14 @@ export default function StudentResultsPage() {
   const datnDone = data.datn.status === 'ĐẠT' || data.datn.status === 'KHÔNG ĐẠT'
   const isPublished = tttnDone && datnDone
 
+  // Helpers for dynamic comments & status based on active tab
+  const activeDone = resultType === 'tttn' ? tttnDone : datnDone
+  const activeComment = resultType === 'tttn' 
+    ? data.tttn.note 
+    : (Number(data.datn.finalScore) >= 5.0 || data.datn.status === 'ĐẠT'
+        ? 'Sinh viên đã hoàn thành và bảo vệ thành công Đồ án tốt nghiệp.'
+        : 'Kết quả đồ án tốt nghiệp đang chờ hội đồng chấm điểm và công bố.')
+
   return (
     <>
       <StudentSectionHeader
@@ -82,30 +90,27 @@ export default function StudentResultsPage() {
         <StudentStatCard title="Cập nhật" value={data.summary.updatedAt} hint="Sau khi hội đồng công bố" accent="violet" />
       </div>
 
-      <section className="mb-5 rounded-[28px] border border-blue-100 bg-[linear-gradient(135deg,#eff6ff_0%,#ffffff_100%)] p-5 shadow-[0_12px_40px_rgba(15,23,42,0.04)]">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-xs font-medium text-[#1976D2] shadow-sm ring-1 ring-blue-100">
-              <Sparkles className="h-3.5 w-3.5" />
-              Bảng kết quả tổng hợp
-            </div>
-            <div className="mt-3 text-sm leading-6 text-slate-600">
-              Kết quả được chia theo TTTN và ĐATN, kèm ghi chú ngắn để sinh viên hiểu nhanh trạng thái hiện tại.
-            </div>
+      <section className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-xs font-medium text-[#1976D2] shadow-sm ring-1 ring-blue-100">
+            <Sparkles className="h-3.5 w-3.5" />
+            Bảng kết quả tổng hợp
           </div>
-          <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[460px]">
-            <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
-              <div className="flex items-center gap-2 text-xs text-slate-500"><CalendarDays className="h-4 w-4 text-[#1976D2]" /> Cập nhật</div>
-              <div className="mt-2 text-lg font-semibold text-slate-900">{data.summary.updatedAt}</div>
-            </div>
-            <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
-              <div className="flex items-center gap-2 text-xs text-slate-500"><ChartColumnBig className="h-4 w-4 text-[#1976D2]" /> Trạng thái công bố</div>
-              <div className="mt-2 text-lg font-semibold text-slate-900">{isPublished ? 'Đã công bố' : 'Đang chờ'}</div>
-            </div>
-            <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
-              <div className="flex items-center gap-2 text-xs text-slate-500"><Medal className="h-4 w-4 text-emerald-500" /> Xếp loại</div>
-              <div className="mt-2 text-lg font-semibold text-slate-900">{data.summary.classification}</div>
-            </div>
+          <div className="text-sm text-slate-600">Kết quả chia theo TTTN & ĐATN</div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="rounded-2xl bg-white p-3 text-xs shadow-sm ring-1 ring-slate-200">
+            <div className="flex items-center gap-2 text-xs text-slate-500"><CalendarDays className="h-4 w-4 text-[#1976D2]" /> Cập nhật</div>
+            <div className="mt-1 text-sm font-semibold text-slate-900">{data.summary.updatedAt}</div>
+          </div>
+          <div className="rounded-2xl bg-white p-3 text-xs shadow-sm ring-1 ring-slate-200">
+            <div className="flex items-center gap-2 text-xs text-slate-500"><ChartColumnBig className="h-4 w-4 text-[#1976D2]" /> Công bố</div>
+            <div className="mt-1 text-sm font-semibold text-slate-900">{isPublished ? 'Đã công bố' : 'Đang chờ'}</div>
+          </div>
+          <div className="rounded-2xl bg-white p-3 text-xs shadow-sm ring-1 ring-slate-200">
+            <div className="flex items-center gap-2 text-xs text-slate-500"><Medal className="h-4 w-4 text-emerald-500" /> Xếp loại</div>
+            <div className="mt-1 text-sm font-semibold text-slate-900">{data.summary.classification}</div>
           </div>
         </div>
       </section>
@@ -148,7 +153,7 @@ export default function StudentResultsPage() {
                 <div className="mt-2 text-sm text-slate-600">{data.tttn.note}</div>
                 <div className="mt-4 space-y-2 text-xs text-slate-500">
                   <div className="flex items-center gap-2"><BadgeCheck className="h-4 w-4 text-emerald-600" /> Đủ số tuần báo cáo</div>
-                  <div className="flex items-center gap-2"><Clock3 className="h-4 w-4 text-[#1976D2]" /> Cập nhật lần cuối: {data.summary.updatedAt}</div>
+                  <div className="flex items-center gap-2"><Clock3 className="h-4 w-4 text-[#1976D2]" /> Cập nhật lần cuối: {selectedRecord?.updatedAt || data.summary.updatedAt}</div>
                 </div>
               </div>
               <div className="rounded-[24px] border border-slate-200 bg-white p-5 xl:col-span-2">
@@ -288,7 +293,7 @@ export default function StudentResultsPage() {
         <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
           <div className="text-sm font-semibold text-slate-900">Nhận xét nhanh</div>
           <div className="mt-4 space-y-3 text-sm text-slate-600">
-            <div className="rounded-2xl bg-slate-50 p-4">{data.tttn.note}</div>
+            <div className="rounded-2xl bg-slate-50 p-4">{activeComment}</div>
             {selectedRecord && (
               <div className="rounded-2xl bg-slate-50 p-4">{selectedRecord.label}: {selectedRecord.note}</div>
             )}
@@ -299,11 +304,11 @@ export default function StudentResultsPage() {
           <div className="text-sm font-semibold text-slate-900">Tình trạng hiện tại</div>
           <div className="mt-4 space-y-3 text-sm text-slate-600">
             <div className="flex items-center gap-2 rounded-2xl bg-white/80 p-3">
-              <CheckCircle2 className={`h-4 w-4 ${isPublished ? 'text-emerald-600' : 'text-slate-400'}`} />
-              {isPublished ? 'Dữ liệu đã được công bố đầy đủ' : 'Kết quả đang chờ công bố'}
+              <CheckCircle2 className={`h-4 w-4 ${activeDone ? 'text-emerald-600' : 'text-slate-400'}`} />
+              {activeDone ? 'Dữ liệu đã được công bố đầy đủ' : 'Kết quả đang chờ công bố'}
             </div>
             <div className="flex items-center gap-2 rounded-2xl bg-white/80 p-3"><Sparkles className="h-4 w-4 text-[#1976D2]" /> Có thể tra cứu lại bất kỳ lúc nào</div>
-            <div className="flex items-center gap-2 rounded-2xl bg-white/80 p-3"><CalendarDays className="h-4 w-4 text-[#1976D2]" /> Cập nhật lần cuối: {data.summary.updatedAt}</div>
+            <div className="flex items-center gap-2 rounded-2xl bg-white/80 p-3"><CalendarDays className="h-4 w-4 text-[#1976D2]" /> Cập nhật lần cuối: {selectedRecord?.updatedAt || data.summary.updatedAt}</div>
           </div>
         </div>
       </section>
