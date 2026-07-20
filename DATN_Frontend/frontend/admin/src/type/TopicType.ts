@@ -8,6 +8,8 @@ interface IBaseTopic {
   rejectReason?: string;
   status: TopicStatus;
   fileUrl?: string;
+  description?: string;
+  direction?: string;
 }
 
 export interface IListTopic extends IBaseTopic {

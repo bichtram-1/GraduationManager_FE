@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getKey } from '@shared/types/I18nKeyType';
 import { Button, Modal, Tooltip, Tag, Input, Select, Space, message, Form, Card } from 'antd';
@@ -49,6 +49,26 @@ const GroupsAdminPage: React.FC = () => {
   const { data: groupList } = groupHooks.useFetchListGroups();
   const updateGroupMutation = groupHooks.useUpdateGroup();
   const deleteGroupMutation = groupHooks.useDeleteGroup();
+  const hasPendingSwapRef = useRef(false);
+
+  const beforeCloseUpdateModal = (): boolean | Promise<boolean> => {
+    if (!hasPendingSwapRef.current) return true;
+    return new Promise<boolean>((resolve) => {
+      Modal.confirm({
+        title: 'Thoát mà không lưu hoán đổi?',
+        icon: <ExclamationCircleOutlined />,
+        content: 'Bạn vừa hoán đổi thành viên nhưng chưa bấm "Cập nhật" để lưu chính thức. Nếu thoát bây giờ, thao tác hoán đổi sẽ KHÔNG được lưu.',
+        okText: 'Thoát, không lưu',
+        cancelText: 'Ở lại',
+        okButtonProps: { danger: true },
+        onOk: () => {
+          hasPendingSwapRef.current = false;
+          resolve(true);
+        },
+        onCancel: () => resolve(false),
+      });
+    });
+  };
   
   const isPeriodClosed = isPeriodClosedForAdmin(selectedPeriod);
   const rawGroups = (groupList?.rows as Group[] | undefined) ?? [];
@@ -338,10 +358,11 @@ const GroupsAdminPage: React.FC = () => {
             </Form.Item>
           </div>
         )}
+        beforeCloseUpdateModal={beforeCloseUpdateModal}
         updateInfo={isPeriodClosed ? undefined : {
           type: 'modal',
           modalInfo: {
-            modalContent: <GroupForm />,
+            modalContent: <GroupForm onPendingSwapChange={(hasPending) => { hasPendingSwapRef.current = hasPending; }} />,
             modalProps: { centered: true, width: 720, title: 'Chỉnh sửa nhóm Đồ Án Tốt Nghiệp' },
             modalFunc: updateGroupMutation,
           }

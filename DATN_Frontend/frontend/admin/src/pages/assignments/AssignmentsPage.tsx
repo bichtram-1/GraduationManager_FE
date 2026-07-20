@@ -322,9 +322,9 @@ const AssignmentsPage = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-4 px-4 pb-4">
+        <div className="grid grid-cols-3 gap-4 px-4 pb-4 items-stretch">
           <div className="col-span-2">
-            <Card className="rounded-[12px]">
+            <Card className="rounded-[12px] h-full flex flex-col">
               <div className="flex items-center justify-between mb-3">
                 <div>
                   <div className="text-sm font-semibold">{t(getKey('step1_select_student_desc'))}</div>
@@ -344,7 +344,7 @@ const AssignmentsPage = () => {
                 </div>
               </div>
 
-              <div className="overflow-x-auto">
+              <div className="overflow-auto flex-1">
                 <table className="w-full text-sm">
                   <thead className="bg-slate-50 text-slate-600">
                     <tr>
@@ -395,7 +395,7 @@ const AssignmentsPage = () => {
           </div>
 
           <div className="col-span-1">
-            <Card className="rounded-[12px]">
+            <Card className="rounded-[12px] h-full flex flex-col">
               <div className="mb-3">
                 <div className="text-sm font-semibold">{t(getKey('step2_select_teacher_desc'))}</div>
                 <div className="text-xs text-slate-500">{t(getKey('step2_sub_desc'))}</div>
@@ -424,7 +424,7 @@ const AssignmentsPage = () => {
                 </div>
 
               <Radio.Group value={selectedTeacher} onChange={(e) => setSelectedTeacher(e.target.value)} className="w-full">
-                <div className="space-y-3">
+                <div className="flex-1 overflow-auto space-y-3">
                   {paginatedTeachers.map((teacher) => (
                     <div key={teacher.id} className={cn(
                       "flex items-center justify-between gap-3 border border-slate-100 p-3 rounded-md",
