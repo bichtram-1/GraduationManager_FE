@@ -112,7 +112,20 @@ const StudentScoresPage: React.FC<Props> = ({ fixedMode }) => {
     const isGrading = pStatus === 'grading';
     const isClosed = pStatus === 'closed';
 
-    if (!isGrading && !isClosed) {
+    // Kiểm tra thêm theo ngày: nếu gradingStartDate đã qua thì cũng cho phép xuất
+    // (tránh bị block khi status BE chưa kịp cập nhật hoặc đang ở trạng thái edge-case)
+    const parseDate = (str?: string) => {
+      if (!str) return null;
+      const parts = str.split('/');
+      if (parts.length === 3) return new Date(+parts[2], +parts[1] - 1, +parts[0]);
+      return new Date(str);
+    };
+    const gradingStarted = (() => {
+      const d = parseDate(selectedPeriod.gradingStartDate);
+      return d ? new Date() >= d : false;
+    })();
+
+    if (!isGrading && !isClosed && !gradingStarted) {
       Modal.warning({
         title: 'Chưa đến giai đoạn chấm điểm',
         content: 'Đợt học/tốt nghiệp hiện tại chưa đến giai đoạn chấm điểm, không thể xuất bảng điểm!',
