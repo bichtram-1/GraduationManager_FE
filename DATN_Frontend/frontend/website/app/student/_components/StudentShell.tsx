@@ -361,8 +361,10 @@ export function StudentShell({ children }: { children: ReactNode }) {
             const Icon = item.icon
             const isActive = activeKey === item.key
             if (item.key === 'results') {
-              const isTttnActive = pathname.startsWith('/student/results') && new URLSearchParams(window.location.search).get('view') === 'tttn'
-              const isDatnActive = pathname.startsWith('/student/results') && new URLSearchParams(window.location.search).get('view') === 'datn'
+              const currentSearch = typeof window !== 'undefined' ? window.location.search : ''
+              const viewParam = new URLSearchParams(currentSearch).get('view')
+              const isTttnActive = pathname.startsWith('/student/results') && (viewParam === 'tttn' || viewParam === null)
+              const isDatnActive = pathname.startsWith('/student/results') && viewParam === 'datn'
 
               return (
                 <Dropdown
@@ -429,8 +431,9 @@ export function StudentShell({ children }: { children: ReactNode }) {
               const Icon = item.icon
               const isActive = activeKey === item.key
               if (item.key === 'results') {
-                const view = new URLSearchParams(window.location.search).get('view')
-                const isTttnActive = pathname.startsWith('/student/results') && view === 'tttn'
+                const currentSearch = typeof window !== 'undefined' ? window.location.search : ''
+                const view = new URLSearchParams(currentSearch).get('view')
+                const isTttnActive = pathname.startsWith('/student/results') && (view === 'tttn' || view === null)
                 const isDatnActive = pathname.startsWith('/student/results') && view === 'datn'
 
                 return (
