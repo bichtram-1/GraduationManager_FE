@@ -5,6 +5,7 @@ import { useMemo, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { studentApi } from '@/lib/api/studentApi'
+import { Dropdown } from 'antd'
 import {
   Award,
   Bell,
@@ -35,8 +36,6 @@ const NAV_ITEMS = [
     { key: 'thesis', href: '/student/thesis-register', label: 'Đăng ký ĐATN', icon: BookOpen },
   { key: 'reports-tttn', href: '/student/reports/tttn', label: 'Báo cáo TTTN', icon: FileText },
   { key: 'reports-datn', href: '/student/reports/datn', label: 'Báo cáo ĐATN', icon: GraduationCap },
-  { key: 'score-tttn', href: '/student/results?view=tttn', label: 'Điểm TTTN', icon: FileText },
-  { key: 'score-datn', href: '/student/results?view=datn', label: 'Điểm ĐATN', icon: GraduationCap },
   { key: 'results', href: '/student/results', label: 'Kết quả', icon: Award },
   { key: 'history', href: '/student/history', label: 'Lịch sử hoạt động', icon: History },
 ]
@@ -164,6 +163,10 @@ export function StudentShell({ children }: { children: ReactNode }) {
     || pathname.startsWith('/student/thesis-invite');
 
   const activeKey = useMemo(() => getActiveKey(pathname), [pathname])
+
+  const handleResultSegment = (type: 'tttn' | 'datn') => {
+    window.location.assign(`/student/results?view=${type}`)
+  }
 
   const handleLogout = () => {
     window.location.assign('/api/logout?from=/login')
@@ -357,6 +360,55 @@ export function StudentShell({ children }: { children: ReactNode }) {
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon
             const isActive = activeKey === item.key
+            if (item.key === 'results') {
+              const isTttnActive = pathname.startsWith('/student/results') && new URLSearchParams(window.location.search).get('view') === 'tttn'
+              const isDatnActive = pathname.startsWith('/student/results') && new URLSearchParams(window.location.search).get('view') === 'datn'
+
+              return (
+                <Dropdown
+                  key={item.key}
+                  trigger={['hover', 'click']}
+                  placement="bottomLeft"
+                  popupRender={() => (
+                    <div className="w-56 space-y-0.5 rounded-2xl border border-slate-200/80 bg-white p-1.5 shadow-[0_12px_40px_rgba(15,23,42,0.12)] z-50">
+                      <a
+                        href="/student/results?view=tttn"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          handleResultSegment('tttn')
+                        }}
+                        className={`flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition duration-150 ${isTttnActive ? 'bg-blue-50/80' : 'hover:bg-slate-50'}`}
+                      >
+                        <FileText className={`h-4 w-4 ${isTttnActive ? 'text-[#1976D2]' : 'text-slate-400'}`} />
+                        <span className={isTttnActive ? 'font-bold text-[#1976D2]' : 'font-semibold text-slate-700 hover:text-blue-600'}>Điểm TTTN</span>
+                      </a>
+                      <a
+                        href="/student/results?view=datn"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          handleResultSegment('datn')
+                        }}
+                        className={`flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition duration-150 ${isDatnActive ? 'bg-blue-50/80' : 'hover:bg-slate-50'}`}
+                      >
+                        <GraduationCap className={`h-4 w-4 ${isDatnActive ? 'text-[#1976D2]' : 'text-slate-400'}`} />
+                        <span className={isDatnActive ? 'font-bold text-[#1976D2]' : 'font-semibold text-slate-700 hover:text-blue-600'}>Điểm ĐATN</span>
+                      </a>
+                    </div>
+                  )}
+                >
+                  <button
+                    type="button"
+                    className={`flex min-w-max items-center gap-1.5 border-b-2 px-4 py-3 text-sm font-medium transition ${isActive ? 'border-[#2196F3] text-[#2196F3]' : 'border-transparent text-slate-600 hover:text-slate-900'}`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {item.label}
+                    <svg className="h-3 w-3 text-slate-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </Dropdown>
+              )
+            }
             return (
               <Link
                 href={item.href}
@@ -376,6 +428,49 @@ export function StudentShell({ children }: { children: ReactNode }) {
             {NAV_ITEMS.map((item) => {
               const Icon = item.icon
               const isActive = activeKey === item.key
+              if (item.key === 'results') {
+                const view = new URLSearchParams(window.location.search).get('view')
+                const isTttnActive = pathname.startsWith('/student/results') && view === 'tttn'
+                const isDatnActive = pathname.startsWith('/student/results') && view === 'datn'
+
+                return (
+                  <div key={item.key} className="border-b border-slate-100">
+                    <button
+                      type="button"
+                      className={`flex w-full items-center gap-3 px-6 py-3 text-sm ${isActive ? 'bg-blue-50 text-[#1976D2]' : 'text-slate-700'}`}
+                    >
+                      <Icon className="h-4 w-4" />
+                      {item.label}
+                    </button>
+                    <div className="space-y-0.5 bg-slate-50/60 px-3 py-2">
+                      <a
+                        href="/student/results?view=tttn"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          handleResultSegment('tttn')
+                          setMenuOpen(false)
+                        }}
+                        className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm transition ${isTttnActive ? 'bg-blue-50 text-[#1976D2]' : 'text-slate-700 hover:bg-white'}`}
+                      >
+                        <FileText className="h-4 w-4" />
+                        Điểm TTTN
+                      </a>
+                      <a
+                        href="/student/results?view=datn"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          handleResultSegment('datn')
+                          setMenuOpen(false)
+                        }}
+                        className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm transition ${isDatnActive ? 'bg-blue-50 text-[#1976D2]' : 'text-slate-700 hover:bg-white'}`}
+                      >
+                        <GraduationCap className="h-4 w-4" />
+                        Điểm ĐATN
+                      </a>
+                    </div>
+                  </div>
+                )
+              }
               return (
                 <Link
                   href={item.href}
