@@ -400,7 +400,7 @@ export function StudentShell({ children }: { children: ReactNode }) {
                 >
                   <button
                     type="button"
-                    className={`flex min-w-max items-center gap-1.5 border-b-2 px-4 py-3 text-sm font-medium transition ${isActive ? 'border-[#2196F3] text-[#2196F3]' : 'border-transparent text-slate-600 hover:text-slate-900'}`}
+                    className={`flex min-w-max items-center gap-1.5 border-b-2 px-4 py-3 text-sm font-medium transition ${isActive ? 'border-[#2196F3] text-[#2196F3]' : 'border-transparent text-[#1976D2] hover:text-[#1565c0]'}`}
                   >
                     <Icon className="h-4 w-4" />
                     {item.label}
@@ -416,7 +416,7 @@ export function StudentShell({ children }: { children: ReactNode }) {
                 href={item.href}
                 prefetch
                 key={item.key}
-                className={`flex min-w-max items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition ${isActive ? 'border-[#2196F3] text-[#2196F3]' : 'border-transparent text-slate-600 hover:text-slate-900'}`}
+                className={`flex min-w-max items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition ${isActive ? 'border-[#2196F3] text-[#2196F3]' : 'border-transparent text-[#1976D2] hover:text-[#1565c0]'}`}
               >
                 <Icon className="h-4 w-4" />
                 {item.label}
@@ -440,7 +440,7 @@ export function StudentShell({ children }: { children: ReactNode }) {
                   <div key={item.key} className="border-b border-slate-100">
                     <button
                       type="button"
-                      className={`flex w-full items-center gap-3 px-6 py-3 text-sm ${isActive ? 'bg-blue-50 text-[#1976D2]' : 'text-slate-700'}`}
+                      className={`flex w-full items-center gap-3 px-6 py-3 text-sm ${isActive ? 'bg-blue-50 text-[#1976D2]' : 'text-[#1976D2] hover:bg-blue-50/40'}`}
                     >
                       <Icon className="h-4 w-4" />
                       {item.label}
@@ -479,7 +479,7 @@ export function StudentShell({ children }: { children: ReactNode }) {
                   href={item.href}
                   prefetch
                   key={item.key}
-                  className={`flex w-full items-center gap-3 border-b border-slate-100 px-6 py-3 text-sm ${isActive ? 'bg-blue-50 text-[#1976D2]' : 'text-slate-700'}`}
+                  className={`flex w-full items-center gap-3 border-b border-slate-100 px-6 py-3 text-sm ${isActive ? 'bg-blue-50 text-[#1976D2]' : 'text-[#1976D2] hover:bg-blue-50/40'}`}
                 >
                   <Icon className="h-4 w-4" />
                   {item.label}
