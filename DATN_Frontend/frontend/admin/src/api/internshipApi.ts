@@ -33,6 +33,11 @@ export const internshipApi = {
     return response?.data;
   },
 
+  batchApproveDeclarations: async (ids: string[]) => {
+    const response = await axiosInstance.post('/private/v1/internships/declarations/batch-approve', { ids });
+    return response?.data;
+  },
+
   getListNoCompanyStudent: async (params?: { periodId?: string }) => {
     const response = await axiosInstance.get('/private/v1/internships/no-company', { params });
     return response?.data?.results?.objects;

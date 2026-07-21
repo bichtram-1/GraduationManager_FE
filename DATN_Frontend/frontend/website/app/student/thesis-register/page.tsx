@@ -616,18 +616,18 @@ export default function ThesisRegisterPage() {
                 const hasSlot = safeUsed < safeMaxSlots && t.published
                 const isCurrentTopic = registration?.topicId === t.id
                 return (
-                  <div key={t.id} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm flex items-center justify-between gap-4 min-h-[96px]">
+                  <div key={t.id} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm flex items-start justify-between gap-4 min-h-[96px] sm:items-center">
                     <div className="flex items-start gap-4 min-w-0">
                       <div className="flex-shrink-0">
                         <div className="text-xs text-[#1976D2] font-semibold">{t.code || t.id}</div>
                       </div>
                       <div className="min-w-0">
                         <div className="text-sm font-semibold text-slate-900 line-clamp-2" title={t.title} style={{ WebkitLineClamp: 2 }}>{t.title}</div>
-                        <div className="mt-1 flex items-center gap-2 text-xs text-slate-500">
-                          <span className="truncate">{teacher}</span>
+                        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs leading-5 text-slate-500">
+                          <span className="min-w-0 wrap-break-word font-medium text-slate-700">{teacher}</span>
                           <span className="text-slate-300">•</span>
                           <span className="font-medium text-slate-600">{safeUsed}/{safeMaxSlots}</span>
-                          {t.direction && <span className="ml-2 text-xs text-blue-700 font-medium bg-blue-50 px-2 py-0.5 rounded-full">{t.direction}</span>}
+                          {t.direction && <span className="ml-2 whitespace-nowrap rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">{t.direction}</span>}
                         </div>
                         <div className="mt-2 flex items-center gap-2">
                           {isCurrentTopic && registration && (
@@ -638,7 +638,7 @@ export default function ThesisRegisterPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex shrink-0 items-center gap-3 self-start sm:self-center">
                       <button
                         onClick={() => setDetailTopic(t)}
                         className="h-9 rounded-full border border-slate-200 bg-white px-4 text-sm text-slate-700 hover:bg-slate-50 transition"

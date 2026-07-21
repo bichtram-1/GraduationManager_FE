@@ -65,6 +65,17 @@ export const internshipHooks = {
     });
   },
 
+  useBatchApproveDeclarations: () => {
+    const queryClient = useQueryClient();
+    return useMutation<{ success: boolean; message: string; updatedCount: number }, AxiosError, { ids: string[] }>({
+      mutationFn: ({ ids }) => internshipApi.batchApproveDeclarations(ids),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: [QueryKey.internships.declarations.list] });
+        queryClient.invalidateQueries({ queryKey: [QueryKey.internships.noCompany.list] });
+      },
+    });
+  },
+
   useFetchListNoCompanyStudents: (params?: { periodId?: string }) => {
     return useQuery({
       queryKey: [QueryKey.internships.noCompany.list, params],

@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { CheckCircle2, Trophy, Sparkles, CalendarDays, Medal, BadgeCheck, Clock3, TrendingUp, FileText, GraduationCap, Star } from 'lucide-react'
 import { StudentPill, StudentSectionHeader, StudentStatCard } from '../_components/StudentShell'
 import { studentApi, IStudentResults } from '@/lib/api/studentApi'
@@ -8,6 +9,8 @@ import { studentApi, IStudentResults } from '@/lib/api/studentApi'
 type ResultType = 'tttn' | 'datn'
 
 export default function StudentResultsPage() {
+  const searchParams = useSearchParams()
+  const forcedView = searchParams.get('view') === 'tttn' || searchParams.get('view') === 'datn' ? (searchParams.get('view') as ResultType) : null
   const [resultType, setResultType] = useState<ResultType>('tttn')
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null)
   const [data, setData] = useState<IStudentResults | null>(null)
@@ -39,6 +42,12 @@ export default function StudentResultsPage() {
     }
   }, [])
 
+  useEffect(() => {
+    if (forcedView) {
+      setResultType(forcedView)
+    }
+  }, [forcedView])
+
   const activeRecords = useMemo(() => {
     if (!data) return []
     return resultType === 'tttn' ? data.tttn.records : data.datn.records
@@ -47,6 +56,9 @@ export default function StudentResultsPage() {
   const selectedRecord = useMemo(() => {
     return activeRecords.find((record) => record.id === selectedRecordId) ?? activeRecords[0]
   }, [selectedRecordId, activeRecords])
+
+  const visibleType = forcedView ?? resultType
+  const isFocusedView = forcedView !== null
 
   const switchType = (type: ResultType) => {
     setResultType(type)
@@ -65,8 +77,6 @@ export default function StudentResultsPage() {
 
   const tttnDone = data.tttn.status === 'Hoàn thành'
   const datnDone = data.datn.status === 'ĐẠT' || data.datn.status === 'KHÔNG ĐẠT'
-  const isPublished = tttnDone && datnDone
-
   // Helpers for dynamic comments & status based on active tab
   const activeDone = resultType === 'tttn' ? tttnDone : datnDone
   const activeComment = resultType === 'tttn' 
@@ -75,20 +85,38 @@ export default function StudentResultsPage() {
         ? 'Sinh viên đã hoàn thành và bảo vệ thành công Đồ án tốt nghiệp.'
         : 'Kết quả đồ án tốt nghiệp đang chờ hội đồng chấm điểm và công bố.')
 
+  const focusedTitle = visibleType === 'tttn' ? 'Điểm TTTN' : 'Điểm ĐATN'
+  const focusedDescription = visibleType === 'tttn'
+    ? 'Xem riêng điểm thực tập tốt nghiệp.'
+    : 'Xem riêng điểm đồ án tốt nghiệp.'
+
   return (
     <>
       <StudentSectionHeader
-        title="Kết quả"
-        description="Tra cứu điểm sau khi giảng viên và hội đồng công bố."
+        title={isFocusedView ? focusedTitle : 'Kết quả'}
+        description={isFocusedView ? focusedDescription : 'Tra cứu điểm sau khi giảng viên và hội đồng công bố.'}
         actions={<StudentPill tone="green">Đã cập nhật gần nhất</StudentPill>}
       />
 
-      <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StudentStatCard title="TTTN" value={data.summary.tttnScore} hint="Điểm giảng viên hướng dẫn" accent="blue" />
-        <StudentStatCard title="ĐATN" value={data.summary.datnScore} hint="Điểm tổng kết hội đồng" accent="green" />
-        <StudentStatCard title="Xếp loại" value={data.summary.classification} hint="Theo thang điểm hiện tại" accent="orange" />
-        <StudentStatCard title="Cập nhật" value={data.summary.updatedAt} hint="Sau khi hội đồng công bố" accent="violet" />
-      </div>
+      {isFocusedView ? (
+        <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <StudentStatCard
+            title={visibleType === 'tttn' ? 'TTTN' : 'ĐATN'}
+            value={visibleType === 'tttn' ? data.summary.tttnScore : data.summary.datnScore}
+            hint={visibleType === 'tttn' ? 'Điểm giảng viên hướng dẫn' : 'Điểm tổng kết hội đồng'}
+            accent={visibleType === 'tttn' ? 'blue' : 'green'}
+          />
+          <StudentStatCard title="Xếp loại" value={data.summary.classification} hint="Theo thang điểm hiện tại" accent="orange" />
+          <StudentStatCard title="Cập nhật" value={data.summary.updatedAt} hint="Sau khi hội đồng công bố" accent="violet" />
+        </div>
+      ) : (
+        <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <StudentStatCard title="TTTN" value={data.summary.tttnScore} hint="Điểm giảng viên hướng dẫn" accent="blue" />
+          <StudentStatCard title="ĐATN" value={data.summary.datnScore} hint="Điểm tổng kết hội đồng" accent="green" />
+          <StudentStatCard title="Xếp loại" value={data.summary.classification} hint="Theo thang điểm hiện tại" accent="orange" />
+          <StudentStatCard title="Cập nhật" value={data.summary.updatedAt} hint="Sau khi hội đồng công bố" accent="violet" />
+        </div>
+      )}
 
       <section className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
@@ -96,29 +124,31 @@ export default function StudentResultsPage() {
             <Sparkles className="h-3.5 w-3.5" />
             Bảng kết quả tổng hợp
           </div>
-          <div className="text-sm text-slate-600">Kết quả chia theo TTTN & ĐATN</div>
+          <div className="text-sm text-slate-600">{isFocusedView ? 'Chỉ hiển thị phần điểm đang chọn' : 'Kết quả chia theo TTTN & ĐATN'}</div>
         </div>
 
         {/* status cards removed to declutter UI */}
       </section>
 
-      <div className="mb-5 flex gap-2 border-b border-slate-200">
-        <button
-          onClick={() => switchType('tttn')}
-          className={`px-5 py-3 text-sm font-medium border-b-2 transition ${resultType === 'tttn' ? 'border-[#2196F3] text-[#2196F3]' : 'border-transparent text-slate-600 hover:text-slate-900'}`}
-        >
-          Điểm TTTN
-        </button>
-        <button
-          onClick={() => switchType('datn')}
-          className={`px-5 py-3 text-sm font-medium border-b-2 transition ${resultType === 'datn' ? 'border-[#2196F3] text-[#2196F3]' : 'border-transparent text-slate-600 hover:text-slate-900'}`}
-        >
-          Điểm ĐATN
-        </button>
-      </div>
+      {!isFocusedView && (
+        <div className="mb-5 flex gap-2 border-b border-slate-200">
+          <button
+            onClick={() => switchType('tttn')}
+            className={`px-5 py-3 text-sm font-medium border-b-2 transition ${resultType === 'tttn' ? 'border-[#2196F3] text-[#2196F3]' : 'border-transparent text-slate-600 hover:text-slate-900'}`}
+          >
+            Điểm TTTN
+          </button>
+          <button
+            onClick={() => switchType('datn')}
+            className={`px-5 py-3 text-sm font-medium border-b-2 transition ${resultType === 'datn' ? 'border-[#2196F3] text-[#2196F3]' : 'border-transparent text-slate-600 hover:text-slate-900'}`}
+          >
+            Điểm ĐATN
+          </button>
+        </div>
+      )}
 
-      <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-        {resultType === 'tttn' ? (
+      <div className={isFocusedView ? 'grid gap-6' : 'grid gap-6 xl:grid-cols-[1.15fr_0.85fr]'}>
+        {visibleType === 'tttn' ? (
           <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
             <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-5 py-4">
               <div>
@@ -223,40 +253,43 @@ export default function StudentResultsPage() {
           </section>
         )}
 
-        <section className="rounded-[28px] border border-slate-200 bg-[linear-gradient(135deg,#eff6ff_0%,#ffffff_100%)] p-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
-          <div className="text-sm font-semibold text-slate-900">Ghi chú nhanh</div>
-          <div className="mt-4 space-y-3 text-sm text-slate-600">
-            <div className="flex items-center gap-2"><Trophy className="h-4 w-4 text-[#1976D2]" /> Điểm được đồng bộ sau khi công bố</div>
-            <div className="flex items-center gap-2"><Medal className="h-4 w-4 text-emerald-500" /> Xếp loại hiển thị ngay bên cạnh điểm</div>
-            <div className="flex items-center gap-2"><CalendarDays className="h-4 w-4 text-[#1976D2]" /> Lần cập nhật gần nhất: {data.summary.updatedAt}</div>
-            <div className="flex items-center gap-2"><TrendingUp className="h-4 w-4 text-[#1976D2]" /> Điểm số phản ánh đúng tiến trình năng lực</div>
-          </div>
+        {!isFocusedView && (
+          <section className="rounded-[28px] border border-slate-200 bg-[linear-gradient(135deg,#eff6ff_0%,#ffffff_100%)] p-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
+            <div className="text-sm font-semibold text-slate-900">Ghi chú nhanh</div>
+            <div className="mt-4 space-y-3 text-sm text-slate-600">
+              <div className="flex items-center gap-2"><Trophy className="h-4 w-4 text-[#1976D2]" /> Điểm được đồng bộ sau khi công bố</div>
+              <div className="flex items-center gap-2"><Medal className="h-4 w-4 text-emerald-500" /> Xếp loại hiển thị ngay bên cạnh điểm</div>
+              <div className="flex items-center gap-2"><CalendarDays className="h-4 w-4 text-[#1976D2]" /> Lần cập nhật gần nhất: {data.summary.updatedAt}</div>
+              <div className="flex items-center gap-2"><TrendingUp className="h-4 w-4 text-[#1976D2]" /> Điểm số phản ánh đúng tiến trình năng lực</div>
+            </div>
 
-          <div className="mt-5 rounded-[24px] bg-white/85 p-4 ring-1 ring-slate-200">
-            <div className="flex items-center gap-2 text-sm font-medium text-slate-900"><Star className="h-4 w-4 text-[#1976D2]" /> Kết quả gần đây</div>
-            <div className="mt-3 space-y-3 text-sm text-slate-600">
-              <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3">
-                <span>TTTN</span>
-                <span className="font-medium text-[#1976D2]">
-                  {!data.tttn.finalScore || String(data.tttn.finalScore).toLowerCase().includes('chưa chấm') ? '_' : data.tttn.finalScore} / 10
-                </span>
-              </div>
-              <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3">
-                <span>ĐATN</span>
-                <span className="font-medium text-emerald-600">
-                  {!data.datn.finalScore || String(data.datn.finalScore).toLowerCase().includes('chưa chấm') ? '_' : data.datn.finalScore} / 10
-                </span>
-              </div>
-              <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3">
-                <span>GPA xếp loại</span>
-                <span className="font-medium text-slate-900">{data.summary.classification}</span>
+            <div className="mt-5 rounded-[24px] bg-white/85 p-4 ring-1 ring-slate-200">
+              <div className="flex items-center gap-2 text-sm font-medium text-slate-900"><Star className="h-4 w-4 text-[#1976D2]" /> Kết quả gần đây</div>
+              <div className="mt-3 space-y-3 text-sm text-slate-600">
+                <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3">
+                  <span>TTTN</span>
+                  <span className="font-medium text-[#1976D2]">
+                    {!data.tttn.finalScore || String(data.tttn.finalScore).toLowerCase().includes('chưa chấm') ? '_' : data.tttn.finalScore} / 10
+                  </span>
+                </div>
+                <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3">
+                  <span>ĐATN</span>
+                  <span className="font-medium text-emerald-600">
+                    {!data.datn.finalScore || String(data.datn.finalScore).toLowerCase().includes('chưa chấm') ? '_' : data.datn.finalScore} / 10
+                  </span>
+                </div>
+                <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3">
+                  <span>GPA xếp loại</span>
+                  <span className="font-medium text-slate-900">{data.summary.classification}</span>
+                </div>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
       </div>
 
-      <section className="mt-6 grid gap-6 xl:grid-cols-3">
+      {!isFocusedView && (
+        <section className="mt-6 grid gap-6 xl:grid-cols-2">
         <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
           <div className="text-sm font-semibold text-slate-900">Dòng thời gian</div>
           <div className="mt-4 space-y-4">
@@ -286,19 +319,8 @@ export default function StudentResultsPage() {
             )}
           </div>
         </div>
-
-        <div className="rounded-[28px] border border-slate-200 bg-[linear-gradient(135deg,#eff6ff_0%,#ffffff_100%)] p-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
-          <div className="text-sm font-semibold text-slate-900">Tình trạng hiện tại</div>
-          <div className="mt-4 space-y-3 text-sm text-slate-600">
-            <div className="flex items-center gap-2 rounded-2xl bg-white/80 p-3">
-              <CheckCircle2 className={`h-4 w-4 ${activeDone ? 'text-emerald-600' : 'text-slate-400'}`} />
-              {activeDone ? 'Dữ liệu đã được công bố đầy đủ' : 'Kết quả đang chờ công bố'}
-            </div>
-            <div className="flex items-center gap-2 rounded-2xl bg-white/80 p-3"><Sparkles className="h-4 w-4 text-[#1976D2]" /> Có thể tra cứu lại bất kỳ lúc nào</div>
-            <div className="flex items-center gap-2 rounded-2xl bg-white/80 p-3"><CalendarDays className="h-4 w-4 text-[#1976D2]" /> Cập nhật lần cuối: {selectedRecord?.updatedAt || data.summary.updatedAt}</div>
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
     </>
   )
 }
