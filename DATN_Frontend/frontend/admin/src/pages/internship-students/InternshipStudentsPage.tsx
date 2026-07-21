@@ -237,8 +237,8 @@ const InternshipStudentsPage = () => {
     return Array.from(groupsMap.values());
   }, [declarationsRows, choCapGiayCompanyFilter]);
 
-  /** In giấy gộp: mở PDF và tự động cập nhật trạng thái sang đã cấp (nếu autoConfirm = true). */
-  const handlePrintGroupedPDF = (group: IGroupedDeclaration, autoConfirm = false) => {
+  /** In giấy gộp: CHỈ mở PDF, KHÔNG đổi status, KHÔNG gọi API. */
+  const handlePrintGroupedPDF = (group: IGroupedDeclaration) => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
       message.error('Không thể mở cửa sổ in. Vui lòng tắt trình chặn popup của trình duyệt!');
@@ -455,13 +455,9 @@ const InternshipStudentsPage = () => {
       </html>
     `);
     printWindow.document.close();
-
-    if (autoConfirm) {
-      handleBatchConfirm(group);
-    }
   };
 
-  /** In giấy cho 1 sinh viên: wrap thành group giả rồi dùng lại handlePrintGroupedPDF và tự động xác nhận. */
+  /** In giấy cho 1 sinh viên: wrap thành group giả rồi dùng lại handlePrintGroupedPDF. */
   const handlePrintSinglePDF = (record: IConfirmationRequest) => {
     const singleGroup: IGroupedDeclaration = {
       key: record.id,
@@ -472,7 +468,7 @@ const InternshipStudentsPage = () => {
       mentor: record.mentor,
       students: [record],
     };
-    handlePrintGroupedPDF(singleGroup, true);
+    handlePrintGroupedPDF(singleGroup);
   };
 
   /** Xác nhận đã cấp giấy hàng loạt: CHO_CAP_GIAY → DA_DUYET + broadcast notify sinh viên.
@@ -784,7 +780,7 @@ const InternshipStudentsPage = () => {
                           <Button
                             size="small"
                             icon={<PrinterOutlined />}
-                            onClick={() => handlePrintGroupedPDF(group, true)}
+                            onClick={() => handlePrintGroupedPDF(group)}
                           >
                             In gộp ({group.students.length} SV)
                           </Button>
