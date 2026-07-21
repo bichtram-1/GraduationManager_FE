@@ -35,11 +35,6 @@ const companyStatusOptions: { value: string; label: keyof I18nKey }[] = [
   { value: STATUS_CODE.PAUSED, label: 'company_paused' },
 ];
 
-const reviewStatusOptions: { value: string; label: keyof I18nKey }[] = [
-  { value: STATUS_CODE.PENDING, label: 'pending_status' },
-  { value: STATUS_CODE.APPROVED, label: 'approved_status' },
-  { value: STATUS_CODE.REJECTED, label: 'status_rejected' },
-];
 
 const CompanyForm: React.FC<Props> = ({ disabled = false }) => {
   const { t } = useTranslation();
@@ -118,15 +113,6 @@ const CompanyForm: React.FC<Props> = ({ disabled = false }) => {
       </Form.Item>
       <Form.Item label={t(getKey('email'))} name="email" rules={[{ type: 'email', message: t(getKey('email_invalid')) }]}>
           <Input disabled={disabled} placeholder="contact@company.com" />
-      </Form.Item>
-      <Form.Item label={t(getKey('review_status'))} name="reviewStatus">
-          <Select
-            disabled={disabled}
-            options={reviewStatusOptions.map((option) => ({
-              value: option.value,
-              label: t(getKey(option.label)),
-            }))}
-          />
       </Form.Item>
     </div>
   );
