@@ -39,6 +39,8 @@ type CompanyRow = {
   reviewStatus: ReviewStatus;
   published: boolean;
   firstStudent?: string;
+  students?: number;       // SV đã duyệt (DA_DUYET + CHO_CAP_GIAY)
+  pendingStudents?: number; // SV đang chờ duyệt (CHO_DUYET) — sẽ bị tự động từ chối nếu tạm dừng
 };
 const getReviewMeta = (t: (key: string) => string) => ({
   [STATUS_CODE.APPROVED]: { label: t(getKey('status_approved')), className: 'bg-[var(--color-green-light)] text-[var(--color-green-medium)]' },
@@ -206,22 +208,70 @@ const CompaniesPage = () => {
   const confirmReviewChange = (record: CompanyRow, reviewStatus: ReviewStatus) => {
     const meta = getReviewMeta(t)[reviewStatus];
     const label = meta.label;
+
+    const doUpdate = () =>
+      updateCompanyMutation.mutate(
+        { id: record.id, body: { reviewStatus }, index: 0, params: { page: 1, limit: 10 } },
+        { onSuccess: () => message.success(t(getKey('update_company_status_success'), { name: record.name, status: label.toLowerCase() })) }
+      );
+
+    // Chỉ tạm dừng (rejected = NGUNG_HOAT_DONG) mới cần cảnh báo
+    if (reviewStatus === STATUS_CODE.REJECTED) {
+      const activeCount  = record.students ?? 0;   // DA_DUYET + CHO_CAP_GIAY
+      const pendingCount = record.pendingStudents ?? 0; // CHO_DUYET
+      const hasAffected  = activeCount > 0 || pendingCount > 0;
+
+      Modal.confirm({
+        centered: true,
+        icon: <ExclamationCircleFilled className="!text-amber-500" />,
+        title: `Tạm dừng công ty “${record.name}”?`,
+        content: (
+          <div className="text-sm space-y-2 mt-1">
+            {hasAffected ? (
+              <>
+                <p className="font-medium text-amber-700">⚠️ Công ty này đang có sinh viên liên quan:</p>
+                <ul className="list-disc pl-5 space-y-1 text-slate-700">
+                  {activeCount > 0 && (
+                    <li>
+                      <span className="font-semibold text-green-700">{activeCount} SV đã được duyệt</span>
+                      {' '}(DA_DUYET / Chờ cấp giấy) — <span className="text-slate-500">không bị ảnh hưởng, vẫn xử lý bình thường</span>
+                    </li>
+                  )}
+                  {pendingCount > 0 && (
+                    <li>
+                      <span className="font-semibold text-red-600">{pendingCount} SV đang chờ duyệt</span>
+                      {' '}— <span className="text-red-500 font-medium">sẽ bị tự động từ chối ngay!</span>
+                    </li>
+                  )}
+                </ul>
+              </>
+            ) : (
+              <p className="text-slate-600">Công ty này không có sinh viên nào đang ký trong đợt hoạt động.</p>
+            )}
+            <p className="text-slate-500 text-xs pt-1">
+              Sau khi tạm dừng, sinh viên sẽ không thấy công ty này trong danh sách chọn khai báo.
+            </p>
+          </div>
+        ),
+        okText: 'Vẫn tạm dừng',
+        cancelText: t(getKey('cancel_btn')),
+        okButtonProps: { danger: true },
+        onOk: doUpdate,
+      });
+      return;
+    }
+
+    // Các trường hợp khác (approved / pending): modal đơn giản như cũ
     Modal.confirm({
       centered: true,
       title: t(getKey('change_review_status_confirm_title'), { name: record.name, status: label.toLowerCase() }),
       content:
-        reviewStatus === STATUS_CODE.REJECTED
-          ? t(getKey('change_review_status_rejected_content'))
-          : reviewStatus === STATUS_CODE.APPROVED
-            ? t(getKey('change_review_status_approved_content'))
-            : t(getKey('change_review_status_pending_content')),
+        reviewStatus === STATUS_CODE.APPROVED
+          ? t(getKey('change_review_status_approved_content'))
+          : t(getKey('change_review_status_pending_content')),
       okText: t(getKey('confirm_btn')),
       cancelText: t(getKey('cancel_btn')),
-      okButtonProps: reviewStatus === STATUS_CODE.REJECTED ? { danger: true } : undefined,
-      onOk: () => updateCompanyMutation.mutate(
-        { id: record.id, body: { reviewStatus }, index: 0, params: { page: 1, limit: 10 } },
-        { onSuccess: () => message.success(t(getKey('update_company_status_success'), { name: record.name, status: label.toLowerCase() })) }
-      ),
+      onOk: doUpdate,
     });
   };
 

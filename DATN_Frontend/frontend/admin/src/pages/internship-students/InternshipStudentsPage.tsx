@@ -1,5 +1,5 @@
 import { CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, DownloadOutlined, FileTextOutlined, PrinterOutlined, SearchOutlined, SolutionOutlined } from '@ant-design/icons';
-import { Button, Card, Form, Input, Select, Space, Tag, Tabs, Typography, Table, message } from 'antd';
+import { Button, Card, Form, Input, Select, Space, Tag, Tabs, Typography, message } from 'antd';
 import * as XLSX from 'xlsx';
 import RemindModal from './components/RemindModal';
 import { useMemo, useState } from 'react';
@@ -100,7 +100,8 @@ const InternshipStudentsPage = () => {
   const mode: ModeKey = location.pathname.includes('/no-company') ? 'no-company' : 'declarations';
   const [declarationTab, setDeclarationTab] = useState<ConfirmationTab>('pending');
   const [remindOpen, setRemindOpen] = useState(false);
-  const [groupedKeyword, setGroupedKeyword] = useState('');
+  // Lưu công ty đang lọc ở tab Chờ cấp giấy — dùng để hiện action bar "In gộp + Xác nhận"
+  const [choCapGiayCompanyFilter, setChoCapGiayCompanyFilter] = useState<string>('all');
 
   const { data: confirmationList } = internshipHooks.useFetchListConfirmationRequests({ periodId: selectedPeriod?.id });
   const { data: declarationsList } = internshipHooks.useFetchListDeclarations({ periodId: selectedPeriod?.id });
@@ -190,25 +191,25 @@ const InternshipStudentsPage = () => {
     students: IConfirmationRequest[];
   }
 
-  // Nhóm các SV đang CHO_CAP_GIAY theo công ty + địa điểm thực tập
-  // Chỉ hiện nhóm có dia_chi_thuc_tap để có thể in giấy gộp được
-  const choCapGiayGrouped = useMemo(() => {
+  // Nhóm SV đang CHO_CAP_GIAY theo công ty đang lọc — dùng cho action bar "In gộp"
+  // Chỉ tính khi admin đã chọn một công ty cụ thể trong bộ lọc
+  const filteredGroupsForPrint = useMemo(() => {
+    if (choCapGiayCompanyFilter === 'all') return [];
     const rows = declarationsRows.filter((r: IConfirmationRequest) =>
-      r.status === STATUS_CODE.CHO_CAP_GIAY && !!(r.internshipLocation || '').trim()
+      r.status === STATUS_CODE.CHO_CAP_GIAY &&
+      r.companyName.toLowerCase() === choCapGiayCompanyFilter.toLowerCase()
     );
+    if (rows.length === 0) return [];
 
     const groupsMap = new Map<string, IGroupedDeclaration>();
     rows.forEach((row: IConfirmationRequest) => {
-      const company = (row.companyName || '').trim();
-      const address = (row.companyAddress || '').trim();
-      const locClean = (row.internshipLocation || '').trim();
-      const key = `${company.toLowerCase()}_${locClean.toLowerCase().trim()}`;
-
+      const locClean = (row.internshipLocation || row.companyAddress || '').trim();
+      const key = locClean.toLowerCase();
       if (!groupsMap.has(key)) {
         groupsMap.set(key, {
           key,
-          companyName: company,
-          companyAddress: address,
+          companyName: (row.companyName || '').trim(),
+          companyAddress: (row.companyAddress || '').trim(),
           internshipLocation: locClean,
           taxId: row.taxId || '—',
           mentor: row.mentor || '—',
@@ -217,15 +218,8 @@ const InternshipStudentsPage = () => {
       }
       groupsMap.get(key)!.students.push(row);
     });
-
-    const kw = groupedKeyword.trim().toLowerCase();
-    return Array.from(groupsMap.values()).filter((g) => {
-      if (!kw) return true;
-      return g.companyName.toLowerCase().includes(kw)
-        || g.companyAddress.toLowerCase().includes(kw)
-        || g.students.some((s) => s.studentName.toLowerCase().includes(kw) || s.studentId.toLowerCase().includes(kw));
-    });
-  }, [declarationsRows, groupedKeyword]);
+    return Array.from(groupsMap.values());
+  }, [declarationsRows, choCapGiayCompanyFilter]);
 
   /** In giấy gộp: CHỈ mở PDF, KHÔNG đổi status, KHÔNG gọi API.
    * Sau khi in xong + hiệu trưởng ký → admin mới bấm "Xác nhận đã cấp" để notify SV. */
@@ -494,53 +488,7 @@ const InternshipStudentsPage = () => {
     );
   };
 
-  // Columns cho panel gộp trong tab CHO_CAP_GIAY
-  const choCapGiayGroupedColumns = [
-    { title: 'STT', key: 'index', width: 50, align: 'center' as const, render: (_: unknown, __: unknown, index: number) => index + 1 },
-    { title: 'Nơi thực tập', key: 'company', render: (_: unknown, record: IGroupedDeclaration) => (
-      <div>
-        <div className="font-semibold text-navyDark">{record.companyName}</div>
-        <div className="text-xs text-slate-500 mt-0.5">Địa chỉ: {record.companyAddress}</div>
-        {record.internshipLocation && record.internshipLocation !== record.companyAddress && (
-          <div className="text-xs text-slate-400 mt-0.5">Địa điểm làm việc: {record.internshipLocation}</div>
-        )}
-      </div>
-    )},
-    { title: 'SV', dataIndex: 'students', key: 'count', width: 80, align: 'center' as const, render: (students: IConfirmationRequest[]) => (
-      <Tag color="blue" className="m-0 font-medium px-2 py-0.5 rounded-full">{students.length} SV</Tag>
-    )},
-    { title: 'Danh sách sinh viên', key: 'students_list', render: (_: unknown, record: IGroupedDeclaration) => (
-      <div className="flex flex-col gap-1">
-        {record.students.map((s) => (
-          <div key={s.id} className="text-xs flex items-center gap-1.5">
-            <span className="text-slate-400 font-mono">{s.studentId}</span>
-            <span className="font-medium text-slate-700">{s.studentName}</span>
-            <span className="text-slate-400">({s.className})</span>
-          </div>
-        ))}
-      </div>
-    )},
-    { title: 'Thao tác', key: 'actions', width: 220, render: (_: unknown, record: IGroupedDeclaration) => (
-      <Space direction="vertical" size={4} className="w-full">
-        <Button
-          icon={<PrinterOutlined />}
-          onClick={() => handlePrintGroupedPDF(record)}
-          className="w-full"
-        >
-          In giấy gộp
-        </Button>
-        <Button
-          type="primary"
-          icon={<CheckCircleOutlined />}
-          loading={batchApproveMutation.isPending}
-          onClick={() => handleBatchConfirm(record)}
-          className="w-full"
-        >
-          Xác nhận đã cấp cả nhóm
-        </Button>
-      </Space>
-    )}
-  ];
+  // Phần columns cho panel gộp đã bỏ, không còn dùng choCapGiayGroupedColumns nữa
 
   const handleDeclarationAction = (row: IConfirmationRequest, status: ConfirmationStatus) => {
     const meta = getConfirmationStatusMeta(t)[status];
@@ -749,72 +697,106 @@ const InternshipStudentsPage = () => {
       )}
 
       {mode === 'declarations' && declarationTab === 'cho_cap_giay' ? (
-        <>
-          {/* Panel gộp theo nơi thực tập — chỉ hiện khi tab Chờ cấp giấy */}
-          <Card key="grouped-panel" className="mb-4 overflow-hidden rounded-[18px] border border-slate-100 bg-white shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
-            <div className="px-6 pt-5 pb-3">
-              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-4">
-                <div>
-                  <div className="font-semibold text-navyDark text-base">Gộp theo nơi thực tập</div>
-                  <div className="text-xs text-slate-500 mt-0.5">
-                    In giấy gộp → chờ ký → bấm <strong>Xác nhận đã cấp</strong> để thông báo sinh viên lên nhận
-                  </div>
-                </div>
-                <Input
-                  allowClear
-                  placeholder="Tìm công ty, địa chỉ, MSSV, tên SV..."
-                  prefix={<SearchOutlined className="text-slate-400" />}
-                  value={groupedKeyword}
-                  onChange={(e) => setGroupedKeyword(e.target.value)}
-                  className="!h-9 max-w-xs !rounded-[10px] !border-slate-300"
-                />
-              </div>
-              {choCapGiayGrouped.length === 0 ? (
-                <div className="py-6 text-center text-slate-400 text-sm">
-                  Không có nhóm nào đang chờ cấp giấy (hoặc chưa có địa điểm thực tập)
-                </div>
-              ) : (
-                <Table
-                  rowKey="key"
-                  dataSource={choCapGiayGrouped}
-                  columns={choCapGiayGroupedColumns}
-                  pagination={choCapGiayGrouped.length > 8 ? { pageSize: 8, showSizeChanger: false } : false}
-                  size="small"
-                />
-              )}
-            </div>
-          </Card>
-          {/* Bảng chi tiết từng SV bên dưới */}
-          <Card key="cho-cap-giay-detail" className="rounded-[18px] border border-slate-100 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
-            <FilterTable<IConfirmationRequest, IConfirmationRequest | undefined, ICreateConfirmationRequest, IUpdateConfirmationRequest>
-              key="table-cho-cap-giay"
-              title="Danh sách chờ cấp giấy"
-              columns={declarationColumns}
-              useQueryHook={useFilteredDeclarationListQuery}
-              paramVariables={declarationParamVariables}
-              actions={declarationActions}
-              updateInfo={isPeriodClosed ? undefined : { type: 'modal', modalInfo: { modalContent: <ConfirmationForm />, modalProps: { centered: true, width: 720, title: t(getKey('edit_profile')) }, modalFunc: updateDeclarationMutation } }}
-              deleteInfo={isPeriodClosed ? undefined : { type: 'modal', modalInfo: { modalContent: null, modalProps: {}, modalFunc: deleteDeclarationMutation as unknown as UseMutationResult<IConfirmationRequest, AxiosError, { id: string; params: BaseListParams }> } }}
-              detailInfo={{ type: 'modal', modalInfo: { modalContent: <ConfirmationForm disabled />, modalProps: { centered: true, width: 720, title: t(getKey('detail_profile')), footer: null }, modalFunc: internshipHooks.useFetchDetailDeclaration } }}
-              formatInitialValues={(d) => ({ studentId: d?.studentId ?? '', studentName: d?.studentName ?? '', className: d?.className ?? '', regDate: d?.regDate ?? '', companyName: d?.companyName ?? '', companyAddress: d?.companyAddress ?? '', internshipLocation: d?.internshipLocation ?? '', position: d?.position ?? '', taxId: d?.taxId ?? '', mentor: d?.mentor ?? '', status: d?.status ?? STATUS_CODE.PENDING })}
-              formatFormValues={(v) => v as unknown as ICreateConfirmationRequest}
-              filterRender={() => (
-                <div className="mb-4">
-                  <div className="mb-3 flex flex-col gap-3 xl:flex-row xl:items-start">
-                    <div className="grid flex-1 grid-cols-1 gap-3 xl:grid-cols-12">
-                      <Form.Item name="keyword" className="xl:col-span-5 !mb-0">
-                        <Input allowClear prefix={<SearchOutlined className="text-slate-400" />} placeholder={t(getKey('search_student_company_placeholder'))} className="!h-11 !rounded-[12px] !border-slate-300" />
-                      </Form.Item>
-                      <Form.Item name="className" className="xl:col-span-3 !mb-0">
-                        <Select allowClear placeholder={t(getKey('all_classes'))} className="!h-11 !w-full" options={[{ value: 'all', label: t(getKey('all_classes')) }, ...classOptions.map((c) => ({ value: c, label: c }))]} />
-                      </Form.Item>
+        <Card key="cho-cap-giay-unified" className="rounded-[18px] border border-slate-100 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
+          <FilterTable<IConfirmationRequest, IConfirmationRequest | undefined, ICreateConfirmationRequest, IUpdateConfirmationRequest>
+            key="table-cho-cap-giay"
+            title="Danh sách chờ cấp giấy"
+            columns={declarationColumns}
+            useQueryHook={useFilteredDeclarationListQuery}
+            paramVariables={declarationParamVariables}
+            actions={declarationActions}
+            updateInfo={isPeriodClosed ? undefined : { type: 'modal', modalInfo: { modalContent: <ConfirmationForm />, modalProps: { centered: true, width: 720, title: t(getKey('edit_profile')) }, modalFunc: updateDeclarationMutation } }}
+            deleteInfo={isPeriodClosed ? undefined : { type: 'modal', modalInfo: { modalContent: null, modalProps: {}, modalFunc: deleteDeclarationMutation as unknown as UseMutationResult<IConfirmationRequest, AxiosError, { id: string; params: BaseListParams }> } }}
+            detailInfo={{ type: 'modal', modalInfo: { modalContent: <ConfirmationForm disabled />, modalProps: { centered: true, width: 720, title: t(getKey('detail_profile')), footer: null }, modalFunc: internshipHooks.useFetchDetailDeclaration } }}
+            formatInitialValues={(d) => ({ studentId: d?.studentId ?? '', studentName: d?.studentName ?? '', className: d?.className ?? '', regDate: d?.regDate ?? '', companyName: d?.companyName ?? '', companyAddress: d?.companyAddress ?? '', internshipLocation: d?.internshipLocation ?? '', position: d?.position ?? '', taxId: d?.taxId ?? '', mentor: d?.mentor ?? '', status: d?.status ?? STATUS_CODE.PENDING })}
+            formatFormValues={(v) => v as unknown as ICreateConfirmationRequest}
+            filterRender={() => (
+              <div className="mb-2">
+                {/* Hàng 1: Bộ lọc + Xuất DS */}
+                <div className="mb-3 flex flex-col gap-3 xl:flex-row xl:items-start">
+                  <div className="grid flex-1 grid-cols-1 gap-3 xl:grid-cols-12">
+                    <Form.Item name="keyword" className="xl:col-span-4 !mb-0">
+                      <Input allowClear prefix={<SearchOutlined className="text-slate-400" />} placeholder={t(getKey('search_student_company_placeholder'))} className="!h-11 !rounded-[12px] !border-slate-300" />
+                    </Form.Item>
+                    <Form.Item name="companyName" className="xl:col-span-4 !mb-0" initialValue="all">
+                      <Select
+                        allowClear
+                        showSearch
+                        placeholder="Lọc theo công ty"
+                        className="!h-11 w-full"
+                        options={[
+                          { value: 'all', label: 'Tất cả công ty' },
+                          ...companiesList.map((c) => ({ value: c.name, label: c.name }))
+                        ]}
+                        optionFilterProp="label"
+                        onChange={(v) => setChoCapGiayCompanyFilter(v || 'all')}
+                        onClear={() => setChoCapGiayCompanyFilter('all')}
+                      />
+                    </Form.Item>
+                    <Form.Item name="className" className="xl:col-span-2 !mb-0">
+                      <Select allowClear placeholder={t(getKey('all_classes'))} className="!h-11 !w-full" options={[{ value: 'all', label: t(getKey('all_classes')) }, ...classOptions.map((c) => ({ value: c, label: c }))]} />
+                    </Form.Item>
+                    <div className="xl:col-span-2 flex items-center">
+                      <Button icon={<DownloadOutlined />} className="!h-11 w-full" onClick={handleExportIssuedList}>
+                        Xuất DS
+                      </Button>
                     </div>
                   </div>
                 </div>
-              )}
-            />
-          </Card>
-        </>
+                {/* Hàng 2 (điều kiện): Action bar "In gộp" khi đã lọc theo công ty */}
+                {choCapGiayCompanyFilter !== 'all' && filteredGroupsForPrint.length > 0 && (
+                  <div className="flex flex-wrap gap-3 rounded-[12px] border border-blue-100 bg-blue-50 px-4 py-3 mb-1">
+                    <div className="flex flex-1 items-center gap-2 min-w-0">
+                      <span className="text-sm font-semibold text-blue-800 truncate">
+                        🏢 {choCapGiayCompanyFilter}
+                      </span>
+                      <span className="text-xs text-blue-500 whitespace-nowrap">
+                        — {filteredGroupsForPrint.reduce((sum, g) => sum + g.students.length, 0)} SV chờ cấp giấy
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {filteredGroupsForPrint.map((group) => (
+                        <Space key={group.key} size={6}>
+                          {filteredGroupsForPrint.length > 1 && (
+                            <span className="text-xs text-blue-600">
+                              ({group.internshipLocation || group.companyAddress})
+                            </span>
+                          )}
+                          <Button
+                            size="small"
+                            icon={<PrinterOutlined />}
+                            onClick={() => handlePrintGroupedPDF(group)}
+                          >
+                            In gộp ({group.students.length} SV)
+                          </Button>
+                          <Button
+                            size="small"
+                            type="primary"
+                            icon={<CheckCircleOutlined />}
+                            loading={batchApproveMutation.isPending}
+                            onClick={() => handleBatchConfirm(group)}
+                          >
+                            Xác nhận đã cấp ({group.students.length} SV)
+                          </Button>
+                        </Space>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {/* Thông báo khi chọn công ty nhưng SV đó chưa có địa điểm thực tập */}
+                {choCapGiayCompanyFilter !== 'all' && filteredGroupsForPrint.length === 0 &&
+                  declarationsRows.some((r: IConfirmationRequest) =>
+                    r.status === STATUS_CODE.CHO_CAP_GIAY &&
+                    r.companyName.toLowerCase() === choCapGiayCompanyFilter.toLowerCase()
+                  ) && (
+                  <div className="rounded-[10px] border border-amber-100 bg-amber-50 px-4 py-2 mb-1 text-xs text-amber-700">
+                    ⚠️ SV tại công ty này chưa có địa điểm thực tập — không thể in giấy gộp. Dùng nút “In giấy” từng dòng bên dưới.
+                  </div>
+                )}
+              </div>
+            )}
+          />
+        </Card>
       ) : mode === 'declarations' ? (
         <Card key="normal-view-declarations" className="rounded-[18px] border border-slate-100 shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
           <FilterTable<IConfirmationRequest, IConfirmationRequest | undefined, ICreateConfirmationRequest, IUpdateConfirmationRequest>
@@ -853,9 +835,12 @@ const InternshipStudentsPage = () => {
                       <Select allowClear placeholder={t(getKey('all_classes'))} className="!h-11 !w-full" options={[{ value: 'all', label: t(getKey('all_classes')) }, ...classOptions.map((c) => ({ value: c, label: c }))]} />
                     </Form.Item>
                   </div>
-                  <Button icon={<DownloadOutlined />} className="!h-11" onClick={handleExportIssuedList}>
-                    Xuất DS cấp giấy
-                  </Button>
+                  {/* Xuất DS cấp giấy: chỉ hiện ở tab Đã xong */}
+                  {declarationTab === 'approved' && (
+                    <Button icon={<DownloadOutlined />} className="!h-11" onClick={handleExportIssuedList}>
+                      Xuất DS cấp giấy
+                    </Button>
+                  )}
                 </div>
               </div>
             )}
