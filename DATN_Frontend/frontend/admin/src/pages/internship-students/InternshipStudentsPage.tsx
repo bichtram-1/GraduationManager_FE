@@ -41,9 +41,17 @@ const getNoCompanyStatusMeta = (t: TFunction) => ({
 } as const);
 
 const useFilteredDeclarationListQuery = (params: BaseListParams) => {
-  const typedParams = params as BaseListParams & { keyword?: string; companyName?: string; className?: string; periodId?: string; declarationTab?: string };
+  const typedParams = params as BaseListParams & { 
+    keyword?: string; 
+    companyName?: string; 
+    className?: string; 
+    periodId?: string; 
+    declarationTab?: string;
+    paperFilter?: 'all' | 'registered' | 'not_registered';
+  };
   const periodId = typedParams.periodId;
   const declarationTab = typedParams.declarationTab || 'all';
+  const paperFilter = typedParams.paperFilter || 'all';
 
   const query = internshipHooks.useFetchListDeclarations({ periodId });
   const keyword = (typedParams.keyword ?? '').trim().toLowerCase();
@@ -55,6 +63,14 @@ const useFilteredDeclarationListQuery = (params: BaseListParams) => {
     .filter((r: IConfirmationRequest) => (declarationTab === 'all' ? true : r.status === declarationTab))
     .filter((r: IConfirmationRequest) => (className === 'all' ? true : r.className === className))
     .filter((r: IConfirmationRequest) => (companyName === 'all' || !companyName ? true : r.companyName.toLowerCase() === companyName.toLowerCase()))
+    .filter((r: IConfirmationRequest) => {
+      if (declarationTab === 'approved' && paperFilter !== 'all') {
+        const hasPaper = !!(r.internshipLocation || '').trim();
+        if (paperFilter === 'registered') return hasPaper;
+        if (paperFilter === 'not_registered') return !hasPaper;
+      }
+      return true;
+    })
     .filter((r: IConfirmationRequest) => !keyword || [r.studentId, r.studentName, r.className, r.companyName, r.taxId].join(' ').toLowerCase().includes(keyword));
 
   return {
@@ -221,9 +237,8 @@ const InternshipStudentsPage = () => {
     return Array.from(groupsMap.values());
   }, [declarationsRows, choCapGiayCompanyFilter]);
 
-  /** In giấy gộp: CHỈ mở PDF, KHÔNG đổi status, KHÔNG gọi API.
-   * Sau khi in xong + hiệu trưởng ký → admin mới bấm "Xác nhận đã cấp" để notify SV. */
-  const handlePrintGroupedPDF = (group: IGroupedDeclaration) => {
+  /** In giấy gộp: mở PDF và tự động cập nhật trạng thái sang đã cấp (nếu autoConfirm = true). */
+  const handlePrintGroupedPDF = (group: IGroupedDeclaration, autoConfirm = false) => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
       message.error('Không thể mở cửa sổ in. Vui lòng tắt trình chặn popup của trình duyệt!');
@@ -440,9 +455,13 @@ const InternshipStudentsPage = () => {
       </html>
     `);
     printWindow.document.close();
+
+    if (autoConfirm) {
+      handleBatchConfirm(group);
+    }
   };
 
-  /** In giấy cho 1 sinh viên: wrap thành group giả rồi dùng lại handlePrintGroupedPDF. */
+  /** In giấy cho 1 sinh viên: wrap thành group giả rồi dùng lại handlePrintGroupedPDF và tự động xác nhận. */
   const handlePrintSinglePDF = (record: IConfirmationRequest) => {
     const singleGroup: IGroupedDeclaration = {
       key: record.id,
@@ -453,7 +472,7 @@ const InternshipStudentsPage = () => {
       mentor: record.mentor,
       students: [record],
     };
-    handlePrintGroupedPDF(singleGroup);
+    handlePrintGroupedPDF(singleGroup, true);
   };
 
   /** Xác nhận đã cấp giấy hàng loạt: CHO_CAP_GIAY → DA_DUYET + broadcast notify sinh viên.
@@ -559,7 +578,7 @@ const InternshipStudentsPage = () => {
       const meta = getConfirmationStatusMeta(t)[record.status] || { label: record.status || 'Chờ duyệt', className: 'bg-[var(--color-gold-light)] text-[var(--color-gold-medium)]' };
       return <Tag className={cn("m-0 rounded-full px-[10px] py-0 border-none", meta.className)}>{meta.label}</Tag>;
     } },
-    { title: 'Thao tác', key: 'cert', width: 155, render: (_: unknown, record: IConfirmationRequest) => {
+    { title: 'Cấp giấy', key: 'cert', width: 155, render: (_: unknown, record: IConfirmationRequest) => {
       // Tab CHO_CAP_GIAY: nút in + nút xác nhận riêng (không từ chối ở đây)
       if (record.status === STATUS_CODE.CHO_CAP_GIAY) {
         return (
@@ -765,7 +784,7 @@ const InternshipStudentsPage = () => {
                           <Button
                             size="small"
                             icon={<PrinterOutlined />}
-                            onClick={() => handlePrintGroupedPDF(group)}
+                            onClick={() => handlePrintGroupedPDF(group, true)}
                           >
                             In gộp ({group.students.length} SV)
                           </Button>
@@ -815,10 +834,10 @@ const InternshipStudentsPage = () => {
               <div className="mb-4">
                 <div className="mb-3 flex flex-col gap-3 xl:flex-row xl:items-start">
                   <div className="grid flex-1 grid-cols-1 gap-3 xl:grid-cols-12">
-                    <Form.Item name="keyword" className="xl:col-span-5 !mb-0">
+                    <Form.Item name="keyword" className={declarationTab === 'approved' ? "xl:col-span-4 !mb-0" : "xl:col-span-5 !mb-0"}>
                       <Input allowClear prefix={<SearchOutlined className="text-slate-400" />} placeholder={t(getKey('search_student_company_placeholder'))} className="!h-11 !rounded-[12px] !border-slate-300" />
                     </Form.Item>
-                    <Form.Item name="companyName" className="xl:col-span-4 !mb-0" initialValue="all">
+                    <Form.Item name="companyName" className={declarationTab === 'approved' ? "xl:col-span-3 !mb-0" : "xl:col-span-4 !mb-0"} initialValue="all">
                       <Select
                         allowClear
                         showSearch
@@ -831,9 +850,23 @@ const InternshipStudentsPage = () => {
                         optionFilterProp="label"
                       />
                     </Form.Item>
-                    <Form.Item name="className" className="xl:col-span-3 !mb-0">
+                    <Form.Item name="className" className={declarationTab === 'approved' ? "xl:col-span-2 !mb-0" : "xl:col-span-3 !mb-0"}>
                       <Select allowClear placeholder={t(getKey('all_classes'))} className="!h-11 !w-full" options={[{ value: 'all', label: t(getKey('all_classes')) }, ...classOptions.map((c) => ({ value: c, label: c }))]} />
                     </Form.Item>
+                    {declarationTab === 'approved' && (
+                      <Form.Item name="paperFilter" className="xl:col-span-3 !mb-0" initialValue="all">
+                        <Select
+                          allowClear
+                          placeholder="Lọc loại giấy"
+                          className="!h-11 !w-full"
+                          options={[
+                            { value: 'all', label: 'Tất cả giấy tờ' },
+                            { value: 'registered', label: 'Đăng ký giấy' },
+                            { value: 'not_registered', label: 'Không đăng ký giấy' }
+                          ]}
+                        />
+                      </Form.Item>
+                    )}
                   </div>
                   {/* Xuất DS cấp giấy: chỉ hiện ở tab Đã xong */}
                   {declarationTab === 'approved' && (
