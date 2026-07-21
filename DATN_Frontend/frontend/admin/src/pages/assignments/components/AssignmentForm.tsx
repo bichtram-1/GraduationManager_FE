@@ -37,10 +37,6 @@ const AssignmentForm: React.FC<Props> = ({ mode = 'edit' }) => {
         </Form.Item>
       </div>
 
-      <Form.Item label={t(getKey('topic_name'))} name="topic">
-        <Input disabled={contextDisabled} />
-      </Form.Item>
-
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <Form.Item label={t(getKey('mentor'))} name="supervisor">
           <Input disabled={disabled} />
