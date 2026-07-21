@@ -35,6 +35,8 @@ const NAV_ITEMS = [
     { key: 'thesis', href: '/student/thesis-register', label: 'Đăng ký ĐATN', icon: BookOpen },
   { key: 'reports-tttn', href: '/student/reports/tttn', label: 'Báo cáo TTTN', icon: FileText },
   { key: 'reports-datn', href: '/student/reports/datn', label: 'Báo cáo ĐATN', icon: GraduationCap },
+  { key: 'score-tttn', href: '/student/results?view=tttn', label: 'Điểm TTTN', icon: FileText },
+  { key: 'score-datn', href: '/student/results?view=datn', label: 'Điểm ĐATN', icon: GraduationCap },
   { key: 'results', href: '/student/results', label: 'Kết quả', icon: Award },
   { key: 'history', href: '/student/history', label: 'Lịch sử hoạt động', icon: History },
 ]
