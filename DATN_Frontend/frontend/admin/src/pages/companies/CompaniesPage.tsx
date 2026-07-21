@@ -1,4 +1,4 @@
-import { BankOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, SearchOutlined, SendOutlined, TeamOutlined, DeleteOutlined, FileExcelOutlined, DownloadOutlined, ExclamationCircleFilled } from '@ant-design/icons';
+import { BankOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, SearchOutlined, TeamOutlined, DeleteOutlined, FileExcelOutlined, DownloadOutlined, ExclamationCircleFilled } from '@ant-design/icons';
 import { Button, Card, Dropdown, Form, Input, message, Modal, Select, Space, Tag, Tabs, Typography, Tooltip, Upload, Alert } from 'antd';
 import type { UploadFile } from 'antd/es/upload/interface';
 import FilterTable from '../../components/shared/table/FilterTable';
@@ -184,8 +184,6 @@ const CompaniesPage = () => {
     approved: companyRows.filter((item) => item.reviewStatus === STATUS_CODE.APPROVED).length,
     rejected: companyRows.filter((item) => item.reviewStatus === STATUS_CODE.REJECTED).length,
   }), [companyRows]);
-
-
 
   const confirmReviewChange = (record: CompanyRow, reviewStatus: ReviewStatus) => {
     const meta = getReviewMeta(t)[reviewStatus];
@@ -534,8 +532,6 @@ const CompaniesPage = () => {
           }}
         />
       </Card>
-
-
 
       <Modal
         title={
