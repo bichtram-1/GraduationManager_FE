@@ -1,4 +1,4 @@
-import { BankOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, SearchOutlined, SendOutlined, TeamOutlined, DeleteOutlined, FileExcelOutlined, DownloadOutlined, ExclamationCircleFilled } from '@ant-design/icons';
+import { BankOutlined, CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, SearchOutlined, TeamOutlined, DeleteOutlined, FileExcelOutlined, DownloadOutlined, ExclamationCircleFilled } from '@ant-design/icons';
 import { Button, Card, Dropdown, Form, Input, message, Modal, Select, Space, Tag, Tabs, Typography, Tooltip, Upload, Alert } from 'antd';
 import type { UploadFile } from 'antd/es/upload/interface';
 import FilterTable from '../../components/shared/table/FilterTable';
@@ -185,8 +185,6 @@ const CompaniesPage = () => {
     rejected: companyRows.filter((item) => item.reviewStatus === STATUS_CODE.REJECTED).length,
   }), [companyRows]);
 
-
-
   const confirmReviewChange = (record: CompanyRow, reviewStatus: ReviewStatus) => {
     const meta = getReviewMeta(t)[reviewStatus];
     const label = meta.label;
@@ -267,16 +265,6 @@ const CompaniesPage = () => {
         <div className="truncate">
           <div className="flex items-center gap-2 truncate">
             <span className="font-medium text-[var(--color-primary)] truncate" title={value}>{value}</span>
-            {record.reviewStatus === STATUS_CODE.PENDING && (
-              <Tag color="purple" className="m-0 rounded-md text-[10px] py-0 px-1.5 border-none">
-                Tự khai báo
-              </Tag>
-            )}
-            {record.status === STATUS_CODE.ACTIVE && !record.published && (
-              <Tag color="blue" className="m-0 rounded-md text-[10px] py-0 px-1.5 border-none">
-                Mới, chưa công bố
-              </Tag>
-            )}
           </div>
           <div className="text-xs text-slate-500 truncate">{record.field}</div>
         </div>
@@ -544,8 +532,6 @@ const CompaniesPage = () => {
           }}
         />
       </Card>
-
-
 
       <Modal
         title={
