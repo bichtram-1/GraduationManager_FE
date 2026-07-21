@@ -3,7 +3,6 @@ import { Button, Card, Dropdown, Form, Input, message, Modal, Select, Space, Tag
 import type { UploadFile } from 'antd/es/upload/interface';
 import FilterTable from '../../components/shared/table/FilterTable';
 import type { ColumnsType } from 'antd/es/table';
-import PublishModal from './components/PublishModal';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn, STATUS_CODE } from '../../constants/commonConst';
@@ -51,12 +50,10 @@ const getReviewMeta = (t: (key: string) => string) => ({
 const CompaniesPage = () => {
   const { t } = useTranslation();
   const [tab, setTab] = useState<CompanyTab>('all');
-  const [publishOpen, setPublishOpen] = useState(false);
   const { data: companyList } = companyHooks.useFetchListCompanies();
   const createCompanyMutation = companyHooks.useCreateCompany();
   const updateCompanyMutation = companyHooks.useUpdateCompany();
   const deleteCompanyMutation = companyHooks.useDeleteCompany();
-  const publishCompaniesMutation = companyHooks.usePublishCompanies();
   const companyRows = (companyList?.rows ?? []) as CompanyRow[];
 
   const importMutation = companyHooks.useImportCompanies();
@@ -188,22 +185,7 @@ const CompaniesPage = () => {
     rejected: companyRows.filter((item) => item.reviewStatus === STATUS_CODE.REJECTED).length,
   }), [companyRows]);
 
-  const unpublishedCount = useMemo(
-    () => companyRows.filter((item) => item.status === STATUS_CODE.ACTIVE && !item.published).length,
-    [companyRows]
-  );
 
-  const handlePublish = () => {
-    publishCompaniesMutation.mutate(undefined, {
-      onSuccess: (data) => {
-        message.success(data?.message || 'Công bố danh sách công ty thành công!');
-        setPublishOpen(false);
-      },
-      onError: () => {
-        message.error('Có lỗi xảy ra khi công bố danh sách công ty!');
-      },
-    });
-  };
 
   const confirmReviewChange = (record: CompanyRow, reviewStatus: ReviewStatus) => {
     const meta = getReviewMeta(t)[reviewStatus];
@@ -372,13 +354,6 @@ const CompaniesPage = () => {
             </Typography.Title>
             <p className={cn('mt-2 mb-0 text-[18px] leading-[26px] text-grayDark')}>{t(getKey('company_management_desc'))}</p>
           </div>
-          <Button
-            icon={<SendOutlined />}
-            onClick={() => setPublishOpen(true)}
-            className="!h-10 !rounded-[8px] !border-[var(--color-primary)] !px-5 !font-medium !text-[var(--color-primary)] hover:!border-[var(--color-primary)] hover:!text-[var(--color-primary)]"
-          >
-            {t(getKey('publish_list_btn'))}
-          </Button>
         </div>
       </div>
 
@@ -570,15 +545,7 @@ const CompaniesPage = () => {
         />
       </Card>
 
-      <PublishModal
-        open={publishOpen}
-        onCancel={() => setPublishOpen(false)}
-        onOk={handlePublish}
-        confirmLoading={publishCompaniesMutation.isPending}
-        companyStats={companyStats}
-        reviewStats={reviewStats}
-        unpublishedCount={unpublishedCount}
-      />
+
 
       <Modal
         title={
